@@ -2,11 +2,11 @@ import {
   Briefcase, 
   DollarSign, 
   AlertTriangle, 
-  Scale, 
-  CheckCircle2, 
-  Clock,
   TrendingUp,
-  Shield
+  TrendingDown,
+  CheckCircle2,
+  Clock,
+  Users
 } from "lucide-react";
 import { KPICard } from "./KPICard";
 import { LitigationMatter } from "@/data/litigationData";
@@ -17,16 +17,20 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ data, view }: SummaryCardsProps) {
-  // Calculate metrics
+  // Calculate metrics from real data
   const totalMatters = data.length;
-  const openMatters = data.filter(m => m.status === 'Open' || m.status === 'In Trial' || m.status === 'Pending').length;
-  const closedMatters = data.filter(m => m.status === 'Closed').length;
-  const criticalMatters = data.filter(m => m.severity === 'Critical').length;
-  const inTrialMatters = data.filter(m => m.status === 'In Trial').length;
+  const cwpMatters = data.filter(m => m.cwpCwn === 'CWP').length;
+  const cwnMatters = data.filter(m => m.cwpCwn === 'CWN').length;
+  const highPainMatters = data.filter(m => m.endPainLvl >= 8).length;
+  const criticalMatters = data.filter(m => m.endPainLvl >= 9).length;
   
-  const totalReserves = data.reduce((sum, m) => sum + m.incurredReserve, 0);
-  const totalPaid = data.reduce((sum, m) => sum + m.paidToDate, 0);
-  const totalExposure = data.reduce((sum, m) => sum + m.estimatedExposure, 0);
+  const totalIndemnities = data.reduce((sum, m) => sum + m.indemnitiesAmount, 0);
+  const totalAmount = data.reduce((sum, m) => sum + m.totalAmount, 0);
+  const totalNet = data.reduce((sum, m) => sum + m.netAmount, 0);
+  
+  // Unique adjusters and teams
+  const uniqueAdjusters = new Set(data.map(m => m.adjusterName)).size;
+  const uniqueTeams = new Set(data.map(m => m.team)).size;
 
   const formatLargeCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -35,40 +39,39 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
     if (amount >= 1000) {
       return `$${(amount / 1000).toFixed(0)}K`;
     }
-    return `$${amount}`;
+    return `$${amount.toFixed(0)}`;
   };
 
   if (view === 'exec') {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
         <KPICard
-          title="Total Exposure"
-          value={formatLargeCurrency(totalExposure)}
-          subtitle="Across all open matters"
+          title="Total Net Exposure"
+          value={formatLargeCurrency(totalNet)}
+          subtitle="Feature inception to current"
           icon={DollarSign}
           variant="danger"
-          trend={{ value: 8.2, isPositive: false }}
         />
         <KPICard
-          title="Total Reserves"
-          value={formatLargeCurrency(totalReserves)}
-          subtitle={`${formatLargeCurrency(totalPaid)} paid YTD`}
+          title="Total Indemnities"
+          value={formatLargeCurrency(totalIndemnities)}
+          subtitle={`${formatLargeCurrency(totalAmount)} total amount`}
           icon={TrendingUp}
           variant="warning"
         />
         <KPICard
-          title="Critical Matters"
+          title="Critical Pain (9-10)"
           value={criticalMatters}
-          subtitle={`${inTrialMatters} currently in trial`}
+          subtitle={`${highPainMatters} high pain (8+)`}
           icon={AlertTriangle}
           variant={criticalMatters > 0 ? 'danger' : 'default'}
         />
         <KPICard
-          title="Open Matters"
-          value={openMatters}
-          subtitle={`${closedMatters} closed this period`}
-          icon={Briefcase}
-          variant="primary"
+          title="CWP Matters"
+          value={cwpMatters}
+          subtitle={`${cwnMatters} CWN matters`}
+          icon={CheckCircle2}
+          variant="success"
         />
       </div>
     );
@@ -78,45 +81,45 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6 stagger-children">
         <KPICard
-          title="Active Matters"
-          value={openMatters}
-          subtitle="Requiring attention"
+          title="Total Records"
+          value={totalMatters}
+          subtitle="In filtered view"
           icon={Briefcase}
           variant="primary"
         />
         <KPICard
-          title="In Trial"
-          value={inTrialMatters}
-          subtitle="Active litigation"
-          icon={Scale}
-          variant={inTrialMatters > 0 ? 'danger' : 'success'}
+          title="CWP (Closed)"
+          value={cwpMatters}
+          subtitle="With payment"
+          icon={CheckCircle2}
+          variant="success"
         />
         <KPICard
-          title="Critical"
-          value={criticalMatters}
-          subtitle="High priority"
-          icon={AlertTriangle}
-          variant={criticalMatters > 0 ? 'danger' : 'default'}
-        />
-        <KPICard
-          title="Pending"
-          value={data.filter(m => m.status === 'Pending').length}
-          subtitle="Awaiting action"
+          title="CWN (Open)"
+          value={cwnMatters}
+          subtitle="No payment"
           icon={Clock}
           variant="warning"
         />
         <KPICard
-          title="Total Reserves"
-          value={formatLargeCurrency(totalReserves)}
-          icon={DollarSign}
+          title="High Pain (8+)"
+          value={highPainMatters}
+          subtitle="Requires attention"
+          icon={AlertTriangle}
+          variant={highPainMatters > 0 ? 'danger' : 'default'}
+        />
+        <KPICard
+          title="Active Teams"
+          value={uniqueTeams}
+          subtitle="Across matters"
+          icon={Users}
           variant="default"
         />
         <KPICard
-          title="Closed"
-          value={closedMatters}
-          subtitle="This period"
-          icon={CheckCircle2}
-          variant="success"
+          title="Total Net"
+          value={formatLargeCurrency(totalNet)}
+          icon={DollarSign}
+          variant="primary"
         />
       </div>
     );
@@ -126,28 +129,28 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
       <KPICard
-        title="My Open Matters"
-        value={openMatters}
+        title="My Records"
+        value={totalMatters}
         subtitle="Active assignments"
         icon={Briefcase}
         variant="primary"
       />
       <KPICard
-        title="Pending Review"
-        value={data.filter(m => m.status === 'Pending').length}
-        subtitle="Needs attention"
+        title="CWN (Pending)"
+        value={cwnMatters}
+        subtitle="Needs resolution"
         icon={Clock}
         variant="warning"
       />
       <KPICard
-        title="Critical Cases"
-        value={criticalMatters}
-        icon={Shield}
-        variant={criticalMatters > 0 ? 'danger' : 'success'}
+        title="High Pain Cases"
+        value={highPainMatters}
+        icon={AlertTriangle}
+        variant={highPainMatters > 0 ? 'danger' : 'success'}
       />
       <KPICard
-        title="Closed This Month"
-        value={closedMatters}
+        title="Closed (CWP)"
+        value={cwpMatters}
         subtitle="Successfully resolved"
         icon={CheckCircle2}
         variant="success"

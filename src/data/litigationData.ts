@@ -1,273 +1,160 @@
 export interface LitigationMatter {
   id: string;
-  claimNumber: string;
+  class: string;
+  prefix: string;
+  claim: string;
   claimant: string;
-  type: 'Litigation' | 'Discipline' | 'Arbitration' | 'Mediation';
-  status: 'Open' | 'Closed' | 'Pending' | 'In Trial';
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  department: string;
-  attorney: string;
-  adjuster: string;
-  dateOpened: string;
-  dateClosed?: string;
-  incurredReserve: number;
-  paidToDate: number;
-  estimatedExposure: number;
-  state: string;
-  description: string;
-  lastActivity: string;
+  coverage: string;
+  uniqueRecord: string;
+  expCategory: string;
+  dept: string;
+  team: string;
+  adjusterUsername: string;
+  adjusterName: string;
+  creditedTeam: string;
+  creditedAdj: string;
+  paymentDate: string;
+  indemnitiesAmount: number;
+  indemnitiesCheckCount: number;
+  expensesCheckCount: number;
+  totalAmount: number;
+  netAmount: number;
+  cwpCwn: 'CWP' | 'CWN';
+  startPainLvl: number;
+  endPainLvl: number;
+  transferDate: string;
+  previousDept?: string;
+  previousTeam?: string;
+  previousAdjuster?: string;
 }
 
 export const litigationData: LitigationMatter[] = [
-  {
-    id: "LIT-2025-001",
-    claimNumber: "CLM-8847291",
-    claimant: "Rodriguez v. Acme Corp",
-    type: "Litigation",
-    status: "Open",
-    severity: "Critical",
-    department: "General Liability",
-    attorney: "Sarah Mitchell",
-    adjuster: "James Wilson",
-    dateOpened: "2025-01-03",
-    incurredReserve: 2500000,
-    paidToDate: 175000,
-    estimatedExposure: 3500000,
-    state: "CA",
-    description: "Product liability - serious bodily injury claim",
-    lastActivity: "2025-01-04"
-  },
-  {
-    id: "LIT-2024-892",
-    claimNumber: "CLM-8821456",
-    claimant: "Chen Industries LLC",
-    type: "Arbitration",
-    status: "Pending",
-    severity: "High",
-    department: "Commercial Lines",
-    attorney: "Michael Torres",
-    adjuster: "Emily Chen",
-    dateOpened: "2024-11-15",
-    incurredReserve: 1800000,
-    paidToDate: 250000,
-    estimatedExposure: 2200000,
-    state: "NY",
-    description: "Contract dispute - breach of coverage terms",
-    lastActivity: "2025-01-02"
-  },
-  {
-    id: "LIT-2024-756",
-    claimNumber: "CLM-8798234",
-    claimant: "Thompson Family Trust",
-    type: "Mediation",
-    status: "Open",
-    severity: "Medium",
-    department: "Property",
-    attorney: "Jennifer Adams",
-    adjuster: "Robert Kim",
-    dateOpened: "2024-09-22",
-    incurredReserve: 450000,
-    paidToDate: 120000,
-    estimatedExposure: 550000,
-    state: "TX",
-    description: "Fire damage claim - coverage dispute",
-    lastActivity: "2024-12-28"
-  },
-  {
-    id: "DIS-2025-003",
-    claimNumber: "CLM-8850122",
-    claimant: "Martinez Employment Matter",
-    type: "Discipline",
-    status: "Open",
-    severity: "High",
-    department: "Employment",
-    attorney: "David Park",
-    adjuster: "Lisa Thompson",
-    dateOpened: "2025-01-02",
-    incurredReserve: 750000,
-    paidToDate: 45000,
-    estimatedExposure: 1200000,
-    state: "FL",
-    description: "Wrongful termination - discrimination allegations",
-    lastActivity: "2025-01-04"
-  },
-  {
-    id: "LIT-2024-623",
-    claimNumber: "CLM-8756891",
-    claimant: "Westfield Medical Group",
-    type: "Litigation",
-    status: "In Trial",
-    severity: "Critical",
-    department: "Professional Liability",
-    attorney: "Sarah Mitchell",
-    adjuster: "James Wilson",
-    dateOpened: "2024-06-14",
-    incurredReserve: 4500000,
-    paidToDate: 890000,
-    estimatedExposure: 6000000,
-    state: "IL",
-    description: "Medical malpractice - multiple plaintiffs",
-    lastActivity: "2025-01-04"
-  },
-  {
-    id: "LIT-2024-589",
-    claimNumber: "CLM-8734521",
-    claimant: "Atlantic Shipping Co.",
-    type: "Arbitration",
-    status: "Closed",
-    severity: "Low",
-    department: "Marine",
-    attorney: "Michael Torres",
-    adjuster: "Emily Chen",
-    dateOpened: "2024-05-08",
-    dateClosed: "2024-12-15",
-    incurredReserve: 320000,
-    paidToDate: 285000,
-    estimatedExposure: 320000,
-    state: "LA",
-    description: "Cargo damage claim - resolved favorably",
-    lastActivity: "2024-12-15"
-  },
-  {
-    id: "DIS-2024-445",
-    claimNumber: "CLM-8712389",
-    claimant: "Baker Compliance Review",
-    type: "Discipline",
-    status: "Pending",
-    severity: "Medium",
-    department: "Regulatory",
-    attorney: "Jennifer Adams",
-    adjuster: "Robert Kim",
-    dateOpened: "2024-08-19",
-    incurredReserve: 180000,
-    paidToDate: 35000,
-    estimatedExposure: 250000,
-    state: "NV",
-    description: "Regulatory compliance investigation",
-    lastActivity: "2024-12-20"
-  },
-  {
-    id: "LIT-2024-398",
-    claimNumber: "CLM-8698765",
-    claimant: "Sunrise Construction LLC",
-    type: "Litigation",
-    status: "Open",
-    severity: "High",
-    department: "Construction",
-    attorney: "David Park",
-    adjuster: "Lisa Thompson",
-    dateOpened: "2024-07-03",
-    incurredReserve: 2100000,
-    paidToDate: 425000,
-    estimatedExposure: 2800000,
-    state: "AZ",
-    description: "Construction defect - multi-family development",
-    lastActivity: "2025-01-03"
-  },
-  {
-    id: "LIT-2025-012",
-    claimNumber: "CLM-8855678",
-    claimant: "GreenTech Solutions",
-    type: "Mediation",
-    status: "Open",
-    severity: "Medium",
-    department: "Environmental",
-    attorney: "Sarah Mitchell",
-    adjuster: "James Wilson",
-    dateOpened: "2025-01-04",
-    incurredReserve: 890000,
-    paidToDate: 0,
-    estimatedExposure: 1100000,
-    state: "WA",
-    description: "Environmental contamination claim",
-    lastActivity: "2025-01-04"
-  },
-  {
-    id: "LIT-2024-512",
-    claimNumber: "CLM-8723456",
-    claimant: "Miller Auto Group",
-    type: "Litigation",
-    status: "Closed",
-    severity: "Low",
-    department: "Auto",
-    attorney: "Michael Torres",
-    adjuster: "Emily Chen",
-    dateOpened: "2024-04-12",
-    dateClosed: "2024-11-30",
-    incurredReserve: 125000,
-    paidToDate: 98500,
-    estimatedExposure: 125000,
-    state: "OH",
-    description: "Fleet accident claim - settled",
-    lastActivity: "2024-11-30"
-  },
-  {
-    id: "DIS-2024-378",
-    claimNumber: "CLM-8687234",
-    claimant: "Johnson HR Investigation",
-    type: "Discipline",
-    status: "Closed",
-    severity: "Medium",
-    department: "Employment",
-    attorney: "Jennifer Adams",
-    adjuster: "Robert Kim",
-    dateOpened: "2024-06-28",
-    dateClosed: "2024-12-01",
-    incurredReserve: 340000,
-    paidToDate: 275000,
-    estimatedExposure: 340000,
-    state: "GA",
-    description: "Harassment claim - resolved",
-    lastActivity: "2024-12-01"
-  },
-  {
-    id: "LIT-2024-834",
-    claimNumber: "CLM-8812567",
-    claimant: "Pacific Distributors Inc.",
-    type: "Litigation",
-    status: "Open",
-    severity: "High",
-    department: "Products",
-    attorney: "David Park",
-    adjuster: "Lisa Thompson",
-    dateOpened: "2024-10-22",
-    incurredReserve: 1650000,
-    paidToDate: 180000,
-    estimatedExposure: 2100000,
-    state: "OR",
-    description: "Product recall litigation - consumer class action",
-    lastActivity: "2025-01-02"
-  }
+  { id: "5575293", class: "LITIGATION", prefix: "55", claim: "7529", claimant: "3", coverage: "BI", uniqueRecord: "5575293", expCategory: "LIT", dept: "ATR", team: "TEAM 26", adjusterUsername: "FERNMEJORA", adjusterName: "FERNANDO MEJORADO", creditedTeam: "TEAM 26", creditedAdj: "FERNANDO MEJORADO", paymentDate: "Mar 28, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 885, netAmount: 0, cwpCwn: "CWN", startPainLvl: 8, endPainLvl: 9, transferDate: "Nov 11, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 53" },
+  { id: "392985794", class: "LITIGATION", prefix: "39", claim: "298579", claimant: "4", coverage: "BI", uniqueRecord: "392985794", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "NEORODRIG", adjusterName: "NEO RODRIGUEZ", creditedTeam: "TEAM 43", creditedAdj: "JOSEPH JIMENEZ", paymentDate: "Nov 25, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 6865.5, netAmount: 17500, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 6, transferDate: "Nov 20, 2025", previousDept: "BI3", previousTeam: "TEAM 43" },
+  { id: "78101643", class: "LITIGATION", prefix: "78", claim: "10164", claimant: "3", coverage: "BI", uniqueRecord: "78101643", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "SYLVSTIGRE", adjusterName: "SYLVIA GREGORY", creditedTeam: "TEAM 61", creditedAdj: "SYLVIA GREGORY", paymentDate: "Sep 4, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 992, netAmount: 27500, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 5, transferDate: "Dec 16, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "7295622", class: "LITIGATION", prefix: "72", claim: "9562", claimant: "2", coverage: "BI", uniqueRecord: "7295622", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 50", adjusterUsername: "RAULMIGCHA", adjusterName: "RAUL CHAVEZ", creditedTeam: "TEAM 50", creditedAdj: "RAUL CHAVEZ", paymentDate: "Oct 8, 2025", indemnitiesAmount: 425000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 425000, netAmount: 425000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 4, transferDate: "Jun 4, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "65135083", class: "LITIGATION", prefix: "65", claim: "13508", claimant: "3", coverage: "BI", uniqueRecord: "65135083", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "SHERMOSA", adjusterName: "SCOTT HERMOSA", creditedTeam: "TEAM 61", creditedAdj: "SCOTT HERMOSA", paymentDate: "Aug 15, 2025", indemnitiesAmount: 9000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 9000, netAmount: 9000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 4, transferDate: "Mar 3, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "65146165", class: "LITIGATION", prefix: "65", claim: "14616", claimant: "5", coverage: "BI", uniqueRecord: "65146165", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 53", adjusterUsername: "FERNMEJORA", adjusterName: "FERNANDO MEJORADO", creditedTeam: "TEAM 53", creditedAdj: "FERNANDO MEJORADO", paymentDate: "Jun 20, 2025", indemnitiesAmount: 20000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 20000, netAmount: 20000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 8, transferDate: "Jan 31, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "65151012", class: "LITIGATION", prefix: "65", claim: "15101", claimant: "2", coverage: "BI", uniqueRecord: "65151012", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "SABRMONARR", adjusterName: "SABRINA ARRIOLA", creditedTeam: "TEAM 68", creditedAdj: "SABRINA ARRIOLA", paymentDate: "May 9, 2025", indemnitiesAmount: 24000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 24000, netAmount: 24000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 8, transferDate: "Apr 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "78175753", class: "LITIGATION", prefix: "78", claim: "17575", claimant: "3", coverage: "BI", uniqueRecord: "78175753", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "GONZAJESSI", adjusterName: "JESSICA GONZALEZ", creditedTeam: "TEAM 68", creditedAdj: "JESSICA GONZALEZ", paymentDate: "Jun 23, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 329.25, netAmount: 115000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "May 17, 2024", previousDept: "BI3", previousTeam: "TEAM 49" },
+  { id: "72175782", class: "LITIGATION", prefix: "72", claim: "17578", claimant: "2", coverage: "BI", uniqueRecord: "72175782", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 63", adjusterUsername: "VICTOGAYTA", adjusterName: "VICTORIA GAYTAN", creditedTeam: "TEAM 63", creditedAdj: "VICTORIA GAYTAN", paymentDate: "Mar 5, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 7, transferDate: "Jun 27, 2024", previousDept: "ATR", previousTeam: "TEAM 56" },
+  { id: "65224402", class: "LITIGATION", prefix: "65", claim: "22440", claimant: "2", coverage: "BI", uniqueRecord: "65224402", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 53", adjusterUsername: "ROBRIONES", adjusterName: "ROSA BRIONES", creditedTeam: "TEAM 53", creditedAdj: "ROSA BRIONES", paymentDate: "Jun 25, 2025", indemnitiesAmount: 3600, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 3600, netAmount: 3600, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 8, transferDate: "Jun 25, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 53" },
+  { id: "71239735", class: "LITIGATION", prefix: "71", claim: "23973", claimant: "5", coverage: "BI", uniqueRecord: "71239735", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "MELIMARDEL", adjusterName: "MELISSA DE LEON", creditedTeam: "TEAM 67", creditedAdj: "MELISSA DE LEON", paymentDate: "Sep 2, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 1645.42, netAmount: 0, cwpCwn: "CWN", startPainLvl: 3, endPainLvl: 5, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "65236745", class: "LITIGATION", prefix: "65", claim: "23674", claimant: "5", coverage: "BI", uniqueRecord: "65236745", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 42", adjusterUsername: "CLARALESAN", adjusterName: "CLARISSA SANCHEZ", creditedTeam: "TEAM 42", creditedAdj: "CLARISSA SANCHEZ", paymentDate: "Jul 23, 2025", indemnitiesAmount: 19000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 19000, netAmount: 19000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 7, transferDate: "Mar 17, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "393170563", class: "LITIGATION", prefix: "39", claim: "317056", claimant: "3", coverage: "BI", uniqueRecord: "393170563", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERMOSA", adjusterName: "SCOTT HERMOSA", creditedTeam: "TEAM 67", creditedAdj: "SCOTT HERMOSA", paymentDate: "Nov 4, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1568.5, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "65327422", class: "BI3", prefix: "65", claim: "32742", claimant: "2", coverage: "BI", uniqueRecord: "65327422", expCategory: "LIT", dept: "BI3", team: "TEAM 45", adjusterUsername: "CIJAWILAYA", adjusterName: "CIJA WILSON-AYALA", creditedTeam: "TEAM 45", creditedAdj: "CIJA WILSON-AYALA", paymentDate: "Jun 13, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 245, netAmount: 31972.65, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 8, transferDate: "Nov 27, 2024", previousDept: "BI3", previousTeam: "TEAM 45" },
+  { id: "62344253", class: "LITIGATION", prefix: "62", claim: "34425", claimant: "3", coverage: "BI", uniqueRecord: "62344253", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "MARCDAVOCH", adjusterName: "MARCUS OCHOA", creditedTeam: "TEAM 66", creditedAdj: "MARCUS OCHOA", paymentDate: "Aug 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 2258.5, netAmount: 20750, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 6, transferDate: "Nov 10, 2023", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "89354753", class: "LITIGATION", prefix: "89", claim: "35475", claimant: "3", coverage: "BI", uniqueRecord: "89354753", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 54", adjusterUsername: "MARIHERHER", adjusterName: "MARIELA HERNANDEZ", creditedTeam: "TEAM 54", creditedAdj: "MARIELA HERNANDEZ", paymentDate: "Mar 12, 2025", indemnitiesAmount: 30000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 30000, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 2, transferDate: "Mar 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "393349672", class: "BI3", prefix: "39", claim: "334967", claimant: "2", coverage: "BI", uniqueRecord: "393349672", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "TRISHBURGO", adjusterName: "TRISHA BURGOS", creditedTeam: "PI TEAM", creditedAdj: "KARLA FIERRO", paymentDate: "Nov 19, 2025", indemnitiesAmount: -25000, indemnitiesCheckCount: -1, expensesCheckCount: 0, totalAmount: -25000, netAmount: 0, cwpCwn: "CWN", startPainLvl: 0, endPainLvl: 0, transferDate: "Dec 29, 2025", previousDept: "BI3", previousTeam: "PI TEAM" },
+  { id: "78457619", class: "LITIGATION", prefix: "78", claim: "45761", claimant: "9", coverage: "BI", uniqueRecord: "78457619", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERDENROD", adjusterName: "SHERRIE RODRIGUEZ", creditedTeam: "TEAM 67", creditedAdj: "SHERRIE RODRIGUEZ", paymentDate: "Jun 26, 2025", indemnitiesAmount: 9000, indemnitiesCheckCount: 3, expensesCheckCount: 0, totalAmount: 9000, netAmount: 9000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 7, transferDate: "Apr 24, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "65468743", class: "LITIGATION", prefix: "65", claim: "46874", claimant: "3", coverage: "BI", uniqueRecord: "65468743", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHRIRICBAC", adjusterName: "CHRISTOPHER BACHAND", creditedTeam: "TEAM 68", creditedAdj: "CHRISTOPHER BACHAND", paymentDate: "Feb 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 760.5, netAmount: 12000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 3, transferDate: "Nov 5, 2024", previousDept: "BI3", previousTeam: "TEAM 31" },
+  { id: "62472633", class: "LITIGATION", prefix: "62", claim: "47263", claimant: "3", coverage: "BI", uniqueRecord: "62472633", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERMOSA", adjusterName: "SCOTT HERMOSA", creditedTeam: "TEAM 67", creditedAdj: "SCOTT HERMOSA", paymentDate: "Sep 4, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 4859.35, netAmount: 0, cwpCwn: "CWN", startPainLvl: 10, endPainLvl: 10, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "63521702", class: "LITIGATION", prefix: "63", claim: "52170", claimant: "2", coverage: "BI", uniqueRecord: "63521702", expCategory: "LIT", dept: "ATR", team: "TEAM 47", adjusterUsername: "SARAHHENDE", adjusterName: "SARAH HENDERSON", creditedTeam: "TEAM 47", creditedAdj: "SARAH HENDERSON", paymentDate: "Dec 12, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 2000, netAmount: 0, cwpCwn: "CWN", startPainLvl: 8, endPainLvl: 7, transferDate: "Nov 25, 2025", previousDept: "BI3", previousTeam: "TEAM 31" },
+  { id: "65534463", class: "LITIGATION", prefix: "65", claim: "53446", claimant: "3", coverage: "BI", uniqueRecord: "65534463", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 57", adjusterUsername: "VIVIAAVILA", adjusterName: "VIVIANA AVILA", creditedTeam: "TEAM 57", creditedAdj: "VIVIANA AVILA", paymentDate: "Feb 11, 2025", indemnitiesAmount: 21000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 21000, netAmount: 21000, cwpCwn: "CWP", startPainLvl: 7, endPainLvl: 7, transferDate: "May 28, 2024", previousDept: "ATR", previousTeam: "TEAM 51" },
+  { id: "72535152", class: "LITIGATION", prefix: "72", claim: "53515", claimant: "2", coverage: "BI", uniqueRecord: "72535152", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHERAHARRI", adjusterName: "CHERYLE HARRIS-CHANEY", creditedTeam: "TEAM 68", creditedAdj: "CHERYLE HARRIS-CHANEY", paymentDate: "Feb 13, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1205, netAmount: 14677, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 3, transferDate: "Nov 17, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "66520385", class: "LITIGATION", prefix: "66", claim: "52038", claimant: "5", coverage: "BI", uniqueRecord: "66520385", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "JOSEABRCAR", adjusterName: "JOSE CARDENAS", creditedTeam: "TEAM 67", creditedAdj: "CAROLINA ARREDONDO", paymentDate: "May 16, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 390, netAmount: 0, cwpCwn: "CWN", startPainLvl: 1, endPainLvl: 4, transferDate: "Dec 2, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "78537023", class: "LITIGATION", prefix: "78", claim: "53702", claimant: "3", coverage: "BI", uniqueRecord: "78537023", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "PRIANNCANT", adjusterName: "PRISCILLA CANTU", creditedTeam: "TEAM 67", creditedAdj: "PRISCILLA CANTU", paymentDate: "Feb 3, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 2950, netAmount: 20000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 7, transferDate: "Mar 3, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 57" },
+  { id: "78591294", class: "LITIGATION", prefix: "78", claim: "59129", claimant: "4", coverage: "BI", uniqueRecord: "78591294", expCategory: "LIM", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERDENROD", adjusterName: "SHERRIE RODRIGUEZ", creditedTeam: "TEAM 67", creditedAdj: "SHERRIE RODRIGUEZ", paymentDate: "Apr 25, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 547.1, netAmount: 0, cwpCwn: "CWN", startPainLvl: 2, endPainLvl: 10, transferDate: "Sep 29, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "70635923", class: "LITIGATION", prefix: "70", claim: "63592", claimant: "3", coverage: "BI", uniqueRecord: "70635923", expCategory: "LIT", dept: "ATR", team: "TEAM 32", adjusterUsername: "CLARALESAN", adjusterName: "CLARISSA SANCHEZ", creditedTeam: "TEAM 32", creditedAdj: "CLARISSA SANCHEZ", paymentDate: "Dec 19, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 85, netAmount: 0, cwpCwn: "CWN", startPainLvl: 6, endPainLvl: 10, transferDate: "Nov 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "393710423", class: "ATR", prefix: "39", claim: "371042", claimant: "3", coverage: "BI", uniqueRecord: "393710423", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "ANTHOWALOP", adjusterName: "ANTHONY LOPEZ", creditedTeam: "PI TEAM", creditedAdj: "KARLA FIERRO", paymentDate: "Nov 13, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 0, endPainLvl: 0, transferDate: "Nov 13, 2025", previousDept: "ATR", previousTeam: "PI TEAM" },
+  { id: "78673992", class: "LITIGATION", prefix: "78", claim: "67399", claimant: "2", coverage: "BI", uniqueRecord: "78673992", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "ELIZAMOORE", adjusterName: "ELIZABETH MOORE", creditedTeam: "TEAM 68", creditedAdj: "ELIZABETH MOORE", paymentDate: "Feb 25, 2025", indemnitiesAmount: 55000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 55000, netAmount: 55000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Jan 21, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 60" },
+  { id: "65756152", class: "LITIGATION", prefix: "65", claim: "75615", claimant: "2", coverage: "BI", uniqueRecord: "65756152", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "ABRAJOSMAR", adjusterName: "ABRAHAM MARTINEZ", creditedTeam: "TEAM 66", creditedAdj: "ABRAHAM MARTINEZ", paymentDate: "Jul 11, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 3675, netAmount: 0, cwpCwn: "CWN", startPainLvl: 2, endPainLvl: 8, transferDate: "Oct 9, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "66764852", class: "LITIGATION", prefix: "66", claim: "76485", claimant: "2", coverage: "BI", uniqueRecord: "66764852", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "ELIZAMOORE", adjusterName: "ELIZABETH MOORE", creditedTeam: "TEAM 68", creditedAdj: "ELIZABETH MOORE", paymentDate: "Feb 20, 2025", indemnitiesAmount: 473.44, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 473.44, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 7, endPainLvl: 6, transferDate: "Jan 21, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 60" },
+  { id: "784944310", class: "LITIGATION", prefix: "78", claim: "49443", claimant: "10", coverage: "BI", uniqueRecord: "784944310", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERDENROD", adjusterName: "SHERRIE RODRIGUEZ", creditedTeam: "TEAM 67", creditedAdj: "SHERRIE RODRIGUEZ", paymentDate: "Apr 7, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 3450, netAmount: 22500, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Apr 24, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "65834502", class: "LITIGATION", prefix: "65", claim: "83450", claimant: "2", coverage: "BI", uniqueRecord: "65834502", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "JASOROYTHO", adjusterName: "JASON THOMAS", creditedTeam: "TEAM 66", creditedAdj: "JASON THOMAS", paymentDate: "Feb 10, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 2150, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Jan 24, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "72866063", class: "LITIGATION", prefix: "72", claim: "86606", claimant: "3", coverage: "BI", uniqueRecord: "72866063", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 66", creditedAdj: "RENE SANCHEZ", paymentDate: "Aug 21, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 32223.44, netAmount: 180000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "72876215", class: "LITIGATION", prefix: "72", claim: "87621", claimant: "5", coverage: "BI", uniqueRecord: "72876215", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHRIRICBAC", adjusterName: "CHRISTOPHER BACHAND", creditedTeam: "TEAM 68", creditedAdj: "CHRISTOPHER BACHAND", paymentDate: "May 16, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 130, netAmount: 11000, cwpCwn: "CWP", startPainLvl: 7, endPainLvl: 8, transferDate: "Mar 16, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "78894553", class: "LITIGATION", prefix: "78", claim: "89455", claimant: "3", coverage: "BI", uniqueRecord: "78894553", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 50", adjusterUsername: "RAULMIGCHA", adjusterName: "RAUL CHAVEZ", creditedTeam: "TEAM 50", creditedAdj: "RAUL CHAVEZ", paymentDate: "Mar 3, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 5500, netAmount: 0, cwpCwn: "CWN", startPainLvl: 6, endPainLvl: 8, transferDate: "Jun 4, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "62914402", class: "LITIGATION", prefix: "62", claim: "91440", claimant: "2", coverage: "BI", uniqueRecord: "62914402", expCategory: "LIT", dept: "ATR", team: "TEAM 32", adjusterUsername: "JOSETMEDIN", adjusterName: "JOSE MEDINA", creditedTeam: "TEAM 32", creditedAdj: "JOSE MEDINA", paymentDate: "Mar 6, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 30.67, netAmount: 0, cwpCwn: "CWN", startPainLvl: 3, endPainLvl: 6, transferDate: "Nov 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "72932172", class: "LITIGATION", prefix: "72", claim: "93217", claimant: "2", coverage: "BI", uniqueRecord: "72932172", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 42", adjusterUsername: "RAULMIGCHA", adjusterName: "RAUL CHAVEZ", creditedTeam: "TEAM 42", creditedAdj: "RAUL CHAVEZ", paymentDate: "Jan 16, 2025", indemnitiesAmount: 8000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 8000, netAmount: 8000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Jan 26, 2024", previousDept: "ATR", previousTeam: "TEAM 27" },
+  { id: "72920183", class: "LITIGATION", prefix: "72", claim: "92018", claimant: "3", coverage: "BI", uniqueRecord: "72920183", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "CHRIALOOLI", adjusterName: "CHRISTIAN OLIVAS", creditedTeam: "TEAM 50", creditedAdj: "MARIELA HERNANDEZ", paymentDate: "Dec 1, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 5, transferDate: "Nov 17, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 50" },
+  { id: "65968684", class: "LITIGATION", prefix: "65", claim: "96868", claimant: "4", coverage: "BI", uniqueRecord: "65968684", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "ERICYANES", adjusterName: "ERIC YANES", creditedTeam: "TEAM 61", creditedAdj: "ERIC YANES", paymentDate: "Mar 28, 2025", indemnitiesAmount: 25000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 25000, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Aug 10, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "631017142", class: "LITIGATION", prefix: "63", claim: "101714", claimant: "2", coverage: "BI", uniqueRecord: "631017142", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 57", adjusterUsername: "EVELPAVNOR", adjusterName: "EVELYN NORIEGA", creditedTeam: "TEAM 57", creditedAdj: "EVELYN NORIEGA", paymentDate: "Apr 25, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 511.4, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 7, transferDate: "Mar 7, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 53" },
+  { id: "891024053", class: "BI3", prefix: "89", claim: "102405", claimant: "3", coverage: "BI", uniqueRecord: "891024053", expCategory: "LDL", dept: "BI3", team: "TEAM 49", adjusterUsername: "MICGARCIA", adjusterName: "MICHELLE ORTIZ", creditedTeam: "TEAM 49", creditedAdj: "MICHELLE ORTIZ", paymentDate: "Jun 27, 2025", indemnitiesAmount: 11000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 11000, netAmount: 11000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Feb 28, 2025", previousDept: "BI3", previousTeam: "TEAM 49" },
+  { id: "651056963", class: "BI3", prefix: "65", claim: "105696", claimant: "3", coverage: "BI", uniqueRecord: "651056963", expCategory: "LIT", dept: "BI3", team: "TEAM 49", adjusterUsername: "MICGARCIA", adjusterName: "MICHELLE ORTIZ", creditedTeam: "TEAM 49", creditedAdj: "MICHELLE ORTIZ", paymentDate: "Aug 4, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 2430.21, netAmount: 12000, cwpCwn: "CWP", startPainLvl: 6, endPainLvl: 6, transferDate: "Jul 25, 2024", previousDept: "BI3", previousTeam: "TEAM 43" },
+  { id: "781120343", class: "LITIGATION", prefix: "78", claim: "112034", claimant: "3", coverage: "BI", uniqueRecord: "781120343", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 57", adjusterUsername: "EVELPAVNOR", adjusterName: "EVELYN NORIEGA", creditedTeam: "TEAM 57", creditedAdj: "EVELYN NORIEGA", paymentDate: "Oct 16, 2025", indemnitiesAmount: 28000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 28000, netAmount: 28000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 6, transferDate: "Oct 16, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 53" },
+  { id: "801172416", class: "LITIGATION", prefix: "80", claim: "117241", claimant: "6", coverage: "BI", uniqueRecord: "801172416", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 63", adjusterUsername: "LYNETENRIQ", adjusterName: "LYNETTE ENRIQUEZ", creditedTeam: "TEAM 63", creditedAdj: "LYNETTE ENRIQUEZ", paymentDate: "Jan 30, 2025", indemnitiesAmount: 37500, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 37500, netAmount: 37500, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Jan 30, 2025", previousDept: "LITIGATION", previousTeam: "LIT SPECIALISTS" },
+  { id: "401178953", class: "LITIGATION", prefix: "40", claim: "117895", claimant: "3", coverage: "BI", uniqueRecord: "401178953", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 42", adjusterUsername: "MARIHERHER", adjusterName: "MARIELA HERNANDEZ", creditedTeam: "TEAM 42", creditedAdj: "MARIELA HERNANDEZ", paymentDate: "Sep 2, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 204.8, netAmount: 12500, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 4, transferDate: "Aug 11, 2025", previousDept: "ATR", previousTeam: "TEAM 51" },
+  { id: "621228378", class: "LITIGATION", prefix: "62", claim: "122837", claimant: "8", coverage: "BI", uniqueRecord: "621228378", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "TANEEMARTE", adjusterName: "TANAE MARTEL", creditedTeam: "TEAM 61", creditedAdj: "SCOTT HERMOSA", paymentDate: "Aug 29, 2025", indemnitiesAmount: 10000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 10000, netAmount: 10000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 4, transferDate: "Jul 31, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "801259393", class: "LITIGATION", prefix: "80", claim: "125939", claimant: "3", coverage: "BI", uniqueRecord: "801259393", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHERAHARRI", adjusterName: "CHERYLE HARRIS-CHANEY", creditedTeam: "TEAM 68", creditedAdj: "CHERYLE HARRIS-CHANEY", paymentDate: "Dec 19, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 227.8, netAmount: 0, cwpCwn: "CWN", startPainLvl: 5, endPainLvl: 7, transferDate: "Nov 12, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "651272512", class: "BI3", prefix: "65", claim: "127251", claimant: "2", coverage: "BI", uniqueRecord: "651272512", expCategory: "LIT", dept: "BI3", team: "TEAM 49", adjusterUsername: "GINANICNIC", adjusterName: "GINA NICHOLSON", creditedTeam: "TEAM 49", creditedAdj: "GINA NICHOLSON", paymentDate: "Apr 29, 2025", indemnitiesAmount: 22500, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 22500, netAmount: 22500, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Apr 22, 2025", previousDept: "BI3", previousTeam: "TEAM 49" },
+  { id: "651289972", class: "LITIGATION", prefix: "65", claim: "128997", claimant: "2", coverage: "BI", uniqueRecord: "651289972", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "MELIMARDEL", adjusterName: "MELISSA DE LEON", creditedTeam: "TEAM 67", creditedAdj: "MELISSA DE LEON", paymentDate: "Apr 18, 2025", indemnitiesAmount: 10000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 10000, netAmount: 10000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 6, transferDate: "Feb 25, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "7811761512", class: "LITIGATION", prefix: "78", claim: "117615", claimant: "12", coverage: "BI", uniqueRecord: "7811761512", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "CARELIQUE", adjusterName: "CAROLINA ARREDONDO", creditedTeam: "TEAM 61", creditedAdj: "CAROLINA ARREDONDO", paymentDate: "May 15, 2025", indemnitiesAmount: 7500, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 7500, netAmount: 7500, cwpCwn: "CWP", startPainLvl: 8, endPainLvl: 8, transferDate: "Mar 27, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "781338272", class: "LITIGATION", prefix: "78", claim: "133827", claimant: "2", coverage: "BI", uniqueRecord: "781338272", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "SABRMONARR", adjusterName: "SABRINA ARRIOLA", creditedTeam: "TEAM 68", creditedAdj: "SABRINA ARRIOLA", paymentDate: "Jul 23, 2025", indemnitiesAmount: 3000, indemnitiesCheckCount: 3, expensesCheckCount: 0, totalAmount: 3000, netAmount: 3000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Apr 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "401386132", class: "LITIGATION", prefix: "40", claim: "138613", claimant: "2", coverage: "BI", uniqueRecord: "401386132", expCategory: "LIT", dept: "ATR", team: "TEAM 28", adjusterUsername: "MAYTEZAVAL", adjusterName: "MAYTE ZAVALA", creditedTeam: "TEAM 28", creditedAdj: "MAYTE ZAVALA", paymentDate: "Feb 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 231.75, netAmount: 0, cwpCwn: "CWN", startPainLvl: 2, endPainLvl: 5, transferDate: "Nov 11, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 50" },
+  { id: "631399185", class: "LITIGATION", prefix: "63", claim: "139918", claimant: "5", coverage: "BI", uniqueRecord: "631399185", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 54", adjusterUsername: "MARIHERHER", adjusterName: "MARIELA HERNANDEZ", creditedTeam: "TEAM 54", creditedAdj: "MARIELA HERNANDEZ", paymentDate: "Apr 11, 2025", indemnitiesAmount: 5000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 5000, netAmount: 5000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 6, transferDate: "Jan 14, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "721438102", class: "LITIGATION", prefix: "72", claim: "143810", claimant: "2", coverage: "BI", uniqueRecord: "721438102", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHRIRICBAC", adjusterName: "CHRISTOPHER BACHAND", creditedTeam: "TEAM 68", creditedAdj: "CHRISTOPHER BACHAND", paymentDate: "Jul 7, 2025", indemnitiesAmount: 7500, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 7500, netAmount: 7500, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 7, transferDate: "Nov 5, 2024", previousDept: "BI3", previousTeam: "TEAM 31" },
+  { id: "651440404", class: "LITIGATION", prefix: "65", claim: "144040", claimant: "4", coverage: "BI", uniqueRecord: "651440404", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "JASOROYTHO", adjusterName: "JASON THOMAS", creditedTeam: "TEAM 66", creditedAdj: "JASON THOMAS", paymentDate: "Feb 4, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 7, transferDate: "Jan 24, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "78403867", class: "ATR", prefix: "78", claim: "40386", claimant: "7", coverage: "BI", uniqueRecord: "78403867", expCategory: "SPD", dept: "ATR", team: "TEAM 32", adjusterUsername: "CAGUILLON", adjusterName: "CYNTHIA AGUILLON", creditedTeam: "TEAM 32", creditedAdj: "CYNTHIA AGUILLON", paymentDate: "Mar 18, 2025", indemnitiesAmount: 16000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 16000, netAmount: 16000, cwpCwn: "CWP", startPainLvl: 0, endPainLvl: 8, transferDate: "May 28, 2024", previousDept: "ATR", previousTeam: "TEAM 26" },
+  { id: "721457713", class: "LITIGATION", prefix: "72", claim: "145771", claimant: "3", coverage: "BI", uniqueRecord: "721457713", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 50", adjusterUsername: "MARIHERHER", adjusterName: "MARIELA HERNANDEZ", creditedTeam: "TEAM 50", creditedAdj: "MARIELA HERNANDEZ", paymentDate: "Jan 20, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 44955.36, netAmount: 0, cwpCwn: "CWN", startPainLvl: 10, endPainLvl: 10, transferDate: "Nov 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "721474882", class: "LITIGATION", prefix: "72", claim: "147488", claimant: "2", coverage: "BI", uniqueRecord: "721474882", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "PRIANNCANT", adjusterName: "PRISCILLA CANTU", creditedTeam: "TEAM 67", creditedAdj: "PRISCILLA CANTU", paymentDate: "Jan 23, 2025", indemnitiesAmount: 8750, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 8750, netAmount: 8753, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 7, transferDate: "Aug 12, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "681485353", class: "LITIGATION", prefix: "68", claim: "148535", claimant: "3", coverage: "BI", uniqueRecord: "681485353", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 50", adjusterUsername: "RAULMIGCHA", adjusterName: "RAUL CHAVEZ", creditedTeam: "TEAM 50", creditedAdj: "RAUL CHAVEZ", paymentDate: "Aug 18, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 12204.44, netAmount: 20000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 8, transferDate: "Jun 4, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "721501162", class: "LITIGATION", prefix: "72", claim: "150116", claimant: "2", coverage: "BI", uniqueRecord: "721501162", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "JASOROYTHO", adjusterName: "JASON THOMAS", creditedTeam: "TEAM 66", creditedAdj: "JASON THOMAS", paymentDate: "Feb 3, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 5, transferDate: "Jan 24, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "731443846", class: "BI3", prefix: "73", claim: "144384", claimant: "6", coverage: "BI", uniqueRecord: "731443846", expCategory: "ATR", dept: "BI3", team: "TEAM 31", adjusterUsername: "RONASANMAT", adjusterName: "RONALDO SANCHEZ-MATA", creditedTeam: "TEAM 31", creditedAdj: "RONALDO SANCHEZ-MATA", paymentDate: "Jun 24, 2025", indemnitiesAmount: 7206.96, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 7206.96, netAmount: 7206.96, cwpCwn: "CWP", startPainLvl: 10, endPainLvl: 10, transferDate: "Nov 3, 2025", previousDept: "BI3", previousTeam: "TEAM 48" },
+  { id: "651515303", class: "LITIGATION", prefix: "65", claim: "151530", claimant: "3", coverage: "BI", uniqueRecord: "651515303", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "SABRMONARR", adjusterName: "SABRINA ARRIOLA", creditedTeam: "TEAM 66", creditedAdj: "SABRINA ARRIOLA", paymentDate: "Jul 24, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 2413.98, netAmount: 0, cwpCwn: "CWN", startPainLvl: 5, endPainLvl: 8, transferDate: "Oct 27, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "721465706", class: "LITIGATION", prefix: "72", claim: "146570", claimant: "6", coverage: "BI", uniqueRecord: "721465706", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 68", creditedAdj: "RENE SANCHEZ", paymentDate: "May 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 9.2, netAmount: 14000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Jul 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "721539914", class: "LITIGATION", prefix: "72", claim: "153991", claimant: "4", coverage: "BI", uniqueRecord: "721539914", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERDENROD", adjusterName: "SHERRIE RODRIGUEZ", creditedTeam: "TEAM 67", creditedAdj: "SHERRIE RODRIGUEZ", paymentDate: "Aug 29, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 2969.5, netAmount: 0, cwpCwn: "CWN", startPainLvl: 3, endPainLvl: 7, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "781556454", class: "LITIGATION", prefix: "78", claim: "155645", claimant: "4", coverage: "BI", uniqueRecord: "781556454", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "MARCDAVOCH", adjusterName: "MARCUS OCHOA", creditedTeam: "TEAM 66", creditedAdj: "MARCUS OCHOA", paymentDate: "Apr 17, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 256.54, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 8, transferDate: "Mar 25, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "631573603", class: "LITIGATION", prefix: "63", claim: "157360", claimant: "3", coverage: "BI", uniqueRecord: "631573603", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 57", adjusterUsername: "EVELPAVNOR", adjusterName: "EVELYN NORIEGA", creditedTeam: "TEAM 57", creditedAdj: "EVELYN NORIEGA", paymentDate: "Sep 4, 2025", indemnitiesAmount: 26000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 26000, netAmount: 26000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 6, transferDate: "Mar 7, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 53" },
+  { id: "721579052", class: "LITIGATION", prefix: "72", claim: "157905", claimant: "2", coverage: "BI", uniqueRecord: "721579052", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "ERICYANES", adjusterName: "ERIC YANES", creditedTeam: "TEAM 61", creditedAdj: "ERIC YANES", paymentDate: "Mar 31, 2025", indemnitiesAmount: 443.88, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 443.88, netAmount: 9000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 4, transferDate: "May 16, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "721556633", class: "LITIGATION", prefix: "72", claim: "155663", claimant: "3", coverage: "BI", uniqueRecord: "721556633", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "NEORODRIG", adjusterName: "NEO RODRIGUEZ", creditedTeam: "TEAM 68", creditedAdj: "RENE SANCHEZ", paymentDate: "Aug 29, 2025", indemnitiesAmount: 15000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 15000, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 0, endPainLvl: 8, transferDate: "Aug 17, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "781708712", class: "LITIGATION", prefix: "78", claim: "170871", claimant: "2", coverage: "BI", uniqueRecord: "781708712", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 68", creditedAdj: "RENE SANCHEZ", paymentDate: "May 16, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 525, netAmount: 7000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Aug 24, 2023", previousDept: "ATR", previousTeam: "TEAM 51" },
+  { id: "721731954", class: "LITIGATION", prefix: "72", claim: "173195", claimant: "4", coverage: "BI", uniqueRecord: "721731954", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "CARELIQUE", adjusterName: "CAROLINA ARREDONDO", creditedTeam: "TEAM 61", creditedAdj: "CAROLINA ARREDONDO", paymentDate: "Feb 17, 2025", indemnitiesAmount: 12000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 12000, netAmount: 12000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Aug 9, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "721740484", class: "LITIGATION", prefix: "72", claim: "174048", claimant: "4", coverage: "BI", uniqueRecord: "721740484", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "CARELIQUE", adjusterName: "CAROLINA ARREDONDO", creditedTeam: "TEAM 61", creditedAdj: "CAROLINA ARREDONDO", paymentDate: "May 9, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 2200, netAmount: 12000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 8, transferDate: "Mar 27, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "781806912", class: "LITIGATION", prefix: "78", claim: "180691", claimant: "2", coverage: "BI", uniqueRecord: "781806912", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "SHERMOSA", adjusterName: "SCOTT HERMOSA", creditedTeam: "TEAM 67", creditedAdj: "SCOTT HERMOSA", paymentDate: "May 16, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 558.75, netAmount: 0, cwpCwn: "CWN", startPainLvl: 4, endPainLvl: 5, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "721793634", class: "LITIGATION", prefix: "72", claim: "179363", claimant: "4", coverage: "BI", uniqueRecord: "721793634", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 66", creditedAdj: "RENE SANCHEZ", paymentDate: "Apr 17, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 800.63, netAmount: 0, cwpCwn: "CWN", startPainLvl: 1, endPainLvl: 1, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "651826063", class: "LITIGATION", prefix: "65", claim: "182606", claimant: "3", coverage: "BI", uniqueRecord: "651826063", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "SYLVSTIGRE", adjusterName: "SYLVIA GREGORY", creditedTeam: "TEAM 61", creditedAdj: "SYLVIA GREGORY", paymentDate: "Mar 5, 2025", indemnitiesAmount: 30000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 30000, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 10, transferDate: "Oct 30, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 60" },
+  { id: "401750234", class: "LITIGATION", prefix: "40", claim: "175023", claimant: "4", coverage: "BI", uniqueRecord: "401750234", expCategory: "LIM", dept: "ATR", team: "TEAM 32", adjusterUsername: "JOSETMEDIN", adjusterName: "JOSE MEDINA", creditedTeam: "TEAM 32", creditedAdj: "JOSE MEDINA", paymentDate: "Jan 20, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1912.5, netAmount: 0, cwpCwn: "CWN", startPainLvl: 1, endPainLvl: 7, transferDate: "Nov 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "651881913", class: "LITIGATION", prefix: "65", claim: "188191", claimant: "3", coverage: "BI", uniqueRecord: "651881913", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 68", creditedAdj: "RENE SANCHEZ", paymentDate: "Jul 9, 2025", indemnitiesAmount: 30000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 30000, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 5, transferDate: "Jun 7, 2023", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "721898713", class: "LITIGATION", prefix: "72", claim: "189871", claimant: "3", coverage: "BI", uniqueRecord: "721898713", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "PRIANNCANT", adjusterName: "PRISCILLA CANTU", creditedTeam: "TEAM 67", creditedAdj: "PRISCILLA CANTU", paymentDate: "Jan 8, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 3000, netAmount: 5000, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 4, transferDate: "Oct 14, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "651888872", class: "LITIGATION", prefix: "65", claim: "188887", claimant: "2", coverage: "BI", uniqueRecord: "651888872", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 53", adjusterUsername: "FERNMEJORA", adjusterName: "FERNANDO MEJORADO", creditedTeam: "TEAM 53", creditedAdj: "FERNANDO MEJORADO", paymentDate: "Mar 10, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 1250, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 9, transferDate: "Jan 31, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "781911444", class: "LITIGATION", prefix: "78", claim: "191144", claimant: "4", coverage: "BI", uniqueRecord: "781911444", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "SABRMONARR", adjusterName: "SABRINA ARRIOLA", creditedTeam: "TEAM 66", creditedAdj: "SABRINA ARRIOLA", paymentDate: "Aug 8, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 4423.3, netAmount: 0, cwpCwn: "CWN", startPainLvl: 1, endPainLvl: 9, transferDate: "Oct 27, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "801913345", class: "BI3", prefix: "80", claim: "191334", claimant: "5", coverage: "BI", uniqueRecord: "801913345", expCategory: "LIT", dept: "BI3", team: "TEAM 43", adjusterUsername: "LAURAREYNA", adjusterName: "LAURA GARCIA", creditedTeam: "TEAM 43", creditedAdj: "LAURA GARCIA", paymentDate: "May 12, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 3400, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 5, endPainLvl: 5, transferDate: "Aug 19, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 63" },
+  { id: "891939803", class: "LITIGATION", prefix: "89", claim: "193980", claimant: "3", coverage: "BI", uniqueRecord: "891939803", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "ANTHOWALOP", adjusterName: "ANTHONY LOPEZ", creditedTeam: "TEAM 42", creditedAdj: "CLARISSA SANCHEZ", paymentDate: "Oct 13, 2025", indemnitiesAmount: 9000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 9000, netAmount: 9000, cwpCwn: "CWP", startPainLvl: 7, endPainLvl: 9, transferDate: "Oct 5, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "671948157", class: "LITIGATION", prefix: "67", claim: "194815", claimant: "7", coverage: "BI", uniqueRecord: "671948157", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 61", adjusterUsername: "ERICYANES", adjusterName: "ERIC YANES", creditedTeam: "TEAM 61", creditedAdj: "ERIC YANES", paymentDate: "Mar 6, 2025", indemnitiesAmount: 25000, indemnitiesCheckCount: 1, expensesCheckCount: 1, totalAmount: 26425.6, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 7, transferDate: "Dec 5, 2024", previousDept: "BI3", previousTeam: "TEAM 31" },
+  { id: "721954663", class: "BI3", prefix: "72", claim: "195466", claimant: "3", coverage: "BI", uniqueRecord: "721954663", expCategory: "LIT", dept: "BI3", team: "TEAM 45", adjusterUsername: "CIJAWILAYA", adjusterName: "CIJA WILSON-AYALA", creditedTeam: "TEAM 45", creditedAdj: "CIJA WILSON-AYALA", paymentDate: "May 13, 2025", indemnitiesAmount: 30000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 30000, netAmount: 30000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 8, transferDate: "Jul 24, 2024", previousDept: "ATR", previousTeam: "TEAM 52" },
+  { id: "781921453", class: "LITIGATION", prefix: "78", claim: "192145", claimant: "3", coverage: "BI", uniqueRecord: "781921453", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "PRIANNCANT", adjusterName: "PRISCILLA CANTU", creditedTeam: "TEAM 67", creditedAdj: "PRISCILLA CANTU", paymentDate: "Mar 11, 2025", indemnitiesAmount: 25300, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 25300, netAmount: 25300, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 7, transferDate: "Jan 2, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 68" },
+  { id: "781965432", class: "LITIGATION", prefix: "78", claim: "196543", claimant: "2", coverage: "BI", uniqueRecord: "781965432", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 29", adjusterUsername: "NEORODRIG", adjusterName: "NEO RODRIGUEZ", creditedTeam: "TEAM 50", creditedAdj: "RAUL CHAVEZ", paymentDate: "Jun 23, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1800, netAmount: 15007.71, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 8, transferDate: "Sep 16, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 50" },
+  { id: "551986542", class: "LITIGATION", prefix: "55", claim: "198654", claimant: "2", coverage: "BI", uniqueRecord: "551986542", expCategory: "LIM", dept: "ATR", team: "TEAM 32", adjusterUsername: "JOSETMEDIN", adjusterName: "JOSE MEDINA", creditedTeam: "TEAM 32", creditedAdj: "JOSE MEDINA", paymentDate: "Dec 19, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1000, netAmount: 0, cwpCwn: "CWN", startPainLvl: 3, endPainLvl: 5, transferDate: "Nov 10, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "721852774", class: "LITIGATION", prefix: "72", claim: "185277", claimant: "4", coverage: "BI", uniqueRecord: "721852774", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "VICTOLLOVE", adjusterName: "VICTORIA LOVE-APPLING", creditedTeam: "TEAM 66", creditedAdj: "VICTORIA LOVE-APPLING", paymentDate: "May 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 823.5, netAmount: 14000, cwpCwn: "CWP", startPainLvl: 8, endPainLvl: 8, transferDate: "Apr 3, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 50" },
+  { id: "781988654", class: "LITIGATION", prefix: "78", claim: "198865", claimant: "4", coverage: "BI", uniqueRecord: "781988654", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 57", adjusterUsername: "KIMBMICAGU", adjusterName: "KIMBERLY AGUILERA", creditedTeam: "TEAM 57", creditedAdj: "KIMBERLY AGUILERA", paymentDate: "Jan 24, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 477.75, netAmount: 24000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 5, transferDate: "Mar 3, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "722055775", class: "LITIGATION", prefix: "72", claim: "205577", claimant: "5", coverage: "BI", uniqueRecord: "722055775", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "MARCDAVOCH", adjusterName: "MARCUS OCHOA", creditedTeam: "TEAM 66", creditedAdj: "MARCUS OCHOA", paymentDate: "May 29, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 14215.31, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 6, transferDate: "Aug 1, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "782070713", class: "BI3", prefix: "78", claim: "207071", claimant: "3", coverage: "BI", uniqueRecord: "782070713", expCategory: "L3L", dept: "BI3", team: "TEAM 43", adjusterUsername: "CRISTPEREZ", adjusterName: "CRISTOBAL PEREZ", creditedTeam: "TEAM 43", creditedAdj: "CRISTOBAL PEREZ", paymentDate: "Jul 11, 2025", indemnitiesAmount: 4750, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 4750, netAmount: 4750, cwpCwn: "CWP", startPainLvl: 4, endPainLvl: 6, transferDate: "Jun 2, 2025", previousDept: "BI3", previousTeam: "TEAM 58" },
+  { id: "731990362", class: "LITIGATION", prefix: "73", claim: "199036", claimant: "2", coverage: "BI", uniqueRecord: "731990362", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 54", adjusterUsername: "JOSEISRHER", adjusterName: "JOSE HERNANDEZ", creditedTeam: "TEAM 54", creditedAdj: "JOSE HERNANDEZ", paymentDate: "Jun 23, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 1790.16, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 6, endPainLvl: 6, transferDate: "Nov 6, 2024", previousDept: "LITIGATION", previousTeam: "TEAM 42" },
+  { id: "782075014", class: "LITIGATION", prefix: "78", claim: "207501", claimant: "4", coverage: "BI", uniqueRecord: "782075014", expCategory: "SPD", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "CHRIRICBAC", adjusterName: "CHRISTOPHER BACHAND", creditedTeam: "TEAM 68", creditedAdj: "CHRISTOPHER BACHAND", paymentDate: "Feb 27, 2025", indemnitiesAmount: 19000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 19000, netAmount: 19000, cwpCwn: "CWP", startPainLvl: 3, endPainLvl: 9, transferDate: "Nov 5, 2024", previousDept: "BI3", previousTeam: "TEAM 31" },
+  { id: "662081105", class: "LITIGATION", prefix: "66", claim: "208110", claimant: "5", coverage: "BI", uniqueRecord: "662081105", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 42", adjusterUsername: "CLARALESAN", adjusterName: "CLARISSA SANCHEZ", creditedTeam: "TEAM 42", creditedAdj: "CLARISSA SANCHEZ", paymentDate: "Jun 13, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 322.3, netAmount: 0, cwpCwn: "CWN", startPainLvl: 1, endPainLvl: 5, transferDate: "Sep 26, 2023", previousDept: "LITIGATION", previousTeam: "TEAM 67" },
+  { id: "722118212", class: "LITIGATION", prefix: "72", claim: "211821", claimant: "2", coverage: "BI", uniqueRecord: "722118212", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 53", adjusterUsername: "ROBRIONES", adjusterName: "ROSA BRIONES", creditedTeam: "TEAM 53", creditedAdj: "ROSA BRIONES", paymentDate: "Oct 14, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 667.81, netAmount: 15000, cwpCwn: "CWP", startPainLvl: 0, endPainLvl: 9, transferDate: "May 15, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "722142422", class: "LITIGATION", prefix: "72", claim: "214242", claimant: "2", coverage: "BI", uniqueRecord: "722142422", expCategory: "L3L", dept: "LITIGATION", team: "TEAM 42", adjusterUsername: "SANDRPENA", adjusterName: "SANDRA PENA", creditedTeam: "TEAM 42", creditedAdj: "SANDRA PENA", paymentDate: "Apr 17, 2025", indemnitiesAmount: 4000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 4000, netAmount: 4000, cwpCwn: "CWP", startPainLvl: 7, endPainLvl: 7, transferDate: "Mar 18, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" },
+  { id: "782163093", class: "LITIGATION", prefix: "78", claim: "216309", claimant: "3", coverage: "BI", uniqueRecord: "782163093", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 68", adjusterUsername: "RENESANCHE", adjusterName: "RENE SANCHEZ", creditedTeam: "TEAM 68", creditedAdj: "RENE SANCHEZ", paymentDate: "Feb 10, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 3, totalAmount: 19750, netAmount: 17000, cwpCwn: "CWP", startPainLvl: 2, endPainLvl: 8, transferDate: "Jun 7, 2023", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "572164792", class: "BI3", prefix: "57", claim: "216479", claimant: "2", coverage: "BI", uniqueRecord: "572164792", expCategory: "LIT", dept: "BI3", team: "TEAM 45", adjusterUsername: "CIJAWILAYA", adjusterName: "CIJA WILSON-AYALA", creditedTeam: "TEAM 45", creditedAdj: "CIJA WILSON-AYALA", paymentDate: "Jul 17, 2025", indemnitiesAmount: 25000, indemnitiesCheckCount: 1, expensesCheckCount: 0, totalAmount: 25000, netAmount: 25000, cwpCwn: "CWP", startPainLvl: 8, endPainLvl: 10, transferDate: "Jul 25, 2024", previousDept: "BI3", previousTeam: "TEAM 49" },
+  { id: "572165372", class: "LITIGATION", prefix: "57", claim: "216537", claimant: "2", coverage: "BI", uniqueRecord: "572165372", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "CARELIQUE", adjusterName: "CAROLINA ARREDONDO", creditedTeam: "TEAM 66", creditedAdj: "CAROLINA ARREDONDO", paymentDate: "Apr 17, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 1, totalAmount: 25, netAmount: 1400, cwpCwn: "CWP", startPainLvl: 1, endPainLvl: 1, transferDate: "Aug 5, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 61" },
+  { id: "652158032", class: "LITIGATION", prefix: "65", claim: "215803", claimant: "2", coverage: "BI", uniqueRecord: "652158032", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 67", adjusterUsername: "MARCDAVOCH", adjusterName: "MARCUS OCHOA", creditedTeam: "TEAM 67", creditedAdj: "MARCUS OCHOA", paymentDate: "Sep 2, 2025", indemnitiesAmount: 0, indemnitiesCheckCount: 0, expensesCheckCount: 2, totalAmount: 2100, netAmount: 0, cwpCwn: "CWN", startPainLvl: 3, endPainLvl: 6, transferDate: "Nov 6, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 66" },
+  { id: "782179493", class: "LITIGATION", prefix: "78", claim: "217949", claimant: "3", coverage: "BI", uniqueRecord: "782179493", expCategory: "LIT", dept: "LITIGATION", team: "TEAM 66", adjusterUsername: "JASOROYTHO", adjusterName: "JASON THOMAS", creditedTeam: "TEAM 66", creditedAdj: "JASON THOMAS", paymentDate: "May 9, 2025", indemnitiesAmount: 12000, indemnitiesCheckCount: 2, expensesCheckCount: 0, totalAmount: 12000, netAmount: 12000, cwpCwn: "CWP", startPainLvl: 0, endPainLvl: 8, transferDate: "Mar 17, 2025", previousDept: "LITIGATION", previousTeam: "TEAM 54" }
 ];
 
-export const departments = [
-  "General Liability",
-  "Commercial Lines", 
-  "Property",
-  "Employment",
-  "Professional Liability",
-  "Marine",
-  "Regulatory",
-  "Construction",
-  "Environmental",
-  "Auto",
-  "Products"
-];
+// Extract unique values for filters
+export const classes = [...new Set(litigationData.map(d => d.class))].sort();
+export const departments = [...new Set(litigationData.map(d => d.dept))].sort();
+export const teams = [...new Set(litigationData.map(d => d.team))].sort();
+export const adjusters = [...new Set(litigationData.map(d => d.adjusterName))].sort();
+export const expCategories = [...new Set(litigationData.map(d => d.expCategory))].sort();
+export const coverages = [...new Set(litigationData.map(d => d.coverage))].sort();
 
-export const attorneys = [
-  "Sarah Mitchell",
-  "Michael Torres",
-  "Jennifer Adams",
-  "David Park"
-];
-
-export const adjusters = [
-  "James Wilson",
-  "Emily Chen",
-  "Robert Kim",
-  "Lisa Thompson"
-];
-
-export const states = [
-  "AZ", "CA", "FL", "GA", "IL", "LA", "NV", "NY", "OH", "OR", "TX", "WA"
-];
+// Summary statistics
+export const getSummaryStats = () => {
+  const totalMatters = litigationData.length;
+  const totalIndemnities = litigationData.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
+  const totalExpenses = litigationData.reduce((sum, d) => sum + d.totalAmount, 0);
+  const totalNet = litigationData.reduce((sum, d) => sum + d.netAmount, 0);
+  const cwpCount = litigationData.filter(d => d.cwpCwn === 'CWP').length;
+  const cwnCount = litigationData.filter(d => d.cwpCwn === 'CWN').length;
+  
+  return {
+    totalMatters,
+    totalIndemnities,
+    totalExpenses,
+    totalNet,
+    cwpCount,
+    cwnCount
+  };
+};
