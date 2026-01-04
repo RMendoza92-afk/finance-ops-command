@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
-import { LitigationMatter } from "@/data/litigationData";
+import { LitigationMatter } from "@/hooks/useLitigationData";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps {

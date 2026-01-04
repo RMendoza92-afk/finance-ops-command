@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LitigationMatter } from "@/data/litigationData";
+import { LitigationMatter } from "@/hooks/useLitigationData";
 import { toast } from "@/hooks/use-toast";
 
 interface ExpertMatchingDashboardProps {

@@ -5,7 +5,8 @@ import { SummaryCards } from "@/components/SummaryCards";
 import { DataTable } from "@/components/DataTable";
 import { ExpertMatchingDashboard } from "@/components/ExpertMatchingDashboard";
 import { LitigationDisciplineDashboard } from "@/components/LitigationDisciplineDashboard";
-import { litigationDataFiltered, getSummaryStats } from "@/data/litigationData";
+import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
+import { Loader2 } from "lucide-react";
 
 interface Filters {
   cwpCwn: string;
@@ -30,6 +31,8 @@ const defaultFilters: Filters = {
 const Index = () => {
   const [activeView, setActiveView] = useState<'exec' | 'manager' | 'adjuster'>('exec');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  
+  const { data: litigationData, loading, error, stats } = useLitigationData();
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -41,8 +44,10 @@ const Index = () => {
 
   const activeFilterCount = Object.values(filters).filter(v => v !== 'all').length;
 
+  const filterOptions = useMemo(() => getFilterOptions(litigationData), [litigationData]);
+
   const filteredData = useMemo(() => {
-    return litigationDataFiltered.filter(matter => {
+    return litigationData.filter(matter => {
       if (filters.cwpCwn !== 'all' && matter.cwpCwn !== filters.cwpCwn) return false;
       if (filters.class !== 'all' && matter.class !== filters.class) return false;
       if (filters.dept !== 'all' && matter.dept !== filters.dept) return false;
@@ -63,9 +68,7 @@ const Index = () => {
       
       return true;
     });
-  }, [filters]);
-
-  const stats = getSummaryStats();
+  }, [filters, litigationData]);
 
   // Get view-specific title
   const viewTitles = {
@@ -80,6 +83,28 @@ const Index = () => {
     adjuster: 'Your assigned cases and pending actions'
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading litigation data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive font-medium">Error loading data</p>
+          <p className="text-muted-foreground text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <CommandHeader activeView={activeView} onViewChange={setActiveView} />
@@ -92,7 +117,7 @@ const Index = () => {
         </div>
 
         {/* Summary KPIs */}
-        <SummaryCards data={filteredData} view={activeView} />
+        <SummaryCards data={filteredData} view={activeView} stats={stats} />
 
         {/* Expert Matching Dashboard for Manager View */}
         {activeView === 'manager' && (
@@ -101,7 +126,7 @@ const Index = () => {
 
         {/* Litigation Discipline Dashboard for Exec View */}
         {activeView === 'exec' && (
-          <LitigationDisciplineDashboard data={filteredData} />
+          <LitigationDisciplineDashboard data={filteredData} stats={stats} />
         )}
 
         {/* Filters */}
@@ -110,16 +135,17 @@ const Index = () => {
           onFilterChange={handleFilterChange}
           onReset={resetFilters}
           activeFilterCount={activeFilterCount}
+          filterOptions={filterOptions}
         />
 
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{filteredData.length}</span> of{' '}
-            <span className="font-medium text-foreground">{litigationDataFiltered.length}</span> records
+            Showing <span className="font-medium text-foreground">{filteredData.length.toLocaleString()}</span> of{' '}
+            <span className="font-medium text-foreground">{litigationData.length.toLocaleString()}</span> records
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>CWP: {stats.cwpCount}</span>
+            <span>CWP: {stats.cwpCount.toLocaleString()}</span>
             <span>Last updated: {new Date().toLocaleString()}</span>
           </div>
         </div>
