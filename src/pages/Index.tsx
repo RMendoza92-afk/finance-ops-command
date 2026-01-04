@@ -3,6 +3,7 @@ import { CommandHeader } from "@/components/CommandHeader";
 import { FilterPanel } from "@/components/FilterPanel";
 import { SummaryCards } from "@/components/SummaryCards";
 import { DataTable } from "@/components/DataTable";
+import { ExpertMatchingDashboard } from "@/components/ExpertMatchingDashboard";
 import { litigationData, getSummaryStats } from "@/data/litigationData";
 
 interface Filters {
@@ -91,6 +92,11 @@ const Index = () => {
 
         {/* Summary KPIs */}
         <SummaryCards data={filteredData} view={activeView} />
+
+        {/* Expert Matching Dashboard for Manager View */}
+        {activeView === 'manager' && (
+          <ExpertMatchingDashboard data={filteredData} />
+        )}
 
         {/* Filters */}
         <FilterPanel 
