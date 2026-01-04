@@ -128,10 +128,8 @@ export function useLitigationData() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            // Filter to only CWP records
-            const allData = results.data
-              .map((row, idx) => transformRow(row, idx))
-              .filter(row => row.cwpCwn === 'CWP');
+            // Include all records (both CWP and CWN)
+            const allData = results.data.map((row, idx) => transformRow(row, idx));
             
             setData(allData);
             
@@ -139,14 +137,16 @@ export function useLitigationData() {
             const totalIndemnities = allData.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
             const totalExpenses = allData.reduce((sum, d) => sum + d.totalAmount, 0);
             const totalNet = allData.reduce((sum, d) => sum + d.netAmount, 0);
+            const cwpCount = allData.filter(d => d.cwpCwn === 'CWP').length;
+            const cwnCount = allData.filter(d => d.cwpCwn === 'CWN').length;
             
             setStats({
               totalMatters: allData.length,
               totalIndemnities,
               totalExpenses,
               totalNet,
-              cwpCount: allData.length,
-              cwnCount: 0,
+              cwpCount,
+              cwnCount,
             });
             
             setLoading(false);
