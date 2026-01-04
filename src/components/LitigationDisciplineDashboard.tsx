@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { LitigationMatter } from "@/data/litigationData";
+import { LitigationMatter } from "@/hooks/useLitigationData";
+
+interface Stats {
+  totalMatters: number;
+  totalIndemnities: number;
+  totalExpenses: number;
+  totalNet: number;
+  cwpCount: number;
+  cwnCount: number;
+}
 
 interface LitigationDisciplineDashboardProps {
   data: LitigationMatter[];
+  stats: Stats;
 }
 
 type TabType = 'posture-roi' | 'decision-gates' | 'patterns';
@@ -40,13 +50,13 @@ const outcomeData: OutcomeRow[] = [
   },
 ];
 
-export function LitigationDisciplineDashboard({ data }: LitigationDisciplineDashboardProps) {
+export function LitigationDisciplineDashboard({ data, stats }: LitigationDisciplineDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('posture-roi');
 
-  // Calculate totals from data or use hardcoded values
-  const totalExpense = 19000000;
-  const expertSpend = 5600000;
-  const postureSpend = 13400000;
+  // Use real stats from loaded data
+  const totalExpense = stats.totalExpenses;
+  const totalIndemnities = stats.totalIndemnities;
+  const totalNet = stats.totalNet;
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -93,12 +103,12 @@ export function LitigationDisciplineDashboard({ data }: LitigationDisciplineDash
           <div className="text-sm text-muted-foreground">Total Litigation Expense (2025)</div>
         </Card>
         <Card className="p-4 bg-card border-border">
-          <div className="text-3xl font-bold text-red-500">{formatCurrency(expertSpend)}</div>
-          <div className="text-sm text-muted-foreground">Expert Spend (Information / Leverage)</div>
+          <div className="text-3xl font-bold text-red-500">{formatCurrency(totalIndemnities)}</div>
+          <div className="text-sm text-muted-foreground">Total Indemnities Paid</div>
         </Card>
         <Card className="p-4 bg-card border-border">
-          <div className="text-3xl font-bold text-red-500">{formatCurrency(postureSpend)}</div>
-          <div className="text-sm text-muted-foreground">Posture / Friction Spend</div>
+          <div className="text-3xl font-bold text-red-500">{formatCurrency(totalNet)}</div>
+          <div className="text-sm text-muted-foreground">Feature Inception to Current Net</div>
         </Card>
       </div>
 

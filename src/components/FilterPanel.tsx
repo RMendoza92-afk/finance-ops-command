@@ -7,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { departments, teams, adjusters, classes, expCategories } from "@/data/litigationData";
 
 interface Filters {
   cwpCwn: string;
@@ -19,14 +18,23 @@ interface Filters {
   painLevel: string;
 }
 
+interface FilterOptions {
+  classes: string[];
+  depts: string[];
+  teams: string[];
+  adjusters: string[];
+  expCategories: string[];
+}
+
 interface FilterPanelProps {
   filters: Filters;
   onFilterChange: (key: keyof Filters, value: string) => void;
   onReset: () => void;
   activeFilterCount: number;
+  filterOptions: FilterOptions;
 }
 
-export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCount }: FilterPanelProps) {
+export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCount, filterOptions }: FilterPanelProps) {
   return (
     <div className="filter-panel rounded-xl p-4 mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -60,7 +68,6 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="CWP">CWP (Closed)</SelectItem>
-            <SelectItem value="CWN">CWN (Open)</SelectItem>
           </SelectContent>
         </Select>
 
@@ -70,7 +77,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Classes</SelectItem>
-            {classes.map(cls => (
+            {filterOptions.classes.map(cls => (
               <SelectItem key={cls} value={cls}>{cls}</SelectItem>
             ))}
           </SelectContent>
@@ -82,7 +89,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Departments</SelectItem>
-            {departments.map(dept => (
+            {filterOptions.depts.map(dept => (
               <SelectItem key={dept} value={dept}>{dept}</SelectItem>
             ))}
           </SelectContent>
@@ -94,7 +101,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectTrigger>
           <SelectContent className="bg-popover border-border max-h-60">
             <SelectItem value="all">All Teams</SelectItem>
-            {teams.map(team => (
+            {filterOptions.teams.map(team => (
               <SelectItem key={team} value={team}>{team}</SelectItem>
             ))}
           </SelectContent>
@@ -106,7 +113,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectTrigger>
           <SelectContent className="bg-popover border-border max-h-60">
             <SelectItem value="all">All Adjusters</SelectItem>
-            {adjusters.map(adj => (
+            {filterOptions.adjusters.map(adj => (
               <SelectItem key={adj} value={adj}>{adj}</SelectItem>
             ))}
           </SelectContent>
@@ -118,7 +125,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Categories</SelectItem>
-            {expCategories.map(cat => (
+            {filterOptions.expCategories.map(cat => (
               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
           </SelectContent>
