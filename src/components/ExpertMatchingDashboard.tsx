@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { LitigationMatter } from "@/data/litigationData";
 
 interface ExpertMatchingDashboardProps {
@@ -140,15 +139,15 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
                     <td className="py-2 pr-2 text-foreground">{row.expert}</td>
                     <td className="py-2 pr-2 text-foreground">{row.posture}</td>
                     <td className="py-2 pr-2">
-                      <Badge 
-                        variant={row.status === 'Terminate' ? 'destructive' : 'secondary'}
-                        className={row.status === 'Terminate' 
-                          ? 'bg-red-600 hover:bg-red-700 text-white' 
-                          : 'bg-zinc-700 hover:bg-zinc-600 text-white'
-                        }
+                      <span 
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          row.status === 'Terminate' 
+                            ? 'bg-red-600 text-white' 
+                            : 'bg-zinc-700 text-white'
+                        }`}
                       >
                         {row.status}
-                      </Badge>
+                      </span>
                     </td>
                     <td className="py-2 pr-2 text-right text-foreground">{formatCurrency(row.paidToDate)}</td>
                     <td className="py-2 pr-2 text-right text-yellow-500">{formatCurrency(row.overhang)}</td>
