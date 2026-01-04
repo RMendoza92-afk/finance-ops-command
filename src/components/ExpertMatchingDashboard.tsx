@@ -10,9 +10,8 @@ interface ExpertMatchingDashboardProps {
 }
 
 // Mock expert matching data derived from litigation matters
-interface SubmissionRow {
+interface ActionableItem {
   id: number;
-  adj: string;
   venue: string;
   venueSeverity: 'High' | 'Med' | 'Low';
   pattern: string;
@@ -28,7 +27,7 @@ const patterns = ['Cognitive complaints', 'Soft tissue only', 'Excessive chiropr
 const experts = ['Neuropsych', 'Chiro', 'Neurologist', 'Nurse'];
 const postures = ['Settle early', 'Validate'];
 
-function generateSubmissions(data: LitigationMatter[]): SubmissionRow[] {
+function generateActionableItems(data: LitigationMatter[]): ActionableItem[] {
   return data.slice(0, 12).map((matter, idx) => {
     const severity = matter.endPainLvl >= 8 ? 'High' : matter.endPainLvl >= 5 ? 'Med' : 'Low';
     const status: 'Terminate' | 'Coach' = matter.endPainLvl >= 7 ? 'Terminate' : 'Coach';
@@ -37,7 +36,6 @@ function generateSubmissions(data: LitigationMatter[]): SubmissionRow[] {
     
     return {
       id: idx + 1,
-      adj: matter.prefix.slice(0, 1) + matter.claim.slice(0, 3).toUpperCase(),
       venue: `${matter.team.replace('TEAM ', '')} (${severity})`,
       venueSeverity: severity,
       pattern: patterns[idx % patterns.length],
@@ -52,16 +50,16 @@ function generateSubmissions(data: LitigationMatter[]): SubmissionRow[] {
 }
 
 export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) {
-  const [selectedRow, setSelectedRow] = useState<SubmissionRow | null>(null);
+  const [selectedRow, setSelectedRow] = useState<ActionableItem | null>(null);
   const [managerNotes, setManagerNotes] = useState("");
 
-  const submissions = generateSubmissions(data);
+  const actionableItems = generateActionableItems(data);
   
   // Calculate KPI metrics
-  const totalSubmissions = submissions.length;
-  const decisionOverhang = submissions.reduce((sum, s) => sum + s.overhang, 0);
-  const selectedTotalCost = selectedRow ? selectedRow.totalCost : submissions.reduce((sum, s) => sum + s.totalCost, 0);
-  const terminateReady = submissions.filter(s => s.status === 'Terminate').length;
+  const totalActionable = actionableItems.length;
+  const decisionOverhang = actionableItems.reduce((sum, s) => sum + s.overhang, 0);
+  const selectedTotalCost = selectedRow ? selectedRow.totalCost : actionableItems.reduce((sum, s) => sum + s.totalCost, 0);
+  const terminateReady = actionableItems.filter(s => s.status === 'Terminate').length;
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(2)}M`;
@@ -74,14 +72,14 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-xl font-bold text-foreground">Expert Matching — Manager Dashboard</h3>
-        <p className="text-sm text-muted-foreground">Full submission view • Cashflow harm + total cost of decision</p>
+        <p className="text-sm text-muted-foreground">Actionable items • Cashflow harm + total cost of decision</p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-card border-border">
-          <div className="text-3xl font-bold text-foreground">{totalSubmissions}</div>
-          <div className="text-sm text-muted-foreground">Submissions</div>
+          <div className="text-3xl font-bold text-foreground">{totalActionable}</div>
+          <div className="text-sm text-muted-foreground">Actionable Items</div>
         </Card>
         <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <div className="text-3xl font-bold text-yellow-500">{formatCurrency(decisionOverhang)}</div>
@@ -102,7 +100,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
         {/* Submission Queue Table */}
         <Card className="lg:col-span-2 p-4 bg-card border-border">
           <div className="mb-3">
-            <h4 className="font-semibold text-foreground">Submission Queue <span className="text-muted-foreground font-normal">(click any line)</span></h4>
+            <h4 className="font-semibold text-foreground">Action Queue <span className="text-muted-foreground font-normal">(click any line)</span></h4>
           </div>
           
           <div className="overflow-x-auto">
@@ -110,7 +108,6 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="pb-2 pr-2">#</th>
-                  <th className="pb-2 pr-2">Adj</th>
                   <th className="pb-2 pr-2">Venue</th>
                   <th className="pb-2 pr-2">Pattern</th>
                   <th className="pb-2 pr-2">Expert</th>
@@ -122,7 +119,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
                 </tr>
               </thead>
               <tbody>
-                {submissions.map((row) => (
+                {actionableItems.map((row) => (
                   <tr 
                     key={row.id}
                     onClick={() => setSelectedRow(row)}
@@ -131,7 +128,6 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
                     }`}
                   >
                     <td className="py-2 pr-2 text-muted-foreground">{row.id}</td>
-                    <td className="py-2 pr-2 text-foreground">{row.adj}</td>
                     <td className="py-2 pr-2">
                       <span className={`${
                         row.venueSeverity === 'High' ? 'text-red-400' : 
@@ -170,9 +166,9 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
 
         {/* Side Panel */}
         <Card className="p-4 bg-card border-border">
-          <h4 className="font-semibold text-foreground mb-2">Select a submission</h4>
+          <h4 className="font-semibold text-foreground mb-2">Select an item</h4>
           <p className="text-sm text-muted-foreground mb-4">
-            {selectedRow ? `Viewing: Row ${selectedRow.id} - ${selectedRow.adj}` : 'Click a line to view total cost impact.'}
+            {selectedRow ? `Viewing: Row ${selectedRow.id} - ${selectedRow.venue}` : 'Click a line to view total cost impact.'}
           </p>
           
           <div className="mb-4">
