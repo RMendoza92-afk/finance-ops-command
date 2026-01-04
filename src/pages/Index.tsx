@@ -1,64 +1,76 @@
 import { useState, useMemo } from "react";
-import { CommandHeader } from "@/components/CommandHeader";
-import { FilterPanel } from "@/components/FilterPanel";
-import { SummaryCards } from "@/components/SummaryCards";
-import { DataTable } from "@/components/DataTable";
-import { ExpertMatchingDashboard } from "@/components/ExpertMatchingDashboard";
-import { LitigationDisciplineDashboard } from "@/components/LitigationDisciplineDashboard";
-import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
-import { Loader2 } from "lucide-react";
+import { useLitigationData, getFilterOptions, LitigationMatter } from "@/hooks/useLitigationData";
+import { OverextensionTable } from "@/components/OverextensionTable";
+import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
+import { Loader2, AlertTriangle, TrendingUp } from "lucide-react";
 
-interface Filters {
-  cwpCwn: string;
-  class: string;
-  dept: string;
-  team: string;
-  adjuster: string;
-  expCategory: string;
-  painLevel: string;
+// Determine litigation stage based on pain level
+function getLitigationStage(painLvl: number): 'Early' | 'Mid' | 'Late' | 'Very Late' {
+  if (painLvl <= 2) return 'Early';
+  if (painLvl <= 5) return 'Mid';
+  if (painLvl <= 7) return 'Late';
+  return 'Very Late';
 }
 
-const defaultFilters: Filters = {
-  cwpCwn: 'all',
-  class: 'all',
-  dept: 'all',
-  team: 'all',
-  adjuster: 'all',
-  expCategory: 'all',
-  painLevel: 'all'
-};
+// Determine expert type from expense category
+function getExpertType(expCategory: string): string {
+  if (!expCategory) return 'Other';
+  const cat = expCategory.toUpperCase();
+  if (cat.includes('MEDICAL') || cat.includes('MED')) return 'Medical';
+  if (cat.includes('LEGAL') || cat.includes('ATTORNEY')) return 'Legal';
+  if (cat.includes('EXPERT') || cat.includes('CONSULT')) return 'Consultant';
+  if (cat.includes('ENGINEER')) return 'Engineering';
+  if (cat.includes('ACCOUNT') || cat.includes('ECON')) return 'Economic';
+  return 'Other';
+}
 
 const Index = () => {
-  const [activeView, setActiveView] = useState<'exec' | 'manager' | 'adjuster'>('exec');
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  
+  const [filters, setFilters] = useState<GlobalFilters>(defaultGlobalFilters);
   const { data: litigationData, loading, error, stats } = useLitigationData();
 
-  const handleFilterChange = (key: keyof Filters, value: string) => {
+  const handleFilterChange = (key: keyof GlobalFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFilters = () => {
-    setFilters(defaultFilters);
+    setFilters(defaultGlobalFilters);
   };
 
-  const activeFilterCount = Object.values(filters).filter(v => v !== 'all').length;
+  const activeFilterCount = Object.entries(filters).filter(([key, v]) => 
+    key !== 'searchText' && v !== 'all'
+  ).length;
 
-  const filterOptions = useMemo(() => getFilterOptions(litigationData), [litigationData]);
+  const filterOptions = useMemo(() => {
+    const opts = getFilterOptions(litigationData);
+    return {
+      departments: opts.depts,
+      teams: opts.teams,
+      adjusters: opts.adjusters
+    };
+  }, [litigationData]);
 
+  // Apply global filters
   const filteredData = useMemo(() => {
     return litigationData.filter(matter => {
-      if (filters.cwpCwn !== 'all' && matter.cwpCwn !== filters.cwpCwn) return false;
-      if (filters.class !== 'all' && matter.class !== filters.class) return false;
-      if (filters.dept !== 'all' && matter.dept !== filters.dept) return false;
-      if (filters.team !== 'all' && matter.team !== filters.team) return false;
-      if (filters.adjuster !== 'all' && matter.adjusterName !== filters.adjuster) return false;
-      if (filters.expCategory !== 'all' && matter.expCategory !== filters.expCategory) return false;
+      // Department filter
+      if (filters.department !== 'all' && matter.dept !== filters.department) return false;
       
-      // Pain level filter
-      if (filters.painLevel !== 'all') {
+      // Team filter
+      if (filters.team !== 'all' && matter.team !== filters.team) return false;
+      
+      // Adjuster filter
+      if (filters.adjuster !== 'all' && matter.adjusterName !== filters.adjuster) return false;
+      
+      // Litigation stage filter (based on pain level)
+      if (filters.litigationStage !== 'all') {
+        const stage = getLitigationStage(matter.endPainLvl);
+        if (stage !== filters.litigationStage) return false;
+      }
+      
+      // Pain band filter
+      if (filters.painBand !== 'all') {
         const pain = matter.endPainLvl;
-        switch (filters.painLevel) {
+        switch (filters.painBand) {
           case 'low': if (pain > 2) return false; break;
           case 'medium': if (pain < 3 || pain > 5) return false; break;
           case 'high': if (pain < 6 || pain > 7) return false; break;
@@ -66,22 +78,29 @@ const Index = () => {
         }
       }
       
+      // Expert type filter
+      if (filters.expertType !== 'all') {
+        const expertType = getExpertType(matter.expCategory);
+        if (expertType !== filters.expertType) return false;
+      }
+      
+      // Free text search
+      if (filters.searchText) {
+        const search = filters.searchText.toLowerCase();
+        const searchableText = [
+          matter.claim,
+          matter.uniqueRecord,
+          matter.claimant,
+          matter.adjusterName,
+          matter.coverage
+        ].join(' ').toLowerCase();
+        
+        if (!searchableText.includes(search)) return false;
+      }
+      
       return true;
     });
   }, [filters, litigationData]);
-
-  // Get view-specific title
-  const viewTitles = {
-    exec: 'Executive Overview',
-    manager: 'Case Management',
-    adjuster: 'My Assignments'
-  };
-
-  const viewDescriptions = {
-    exec: 'High-level financial exposure and critical matters requiring executive attention',
-    manager: 'Complete matter oversight with team assignments and workflow status',
-    adjuster: 'Your assigned cases and pending actions'
-  };
 
   if (loading) {
     return (
@@ -107,30 +126,35 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <CommandHeader activeView={activeView} onViewChange={setActiveView} />
+      {/* Header */}
+      <header className="command-header px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+              <h1 className="text-xl font-bold tracking-tight">Overextension & Reactive Spend</h1>
+            </div>
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-destructive/20 text-destructive border border-destructive/30">
+              DISCIPLINE TOOL
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>{filteredData.length.toLocaleString()} of {litigationData.length.toLocaleString()} records</span>
+            </div>
+            <span>CWP: {stats.cwpCount.toLocaleString()} | CWN: {stats.cwnCount.toLocaleString()}</span>
+          </div>
+        </div>
+        <p className="text-muted-foreground text-sm mt-2">
+          Identify claims with disproportionate reactive posture spend vs. expert investment. 
+          <span className="text-destructive ml-1">RED = ≥3x ratio requires immediate review.</span>
+        </p>
+      </header>
       
       <main className="px-6 py-6">
-        {/* View Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-1">{viewTitles[activeView]}</h2>
-          <p className="text-muted-foreground">{viewDescriptions[activeView]}</p>
-        </div>
-
-        {/* Summary KPIs */}
-        <SummaryCards data={filteredData} view={activeView} stats={stats} />
-
-        {/* Expert Matching Dashboard for Manager View */}
-        {activeView === 'manager' && (
-          <ExpertMatchingDashboard data={filteredData} />
-        )}
-
-        {/* Litigation Discipline Dashboard for Exec View */}
-        {activeView === 'exec' && (
-          <LitigationDisciplineDashboard data={filteredData} stats={stats} />
-        )}
-
-        {/* Filters */}
-        <FilterPanel 
+        {/* Global Filters */}
+        <GlobalFilterPanel 
           filters={filters}
           onFilterChange={handleFilterChange}
           onReset={resetFilters}
@@ -138,27 +162,15 @@ const Index = () => {
           filterOptions={filterOptions}
         />
 
-        {/* Results count */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{filteredData.length.toLocaleString()}</span> of{' '}
-            <span className="font-medium text-foreground">{litigationData.length.toLocaleString()}</span> records
-          </p>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>CWP: {stats.cwpCount.toLocaleString()}</span>
-            <span>Last updated: {new Date().toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Data Table */}
-        <DataTable data={filteredData} view={activeView} />
+        {/* Main Overextension Table */}
+        <OverextensionTable data={filteredData} />
       </main>
 
       {/* Footer */}
       <footer className="border-t border-border px-6 py-4 mt-8">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <p>© 2025 Litigation & Discipline Command Center - RRM Data</p>
-          <p>Data as of January 4, 2025</p>
+          <p>All calculations dynamically computed • No static values</p>
         </div>
       </footer>
     </div>
