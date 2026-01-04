@@ -1,4 +1,4 @@
-import { Filter, X, RotateCcw } from "lucide-react";
+import { Filter, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -7,16 +7,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { departments, attorneys, adjusters, states } from "@/data/litigationData";
+import { departments, teams, adjusters, classes, expCategories } from "@/data/litigationData";
 
 interface Filters {
-  status: string;
-  severity: string;
-  type: string;
-  department: string;
-  attorney: string;
+  cwpCwn: string;
+  class: string;
+  dept: string;
+  team: string;
   adjuster: string;
-  state: string;
+  expCategory: string;
+  painLevel: string;
 }
 
 interface FilterPanelProps {
@@ -53,46 +53,30 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <Select value={filters.status} onValueChange={(v) => onFilterChange('status', v)}>
+        <Select value={filters.cwpCwn} onValueChange={(v) => onFilterChange('cwpCwn', v)}>
           <SelectTrigger className="bg-muted/50 border-border">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="CWP/CWN" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Open">Open</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="In Trial">In Trial</SelectItem>
+            <SelectItem value="CWP">CWP (Closed)</SelectItem>
+            <SelectItem value="CWN">CWN (Open)</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={filters.severity} onValueChange={(v) => onFilterChange('severity', v)}>
+        <Select value={filters.class} onValueChange={(v) => onFilterChange('class', v)}>
           <SelectTrigger className="bg-muted/50 border-border">
-            <SelectValue placeholder="Severity" />
+            <SelectValue placeholder="Class" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All Severity</SelectItem>
-            <SelectItem value="Low">Low</SelectItem>
-            <SelectItem value="Medium">Medium</SelectItem>
-            <SelectItem value="High">High</SelectItem>
-            <SelectItem value="Critical">Critical</SelectItem>
+            <SelectItem value="all">All Classes</SelectItem>
+            {classes.map(cls => (
+              <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
-        <Select value={filters.type} onValueChange={(v) => onFilterChange('type', v)}>
-          <SelectTrigger className="bg-muted/50 border-border">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="Litigation">Litigation</SelectItem>
-            <SelectItem value="Discipline">Discipline</SelectItem>
-            <SelectItem value="Arbitration">Arbitration</SelectItem>
-            <SelectItem value="Mediation">Mediation</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.department} onValueChange={(v) => onFilterChange('department', v)}>
+        <Select value={filters.dept} onValueChange={(v) => onFilterChange('dept', v)}>
           <SelectTrigger className="bg-muted/50 border-border">
             <SelectValue placeholder="Department" />
           </SelectTrigger>
@@ -104,14 +88,14 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectContent>
         </Select>
 
-        <Select value={filters.attorney} onValueChange={(v) => onFilterChange('attorney', v)}>
+        <Select value={filters.team} onValueChange={(v) => onFilterChange('team', v)}>
           <SelectTrigger className="bg-muted/50 border-border">
-            <SelectValue placeholder="Attorney" />
+            <SelectValue placeholder="Team" />
           </SelectTrigger>
-          <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All Attorneys</SelectItem>
-            {attorneys.map(atty => (
-              <SelectItem key={atty} value={atty}>{atty}</SelectItem>
+          <SelectContent className="bg-popover border-border max-h-60">
+            <SelectItem value="all">All Teams</SelectItem>
+            {teams.map(team => (
+              <SelectItem key={team} value={team}>{team}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -120,7 +104,7 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           <SelectTrigger className="bg-muted/50 border-border">
             <SelectValue placeholder="Adjuster" />
           </SelectTrigger>
-          <SelectContent className="bg-popover border-border">
+          <SelectContent className="bg-popover border-border max-h-60">
             <SelectItem value="all">All Adjusters</SelectItem>
             {adjusters.map(adj => (
               <SelectItem key={adj} value={adj}>{adj}</SelectItem>
@@ -128,15 +112,28 @@ export function FilterPanel({ filters, onFilterChange, onReset, activeFilterCoun
           </SelectContent>
         </Select>
 
-        <Select value={filters.state} onValueChange={(v) => onFilterChange('state', v)}>
+        <Select value={filters.expCategory} onValueChange={(v) => onFilterChange('expCategory', v)}>
           <SelectTrigger className="bg-muted/50 border-border">
-            <SelectValue placeholder="State" />
+            <SelectValue placeholder="Exp Category" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All States</SelectItem>
-            {states.map(st => (
-              <SelectItem key={st} value={st}>{st}</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
+            {expCategories.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.painLevel} onValueChange={(v) => onFilterChange('painLevel', v)}>
+          <SelectTrigger className="bg-muted/50 border-border">
+            <SelectValue placeholder="Pain Level" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="all">All Pain Levels</SelectItem>
+            <SelectItem value="low">Low (0-2)</SelectItem>
+            <SelectItem value="medium">Medium (3-5)</SelectItem>
+            <SelectItem value="high">High (6-7)</SelectItem>
+            <SelectItem value="critical">Critical (8-10)</SelectItem>
           </SelectContent>
         </Select>
       </div>

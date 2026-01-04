@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
 import { LitigationMatter } from "@/data/litigationData";
-import { StatusBadge, SeverityBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps {
@@ -12,8 +11,50 @@ interface DataTableProps {
 type SortField = keyof LitigationMatter;
 type SortDirection = 'asc' | 'desc';
 
+// Pain level to severity mapping
+const getPainSeverity = (painLvl: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
+  if (painLvl <= 2) return 'Low';
+  if (painLvl <= 5) return 'Medium';
+  if (painLvl <= 7) return 'High';
+  return 'Critical';
+};
+
+// CWP/CWN Badge
+function StatusBadge({ status }: { status: 'CWP' | 'CWN' }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
+      status === 'CWP' 
+        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+        : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+    )}>
+      {status}
+    </span>
+  );
+}
+
+// Pain Level Badge
+function PainBadge({ level }: { level: number }) {
+  const severity = getPainSeverity(level);
+  const colors = {
+    Low: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    Medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    High: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    Critical: "bg-red-500/20 text-red-400 border-red-500/30 animate-pulse"
+  };
+  
+  return (
+    <span className={cn(
+      "inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium border",
+      colors[severity]
+    )}>
+      {level}
+    </span>
+  );
+}
+
 export function DataTable({ data, view }: DataTableProps) {
-  const [sortField, setSortField] = useState<SortField>('lastActivity');
+  const [sortField, setSortField] = useState<SortField>('paymentDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const handleSort = (field: SortField) => {
@@ -77,66 +118,69 @@ export function DataTable({ data, view }: DataTableProps) {
         <table className="data-table">
           <thead>
             <tr>
-              <SortHeader field="id">Matter ID</SortHeader>
-              <SortHeader field="claimant">Claimant/Matter</SortHeader>
-              <SortHeader field="type">Type</SortHeader>
-              <SortHeader field="status">Status</SortHeader>
-              <SortHeader field="severity">Severity</SortHeader>
-              <SortHeader field="department">Dept</SortHeader>
-              {showAssignees && <SortHeader field="attorney">Attorney</SortHeader>}
-              {showAssignees && <SortHeader field="adjuster">Adjuster</SortHeader>}
-              <SortHeader field="state">State</SortHeader>
-              {showFinancials && <SortHeader field="incurredReserve">Reserve</SortHeader>}
-              {showFinancials && <SortHeader field="paidToDate">Paid</SortHeader>}
-              {showFinancials && <SortHeader field="estimatedExposure">Exposure</SortHeader>}
-              <SortHeader field="lastActivity">Last Activity</SortHeader>
+              <SortHeader field="uniqueRecord">Record ID</SortHeader>
+              <SortHeader field="class">Class</SortHeader>
+              <SortHeader field="claim">Claim</SortHeader>
+              <SortHeader field="cwpCwn">Status</SortHeader>
+              <SortHeader field="endPainLvl">Pain</SortHeader>
+              <SortHeader field="dept">Dept</SortHeader>
+              <SortHeader field="team">Team</SortHeader>
+              {showAssignees && <SortHeader field="adjusterName">Adjuster</SortHeader>}
+              <SortHeader field="expCategory">Exp Cat</SortHeader>
+              {showFinancials && <SortHeader field="indemnitiesAmount">Indemnities</SortHeader>}
+              {showFinancials && <SortHeader field="totalAmount">Total Amt</SortHeader>}
+              {showFinancials && <SortHeader field="netAmount">Net Amt</SortHeader>}
+              <SortHeader field="paymentDate">Payment Date</SortHeader>
               <th className="text-right pr-4">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {sortedData.map((matter, index) => (
+            {sortedData.slice(0, 100).map((matter, index) => (
               <tr 
-                key={matter.id}
+                key={`${matter.id}-${index}`}
                 className="animate-fade-in"
-                style={{ animationDelay: `${index * 30}ms` }}
+                style={{ animationDelay: `${index * 20}ms` }}
               >
-                <td className="font-mono text-sm text-primary">{matter.id}</td>
-                <td>
-                  <div className="max-w-xs">
-                    <p className="font-medium truncate">{matter.claimant}</p>
-                    <p className="text-xs text-muted-foreground truncate">{matter.claimNumber}</p>
-                  </div>
-                </td>
+                <td className="font-mono text-sm text-primary">{matter.uniqueRecord}</td>
                 <td>
                   <span className="text-sm px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                    {matter.type}
+                    {matter.class}
                   </span>
                 </td>
-                <td><StatusBadge status={matter.status} /></td>
-                <td><SeverityBadge severity={matter.severity} /></td>
-                <td className="text-sm">{matter.department}</td>
-                {showAssignees && <td className="text-sm">{matter.attorney}</td>}
-                {showAssignees && <td className="text-sm">{matter.adjuster}</td>}
-                <td className="font-mono text-sm">{matter.state}</td>
+                <td className="font-mono text-sm">{matter.prefix}-{matter.claim}</td>
+                <td><StatusBadge status={matter.cwpCwn} /></td>
+                <td><PainBadge level={matter.endPainLvl} /></td>
+                <td className="text-sm">{matter.dept}</td>
+                <td className="text-sm text-muted-foreground">{matter.team}</td>
+                {showAssignees && <td className="text-sm">{matter.adjusterName}</td>}
+                <td>
+                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                    {matter.expCategory}
+                  </span>
+                </td>
                 {showFinancials && (
-                  <td className="font-mono text-sm text-right">
-                    {formatCurrency(matter.incurredReserve)}
+                  <td className={cn(
+                    "font-mono text-sm text-right",
+                    matter.indemnitiesAmount > 0 ? "text-emerald-400" : "text-muted-foreground"
+                  )}>
+                    {formatCurrency(matter.indemnitiesAmount)}
                   </td>
                 )}
                 {showFinancials && (
-                  <td className="font-mono text-sm text-right text-muted-foreground">
-                    {formatCurrency(matter.paidToDate)}
+                  <td className="font-mono text-sm text-right">
+                    {formatCurrency(matter.totalAmount)}
                   </td>
                 )}
                 {showFinancials && (
                   <td className={cn(
                     "font-mono text-sm text-right font-medium",
-                    matter.estimatedExposure > 2000000 ? "metric-negative" : "metric-neutral"
+                    matter.netAmount > 100000 ? "text-red-400" : 
+                    matter.netAmount > 0 ? "text-amber-400" : "text-muted-foreground"
                   )}>
-                    {formatCurrency(matter.estimatedExposure)}
+                    {formatCurrency(matter.netAmount)}
                   </td>
                 )}
-                <td className="text-sm text-muted-foreground">{matter.lastActivity}</td>
+                <td className="text-sm text-muted-foreground">{matter.paymentDate}</td>
                 <td className="text-right pr-4">
                   <button className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-primary">
                     <ExternalLink className="h-4 w-4" />
@@ -151,6 +195,12 @@ export function DataTable({ data, view }: DataTableProps) {
       {sortedData.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           No matters match your current filters.
+        </div>
+      )}
+      
+      {sortedData.length > 100 && (
+        <div className="py-3 text-center text-sm text-muted-foreground border-t border-border">
+          Showing first 100 of {sortedData.length} records
         </div>
       )}
     </div>

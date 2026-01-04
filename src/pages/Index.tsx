@@ -3,26 +3,26 @@ import { CommandHeader } from "@/components/CommandHeader";
 import { FilterPanel } from "@/components/FilterPanel";
 import { SummaryCards } from "@/components/SummaryCards";
 import { DataTable } from "@/components/DataTable";
-import { litigationData, LitigationMatter } from "@/data/litigationData";
+import { litigationData, getSummaryStats } from "@/data/litigationData";
 
 interface Filters {
-  status: string;
-  severity: string;
-  type: string;
-  department: string;
-  attorney: string;
+  cwpCwn: string;
+  class: string;
+  dept: string;
+  team: string;
   adjuster: string;
-  state: string;
+  expCategory: string;
+  painLevel: string;
 }
 
 const defaultFilters: Filters = {
-  status: 'all',
-  severity: 'all',
-  type: 'all',
-  department: 'all',
-  attorney: 'all',
+  cwpCwn: 'all',
+  class: 'all',
+  dept: 'all',
+  team: 'all',
   adjuster: 'all',
-  state: 'all'
+  expCategory: 'all',
+  painLevel: 'all'
 };
 
 const Index = () => {
@@ -41,16 +41,29 @@ const Index = () => {
 
   const filteredData = useMemo(() => {
     return litigationData.filter(matter => {
-      if (filters.status !== 'all' && matter.status !== filters.status) return false;
-      if (filters.severity !== 'all' && matter.severity !== filters.severity) return false;
-      if (filters.type !== 'all' && matter.type !== filters.type) return false;
-      if (filters.department !== 'all' && matter.department !== filters.department) return false;
-      if (filters.attorney !== 'all' && matter.attorney !== filters.attorney) return false;
-      if (filters.adjuster !== 'all' && matter.adjuster !== filters.adjuster) return false;
-      if (filters.state !== 'all' && matter.state !== filters.state) return false;
+      if (filters.cwpCwn !== 'all' && matter.cwpCwn !== filters.cwpCwn) return false;
+      if (filters.class !== 'all' && matter.class !== filters.class) return false;
+      if (filters.dept !== 'all' && matter.dept !== filters.dept) return false;
+      if (filters.team !== 'all' && matter.team !== filters.team) return false;
+      if (filters.adjuster !== 'all' && matter.adjusterName !== filters.adjuster) return false;
+      if (filters.expCategory !== 'all' && matter.expCategory !== filters.expCategory) return false;
+      
+      // Pain level filter
+      if (filters.painLevel !== 'all') {
+        const pain = matter.endPainLvl;
+        switch (filters.painLevel) {
+          case 'low': if (pain > 2) return false; break;
+          case 'medium': if (pain < 3 || pain > 5) return false; break;
+          case 'high': if (pain < 6 || pain > 7) return false; break;
+          case 'critical': if (pain < 8) return false; break;
+        }
+      }
+      
       return true;
     });
   }, [filters]);
+
+  const stats = getSummaryStats();
 
   // Get view-specific title
   const viewTitles = {
@@ -91,11 +104,12 @@ const Index = () => {
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
             Showing <span className="font-medium text-foreground">{filteredData.length}</span> of{' '}
-            <span className="font-medium text-foreground">{litigationData.length}</span> matters
+            <span className="font-medium text-foreground">{litigationData.length}</span> records
           </p>
-          <p className="text-xs text-muted-foreground">
-            Last updated: {new Date().toLocaleString()}
-          </p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span>CWP: {stats.cwpCount} | CWN: {stats.cwnCount}</span>
+            <span>Last updated: {new Date().toLocaleString()}</span>
+          </div>
         </div>
 
         {/* Data Table */}
@@ -105,7 +119,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border px-6 py-4 mt-8">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <p>© 2025 Litigation & Discipline Command Center</p>
+          <p>© 2025 Litigation & Discipline Command Center - RRM Data</p>
           <p>Data as of January 4, 2025</p>
         </div>
       </footer>
