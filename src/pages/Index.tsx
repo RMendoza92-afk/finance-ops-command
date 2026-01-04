@@ -4,6 +4,7 @@ import { FilterPanel } from "@/components/FilterPanel";
 import { SummaryCards } from "@/components/SummaryCards";
 import { DataTable } from "@/components/DataTable";
 import { ExpertMatchingDashboard } from "@/components/ExpertMatchingDashboard";
+import { LitigationDisciplineDashboard } from "@/components/LitigationDisciplineDashboard";
 import { litigationData, getSummaryStats } from "@/data/litigationData";
 
 interface Filters {
@@ -96,6 +97,11 @@ const Index = () => {
         {/* Expert Matching Dashboard for Manager View */}
         {activeView === 'manager' && (
           <ExpertMatchingDashboard data={filteredData} />
+        )}
+
+        {/* Litigation Discipline Dashboard for Exec View */}
+        {activeView === 'exec' && (
+          <LitigationDisciplineDashboard data={filteredData} />
         )}
 
         {/* Filters */}
