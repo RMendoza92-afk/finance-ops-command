@@ -128,6 +128,8 @@ export function useLitigationData() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
+            console.log('Parsed rows:', results.data.length);
+            
             // Include all records (both CWP and CWN)
             const allData = results.data.map((row, idx) => transformRow(row, idx));
             
@@ -139,6 +141,15 @@ export function useLitigationData() {
             const totalNet = allData.reduce((sum, d) => sum + d.netAmount, 0);
             const cwpCount = allData.filter(d => d.cwpCwn === 'CWP').length;
             const cwnCount = allData.filter(d => d.cwpCwn === 'CWN').length;
+            
+            console.log('Stats:', { 
+              total: allData.length, 
+              cwp: cwpCount, 
+              cwn: cwnCount,
+              indemnities: totalIndemnities,
+              expenses: totalExpenses,
+              net: totalNet
+            });
             
             setStats({
               totalMatters: allData.length,
