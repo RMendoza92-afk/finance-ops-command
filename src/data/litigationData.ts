@@ -137,17 +137,19 @@ export const classes = [...new Set(litigationData.map(d => d.class))].sort();
 export const departments = [...new Set(litigationData.map(d => d.dept))].sort();
 export const teams = [...new Set(litigationData.map(d => d.team))].sort();
 export const adjusters = [...new Set(litigationData.map(d => d.adjusterName))].sort();
-export const expCategories = [...new Set(litigationData.map(d => d.expCategory))].sort();
-export const coverages = [...new Set(litigationData.map(d => d.coverage))].sort();
+// Filter to only CWP (Closed With Payment) records
+export const litigationDataFiltered = litigationData.filter(d => d.cwpCwn === 'CWP');
+
+export const expCategories = [...new Set(litigationDataFiltered.map(d => d.expCategory))].sort();
+export const coverages = [...new Set(litigationDataFiltered.map(d => d.coverage))].sort();
 
 // Summary statistics
 export const getSummaryStats = () => {
-  const totalMatters = litigationData.length;
-  const totalIndemnities = litigationData.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
-  const totalExpenses = litigationData.reduce((sum, d) => sum + d.totalAmount, 0);
-  const totalNet = litigationData.reduce((sum, d) => sum + d.netAmount, 0);
-  const cwpCount = litigationData.filter(d => d.cwpCwn === 'CWP').length;
-  const cwnCount = litigationData.filter(d => d.cwpCwn === 'CWN').length;
+  const totalMatters = litigationDataFiltered.length;
+  const totalIndemnities = litigationDataFiltered.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
+  const totalExpenses = litigationDataFiltered.reduce((sum, d) => sum + d.totalAmount, 0);
+  const totalNet = litigationDataFiltered.reduce((sum, d) => sum + d.netAmount, 0);
+  const cwpCount = litigationDataFiltered.length;
   
   return {
     totalMatters,
@@ -155,6 +157,6 @@ export const getSummaryStats = () => {
     totalExpenses,
     totalNet,
     cwpCount,
-    cwnCount
+    cwnCount: 0
   };
 };

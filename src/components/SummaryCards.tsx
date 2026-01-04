@@ -32,7 +32,6 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
   // Calculate metrics from filtered data (for drill-down context)
   const totalMatters = data.length;
   const cwpMatters = data.filter(m => m.cwpCwn === 'CWP').length;
-  const cwnMatters = data.filter(m => m.cwpCwn === 'CWN').length;
   const highPainMatters = data.filter(m => m.endPainLvl >= 8).length;
   const criticalMatters = data.filter(m => m.endPainLvl >= 9).length;
   
@@ -81,9 +80,9 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
           variant={criticalMatters > 0 ? 'danger' : 'default'}
         />
         <KPICard
-          title="CWP Matters"
+          title="Closed Matters"
           value={cwpMatters}
-          subtitle={`${cwnMatters} CWN matters`}
+          subtitle="With payment"
           icon={CheckCircle2}
           variant="success"
         />
@@ -102,18 +101,18 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
           variant="primary"
         />
         <KPICard
-          title="CWP (Closed)"
+          title="Closed (CWP)"
           value={cwpMatters}
           subtitle="With payment"
           icon={CheckCircle2}
           variant="success"
         />
         <KPICard
-          title="CWN (Closed)"
-          value={cwnMatters}
-          subtitle="No indemnity paid"
-          icon={Clock}
-          variant="warning"
+          title="High Pain (8+)"
+          value={highPainMatters}
+          subtitle="Requires attention"
+          icon={AlertTriangle}
+          variant={highPainMatters > 0 ? 'danger' : 'default'}
         />
         <KPICard
           title="High Pain (8+)"
@@ -149,13 +148,12 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
         icon={Briefcase}
         variant="primary"
       />
-      <KPICard
-        title="CWN (Pending)"
-        value={cwnMatters}
-        subtitle="Needs resolution"
-        icon={Clock}
-        variant="warning"
-      />
+        <KPICard
+          title="High Pain Cases"
+          value={highPainMatters}
+          icon={AlertTriangle}
+          variant={highPainMatters > 0 ? 'danger' : 'success'}
+        />
       <KPICard
         title="High Pain Cases"
         value={highPainMatters}

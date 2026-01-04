@@ -5,7 +5,7 @@ import { SummaryCards } from "@/components/SummaryCards";
 import { DataTable } from "@/components/DataTable";
 import { ExpertMatchingDashboard } from "@/components/ExpertMatchingDashboard";
 import { LitigationDisciplineDashboard } from "@/components/LitigationDisciplineDashboard";
-import { litigationData, getSummaryStats } from "@/data/litigationData";
+import { litigationDataFiltered, getSummaryStats } from "@/data/litigationData";
 
 interface Filters {
   cwpCwn: string;
@@ -42,7 +42,7 @@ const Index = () => {
   const activeFilterCount = Object.values(filters).filter(v => v !== 'all').length;
 
   const filteredData = useMemo(() => {
-    return litigationData.filter(matter => {
+    return litigationDataFiltered.filter(matter => {
       if (filters.cwpCwn !== 'all' && matter.cwpCwn !== filters.cwpCwn) return false;
       if (filters.class !== 'all' && matter.class !== filters.class) return false;
       if (filters.dept !== 'all' && matter.dept !== filters.dept) return false;
@@ -116,10 +116,10 @@ const Index = () => {
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
             Showing <span className="font-medium text-foreground">{filteredData.length}</span> of{' '}
-            <span className="font-medium text-foreground">{litigationData.length}</span> records
+            <span className="font-medium text-foreground">{litigationDataFiltered.length}</span> records
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>CWP: {stats.cwpCount} | CWN: {stats.cwnCount}</span>
+            <span>CWP: {stats.cwpCount}</span>
             <span>Last updated: {new Date().toLocaleString()}</span>
           </div>
         </div>
