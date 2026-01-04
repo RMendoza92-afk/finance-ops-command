@@ -109,9 +109,9 @@ export function SummaryCards({ data, view }: SummaryCardsProps) {
           variant="success"
         />
         <KPICard
-          title="CWN (Open)"
+          title="CWN (Closed)"
           value={cwnMatters}
-          subtitle="No payment"
+          subtitle="No indemnity paid"
           icon={Clock}
           variant="warning"
         />
