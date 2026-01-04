@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LitigationMatter } from "@/data/litigationData";
+import { toast } from "@/hooks/use-toast";
 
 interface ExpertMatchingDashboardProps {
   data: LitigationMatter[];
@@ -185,6 +186,14 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
               variant="secondary"
               className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white"
               disabled={!selectedRow}
+              onClick={() => {
+                toast({
+                  title: "Coaching initiated",
+                  description: `Row ${selectedRow?.id} - ${selectedRow?.venue} marked for coaching.`,
+                });
+                setSelectedRow(null);
+                setManagerNotes("");
+              }}
             >
               Coach
             </Button>
@@ -192,6 +201,15 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
               variant="destructive"
               className="flex-1"
               disabled={!selectedRow}
+              onClick={() => {
+                toast({
+                  title: "Termination confirmed",
+                  description: `Row ${selectedRow?.id} - ${selectedRow?.venue} marked for termination.`,
+                  variant: "destructive",
+                });
+                setSelectedRow(null);
+                setManagerNotes("");
+              }}
             >
               Terminate
             </Button>
