@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
 import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
+import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
-import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2 } from "lucide-react";
+import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -161,7 +162,9 @@ const Index = () => {
             <div className="h-8 w-px bg-border" />
             <div>
               <h1 className="text-lg font-bold tracking-tight">Litigation Discipline Command Center</h1>
-              <p className="text-xs text-muted-foreground">2025 Litigation Portfolio • Decision & Discipline System</p>
+              <p className="text-xs text-muted-foreground">
+                {filters.inventoryStatus === 'open' ? 'Open Inventory Analysis' : '2025 Litigation Portfolio'} • Decision & Discipline System
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -212,7 +215,9 @@ const Index = () => {
         />
 
         {/* Tab Content */}
-        {activeTab === 'executive' ? (
+        {filters.inventoryStatus === 'open' ? (
+          <OpenInventoryDashboard />
+        ) : activeTab === 'executive' ? (
           <ExecutiveDashboard data={filteredData} onDrilldown={handleDrilldown} />
         ) : (
           <OverextensionTable data={filteredData} />
