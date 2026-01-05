@@ -34,10 +34,12 @@ serve(async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Get request params
+    // Get request params - default recipient is Richie Mendoza
     const body = await req.json().catch(() => ({}));
-    const recipientEmail = body.email || Deno.env.get("EXECUTIVE_DIGEST_EMAIL");
+    const recipientEmail = body.email || "RICHIE.MENDOZA@FREDLOYA.COM";
     const isTest = body.test === true;
+    
+    console.log(`Sending executive digest to: ${recipientEmail}`);
 
     // Fetch open exposure data
     const { data: exposureData, error: exposureError } = await supabase
