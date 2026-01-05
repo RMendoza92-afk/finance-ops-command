@@ -76,6 +76,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [generatingBudgetPDF, setGeneratingBudgetPDF] = useState(false);
   const [showCP1Drawer, setShowCP1Drawer] = useState(false);
   const [generatingCP1PDF, setGeneratingCP1PDF] = useState(false);
+  const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -788,6 +789,85 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       toast.error('Failed to generate PDF');
     } finally {
       setGeneratingCP1PDF(false);
+    }
+  }, []);
+
+  // Generate Excel for CP1 Analysis
+  const generateCP1Excel = useCallback(async () => {
+    setGeneratingCP1Excel(true);
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.utils.book_new();
+
+      // Sheet 1: Executive Summary
+      const summaryData = [
+        ['CP1 LIMITS TENDERED ANALYSIS'],
+        [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+        [],
+        ['EXECUTIVE SUMMARY'],
+        ['Metric', 'Value'],
+        ['Total Claims', CP1_DATA.totals.grandTotal],
+        ['CP1 Tendered', CP1_DATA.totals.yes],
+        ['No CP', CP1_DATA.totals.noCP],
+        ['CP1 Rate', `${CP1_DATA.cp1Rate}%`],
+        ['BI CP1 Rate', '34.2%'],
+      ];
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+      // Sheet 2: BI Age Breakdown
+      const biAgeData = [
+        ['BODILY INJURY - CP1 BY AGE'],
+        [],
+        ['Age Bucket', 'No CP', 'CP1 Yes', 'Total', 'CP1 Rate'],
+        ...CP1_DATA.biByAge.map(row => [
+          row.age,
+          row.noCP,
+          row.yes,
+          row.total,
+          `${((row.yes / row.total) * 100).toFixed(1)}%`
+        ]),
+        ['BI Total', CP1_DATA.biTotal.noCP, CP1_DATA.biTotal.yes, CP1_DATA.biTotal.total, '34.2%'],
+      ];
+      const biAgeSheet = XLSX.utils.aoa_to_sheet(biAgeData);
+      XLSX.utils.book_append_sheet(workbook, biAgeSheet, 'BI Age Breakdown');
+
+      // Sheet 3: Coverage Summary
+      const coverageData = [
+        ['CP1 BY COVERAGE TYPE'],
+        [],
+        ['Coverage', 'No CP', 'CP1 Yes', 'Total', 'CP1 Rate'],
+        ...CP1_DATA.byCoverage.map(row => [
+          row.coverage,
+          row.noCP,
+          row.yes,
+          row.total,
+          `${row.cp1Rate}%`
+        ]),
+        ['GRAND TOTAL', CP1_DATA.totals.noCP, CP1_DATA.totals.yes, CP1_DATA.totals.grandTotal, `${CP1_DATA.cp1Rate}%`],
+      ];
+      const coverageSheet = XLSX.utils.aoa_to_sheet(coverageData);
+      XLSX.utils.book_append_sheet(workbook, coverageSheet, 'Coverage Summary');
+
+      // Sheet 4: Key Insights
+      const insightsData = [
+        ['KEY INSIGHTS'],
+        [],
+        [`BI represents ${((CP1_DATA.biTotal.yes / CP1_DATA.totals.yes) * 100).toFixed(1)}% of all CP1 tendered claims (${CP1_DATA.biTotal.yes.toLocaleString()} of ${CP1_DATA.totals.yes.toLocaleString()})`],
+        [`Aged 365+ BI claims have highest CP1 rate at 45.7% (${CP1_DATA.biByAge[0].yes.toLocaleString()} claims)`],
+        [`UI coverage has highest CP1 rate at 51.9% but only ${CP1_DATA.byCoverage.find(c => c.coverage === 'UI')?.total} claims`],
+        [`Under 60 Days BI claims have lowest CP1 rate at 13.5% - early resolution opportunity`],
+      ];
+      const insightsSheet = XLSX.utils.aoa_to_sheet(insightsData);
+      XLSX.utils.book_append_sheet(workbook, insightsSheet, 'Key Insights');
+
+      XLSX.writeFile(workbook, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      toast.success('CP1 Analysis Excel generated');
+    } catch (err) {
+      console.error('Error generating Excel:', err);
+      toast.error('Failed to generate Excel');
+    } finally {
+      setGeneratingCP1Excel(false);
     }
   }, []);
   
@@ -3272,19 +3352,34 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 <CheckCircle2 className="h-5 w-5 text-success" />
                 CP1 Limits Tendered Analysis
               </SheetTitle>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={generateCP1PDF}
-                disabled={generatingCP1PDF}
-              >
-                {generatingCP1PDF ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Export PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={generateCP1PDF}
+                  disabled={generatingCP1PDF}
+                >
+                  {generatingCP1PDF ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={generateCP1Excel}
+                  disabled={generatingCP1Excel}
+                >
+                  {generatingCP1Excel ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Excel
+                </Button>
+              </div>
             </div>
             <SheetDescription>
               Policy limits tendered claims analysis by coverage type and age
