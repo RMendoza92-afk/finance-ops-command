@@ -120,13 +120,13 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  drawPageHeader(doc, pageWidth, 'EXECUTIVE COMMAND PACKAGE', 'Board-Level Summary', ctx);
+  drawPageHeader(doc, pageWidth, 'LITIGATION DISCIPLINE REPORT', 'Weekly Status', ctx);
   let y = 44;
   
   // CRITICAL BANNER: Financial Impact Statement
   const totalExposure = config.decisionsData.totalExposure + config.budgetData.ytdPaid;
   const criticalCount = config.decisionsData.critical;
-  const budgetStatus = config.budgetData.onTrack ? 'ON TRACK' : 'REQUIRES ATTENTION';
+  const budgetStatus = config.budgetData.onTrack ? 'ON TRACK' : 'OVER';
   
   // Impact banner - dark red for critical, dark green for ok
   doc.setFillColor(criticalCount > 0 ? 60 : 15, criticalCount > 0 ? 20 : 35, criticalCount > 0 ? 20 : 25);
@@ -139,11 +139,11 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('FINANCIAL POSITION', margins.left + 8, y + 8);
+  doc.text('POSITION', margins.left + 8, y + 8);
   
   doc.setFontSize(14);
   doc.text(
-    `${formatCurrency(totalExposure, true)} TOTAL EXPOSURE | ${criticalCount} CRITICAL ITEMS | BUDGET: ${budgetStatus}`,
+    `${formatCurrency(totalExposure, true)} EXPOSED | ${criticalCount} CRITICAL | BUDGET ${budgetStatus}`,
     margins.left + 8, y + 20
   );
   y += 34;
@@ -152,21 +152,21 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const kpiWidth = (pageWidth - margins.left - margins.right - 16) / 3;
   const kpis = [
     {
-      label: 'CLAIMS SPEND',
+      label: 'PAID YTD',
       value: formatCurrency(config.budgetData.ytdPaid, true),
-      sub: `${config.budgetData.burnRate}% of budget`,
+      sub: `${config.budgetData.burnRate}% burn`,
       status: config.budgetData.onTrack ? 'positive' : 'negative'
     },
     {
-      label: 'PENDING DECISIONS',
+      label: 'PENDING',
       value: config.decisionsData.total.toString(),
       sub: `${config.decisionsData.critical} critical`,
       status: config.decisionsData.critical > 0 ? 'negative' : 'neutral'
     },
     {
-      label: 'CP1 RATE',
+      label: 'LIMITS HIT',
       value: config.cp1Data.cp1Rate,
-      sub: `${config.cp1Data.cp1Count.toLocaleString()} tendered`,
+      sub: `${config.cp1Data.cp1Count.toLocaleString()} claims`,
       status: parseFloat(config.cp1Data.cp1Rate) > 30 ? 'negative' : 'neutral'
     }
   ];
@@ -188,21 +188,21 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const decisions = [
     {
       domain: 'BUDGET',
-      status: config.budgetData.onTrack ? '✓ Good' : '⚠ Over',
+      status: config.budgetData.onTrack ? '✓ OK' : '⚠ OVER',
       impact: formatCurrency(config.budgetData.projectedVariance, true),
-      action: config.budgetData.onTrack ? 'Stay the course' : 'Review BI spend'
+      action: config.budgetData.onTrack ? 'Hold' : 'Cut BI'
     },
     {
-      domain: 'DECISIONS',
-      status: config.decisionsData.critical > 0 ? `⚠ ${config.decisionsData.critical} Urgent` : '✓ Clear',
+      domain: 'QUEUE',
+      status: config.decisionsData.critical > 0 ? `⚠ ${config.decisionsData.critical}` : '✓ CLEAR',
       impact: formatCurrency(config.decisionsData.totalExposure, true),
-      action: config.decisionsData.critical > 0 ? 'Review today' : 'Routine'
+      action: config.decisionsData.critical > 0 ? 'Today' : 'None'
     },
     {
       domain: 'LIMITS',
-      status: parseFloat(config.cp1Data.cp1Rate) > 28 ? '⚠ High' : '✓ Normal',
-      impact: `${config.cp1Data.cp1Count.toLocaleString()} claims`,
-      action: parseFloat(config.cp1Data.cp1Rate) > 28 ? 'Check aged BI' : 'Monitor'
+      status: parseFloat(config.cp1Data.cp1Rate) > 28 ? '⚠ HIGH' : '✓ OK',
+      impact: `${config.cp1Data.cp1Count.toLocaleString()}`,
+      action: parseFloat(config.cp1Data.cp1Rate) > 28 ? 'Audit aged BI' : 'None'
     }
   ];
   
@@ -213,7 +213,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(7);
   const colWidths = [35, 45, 50, 56];
   let colX = margins.left + 4;
-  ['DOMAIN', 'STATUS', 'EXPOSURE/IMPACT', 'REQUIRED ACTION'].forEach((h, i) => {
+  ['AREA', 'STATUS', 'EXPOSURE', 'ACTION'].forEach((h, i) => {
     doc.text(h, colX, y + 6);
     colX += colWidths[i];
   });
@@ -263,7 +263,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.azure);
-  doc.text('CFO BOTTOM LINE:', margins.left + 5, y + 8);
+  doc.text('BOTTOM LINE:', margins.left + 5, y + 8);
   
   // Generate bottom line based on data - plain English, no jargon
   const bottomLine = generateCFOBottomLine(config);
@@ -321,20 +321,20 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'BUDGET BURN RATE ANALYSIS', `FY${ctx.fiscalYear} Claims Payment Tracking`, ctx);
   y = 44;
   
-  // Budget key takeaway - plain executive language
+  // Budget key takeaway
   const budgetTakeaway = config.budgetData.onTrack
-    ? `We've spent ${formatCurrency(config.budgetData.ytdPaid, true)} year-to-date. We're on track to finish ${formatCurrency(config.budgetData.projectedVariance, true)} under budget.`
-    : `We've spent ${formatCurrency(config.budgetData.ytdPaid, true)} year-to-date. At this pace, we'll be ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget by year-end.`;
+    ? `${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(config.budgetData.projectedVariance, true)} under.`
+    : `${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, budgetTakeaway, config.budgetData.onTrack ? 'positive' : 'negative');
   y += 26;
   
-  // Budget metrics row - plain labels
+  // Budget metrics row
   const budgetMetrics = [
-    { label: 'ANNUAL BUDGET', value: formatCurrency(config.budgetData.annualBudget, true), sub: `FY${ctx.fiscalYear}` },
-    { label: 'SPENT SO FAR', value: formatCurrency(config.budgetData.ytdPaid, true), sub: `${config.budgetData.yoyChangePercent >= 0 ? '+' : ''}${config.budgetData.yoyChangePercent.toFixed(1)}% vs last year` },
-    { label: 'BURN RATE', value: `${config.budgetData.burnRate}%`, sub: 'of annual' },
-    { label: 'LEFT TO SPEND', value: formatCurrency(config.budgetData.remaining, true), sub: config.budgetData.onTrack ? 'On track' : 'Tight' }
+    { label: 'BUDGET', value: formatCurrency(config.budgetData.annualBudget, true), sub: `FY${ctx.fiscalYear}` },
+    { label: 'SPENT', value: formatCurrency(config.budgetData.ytdPaid, true), sub: `${config.budgetData.yoyChangePercent >= 0 ? '+' : ''}${config.budgetData.yoyChangePercent.toFixed(1)}% YoY` },
+    { label: 'BURN', value: `${config.budgetData.burnRate}%`, sub: 'of annual' },
+    { label: 'REMAINING', value: formatCurrency(config.budgetData.remaining, true), sub: config.budgetData.onTrack ? 'OK' : 'Tight' }
   ];
   
   const bkWidth = (pageWidth - margins.left - margins.right - 24) / 4;
@@ -397,7 +397,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     doc.text(`${cov.change >= 0 ? '+' : ''}${formatCurrency(cov.change, true)}`, colX, y + 5);
     colX += covCols[3];
     
-    const impact = cov.change > 20000000 ? 'FIX NOW' : cov.change > 0 ? 'WATCH' : 'GOOD';
+    const impact = cov.change > 20000000 ? 'ACT' : cov.change > 0 ? 'WATCH' : 'OK';
     doc.text(impact, colX, y + 5);
     
     y += 10;
@@ -432,13 +432,13 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
-  doc.text('WHY:', margins.left + 4, y + 8);
+  doc.text('DRIVER:', margins.left + 4, y + 8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   const biPct = ((config.budgetData.coverageBreakdown.bi.change / totalChange) * 100).toFixed(0);
   const biClaimDiff = config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024;
-  doc.text(`BI is ${biPct}% of the increase. We're seeing ${biClaimDiff.toLocaleString()} more BI claims than last year.`, margins.left + 22, y + 8);
-  doc.text('Next step: Dig into BI severity and litigation to find what changed.', margins.left + 4, y + 16);
+  doc.text(`BI = ${biPct}% of increase. ${biClaimDiff.toLocaleString()} more BI claims YoY.`, margins.left + 28, y + 8);
+  doc.text('ACTION: Review BI severity and lit spend.', margins.left + 4, y + 16);
   
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
   
@@ -453,23 +453,23 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  drawPageHeader(doc, pageWidth, 'PENDING EXECUTIVE DECISIONS', `${config.decisionsData.critical} Critical Items Require Immediate Action`, ctx);
+  drawPageHeader(doc, pageWidth, 'DECISION QUEUE', `${config.decisionsData.critical} Critical`, ctx);
   y = 44;
   
-  // Decision takeaway - plain executive language
+  // Decision takeaway
   const decisionTakeaway = config.decisionsData.critical > 0
-    ? `${config.decisionsData.total} matters need your sign-off, worth ${formatCurrency(config.decisionsData.totalExposure, true)}. ${config.decisionsData.critical} are urgent. ${config.decisionsData.thisWeek} are due this week.`
-    : `${config.decisionsData.total} matters need your sign-off, worth ${formatCurrency(config.decisionsData.totalExposure, true)}. Nothing urgent right now.`;
+    ? `${config.decisionsData.total} pending. ${formatCurrency(config.decisionsData.totalExposure, true)} exposed. ${config.decisionsData.critical} critical. ${config.decisionsData.thisWeek} due this week.`
+    : `${config.decisionsData.total} pending. ${formatCurrency(config.decisionsData.totalExposure, true)} exposed. None critical.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'neutral');
   y += 26;
   
-  // Decision metrics - plain labels
+  // Decision metrics
   const decMetrics = [
-    { label: 'PENDING', value: config.decisionsData.total.toString(), sub: 'total' },
-    { label: 'URGENT', value: config.decisionsData.critical.toString(), sub: 'need action now' },
-    { label: 'DUE THIS WEEK', value: config.decisionsData.thisWeek.toString(), sub: 'next 7 days' },
-    { label: 'MONEY AT STAKE', value: formatCurrency(config.decisionsData.totalExposure, true), sub: 'total exposure' }
+    { label: 'PENDING', value: config.decisionsData.total.toString(), sub: 'matters' },
+    { label: 'CRITICAL', value: config.decisionsData.critical.toString(), sub: 'act now' },
+    { label: 'THIS WEEK', value: config.decisionsData.thisWeek.toString(), sub: '7 days' },
+    { label: 'EXPOSED', value: formatCurrency(config.decisionsData.totalExposure, true), sub: 'total' }
   ];
   
   decMetrics.forEach((m, i) => {
@@ -551,21 +551,21 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  drawPageHeader(doc, pageWidth, 'CP1 LIMITS TENDERED ANALYSIS', 'Policy Limits Exposure by Coverage and Age', ctx);
+  drawPageHeader(doc, pageWidth, 'LIMITS EXPOSURE', 'CP1 by Coverage and Age', ctx);
   y = 44;
   
-  // CP1 takeaway - plain executive language
-  const cp1Takeaway = `${config.cp1Data.cp1Count.toLocaleString()} claims have hit policy limits (${config.cp1Data.cp1Rate} of our book). Bodily injury is the driver at ${config.cp1Data.biCP1Rate}. Oldest claims are the biggest problem.`;
+  // CP1 takeaway
+  const cp1Takeaway = `${config.cp1Data.cp1Count.toLocaleString()} at limits (${config.cp1Data.cp1Rate}). BI drives at ${config.cp1Data.biCP1Rate}. Aged claims = highest risk.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, parseFloat(config.cp1Data.cp1Rate) > 28 ? 'negative' : 'neutral');
   y += 26;
   
-  // CP1 metrics - plain labels
+  // CP1 metrics
   const cp1Metrics = [
-    { label: 'OPEN CLAIMS', value: config.cp1Data.totalClaims.toLocaleString(), sub: 'total book' },
-    { label: 'AT LIMITS', value: config.cp1Data.cp1Count.toLocaleString(), sub: 'maxed out' },
-    { label: 'LIMITS RATE', value: config.cp1Data.cp1Rate, sub: 'of book' },
-    { label: 'BI RATE', value: config.cp1Data.biCP1Rate, sub: 'biggest driver' }
+    { label: 'OPEN', value: config.cp1Data.totalClaims.toLocaleString(), sub: 'claims' },
+    { label: 'AT LIMITS', value: config.cp1Data.cp1Count.toLocaleString(), sub: 'CP1' },
+    { label: 'CP1 RATE', value: config.cp1Data.cp1Rate, sub: 'of book' },
+    { label: 'BI RATE', value: config.cp1Data.biCP1Rate, sub: 'driver' }
   ];
   
   cp1Metrics.forEach((m, i) => {
@@ -736,7 +736,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     doc.setFillColor(0, 0, 0);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
     
-    drawPageHeader(doc, pageWidth, 'QUARTERLY TREND ANALYSIS', 'Expert Spend & Historical Patterns', ctx);
+    drawPageHeader(doc, pageWidth, 'QUARTERLY TREND', 'Expert Spend', ctx);
     y = 44;
     
     // Quarterly data table
@@ -898,7 +898,7 @@ function drawKeyTakeaway(doc: any, x: number, y: number, width: number, text: st
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...accentColor);
-  doc.text('KEY TAKEAWAY:', x + 8, y + 8);
+  doc.text('STATUS:', x + 8, y + 8);
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
@@ -962,28 +962,28 @@ function generateCFOBottomLine(config: ExecutivePackageConfig): string {
   const issues: string[] = [];
   const positives: string[] = [];
   
-  // Budget assessment - plain language
+  // Budget assessment
   if (!config.budgetData.onTrack) {
-    issues.push(`we're heading ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget`);
+    issues.push(`${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget`);
   } else {
-    positives.push(`budget looks good with ${formatCurrency(config.budgetData.projectedVariance, true)} cushion`);
+    positives.push(`${formatCurrency(config.budgetData.projectedVariance, true)} under budget`);
   }
   
   // Decisions assessment
   if (config.decisionsData.critical > 0) {
-    issues.push(`${config.decisionsData.critical} items need your attention today`);
+    issues.push(`${config.decisionsData.critical} critical pending`);
   }
   
   // CP1 assessment
   if (parseFloat(config.cp1Data.cp1Rate) > 28) {
-    issues.push(`too many claims hitting limits (${config.cp1Data.cp1Rate})`);
+    issues.push(`CP1 at ${config.cp1Data.cp1Rate}`);
   }
   
   if (issues.length === 0) {
-    return `Things are running clean. ${positives.join('. ')}. Nothing needs your attention right now.`;
+    return `Clean. ${positives.join('. ')}. No action required.`;
   } else if (issues.length === 1) {
-    return `One thing to watch: ${issues[0]}. ${positives.length > 0 ? positives.join('. ') + '.' : ''}`;
+    return `${issues[0]}. ${positives.length > 0 ? positives.join('. ') + '.' : ''}`;
   } else {
-    return `A few things need attention: ${issues.join('; ')}. Worth 15 minutes this week.`;
+    return `${issues.join('. ')}.`;
   }
 }
