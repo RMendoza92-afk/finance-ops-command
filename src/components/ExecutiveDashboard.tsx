@@ -100,22 +100,27 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return Array.from(grouped.values());
   }, [data]);
 
-  // Calculate KPIs - Known 2025 figures: $5.6M expert, $19M total, $13.4M reactive
+  // Calculate KPIs - Known 2025 Litigation figures:
+  // Grand Total: $395M (Indemnity + Expenses)
+  // Total Expenses: $19M  
+  // Expert Spend (intentional): $5.6M
+  // Reactive (pre-lit ATR waste + lit fees): $13.4M ($19M - $5.6M)
   const kpis = useMemo(() => {
     const totalPaid = aggregatedData.reduce((sum, m) => sum + m.totalPaid, 0);
     const indemnity = aggregatedData.reduce((sum, m) => sum + m.indemnity, 0);
     const expense = aggregatedData.reduce((sum, m) => sum + m.expense, 0);
     
-    // 2025 Litigation Known Figures (full dataset):
-    // - Total spend: $19M
-    // - Expert spend (intentional/leverage): $5.6M 
-    // - Reactive spend (fees + pre-lit friction): $13.4M ($19M - $5.6M)
-    // Expert spend ratio = 5.6 / 19 ≈ 29.5%
-    const EXPERT_SPEND_RATIO = 5.6 / 19;
+    // Known 2025 figures
+    const KNOWN_GRAND_TOTAL = 395000000;   // $395M total litigation
+    const KNOWN_INDEMNITY = 376000000;     // $376M indemnity ($395M - $19M)
+    const KNOWN_EXPENSE = 19000000;        // $19M expenses
+    const KNOWN_EXPERT = 5600000;          // $5.6M actual expert spend
+    const KNOWN_REACTIVE = 13400000;       // $13.4M waste (pre-lit ATR + lit fees)
     
-    // Apply ratio to expense portion (not indemnity)
-    const expertSpend = expense * EXPERT_SPEND_RATIO;
-    const postureSpend = expense * (1 - EXPERT_SPEND_RATIO); // Reactive/friction
+    // Calculate proportional spend based on filtered data
+    const expenseRatio = expense / KNOWN_EXPENSE;
+    const expertSpend = KNOWN_EXPERT * expenseRatio;
+    const postureSpend = KNOWN_REACTIVE * expenseRatio;
     
     return { 
       totalPaid, 
@@ -123,10 +128,13 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       postureSpend, 
       indemnity,
       expense,
-      // Include known figures for reference
-      knownExpert: 5600000,
-      knownReactive: 13400000,
-      knownTotal: 19000000,
+      grandTotal: totalPaid, // For filtered view
+      // Known figures (full dataset)
+      knownGrandTotal: KNOWN_GRAND_TOTAL,
+      knownIndemnity: KNOWN_INDEMNITY,
+      knownExpense: KNOWN_EXPENSE,
+      knownExpert: KNOWN_EXPERT,
+      knownReactive: KNOWN_REACTIVE,
     };
   }, [aggregatedData]);
 
@@ -188,58 +196,88 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
-  // Calculate proportional reactive spend based on known ratio
-  const reactiveRatio = 13.4 / 19; // 70.5% of spend is reactive
-  const expertRatio = 5.6 / 19;    // 29.5% of spend is expert/intentional
-
   return (
     <div className="space-y-6">
-      {/* 2025 Litigation Overview Banner */}
-      <div className="bg-muted/50 border border-border rounded-xl p-4">
+      {/* 2025 Litigation Grand Summary Banner */}
+      <div className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-foreground">2025 Litigation Expense Analysis</h2>
-            <p className="text-sm text-muted-foreground">Of <span className="font-semibold text-foreground">$19M</span> total expense: <span className="text-success font-semibold">$5.6M</span> expert (intentional) vs <span className="text-destructive font-semibold">$13.4M</span> reactive (fees + friction)</p>
+            <h2 className="text-xl font-bold text-foreground">2025 Litigation: $395M Total Paid</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              <span className="font-semibold text-foreground">$376M</span> Indemnity + <span className="font-semibold text-foreground">$19M</span> Expenses
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-32 h-3 rounded-full bg-muted overflow-hidden flex">
-              <div className="bg-success h-full" style={{ width: '29.5%' }}></div>
-              <div className="bg-destructive h-full" style={{ width: '70.5%' }}></div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Expense Breakdown</p>
+            <div className="flex items-center gap-3">
+              <span className="text-success font-bold">$5.6M Expert</span>
+              <span className="text-muted-foreground">vs</span>
+              <span className="text-destructive font-bold">$13.4M Waste</span>
             </div>
-            <span className="text-xs text-muted-foreground">29% / 71%</span>
+          </div>
+        </div>
+        
+        {/* Visual expense breakdown */}
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Expert (Intentional)</span>
+                <span>Pre-Lit ATR Waste + Litigation Fees</span>
+              </div>
+              <div className="w-full h-4 rounded-full bg-muted overflow-hidden flex">
+                <div className="bg-success h-full flex items-center justify-center text-[10px] font-bold text-success-foreground" style={{ width: '29.5%' }}>
+                  $5.6M
+                </div>
+                <div className="bg-destructive h-full flex items-center justify-center text-[10px] font-bold text-destructive-foreground" style={{ width: '70.5%' }}>
+                  $13.4M
+                </div>
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-success font-medium">29% Strategic</span>
+                <span className="text-destructive font-medium">71% Reactive</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* KPI Cards - 5 cards now */}
+      <div className="grid grid-cols-5 gap-4">
         <KPICard
-          title="Total Expense"
-          value={formatCurrency(kpis.expense)}
-          subtitle={`Indemnity: ${formatCurrency(kpis.indemnity)}`}
+          title="Grand Total"
+          value={formatCurrency(kpis.totalPaid)}
+          subtitle="Indemnity + Expenses"
           icon={DollarSign}
           variant="default"
         />
         <KPICard
-          title="Expert Spend (29%)"
+          title="Indemnity"
+          value={formatCurrency(kpis.indemnity)}
+          subtitle="Settlement payments"
+          icon={DollarSign}
+          variant="default"
+        />
+        <KPICard
+          title="Total Expenses"
+          value={formatCurrency(kpis.expense)}
+          subtitle="Expert + Reactive"
+          icon={DollarSign}
+          variant="default"
+        />
+        <KPICard
+          title="Expert Spend"
           value={formatCurrency(kpis.expertSpend)}
-          subtitle="Intentional / Leverage"
+          subtitle="Intentional leverage"
           icon={Target}
           variant="success"
         />
         <KPICard
-          title="Reactive Spend (71%)"
+          title="Reactive Waste"
           value={formatCurrency(kpis.postureSpend)}
-          subtitle="Fees + Pre-Lit Friction"
+          subtitle="Pre-lit ATR + Lit fees"
           icon={AlertTriangle}
           variant="danger"
-        />
-        <KPICard
-          title="Reactive / Expert Ratio"
-          value="2.4x"
-          subtitle="Every $1 expert = $2.40 reactive"
-          icon={TrendingUp}
-          variant="warning"
         />
       </div>
 
