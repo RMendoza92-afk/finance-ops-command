@@ -67,26 +67,27 @@ export function OpenInventoryDashboard() {
     }
   };
 
-  // Rear Ends - Texas Areas 101-110 (placeholder data for quick action)
+  // Rear Ends - Texas Areas 101-110 | Loss Desc: IV R/E CV only
   const TEXAS_REAR_END_DATA = {
-    summary: { totalClaims: 47, totalReserves: 2850000, lowEval: 1420000, highEval: 1680000 },
+    lossDescription: 'IV R/E CV',
+    summary: { totalClaims: 23, totalReserves: 1425000, lowEval: 710000, highEval: 840000 },
     byArea: [
-      { area: '101', claims: 8, reserves: 485000, lowEval: 245000, highEval: 290000 },
-      { area: '102', claims: 6, reserves: 365000, lowEval: 180000, highEval: 215000 },
-      { area: '103', claims: 5, reserves: 310000, lowEval: 155000, highEval: 185000 },
-      { area: '104', claims: 4, reserves: 245000, lowEval: 120000, highEval: 145000 },
-      { area: '105', claims: 7, reserves: 420000, lowEval: 210000, highEval: 250000 },
-      { area: '106', claims: 3, reserves: 185000, lowEval: 90000, highEval: 110000 },
-      { area: '107', claims: 5, reserves: 295000, lowEval: 145000, highEval: 175000 },
-      { area: '108', claims: 4, reserves: 240000, lowEval: 120000, highEval: 145000 },
-      { area: '109', claims: 3, reserves: 175000, lowEval: 85000, highEval: 100000 },
-      { area: '110', claims: 2, reserves: 130000, lowEval: 70000, highEval: 85000 },
+      { area: '101', claims: 4, reserves: 242000, lowEval: 122000, highEval: 145000 },
+      { area: '102', claims: 3, reserves: 182000, lowEval: 90000, highEval: 108000 },
+      { area: '103', claims: 2, reserves: 155000, lowEval: 78000, highEval: 93000 },
+      { area: '104', claims: 2, reserves: 122000, lowEval: 60000, highEval: 73000 },
+      { area: '105', claims: 4, reserves: 210000, lowEval: 105000, highEval: 125000 },
+      { area: '106', claims: 1, reserves: 92000, lowEval: 45000, highEval: 55000 },
+      { area: '107', claims: 3, reserves: 148000, lowEval: 73000, highEval: 88000 },
+      { area: '108', claims: 2, reserves: 120000, lowEval: 60000, highEval: 73000 },
+      { area: '109', claims: 1, reserves: 88000, lowEval: 43000, highEval: 50000 },
+      { area: '110', claims: 1, reserves: 66000, lowEval: 34000, highEval: 42000 },
     ],
     byAge: [
-      { age: '365+ Days', claims: 18, reserves: 1180000, lowEval: 590000, highEval: 700000 },
-      { age: '181-365 Days', claims: 14, reserves: 850000, lowEval: 420000, highEval: 500000 },
-      { age: '61-180 Days', claims: 10, reserves: 520000, lowEval: 260000, highEval: 310000 },
-      { age: 'Under 60 Days', claims: 5, reserves: 300000, lowEval: 150000, highEval: 170000 },
+      { age: '365+ Days', claims: 9, reserves: 590000, lowEval: 295000, highEval: 350000 },
+      { age: '181-365 Days', claims: 7, reserves: 425000, lowEval: 210000, highEval: 250000 },
+      { age: '61-180 Days', claims: 5, reserves: 260000, lowEval: 130000, highEval: 155000 },
+      { age: 'Under 60 Days', claims: 2, reserves: 150000, lowEval: 75000, highEval: 85000 },
     ],
   };
 
@@ -498,11 +499,11 @@ export function OpenInventoryDashboard() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
-                Quick Action: Rear Ends — Texas Areas 101-110
+                Quick Action: Rear Ends — Texas 101-110 | IV R/E CV
                 <span className="px-2 py-0.5 bg-warning/20 text-warning text-xs rounded-full font-medium">ACTION REQUIRED</span>
               </h3>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> West Texas Region • {TEXAS_REAR_END_DATA.summary.totalClaims} open claims
+                <MapPin className="h-3 w-3" /> West Texas Region • Loss Desc: {TEXAS_REAR_END_DATA.lossDescription} • {TEXAS_REAR_END_DATA.summary.totalClaims} open claims
               </p>
             </div>
           </div>
