@@ -151,23 +151,21 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // ============ CEO STATEMENT ============
   const ceoStatement = buildCEOStatement(data, config);
   doc.setFillColor(...C.rowDark);
-  doc.roundedRect(m.l, y, cw, 28, 1, 1, 'F');
+  doc.roundedRect(m.l, y, cw, 16, 1, 1, 'F');
   doc.setFillColor(...C.gold);
-  doc.rect(m.l, y, 2, 28, 'F');
+  doc.rect(m.l, y, 1.5, 16, 'F');
   
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(...C.offWhite);
-  
-  const statementLines = doc.splitTextToSize(ceoStatement, cw - 12);
-  doc.text(statementLines.slice(0, 3), m.l + 6, y + 8);
+  doc.text(ceoStatement, m.l + 5, y + 7, { maxWidth: cw - 50 });
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setTextColor(...C.gold);
-  doc.text('— Fred Loya Jr., CEO', pw - m.r - 4, y + 24, { align: 'right' });
+  doc.text('— F. Loya Jr.', pw - m.r - 2, y + 11, { align: 'right' });
   
-  y += 32;
+  y += 20;
 
   // ============ STATUS BANNER ============
   const bannerColor = data.status === 'FAIL' ? C.red : data.status === 'WARN' ? C.amber : C.green;
@@ -531,20 +529,20 @@ function buildCEOStatement(
 ): string {
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      return `I am not in control of spend. BI indemnities are exceeding forecast. Effective Friday, I am implementing enhanced authorization controls. No disbursements without my approval.`;
+      return `Not in control. BI over forecast. Enhanced auth controls Friday.`;
     }
     if (data.breaking.includes('DECISIONS')) {
-      return `${config.decisionsData.critical} matters require immediate disposition. Delayed resolution compounds our exposure. I am directing same-day clearance of all critical items.`;
+      return `${config.decisionsData.critical} critical matters pending. Same-day disposition required.`;
     }
     if (data.breaking.includes('AGED')) {
-      return `Aged inventory at ${data.agedValue} exceeds acceptable thresholds. This represents material risk to our reserves position. I am initiating escalation protocols immediately.`;
+      return `Aged inventory at ${data.agedValue}. Material reserve risk. Escalating now.`;
     }
-    return `Multiple control deficiencies identified. I am directing corrective action per the orders below. Execution is expected without delay.`;
+    return `Control deficiencies identified. Corrective action required per orders.`;
   }
   
   if (data.status === 'WARN') {
-    return `Operations are in control. CP1 rate at ${config.cp1Data.cp1Rate} warrants monitoring. No intervention required. I expect a status update within 7 business days.`;
+    return `In control. CP1 at ${config.cp1Data.cp1Rate} under review. Update in 7 days.`;
   }
   
-  return `All key indicators are within target parameters. Current operational cadence is satisfactory. I expect continued discipline through next reporting period.`;
+  return `In control. All indicators within target. Maintain cadence.`;
 }
