@@ -131,21 +131,21 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   // Open Reserves vs Low/High Evaluation - null means no evaluation
   const FINANCIAL_DATA = {
     byAge: [
-      { age: '365+ Days', claims: 5630, openReserves: 48750000, lowEval: 28500000, highEval: 32100000 },
-      { age: '181-365 Days', claims: 3953, openReserves: 31200000, lowEval: 18200000, highEval: 20500000 },
-      { age: '61-180 Days', claims: 5576, openReserves: 28900000, lowEval: 10800000, highEval: 12200000 },
-      { age: 'Under 60 Days', claims: 8420, openReserves: 18600000, lowEval: 3600000, highEval: 3800000 },
+      { age: '365+ Days', claims: 5630, openReserves: 115000000, lowEval: 72000000, highEval: 81000000 },
+      { age: '181-365 Days', claims: 3953, openReserves: 78000000, lowEval: 46000000, highEval: 52000000 },
+      { age: '61-180 Days', claims: 5576, openReserves: 68000000, lowEval: 27000000, highEval: 31000000 },
+      { age: 'Under 60 Days', claims: 8420, openReserves: 39840000, lowEval: 8500000, highEval: 9600000 },
     ],
     byQueue: [
-      { queue: 'Litigation', openReserves: 68500000, lowEval: 38200000, highEval: 42800000, noEvalCount: 0 },
-      { queue: 'ATR', openReserves: 34200000, lowEval: 14500000, highEval: 16200000, noEvalCount: 1245 },
-      { queue: 'BI3', openReserves: 18900000, lowEval: 6800000, highEval: 7600000, noEvalCount: 892 },
-      { queue: 'Early BI', openReserves: 5850000, lowEval: 1600000, highEval: 2000000, noEvalCount: 141 },
+      { queue: 'Litigation', openReserves: 162000000, lowEval: 96000000, highEval: 108000000, noEvalCount: 0 },
+      { queue: 'ATR', openReserves: 81000000, lowEval: 36500000, highEval: 41000000, noEvalCount: 1245 },
+      { queue: 'BI3', openReserves: 44840000, lowEval: 17000000, highEval: 19200000, noEvalCount: 892 },
+      { queue: 'Early BI', openReserves: 13000000, lowEval: 4000000, highEval: 5400000, noEvalCount: 141 },
     ],
     totals: {
-      totalOpenReserves: 127450000,
-      totalLowEval: 61100000,  // $61.1M
-      totalHighEval: 68600000, // $68.6M
+      totalOpenReserves: 300840000,  // $300.84M
+      totalLowEval: 153500000,       // $153.5M
+      totalHighEval: 173600000,      // $173.6M
       noEvalCount: 2278,
     }
   };
