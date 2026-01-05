@@ -7,21 +7,31 @@ export interface ExecutiveReviewResult {
   score: number;
 }
 
-// Estimate claim age from prefix (lower prefixes = older claims)
-export function estimateClaimAge(prefix: string): number {
+// Calculate claim age from transfer date or fallback to current year
+export function estimateClaimAge(prefix: string, transferDate?: string): number {
   const currentYear = 2025;
   
+  // If we have a transfer date, calculate actual age
+  if (transferDate) {
+    const dateMatch = transferDate.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
+    if (dateMatch) {
+      const year = parseInt(dateMatch[3]);
+      if (!isNaN(year) && year >= 2010 && year <= currentYear) {
+        return currentYear - year;
+      }
+    }
+  }
+  
+  // Fallback: use prefix as rough estimate (higher prefix = newer claim)
   const prefixNum = parseInt(prefix);
   if (isNaN(prefixNum)) return 0;
   
-  if (prefixNum <= 39) return currentYear - 2017; // ~8 years
-  if (prefixNum <= 55) return currentYear - 2018; // ~7 years  
-  if (prefixNum <= 65) return currentYear - 2019; // ~6 years
-  if (prefixNum <= 70) return currentYear - 2020; // ~5 years
-  if (prefixNum <= 72) return currentYear - 2021; // ~4 years
-  if (prefixNum <= 78) return currentYear - 2022; // ~3 years
-  if (prefixNum <= 89) return currentYear - 2023; // ~2 years
-  return currentYear - 2024; // ~1 year
+  // Rough estimate: prefixes increased ~10-15 per year
+  if (prefixNum <= 50) return Math.min(6, currentYear - 2019);
+  if (prefixNum <= 65) return Math.min(5, currentYear - 2020);
+  if (prefixNum <= 75) return Math.min(3, currentYear - 2022);
+  if (prefixNum <= 85) return Math.min(2, currentYear - 2023);
+  return 1; // Recent claims
 }
 
 // HYBRID EXECUTIVE REVIEW CLASSIFICATION

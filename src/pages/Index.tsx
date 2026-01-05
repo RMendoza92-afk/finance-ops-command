@@ -78,7 +78,7 @@ const Index = () => {
       
       // Executive Review filter
       if (filters.executiveReview !== 'all') {
-        const claimAge = estimateClaimAge(matter.prefix);
+        const claimAge = estimateClaimAge(matter.prefix, matter.transferDate);
         const stage = getLitigationStage(matter.endPainLvl);
         const painEscalation = matter.endPainLvl - matter.startPainLvl;
         

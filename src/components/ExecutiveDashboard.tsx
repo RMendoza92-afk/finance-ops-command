@@ -195,7 +195,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       const existing = claimMap.get(key);
       const stage = getLitigationStage(matter.endPainLvl);
       const expenseAmount = Math.max(0, (matter.totalAmount || 0) - (matter.indemnitiesAmount || 0));
-      const claimAge = estimateClaimAge(matter.prefix);
+      const claimAge = estimateClaimAge(matter.prefix, matter.transferDate);
       const painEscalation = matter.endPainLvl - matter.startPainLvl;
       
       if (existing) {

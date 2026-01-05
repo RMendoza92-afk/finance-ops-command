@@ -76,25 +76,30 @@ function getRiskFlag(ratio: number): RiskLevel {
   return 'RED';
 }
 
-// Estimate claim age from prefix (lower prefixes = older claims)
-// Prefix appears to be 2-digit year codes: 65 = 2016-2017, 78 = 2017-2018, etc.
-function estimateClaimAge(prefix: string, claim: string): number {
+// Calculate claim age from transfer date or fallback
+function estimateClaimAge(prefix: string, transferDate?: string): number {
   const currentYear = 2025;
   
-  // Try to extract year from prefix pattern
+  // If we have a transfer date, calculate actual age
+  if (transferDate) {
+    const dateMatch = transferDate.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
+    if (dateMatch) {
+      const year = parseInt(dateMatch[3]);
+      if (!isNaN(year) && year >= 2010 && year <= currentYear) {
+        return currentYear - year;
+      }
+    }
+  }
+  
+  // Fallback: use prefix as rough estimate (higher prefix = newer claim)
   const prefixNum = parseInt(prefix);
   if (isNaN(prefixNum)) return 0;
   
-  // Common prefix patterns mapping to approximate years
-  // This is an approximation - real logic would use actual claim dates
-  if (prefixNum <= 39) return currentYear - 2017; // ~8 years
-  if (prefixNum <= 55) return currentYear - 2018; // ~7 years  
-  if (prefixNum <= 65) return currentYear - 2019; // ~6 years
-  if (prefixNum <= 70) return currentYear - 2020; // ~5 years
-  if (prefixNum <= 72) return currentYear - 2021; // ~4 years
-  if (prefixNum <= 78) return currentYear - 2022; // ~3 years
-  if (prefixNum <= 89) return currentYear - 2023; // ~2 years
-  return currentYear - 2024; // ~1 year
+  if (prefixNum <= 50) return Math.min(6, currentYear - 2019);
+  if (prefixNum <= 65) return Math.min(5, currentYear - 2020);
+  if (prefixNum <= 75) return Math.min(3, currentYear - 2022);
+  if (prefixNum <= 85) return Math.min(2, currentYear - 2023);
+  return 1; // Recent claims
 }
 
 // HYBRID EXECUTIVE REVIEW CLASSIFICATION
@@ -293,7 +298,7 @@ export function OverextensionTable({ data }: OverextensionTableProps) {
       const minPain = Math.min(...transactions.map(t => t.startPainLvl));
       const painEscalation = maxPain - minPain;
       const litigationStage = getLitigationStage(maxPain);
-      const claimAge = estimateClaimAge(first.prefix, first.claim);
+      const claimAge = estimateClaimAge(first.prefix, first.transferDate);
       
       // Calculate executive review using hybrid criteria
       const executiveReview = calculateExecutiveReview(
