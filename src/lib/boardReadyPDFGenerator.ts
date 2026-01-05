@@ -1,16 +1,36 @@
 /**
- * CEO CONTROL PANEL GENERATOR
- * ===========================
- * This dashboard must read like a CEO control panel, not a management report.
- * If interpretation is required, the output is wrong.
+ * CEO CONTROL INSTRUMENT — CHIEF OF STAFF TO FRED LOYA JR.
+ * =========================================================
+ * You are Chief of Staff. This is a CEO control and discipline instrument.
  * 
- * EVERY PAGE MUST DO ONE OF:
- * - CALL OUT A FAILURE
- * - DEFEND A POSITION
- * - DEMAND AN ACTION
- * - CONFIRM DISCIPLINE IS HOLDING
+ * Your job is NOT to summarize data.
+ * Your job is to DECIDE, LABEL, and FORCE POSTURE.
  * 
- * If a page only "informs," it has failed. Neutral tone is NOT ALLOWED.
+ * The reader:
+ * - Is Fred Loya Jr.
+ * - Already knows the business
+ * - Has zero patience
+ * - Will not interpret or infer
+ * 
+ * Page 1 must immediately answer:
+ * 1. Are we in control or not?
+ * 2. Where is discipline breaking (if anywhere)?
+ * 3. Does executive intervention happen this week, or not?
+ * 
+ * Every section MUST resolve to ONE state:
+ * 🟢 DISCIPLINE HOLDING — no action
+ * 🟡 DISCIPLINE SOFTENING — warning / monitor
+ * 🔴 DISCIPLINE BROKEN — intervention required
+ * 
+ * NO NEUTRAL OR DESCRIPTIVE SECTIONS.
+ * 
+ * All metrics MUST include:
+ * - Financial impact
+ * - Owner
+ * - Consequence if unchanged
+ * 
+ * If the CEO cannot understand the takeaway in 10 seconds, REGENERATE.
+ * Interpretation is failure.
  */
 
 import { format } from 'date-fns';
@@ -123,80 +143,75 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  drawPageHeader(doc, pageWidth, 'CEO CONTROL PANEL', 'This Week: Status / Breaks / Enforcement', ctx);
+  drawPageHeader(doc, pageWidth, 'FRED LOYA JR. — THIS WEEK', 'Chief of Staff Control Report', ctx);
   let y = 44;
 
   const ceo = buildCEOControlPanel(config);
 
-  // STATUS BLOCK (binary judgment)
-  doc.setFillColor(25, 25, 25);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'F');
-  doc.setDrawColor(...(ceo.disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : ceo.disciplineBand === 'degrading' ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success));
-  doc.setLineWidth(1);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'S');
-
+  // GIANT STATUS BADGE — 10 second read
+  const statusBadgeColor = ceo.disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : ceo.disciplineBand === 'degrading' ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success;
+  doc.setFillColor(statusBadgeColor[0], statusBadgeColor[1], statusBadgeColor[2]);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 28, 4, 4, 'F');
+  
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text(`STATUS: ${ceo.statusLine}`, margins.left + 6, y + 9);
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.text(ceo.disciplineLabel, pageWidth / 2, y + 12, { align: 'center' });
+  
+  doc.setFontSize(9);
+  doc.text(ceo.statusLine, pageWidth / 2, y + 22, { align: 'center' });
+  y += 36;
 
-  doc.setFontSize(8);
-  doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-  doc.text(`DISCIPLINE: ${ceo.disciplineLabel}  |  OWNER: ${ceo.primaryOwner}`, margins.left + 6, y + 17);
-  y += 30;
-
-  // THE 3 QUESTIONS (no scanning)
+  // THE 3 QUESTIONS — NO SCANNING REQUIRED
   const boxW = pageWidth - margins.left - margins.right;
-  const boxH = 26;
+  const boxH = 30;
 
-  const drawCEOBox = (title: string, body: string, accent: number[]) => {
+  const drawCEOBox = (number: string, question: string, answer: string, owner: string, impact: string, consequence: string, accent: number[]) => {
     doc.setFillColor(18, 18, 18);
     doc.roundedRect(margins.left, y, boxW, boxH, 3, 3, 'F');
     doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(margins.left, y + 4, 4, boxH - 8, 'F');
+    doc.rect(margins.left, y + 4, 5, boxH - 8, 'F');
 
+    // Question label
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(accent[0], accent[1], accent[2]);
-    doc.text(title, margins.left + 10, y + 9);
+    doc.text(`${number} ${question}`, margins.left + 10, y + 8);
 
+    // Answer (large, bold)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    const lines = doc.splitTextToSize(body, boxW - 16);
-    doc.text(lines.slice(0, 2), margins.left + 10, y + 20);
+    const lines = doc.splitTextToSize(answer, boxW - 20);
+    doc.text(lines[0], margins.left + 10, y + 18);
 
-    y += boxH + 8;
+    // Owner | Impact | Consequence (single line)
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+    doc.text(`OWNER: ${owner}  |  IMPACT: ${impact}  |  IF UNCHANGED: ${consequence}`, margins.left + 10, y + 26);
+
+    y += boxH + 4;
   };
 
-  drawCEOBox('1) AHEAD OR BEHIND PLAN', ceo.planAnswer, ceo.planAccent);
-  drawCEOBox('2) WHAT IS BREAKING DISCIPLINE', ceo.breakAnswer, ceo.breakAccent);
-  drawCEOBox('3) REQUIRED THIS WEEK', ceo.enforcementAnswer, ceo.enforcementAccent);
+  drawCEOBox('1)', 'ARE WE IN CONTROL?', ceo.planAnswer, ceo.planOwner, ceo.planImpact, ceo.planConsequence, ceo.planAccent);
+  drawCEOBox('2)', 'WHERE IS DISCIPLINE BREAKING?', ceo.breakAnswer, ceo.breakOwner, ceo.breakImpact, ceo.breakConsequence, ceo.breakAccent);
+  drawCEOBox('3)', 'INTERVENTION THIS WEEK?', ceo.enforcementAnswer, ceo.enforcementOwner, ceo.enforcementImpact, ceo.enforcementConsequence, ceo.enforcementAccent);
 
-  // CONSEQUENCE (hard framing)
-  doc.setFillColor(25, 25, 25);
-  doc.roundedRect(margins.left, y, boxW, 20, 3, 3, 'F');
+  // CHIEF OF STAFF CONFIRMATION
+  y += 4;
+  doc.setFillColor(ceo.disciplineBand === 'holding' ? 15 : 40, ceo.disciplineBand === 'holding' ? 35 : 18, ceo.disciplineBand === 'holding' ? 25 : 18);
+  doc.roundedRect(margins.left, y, boxW, 22, 3, 3, 'F');
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(...EXECUTIVE_COLORS.azure);
-  doc.text('CONSEQUENCE IF UNCHANGED (30 DAYS):', margins.left + 6, y + 8);
-
-  doc.setFont('helvetica', 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text(ceo.consequence30d, margins.left + 6, y + 16);
-  y += 26;
-
-  // CONFIRMATION (explicit)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('CONFIRMATION REQUIRED:', margins.left, y);
-  y += 6;
-
+  doc.text('CHIEF OF STAFF CONFIRMATION:', margins.left + 6, y + 9);
+  
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-  doc.text(ceo.confirmationLine, margins.left, y);
+  const confirmLines = doc.splitTextToSize(ceo.confirmationLine, boxW - 16);
+  doc.text(confirmLines[0], margins.left + 6, y + 17);
 
   // Page footer
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
@@ -215,11 +230,16 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'BUDGET BURN RATE ANALYSIS', `FY${ctx.fiscalYear} Claims Payment Tracking`, ctx);
   y = 44;
   
-  // Budget key takeaway — AUTHORITATIVE VOICE
-  const budgetBand = config.budgetData.onTrack ? 'holding' : 'failure';
+  // Budget discipline state — NO NEUTRAL
+  const budgetBand = config.budgetData.onTrack ? '🟢 DISCIPLINE HOLDING' : '🔴 DISCIPLINE BROKEN';
+  const budgetOwner = 'Claims + Litigation';
+  const budgetImpact = formatCurrency(Math.abs(config.budgetData.projectedVariance), true);
+  const budgetConsequence = config.budgetData.onTrack 
+    ? 'None — on track'
+    : `+${formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true)}/mo bleed`;
   const budgetTakeaway = config.budgetData.onTrack
-    ? `I am defending this position: we are ${formatCurrency(config.budgetData.projectedVariance, true)} under plan. Gates are holding. No intervention needed—maintain cadence.`
-    : `I am calling out a failure: we are ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over plan. BI severity broke discipline. I am demanding Claims tighten the BI payment gate this week. Litigation spend review is required by Friday.`;
+    ? `${budgetBand} | OWNER: ${budgetOwner} | We are ${formatCurrency(config.budgetData.projectedVariance, true)} under. No action.`
+    : `${budgetBand} | OWNER: ${budgetOwner} | ${budgetImpact} over. BI broke the gate. Tighten now.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, budgetTakeaway, config.budgetData.onTrack ? 'positive' : 'negative');
   y += 26;
@@ -355,12 +375,14 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     .filter(d => d.severity === 'critical')
     .reduce((s, d) => s + (d.amount || 0), 0);
 
-  // Decision takeaway — AUTHORITATIVE VOICE
+  // Decision discipline state — NO NEUTRAL
+  const decisionBand = config.decisionsData.critical > 0 ? '🔴 DISCIPLINE BROKEN' : '🟢 DISCIPLINE HOLDING';
+  const decisionOwner = 'Litigation';
   const decisionTakeaway = config.decisionsData.critical > 0
-    ? `I am calling out a failure: ${config.decisionsData.critical} critical matters are stalled (${formatCurrency(criticalExposure, true)} exposed). Litigation must clear these today—not tomorrow. I am demanding same-day resolution and tighter authority gates on new filings.`
-    : `I am confirming discipline is holding: ${config.decisionsData.total} matters pending (${formatCurrency(config.decisionsData.totalExposure, true)}). Queue is moving. No executive intervention required—maintain cadence.`;
+    ? `${decisionBand} | OWNER: ${decisionOwner} | ${config.decisionsData.critical} critical stalled (${formatCurrency(criticalExposure, true)}). Clear today.`
+    : `${decisionBand} | OWNER: ${decisionOwner} | Queue moving. ${config.decisionsData.total} pending. No action.`;
   
-  drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'neutral');
+  drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'positive');
   y += 26;
   
   // Decision metrics
@@ -457,13 +479,18 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const agedShare = agedBucket && config.cp1Data.biTotal.total > 0 ? (agedBucket.total / config.cp1Data.biTotal.total) : 0;
   const agedSharePct = (agedShare * 100);
   const agedEscalation = agedSharePct >= 40;
+  const cp1High = parseFloat(config.cp1Data.cp1Rate) > 28;
 
-  // CP1 takeaway — AUTHORITATIVE VOICE
+  // CP1 discipline state — NO NEUTRAL
+  const cp1Band = agedEscalation ? '🔴 DISCIPLINE BROKEN' : cp1High ? '🟡 DISCIPLINE SOFTENING' : '🟢 DISCIPLINE HOLDING';
+  const cp1Owner = 'Claims + Litigation';
   const cp1Takeaway = agedEscalation
-    ? `I am calling out a failure: aged BI hit ${agedSharePct.toFixed(1)}%—that triggers automatic escalation. CP1 rate is ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). I am demanding Claims and Litigation execute the escalation protocol and review settlement authority immediately.`
-    : `I am defending this position: CP1 at ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI at ${agedSharePct.toFixed(1)}% is below the 40% escalation threshold. Discipline is holding—maintain monitoring cadence.`;
+    ? `${cp1Band} | OWNER: ${cp1Owner} | Aged BI at ${agedSharePct.toFixed(0)}% (threshold 40%). Execute escalation now.`
+    : cp1High
+      ? `${cp1Band} | OWNER: ${cp1Owner} | CP1 at ${config.cp1Data.cp1Rate} is elevated. Monitoring. No action yet.`
+      : `${cp1Band} | OWNER: ${cp1Owner} | CP1 at ${config.cp1Data.cp1Rate}. Aged BI at ${agedSharePct.toFixed(0)}%. No action.`;
   
-  drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, parseFloat(config.cp1Data.cp1Rate) > 28 ? 'negative' : 'neutral');
+  drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, agedEscalation ? 'negative' : cp1High ? 'neutral' : 'positive');
   y += 26;
   
   // CP1 metrics
@@ -877,12 +904,20 @@ function buildCEOControlPanel(config: ExecutivePackageConfig): {
   statusLine: string;
   planAnswer: string;
   planAccent: number[];
+  planOwner: string;
+  planImpact: string;
+  planConsequence: string;
   breakAnswer: string;
   breakAccent: number[];
+  breakOwner: string;
+  breakImpact: string;
+  breakConsequence: string;
   enforcementAnswer: string;
   enforcementAccent: number[];
+  enforcementOwner: string;
+  enforcementImpact: string;
+  enforcementConsequence: string;
   primaryOwner: string;
-  consequence30d: string;
   confirmationLine: string;
 } {
   const overBudget = !config.budgetData.onTrack;
@@ -895,54 +930,86 @@ function buildCEOControlPanel(config: ExecutivePackageConfig): {
   const agedBucket = config.cp1Data.biByAge.find(a => a.age === '365+ Days');
   const agedShare = agedBucket && config.cp1Data.biTotal.total > 0 ? (agedBucket.total / config.cp1Data.biTotal.total) : 0;
   const agedEscalation = agedShare >= 0.40;
+  const agedSharePct = (agedShare * 100).toFixed(0);
 
-  const disciplineBand: DisciplineBand = overBudget || critical || agedEscalation ? 'failure' : (cp1High || biDriver ? 'degrading' : 'holding');
-  const disciplineLabel = disciplineBand === 'failure' ? '❌ FAILURE — INTERVENTION REQUIRED' : disciplineBand === 'degrading' ? '⚠️ DEGRADING — WATCH ACTIVE' : '✅ HOLDING — NO ACTION';
-
-  const statusLine = overBudget
-    ? `OVER BUDGET — I AM CALLING OUT A FAILURE (${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over)`
-    : `AHEAD OF PLAN — I AM DEFENDING THIS POSITION (${formatCurrency(config.budgetData.projectedVariance, true)} under)`;
-
-  const planAnswer = overBudget
-    ? `We are ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over. This is unacceptable.`
-    : `We are ${formatCurrency(config.budgetData.projectedVariance, true)} under. I am defending this position.`;
-
-  const breakAnswer = (() => {
-    if (overBudget) return `BI severity broke discipline. Litigation velocity compounded it.`;
-    if (critical) return `Decision queue is stalled. This is blocking discipline.`;
-    if (agedEscalation) return `Aged BI exceeded 40%. Escalation protocol is now mandatory.`;
-    if (cp1High) return `Limits rate is elevated. I am watching this closely.`;
-    return `Nothing is breaking. I am confirming discipline is holding.`;
-  })();
-
-  const enforcementAnswer = (() => {
-    const actions: string[] = [];
-    if (overBudget) actions.push('I demand Claims tighten the BI gate. Litigation spend review by Friday.');
-    if (critical) actions.push('I demand Litigation clear critical decisions today.');
-    if (agedEscalation) actions.push('I demand the escalation protocol be executed immediately.');
-    if (!overBudget && !critical && !agedEscalation) return 'No intervention required. I am confirming gates are holding. Maintain cadence.';
-    return actions.join(' ');
-  })();
-
-  const primaryOwner = overBudget ? 'Claims (BI) + Litigation' : critical ? 'Litigation' : agedEscalation ? 'Claims + Litigation' : 'Claims';
-
-  // Use only defensible arithmetic derived from existing totals (pro‑rata 30d).
-  const monthlyOverPlan = overBudget ? Math.abs(config.budgetData.projectedVariance) / 12 : 0;
   const criticalExposure = config.decisionsData.decisions
     .filter(d => d.severity === 'critical')
     .reduce((s, d) => s + (d.amount || 0), 0);
-  const monthlyCritical = criticalExposure > 0 ? (criticalExposure / 12) : 0;
-  const consequence30d = overBudget
-    ? `If unchanged: we bleed ${formatCurrency(monthlyOverPlan, true)} every 30 days. I will not accept that.`
-    : critical
-      ? `If unchanged: ${formatCurrency(monthlyCritical, true)} stays at risk every 30 days. Unacceptable.`
-      : agedEscalation
-        ? `If unchanged: escalation stays active. Exposure compounds. I demand resolution.`
-        : `If unchanged: no consequence. I am confirming discipline is holding.`;
 
+  // DISCIPLINE BAND — the only 3 states allowed
+  const disciplineBand: DisciplineBand = overBudget || critical || agedEscalation 
+    ? 'failure' 
+    : (cp1High || biDriver ? 'degrading' : 'holding');
+
+  // LABELS — no neutral language
+  const disciplineLabel = disciplineBand === 'failure' 
+    ? '🔴 DISCIPLINE BROKEN — INTERVENTION REQUIRED' 
+    : disciplineBand === 'degrading' 
+      ? '🟡 DISCIPLINE SOFTENING — WARNING ACTIVE' 
+      : '🟢 DISCIPLINE HOLDING — NO ACTION';
+
+  const statusLine = disciplineBand === 'failure'
+    ? 'We are NOT in control. Executive action required this week.'
+    : disciplineBand === 'degrading'
+      ? 'Control is slipping. Monitoring active. No intervention yet.'
+      : 'We are in control. No intervention required.';
+
+  // QUESTION 1: Are we in control?
+  const planAnswer = overBudget
+    ? `NO. ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over plan. BI broke the gate.`
+    : `YES. ${formatCurrency(config.budgetData.projectedVariance, true)} under plan. Gates holding.`;
+  const planOwner = 'Claims + Litigation';
+  const planImpact = formatCurrency(Math.abs(config.budgetData.projectedVariance), true);
+  const planConsequence = overBudget 
+    ? `+${formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true)}/mo bleed`
+    : 'None — on track';
+
+  // QUESTION 2: Where is discipline breaking?
+  const breakAnswer = (() => {
+    if (overBudget) return `BI PAYMENT GATE. Severity is driving overspend.`;
+    if (critical) return `DECISION QUEUE. ${config.decisionsData.critical} critical matters stalled.`;
+    if (agedEscalation) return `AGED BI. ${agedSharePct}% at 365+ days. Escalation triggered.`;
+    if (cp1High) return `LIMITS RATE. ${config.cp1Data.cp1Rate} CP1 is elevated.`;
+    return `NOWHERE. All gates holding.`;
+  })();
+  const breakOwner = overBudget ? 'Claims' : critical ? 'Litigation' : agedEscalation ? 'Claims + Litigation' : 'All';
+  const breakImpact = overBudget 
+    ? formatCurrency(biChange, true) + ' BI YoY'
+    : critical 
+      ? formatCurrency(criticalExposure, true) + ' exposed'
+      : agedEscalation
+        ? agedSharePct + '% aged BI'
+        : '$0 — clean';
+  const breakConsequence = overBudget || critical || agedEscalation
+    ? 'Exposure compounds weekly'
+    : 'None';
+
+  // QUESTION 3: Intervention this week?
+  const enforcementAnswer = (() => {
+    if (overBudget) return `YES. Tighten BI gate. Litigation spend review by Friday.`;
+    if (critical) return `YES. Clear critical queue today. No exceptions.`;
+    if (agedEscalation) return `YES. Execute escalation protocol. Review authority.`;
+    if (cp1High) return `MONITOR. No action yet. Review in 7 days.`;
+    return `NO. Maintain cadence.`;
+  })();
+  const enforcementOwner = overBudget ? 'Claims + Litigation' : critical ? 'Litigation' : agedEscalation ? 'Claims' : 'None';
+  const enforcementImpact = disciplineBand === 'failure' 
+    ? 'Required now' 
+    : disciplineBand === 'degrading' 
+      ? 'Monitor active' 
+      : 'None needed';
+  const enforcementConsequence = disciplineBand === 'failure'
+    ? 'Delay = more exposure'
+    : 'None';
+
+  const primaryOwner = overBudget ? 'Claims (BI) + Litigation' : critical ? 'Litigation' : agedEscalation ? 'Claims + Litigation' : 'None required';
+
+  // CHIEF OF STAFF CONFIRMATION — written as the CoS speaking to Fred
   const confirmationLine = disciplineBand === 'holding'
-    ? 'I confirm: no intervention required. Gates are holding. Maintain cadence.'
-    : 'I demand confirmation: enforcement has been assigned and will execute this week.';
+    ? 'Mr. Loya, discipline is holding. No action required. I will maintain watch and report any changes.'
+    : disciplineBand === 'degrading'
+      ? 'Mr. Loya, control is softening. I am monitoring. I will escalate if thresholds breach.'
+      : 'Mr. Loya, discipline has broken. I have assigned enforcement. Confirmation of execution is required by Friday.';
 
   return {
     disciplineBand,
@@ -950,12 +1017,20 @@ function buildCEOControlPanel(config: ExecutivePackageConfig): {
     statusLine,
     planAnswer,
     planAccent: overBudget ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.success,
+    planOwner,
+    planImpact,
+    planConsequence,
     breakAnswer,
     breakAccent: disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : disciplineBand === 'degrading' ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success,
+    breakOwner,
+    breakImpact,
+    breakConsequence,
     enforcementAnswer,
-    enforcementAccent: disciplineBand === 'holding' ? EXECUTIVE_COLORS.success : EXECUTIVE_COLORS.danger,
+    enforcementAccent: disciplineBand === 'holding' ? EXECUTIVE_COLORS.success : disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.warning,
+    enforcementOwner,
+    enforcementImpact,
+    enforcementConsequence,
     primaryOwner,
-    consequence30d,
     confirmationLine,
   };
 }
