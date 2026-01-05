@@ -80,19 +80,19 @@ export interface CP1Analysis {
   totals: { grandTotal: number; yes: number; noCP: number };
 }
 
-// ==================== COLORS ====================
+// ==================== COLORS - TRUE DARK MODE ====================
 const C = {
-  bg: [10, 15, 25] as [number, number, number],
-  headerBg: [20, 30, 50] as [number, number, number],
-  rowDark: [18, 24, 38] as [number, number, number],
-  rowLight: [25, 32, 48] as [number, number, number],
-  border: [45, 55, 75] as [number, number, number],
+  bg: [18, 18, 18] as [number, number, number],
+  headerBg: [28, 28, 28] as [number, number, number],
+  rowDark: [24, 24, 24] as [number, number, number],
+  rowLight: [32, 32, 32] as [number, number, number],
+  border: [60, 60, 60] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  muted: [140, 150, 170] as [number, number, number],
+  muted: [160, 160, 160] as [number, number, number],
   green: [34, 197, 94] as [number, number, number],
   red: [239, 68, 68] as [number, number, number],
   amber: [251, 191, 36] as [number, number, number],
-  blue: [59, 130, 246] as [number, number, number],
+  accent: [180, 180, 180] as [number, number, number],
 };
 
 // ==================== GENERATOR ====================
@@ -119,29 +119,29 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
 
   // ============ HEADER ============
   doc.setFillColor(...C.headerBg);
-  doc.rect(0, 0, pw, 28, 'F');
-  doc.setFillColor(...C.blue);
-  doc.rect(0, 28, pw, 2, 'F');
+  doc.rect(0, 0, pw, 32, 'F');
+  doc.setFillColor(...C.accent);
+  doc.rect(0, 32, pw, 1, 'F');
 
-  // Logo
+  // Logo - smaller and properly positioned
   try {
-    doc.addImage(loyaLogo, 'JPEG', m.l, 4, 20, 20);
+    doc.addImage(loyaLogo, 'JPEG', m.l, 6, 18, 18);
   } catch (e) {
-    // Logo failed to load, continue without it
+    // Logo failed to load
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(18);
   doc.setTextColor(...C.white);
-  doc.text('CEO CONTROL PANEL', m.l + 24, 18);
+  doc.text('CEO CONTROL PANEL', m.l + 22, 20);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...C.muted);
-  doc.text(ctx.reportPeriod, pw - m.r, 12, { align: 'right' });
-  doc.text(`Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 22, { align: 'right' });
+  doc.text(ctx.reportPeriod, pw - m.r, 14, { align: 'right' });
+  doc.text(`Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 24, { align: 'right' });
 
-  y = 38;
+  y = 40;
 
   // ============ BUILD DATA ============
   const data = buildControlData(config);
