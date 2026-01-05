@@ -158,13 +158,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7);
   doc.setTextColor(...C.offWhite);
-  doc.text(ceoStatement, m.l + 5, y + 7, { maxWidth: cw - 50 });
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  doc.setTextColor(...C.gold);
-  doc.text('— F. Loya Jr.', pw - m.r - 2, y + 11, { align: 'right' });
-  
+  doc.text(ceoStatement, m.l + 5, y + 7, { maxWidth: cw - 10 });
+
   y += 20;
 
   // ============ STATUS BANNER ============
