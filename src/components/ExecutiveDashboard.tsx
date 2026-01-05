@@ -4,8 +4,9 @@ import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportDa
 import { KPICard } from "@/components/KPICard";
 import { PainLevelUpload } from "@/components/PainLevelUpload";
 import { DataUploadPanel } from "@/components/DataUploadPanel";
-import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -994,16 +995,38 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-[#0c2340]/60">#{idx + 1}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold ${
-                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-[#b41e1e]' : 'text-amber-600'
-                  }`}>
-                    {caseItem.executiveReview.score}pts
-                  </span>
-                  <span className={`w-2.5 h-2.5 rounded-full ${
-                    caseItem.executiveReview.level === 'CRITICAL' ? 'bg-[#b41e1e] animate-pulse' : 'bg-amber-500'
-                  }`}></span>
-                </div>
+                <TooltipProvider>
+                  <ShadcnTooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-help">
+                        <span className={`text-sm font-bold ${
+                          caseItem.executiveReview.level === 'CRITICAL' ? 'text-[#b41e1e]' : 'text-amber-600'
+                        }`}>
+                          {caseItem.executiveReview.score}pts
+                        </span>
+                        <span className={`w-2.5 h-2.5 rounded-full ${
+                          caseItem.executiveReview.level === 'CRITICAL' ? 'bg-[#b41e1e] animate-pulse' : 'bg-amber-500'
+                        }`}></span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs p-3 text-xs">
+                      <p className="font-bold mb-2 text-foreground">Score Formula:</p>
+                      <div className="space-y-1 text-muted-foreground">
+                        <p>• Age 7+ yr: +40pts</p>
+                        <p>• Age 5-6 yr: +25pts</p>
+                        <p>• Age 3-4 yr: +10pts</p>
+                        <p>• Late stage + $0 expert: +20pts</p>
+                        <p>• High reactive, no expert: +15pts</p>
+                        <p>• Pain escalation 4+: +20pts</p>
+                        <p>• Pain level 9-10: +15pts</p>
+                        <p>• Large loss / L3L: +15pts</p>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="text-muted-foreground">CRITICAL: 50+pts • REQUIRED: 30-49pts</p>
+                      </div>
+                    </TooltipContent>
+                  </ShadcnTooltip>
+                </TooltipProvider>
               </div>
               
               {/* Matter ID - Primary Identifier for correlation */}
