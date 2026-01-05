@@ -2,6 +2,9 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
+// Base64 encoded Loya logo (FLI logo)
+const LOYA_LOGO_BASE64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCABkAGQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==';
+
 export interface ManagerTracking {
   name: string;
   value: string | number;
@@ -12,9 +15,9 @@ export interface ExportableData {
   title: string;
   subtitle?: string;
   timestamp: string;
-  affectsManager?: string; // Who this report affects/is prepared for
-  directive?: string; // Directive statement for action
-  managerTracking?: ManagerTracking[]; // High eval managers, no eval tracking, etc.
+  affectsManager?: string;
+  directive?: string;
+  managerTracking?: ManagerTracking[];
   summary?: Record<string, string | number>;
   columns: string[];
   rows: (string | number)[][];
@@ -24,150 +27,163 @@ export function useExportData() {
   const generatePDF = (data: ExportableData) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 25;
+    let yPos = 20;
 
-    // Colors
-    const primaryColor = { r: 15, g: 23, b: 42 }; // Slate 900
-    const accentColor = { r: 220, g: 38, b: 38 }; // Red 600
-    const mutedColor = { r: 100, g: 116, b: 139 }; // Slate 500
-    const lightBg = { r: 248, g: 250, b: 252 }; // Slate 50
-    const borderColor = { r: 226, g: 232, b: 240 }; // Slate 200
+    // Colors - Loya brand colors
+    const primaryColor = { r: 0, g: 51, b: 102 }; // Navy blue
+    const accentColor = { r: 204, g: 0, b: 0 }; // Loya Red
+    const mutedColor = { r: 100, g: 116, b: 139 };
+    const lightBg = { r: 248, g: 250, b: 252 };
+    const borderColor = { r: 226, g: 232, b: 240 };
 
-    // Header bar
+    // ====== HEADER WITH LOGO ======
     doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
-    doc.rect(0, 0, pageWidth, 18, 'F');
+    doc.rect(0, 0, pageWidth, 28, 'F');
 
-    // Logo/Brand text
+    // Add Loya logo
+    try {
+      doc.addImage(LOYA_LOGO_BASE64, 'JPEG', 10, 4, 20, 20);
+    } catch (e) {
+      // Fallback if logo fails
+    }
+
+    // Company name next to logo
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(16);
     doc.setTextColor(255, 255, 255);
-    doc.text('LITIGATION DISCIPLINE COMMAND CENTER', 14, 12);
-
-    // Report type badge
-    doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-    doc.roundedRect(pageWidth - 50, 5, 36, 8, 2, 2, 'F');
-    doc.setFontSize(7);
-    doc.text('EXECUTIVE REPORT', pageWidth - 32, 10, { align: 'center' });
-
-    // Main Title
-    yPos = 32;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-    doc.text(data.title, 14, yPos);
-    yPos += 8;
-
-    // Subtitle
-    if (data.subtitle) {
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-      doc.text(data.subtitle, 14, yPos);
-      yPos += 6;
-    }
-
-    // Timestamp
-    doc.setFontSize(9);
-    doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-    doc.text(`Generated: ${data.timestamp}`, 14, yPos);
+    doc.text('FRED LOYA INSURANCE', 34, 14);
     
-    // Affects/Prepared For - Right aligned
-    if (data.affectsManager) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.text(`Prepared For: ${data.affectsManager}`, pageWidth - 14, yPos, { align: 'right' });
-    }
-    yPos += 12;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Litigation Discipline Command Center', 34, 21);
 
-    // Divider line
+    // Report badge
+    doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+    doc.roundedRect(pageWidth - 52, 8, 42, 12, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('EXECUTIVE REPORT', pageWidth - 31, 16, { align: 'center' });
+
+    yPos = 38;
+
+    // ====== TITLE SECTION ======
+    doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
+    doc.roundedRect(10, yPos - 4, pageWidth - 20, 24, 3, 3, 'F');
     doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
     doc.setLineWidth(0.5);
-    doc.line(14, yPos, pageWidth - 14, yPos);
-    yPos += 10;
+    doc.roundedRect(10, yPos - 4, pageWidth - 20, 24, 3, 3, 'S');
 
-    // Directive Section - Bold action statement
-    if (data.directive) {
-      doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.roundedRect(14, yPos, pageWidth - 28, 22, 3, 3, 'F');
-      
-      doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.text(data.title, 16, yPos + 6);
+
+    if (data.subtitle) {
       doc.setFontSize(10);
-      doc.setTextColor(255, 255, 255);
-      doc.text('DIRECTIVE:', 18, yPos + 8);
-      
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 50);
-      doc.text(directiveLines.slice(0, 2).join(' '), 50, yPos + 8);
-      if (directiveLines.length > 2) {
-        doc.text(directiveLines.slice(2, 4).join(' '), 18, yPos + 16);
-      }
-      yPos += 30;
+      doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
+      doc.text(data.subtitle, 16, yPos + 14);
     }
 
-    // Manager Tracking Section - High Eval Managers & No Eval Assignment
+    // Timestamp right aligned
+    doc.setFontSize(8);
+    doc.text(`Generated: ${data.timestamp}`, pageWidth - 16, yPos + 6, { align: 'right' });
+
+    if (data.affectsManager) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.text(`Prepared For: ${data.affectsManager}`, pageWidth - 16, yPos + 14, { align: 'right' });
+    }
+
+    yPos += 28;
+
+    // ====== DIRECTIVE BOX ======
+    if (data.directive) {
+      doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.roundedRect(10, yPos, pageWidth - 20, 24, 3, 3, 'F');
+      
+      // White border inside
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(12, yPos + 2, pageWidth - 24, 20, 2, 2, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text('⚡ DIRECTIVE:', 16, yPos + 10);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 60);
+      doc.text(directiveLines.slice(0, 2).join(' '), 48, yPos + 10);
+      if (directiveLines.length > 2) {
+        doc.text(directiveLines.slice(2, 4).join(' '), 16, yPos + 18);
+      }
+      yPos += 32;
+    }
+
+    // ====== MANAGER TRACKING SECTION ======
     if (data.managerTracking && data.managerTracking.length > 0) {
       const highEvalManagers = data.managerTracking.filter(m => m.category === 'high_eval');
       const noEvalTracking = data.managerTracking.filter(m => m.category === 'no_eval');
 
       if (highEvalManagers.length > 0) {
+        // Section header box
+        doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.roundedRect(10, yPos, pageWidth - 20, 10, 2, 2, 'F');
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-        doc.text('HIGH EVALUATION TOP 10 MANAGERS', 14, yPos);
-        yPos += 6;
-        
-        doc.setFontSize(8);
-        doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-        doc.text('Managers issuing the highest evaluations - requires immediate review', 14, yPos);
-        yPos += 6;
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.text('HIGH EVALUATION TOP 10 MANAGERS', 16, yPos + 7);
+        yPos += 14;
 
-        // Two-column layout for managers
-        const colWidth = (pageWidth - 32) / 2;
+        // Managers box
+        doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
+        const managersBoxHeight = Math.ceil(highEvalManagers.length / 2) * 10 + 8;
+        doc.roundedRect(10, yPos, pageWidth - 20, managersBoxHeight, 2, 2, 'F');
+        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(10, yPos, pageWidth - 20, managersBoxHeight, 2, 2, 'S');
+
+        const colWidth = (pageWidth - 36) / 2;
         highEvalManagers.forEach((manager, idx) => {
           const col = idx % 2;
           const row = Math.floor(idx / 2);
-          const xPos = 14 + col * (colWidth + 4);
-          const rowY = yPos + row * 10;
+          const xPos = 16 + col * (colWidth + 8);
+          const rowY = yPos + 8 + row * 10;
 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
           doc.text(`${idx + 1}. ${manager.name}`, xPos, rowY);
           
-          doc.setFont('helvetica', 'normal');
+          doc.setFont('helvetica', 'bold');
           doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-          doc.text(String(manager.value), xPos + colWidth - 20, rowY);
+          doc.text(String(manager.value), xPos + colWidth - 10, rowY, { align: 'right' });
         });
-        yPos += Math.ceil(highEvalManagers.length / 2) * 10 + 8;
+        yPos += managersBoxHeight + 6;
       }
 
       if (noEvalTracking.length > 0) {
-        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-        doc.setLineWidth(0.3);
-        doc.line(14, yPos, pageWidth - 14, yPos);
-        yPos += 8;
+        // No Eval section box
+        doc.setFillColor(255, 240, 240);
+        doc.roundedRect(10, yPos, pageWidth - 20, 20, 2, 2, 'F');
+        doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(10, yPos, pageWidth - 20, 20, 2, 2, 'S');
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-        doc.text('NO EVALUATION TRACKING', 14, yPos);
-        yPos += 6;
+        doc.setFontSize(10);
+        doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.text('NO EVALUATION TRACKING', 16, yPos + 8);
 
-        doc.setFontSize(8);
-        doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-        doc.text('Claims without evaluation assigned for accountability tracking', 14, yPos);
-        yPos += 6;
-
-        noEvalTracking.forEach((item) => {
+        noEvalTracking.forEach((item, idx) => {
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
           doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-          doc.text(`${item.name}: ${item.value} claims`, 14, yPos);
-          yPos += 6;
+          doc.text(`Assigned to: ${item.name} — ${item.value} claims require evaluation`, 16, yPos + 16);
         });
-        yPos += 6;
+        yPos += 26;
       }
     }
 
