@@ -927,15 +927,15 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       </div>
 
       {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
-      <div id="executive-command-center" className="print-section bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
+      <div id="executive-command-center" className="print-section bg-card rounded-xl p-6 border border-border shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/20 rounded-lg">
-              <Activity className="h-5 w-5 text-amber-400" />
+            <div className="p-2 bg-warning/20 rounded-lg">
+              <Activity className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h3>
-              <p className="text-xs text-slate-400">Real-time portfolio health • Updated {timestamp}</p>
+              <h3 className="text-lg font-bold text-foreground tracking-wide">EXECUTIVE COMMAND CENTER</h3>
+              <p className="text-xs text-muted-foreground">Real-time portfolio health • Updated {timestamp}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -975,7 +975,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 );
                 toast.success('Executive Package downloaded! (PDF + Excel with granular data)');
               }}
-              className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 print:hidden"
+              className="bg-secondary border-border text-foreground hover:bg-secondary/80 print:hidden"
             >
               <Download className="h-4 w-4 mr-2" />
               Export Package
@@ -989,93 +989,93 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
         <div className="grid grid-cols-4 gap-4 mb-6">
           {/* Total Open Reserves with Trend */}
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <div className="bg-secondary/50 rounded-xl p-4 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-400 uppercase">Open Reserves</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase">Open Reserves</span>
               <div className={`flex items-center gap-1 text-xs font-bold ${EXECUTIVE_METRICS.trends.reservesMoM > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                 {EXECUTIVE_METRICS.trends.reservesMoM > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                 {Math.abs(EXECUTIVE_METRICS.trends.reservesMoM)}% MoM
               </div>
             </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-xs ${EXECUTIVE_METRICS.trends.reservesYoY < 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <span className={`text-xs ${EXECUTIVE_METRICS.trends.reservesYoY < 0 ? 'text-success' : 'text-destructive'}`}>
                 {EXECUTIVE_METRICS.trends.reservesYoY > 0 ? '+' : ''}{EXECUTIVE_METRICS.trends.reservesYoY}% YoY
               </span>
             </div>
           </div>
 
           {/* Pending Evaluation ALERT */}
-          <div className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-xl p-4 border-2 border-amber-500/50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="bg-gradient-to-br from-warning/20 to-warning/10 rounded-xl p-4 border-2 border-warning/50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-warning/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">⚠️ PENDING EVAL</span>
-              <AlertTriangle className="h-4 w-4 text-amber-400 animate-pulse" />
+              <span className="text-xs font-bold text-warning uppercase tracking-wide">⚠️ PENDING EVAL</span>
+              <AlertTriangle className="h-4 w-4 text-warning animate-pulse" />
             </div>
-            <p className="text-2xl font-bold text-amber-300">{formatCurrency(FINANCIAL_DATA.totals.noEvalAmount || 0)}</p>
-            <p className="text-xs text-amber-400/80 mt-1">63% of reserves without evaluation</p>
-            <div className="mt-2 bg-amber-950/50 rounded px-2 py-1">
-              <span className="text-xs text-amber-300 font-medium">Action Required</span>
+            <p className="text-2xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalAmount || 0)}</p>
+            <p className="text-xs text-warning/80 mt-1">63% of reserves without evaluation</p>
+            <div className="mt-2 bg-warning/10 rounded px-2 py-1">
+              <span className="text-xs text-warning font-medium">Action Required</span>
             </div>
           </div>
 
           {/* Closure Velocity */}
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <div className="bg-secondary/50 rounded-xl p-4 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-400 uppercase">Closures This Month</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase">Closures This Month</span>
               <div className="flex items-center gap-1 text-xs font-bold text-emerald-400">
                 <TrendingUp className="h-3 w-3" />
                 +{((EXECUTIVE_METRICS.closures.closedThisMonth / EXECUTIVE_METRICS.closures.closedLastMonth - 1) * 100).toFixed(0)}%
               </div>
             </div>
-            <p className="text-2xl font-bold text-white">{formatNumber(EXECUTIVE_METRICS.closures.closedThisMonth)}</p>
+            <p className="text-2xl font-bold text-foreground">{formatNumber(EXECUTIVE_METRICS.closures.closedThisMonth)}</p>
             <div className="flex items-center gap-3 mt-2 text-xs">
-              <span className="text-slate-400">Avg: {EXECUTIVE_METRICS.closures.avgDaysToClose} days</span>
-              <span className="text-emerald-400">↓{Math.abs(EXECUTIVE_METRICS.closures.avgDaysToCloseTrend)}d faster</span>
+              <span className="text-muted-foreground">Avg: {EXECUTIVE_METRICS.closures.avgDaysToClose} days</span>
+              <span className="text-success">↓{Math.abs(EXECUTIVE_METRICS.closures.avgDaysToCloseTrend)}d faster</span>
             </div>
           </div>
 
           {/* Aging Alert */}
-          <div className="bg-gradient-to-br from-red-900/40 to-red-800/20 rounded-xl p-4 border-2 border-red-500/50">
+          <div className="bg-gradient-to-br from-destructive/20 to-destructive/10 rounded-xl p-4 border-2 border-destructive/50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-red-400 uppercase tracking-wide">🚨 AGED 365+ DAYS</span>
-              <Clock className="h-4 w-4 text-red-400" />
+              <span className="text-xs font-bold text-destructive uppercase tracking-wide">🚨 AGED 365+ DAYS</span>
+              <Clock className="h-4 w-4 text-destructive" />
             </div>
-            <p className="text-2xl font-bold text-red-300">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
-            <p className="text-xs text-red-400/80 mt-1">{EXECUTIVE_METRICS.aging.over365Pct}% of inventory • {formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
-            <div className="mt-2 h-1.5 bg-red-950 rounded-full overflow-hidden">
-              <div className="h-full bg-red-500 rounded-full" style={{ width: `${EXECUTIVE_METRICS.aging.over365Pct}%` }}></div>
+            <p className="text-2xl font-bold text-destructive">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
+            <p className="text-xs text-destructive/80 mt-1">{EXECUTIVE_METRICS.aging.over365Pct}% of inventory • {formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
+            <div className="mt-2 h-1.5 bg-destructive/20 rounded-full overflow-hidden">
+              <div className="h-full bg-destructive rounded-full" style={{ width: `${EXECUTIVE_METRICS.aging.over365Pct}%` }}></div>
             </div>
           </div>
         </div>
 
         {/* Evaluation Summary Row */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <DollarSign className="h-5 w-5 text-blue-400" />
+            <div className="p-2 bg-info/20 rounded-lg">
+              <DollarSign className="h-5 w-5 text-info" />
             </div>
             <div>
-              <p className="text-xs text-slate-400 uppercase">Low Eval</p>
-              <p className="text-xl font-bold text-blue-300">{formatCurrency(FINANCIAL_DATA.totals.totalLowEval)}</p>
+              <p className="text-xs text-muted-foreground uppercase">Low Eval</p>
+              <p className="text-xl font-bold text-info">{formatCurrency(FINANCIAL_DATA.totals.totalLowEval)}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-emerald-500/20 rounded-lg">
-              <Target className="h-5 w-5 text-emerald-400" />
+            <div className="p-2 bg-success/20 rounded-lg">
+              <Target className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-xs text-slate-400 uppercase">Median Eval</p>
-              <p className="text-xl font-bold text-emerald-300">{formatCurrency((FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2)}</p>
+              <p className="text-xs text-muted-foreground uppercase">Median Eval</p>
+              <p className="text-xl font-bold text-success">{formatCurrency((FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2)}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-amber-500/20 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-amber-400" />
+            <div className="p-2 bg-warning/20 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-xs text-slate-400 uppercase">High Eval</p>
-              <p className="text-xl font-bold text-amber-300">{formatCurrency(FINANCIAL_DATA.totals.totalHighEval)}</p>
+              <p className="text-xs text-muted-foreground uppercase">High Eval</p>
+              <p className="text-xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.totalHighEval)}</p>
             </div>
           </div>
         </div>
