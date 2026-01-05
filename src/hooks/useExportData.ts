@@ -573,7 +573,251 @@ export function useExportData() {
     return filename;
   };
 
-  return { generatePDF, generateExcel, exportBoth, generateFullExcel };
+  // Generate Executive Command Center PDF
+  const generateExecutivePDF = async (metrics: {
+    totalOpenReserves: number;
+    pendingEval: number;
+    pendingEvalPct: number;
+    closuresThisMonth: number;
+    avgDaysToClose: number;
+    closureTrend: number;
+    aged365Count: number;
+    aged365Reserves: number;
+    aged365Pct: number;
+    reservesMoM: number;
+    reservesYoY: number;
+    lowEval: number;
+    medianEval: number;
+    highEval: number;
+  }) => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+    
+    // Colors
+    const darkBg = { r: 15, g: 23, b: 42 };        // slate-900
+    const cardBg = { r: 30, g: 41, b: 59 };        // slate-800
+    const textWhite = { r: 255, g: 255, b: 255 };
+    const textMuted = { r: 148, g: 163, b: 184 };  // slate-400
+    const accentAmber = { r: 251, g: 191, b: 36 }; // amber-400
+    const accentRed = { r: 248, g: 113, b: 113 };  // red-400
+    const accentGreen = { r: 52, g: 211, b: 153 }; // emerald-400
+    const accentBlue = { r: 96, g: 165, b: 250 };  // blue-400
+    
+    const formatCurrency = (val: number) => {
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+      return `$${val.toFixed(0)}`;
+    };
+
+    // Background
+    doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    // Header
+    let yPos = 20;
+    try {
+      const logoBase64 = await loadImageAsBase64(loyaLogo);
+      doc.addImage(logoBase64, 'JPEG', 14, 10, 45, 12);
+    } catch {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text('FRED LOYA INSURANCE', 14, 18);
+    }
+
+    // Title
+    yPos = 32;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text('EXECUTIVE COMMAND CENTER', 14, yPos);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text(`Real-time portfolio health • ${timestamp}`, 14, yPos + 6);
+
+    // Live badge
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(pageWidth - 50, yPos - 10, 36, 10, 2, 2, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(255, 255, 255);
+    doc.text('● LIVE DATA', pageWidth - 48, yPos - 4);
+
+    yPos = 50;
+
+    // === MAIN METRICS CARDS (4 columns) ===
+    const cardWidth = (pageWidth - 70) / 4;
+    const cardHeight = 50;
+    const cardY = yPos;
+
+    // Card 1: Open Reserves
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.roundedRect(14, cardY, cardWidth, cardHeight, 4, 4, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('OPEN RESERVES', 20, cardY + 12);
+    
+    // MoM indicator
+    const momColor = metrics.reservesMoM > 0 ? accentRed : accentGreen;
+    doc.setTextColor(momColor.r, momColor.g, momColor.b);
+    doc.setFontSize(7);
+    doc.text(`${metrics.reservesMoM > 0 ? '↑' : '↓'}${Math.abs(metrics.reservesMoM)}% MoM`, 14 + cardWidth - 30, cardY + 12);
+    
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text(formatCurrency(metrics.totalOpenReserves), 20, cardY + 30);
+    
+    const yoyColor = metrics.reservesYoY < 0 ? accentGreen : accentRed;
+    doc.setFontSize(9);
+    doc.setTextColor(yoyColor.r, yoyColor.g, yoyColor.b);
+    doc.text(`${metrics.reservesYoY > 0 ? '+' : ''}${metrics.reservesYoY}% YoY`, 20, cardY + 42);
+
+    // Card 2: Pending Eval (Alert Style)
+    const card2X = 14 + cardWidth + 14;
+    doc.setFillColor(120, 53, 15);  // amber-900
+    doc.roundedRect(card2X, cardY, cardWidth, cardHeight, 4, 4, 'F');
+    doc.setDrawColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.setLineWidth(1.5);
+    doc.roundedRect(card2X, cardY, cardWidth, cardHeight, 4, 4, 'S');
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.text('⚠ PENDING EVAL', card2X + 6, cardY + 12);
+    
+    doc.setFontSize(22);
+    doc.text(formatCurrency(metrics.pendingEval), card2X + 6, cardY + 30);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${metrics.pendingEvalPct.toFixed(0)}% of reserves without evaluation`, card2X + 6, cardY + 40);
+
+    // Card 3: Closures This Month
+    const card3X = card2X + cardWidth + 14;
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.roundedRect(card3X, cardY, cardWidth, cardHeight, 4, 4, 'F');
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('CLOSURES THIS MONTH', card3X + 6, cardY + 12);
+    
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.setFontSize(7);
+    doc.text(`↑ +${metrics.closureTrend}%`, card3X + cardWidth - 25, cardY + 12);
+    
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text(metrics.closuresThisMonth.toLocaleString(), card3X + 6, cardY + 30);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text(`Avg: ${metrics.avgDaysToClose} days`, card3X + 6, cardY + 40);
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.text('↓8d faster', card3X + 45, cardY + 40);
+
+    // Card 4: Aged 365+ (Alert Style)
+    const card4X = card3X + cardWidth + 14;
+    doc.setFillColor(127, 29, 29);  // red-900
+    doc.roundedRect(card4X, cardY, cardWidth, cardHeight, 4, 4, 'F');
+    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.setLineWidth(1.5);
+    doc.roundedRect(card4X, cardY, cardWidth, cardHeight, 4, 4, 'S');
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.text('🚨 AGED 365+ DAYS', card4X + 6, cardY + 12);
+    
+    doc.setFontSize(22);
+    doc.text(metrics.aged365Count.toLocaleString(), card4X + 6, cardY + 30);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${metrics.aged365Pct}% of inventory • ${formatCurrency(metrics.aged365Reserves)}`, card4X + 6, cardY + 40);
+    
+    // Progress bar for aged
+    doc.setFillColor(50, 20, 20);
+    doc.roundedRect(card4X + 6, cardY + 44, cardWidth - 12, 3, 1, 1, 'F');
+    doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.roundedRect(card4X + 6, cardY + 44, (cardWidth - 12) * (metrics.aged365Pct / 100), 3, 1, 1, 'F');
+
+    // === EVALUATION SUMMARY ROW ===
+    yPos = cardY + cardHeight + 16;
+    const evalRowWidth = pageWidth - 28;
+    const evalCardWidth = evalRowWidth / 3;
+    
+    doc.setFillColor(30, 41, 59);
+    doc.roundedRect(14, yPos, evalRowWidth, 40, 4, 4, 'F');
+
+    // Low Eval
+    doc.setFillColor(37, 99, 235, 0.2);
+    doc.circle(34, yPos + 20, 10, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(accentBlue.r, accentBlue.g, accentBlue.b);
+    doc.text('$', 31, yPos + 24);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('LOW EVAL', 50, yPos + 16);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentBlue.r, accentBlue.g, accentBlue.b);
+    doc.text(formatCurrency(metrics.lowEval), 50, yPos + 28);
+
+    // Median Eval
+    const medX = 14 + evalCardWidth;
+    doc.setFillColor(16, 185, 129, 0.2);
+    doc.circle(medX + 20, yPos + 20, 10, 'F');
+    doc.setFontSize(12);
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.text('◎', medX + 16, yPos + 23);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('MEDIAN EVAL', medX + 36, yPos + 16);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.text(formatCurrency(metrics.medianEval), medX + 36, yPos + 28);
+
+    // High Eval
+    const highX = 14 + evalCardWidth * 2;
+    doc.setFillColor(245, 158, 11, 0.2);
+    doc.circle(highX + 20, yPos + 20, 10, 'F');
+    doc.setFontSize(12);
+    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.text('↗', highX + 16, yPos + 23);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('HIGH EVAL', highX + 36, yPos + 16);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.text(formatCurrency(metrics.highEval), highX + 36, yPos + 28);
+
+    // Footer
+    yPos = pageHeight - 12;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('FLI Litigation Command Center • Executive Summary', 14, yPos);
+    doc.text(`Generated: ${timestamp}`, pageWidth - 70, yPos);
+
+    // Download
+    const filename = `Executive_Command_Center_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    doc.save(filename);
+    return filename;
+  };
+
+  return { generatePDF, generateExcel, exportBoth, generateFullExcel, generateExecutivePDF };
 }
 
 // Export type definitions for different dashboard sections
