@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, Clock, Flame, Download } from "lucide-react";
+import { Loader2, AlertTriangle, Clock, Flame, Download, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -14,6 +14,7 @@ import {
   getLitigationStage,
   ExecutiveReviewResult 
 } from "@/lib/executiveReview";
+import { SMSDialog } from "./SMSDialog";
 
 interface CP1Claim {
   matter_id: string;
@@ -49,7 +50,8 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
   const [claims, setClaims] = useState<CP1Claim[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [selectedClaimForSMS, setSelectedClaimForSMS] = useState<ClaimWithReview | null>(null);
   useEffect(() => {
     if (open && coverage) {
       fetchClaims();
@@ -212,10 +214,15 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
                 {claimsWithReview.map((claim) => (
                   <TableRow 
                     key={claim.matter_id} 
-                    className={`hover:bg-muted/50 ${
+                    className={`hover:bg-muted/50 cursor-pointer ${
                       claim.executiveReview.level === 'CRITICAL' ? 'bg-destructive/5' : 
                       claim.executiveReview.level === 'REQUIRED' ? 'bg-amber-500/5' : ''
                     }`}
+                    onDoubleClick={() => {
+                      setSelectedClaimForSMS(claim);
+                      setSmsDialogOpen(true);
+                    }}
+                    title="Double-click to send SMS alert"
                   >
                     <TableCell>
                       {claim.executiveReview.level !== 'NONE' && (
@@ -282,8 +289,20 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
         {/* Footer */}
         {claims.length > 0 && (
           <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-            <span>Showing {claimsWithReview.length} claims • Sorted by executive review score</span>
+            <span>Showing {claimsWithReview.length} claims • Double-click row to send SMS</span>
             <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSelectedClaimForSMS(null);
+                  setSmsDialogOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Send SMS
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -327,6 +346,44 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
             </div>
           </div>
         )}
+
+        {/* SMS Dialog */}
+        <SMSDialog
+          open={smsDialogOpen}
+          onClose={() => {
+            setSmsDialogOpen(false);
+            setSelectedClaimForSMS(null);
+          }}
+          context={selectedClaimForSMS ? {
+            claimType: coverage,
+            matterId: selectedClaimForSMS.matter_id,
+            exposure: selectedClaimForSMS.total_amount || 0,
+            region: selectedClaimForSMS.location || undefined,
+            description: selectedClaimForSMS.executiveReview.reasons.join(', '),
+          } : {
+            claimType: coverage,
+            claimCount: claimsWithReview.length,
+            exposure: stats.totalExposure,
+            description: `${stats.criticalCount} CRITICAL, ${stats.requiredCount} REQUIRED reviews`
+          }}
+          onExportExcel={() => {
+            const exportData = claimsWithReview.map(c => ({
+              'Matter ID': c.matter_id,
+              'Review Level': c.executiveReview.level,
+              'Score': c.executiveReview.score,
+              'Claimant': c.claimant || '',
+              'Lead': c.matter_lead || '',
+              'Location': c.location || '',
+              'Days Open': c.days_open || 0,
+              'Exposure': c.total_amount || 0,
+              'Reasons': c.executiveReview.reasons.join(' | '),
+            }));
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
+            XLSX.writeFile(wb, `CP1_${coverage}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
