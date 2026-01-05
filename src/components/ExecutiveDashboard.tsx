@@ -135,12 +135,12 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     };
   }, [aggregatedData]);
 
-  // Expert spend by quarter - actual 2025 YTD data (corrected: paid vs approved)
+  // Expert spend by quarter - actual 2025 YTD data (through November)
   const quarterlyExpertData = [
-    { quarter: 'Q1 2025', paid: 2141536, approved: 1553080, avgMonthly: 713845 },
-    { quarter: 'Q2 2025', paid: 1680352, approved: 1727599, avgMonthly: 560117 },
-    { quarter: 'Q3 2025', paid: 1449627, approved: 1383717, avgMonthly: 483209 },
-    { quarter: 'Q4 2025', paid: 909651, approved: 1016756, avgMonthly: 454826 },
+    { quarter: 'Q1 2025', paid: 1553080, paidAvgMonthly: 517693, approved: 2141536, approvedAvgMonthly: 713845 },
+    { quarter: 'Q2 2025', paid: 1727599, paidAvgMonthly: 575866, approved: 1680352, approvedAvgMonthly: 560117 },
+    { quarter: 'Q3 2025', paid: 1383717, paidAvgMonthly: 461239, approved: 1449627, approvedAvgMonthly: 483209 },
+    { quarter: 'Q4 2025', paid: 1016756, paidAvgMonthly: 508378, approved: 909651, approvedAvgMonthly: 454826 },
   ];
 
   // Reactive cost curve by stage - using actual expert ratio
@@ -295,8 +295,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
               <tr className="border-b border-border">
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium">Quarter</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Paid</th>
-                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Monthly Avg</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Paid Monthly Avg</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Approved</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Approved Monthly Avg</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Variance</th>
               </tr>
             </thead>
@@ -305,10 +306,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 <tr key={q.quarter} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="py-2 px-3 font-medium">{q.quarter}</td>
                   <td className="py-2 px-3 text-right text-success font-semibold">{formatCurrencyFull(q.paid)}</td>
-                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.avgMonthly)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.paidAvgMonthly)}</td>
                   <td className="py-2 px-3 text-right">{formatCurrencyFull(q.approved)}</td>
-                  <td className={`py-2 px-3 text-right font-medium ${q.paid < q.approved ? 'text-success' : 'text-warning'}`}>
-                    {q.paid < q.approved ? '-' : '+'}{formatCurrencyFull(Math.abs(q.approved - q.paid))}
+                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.approvedAvgMonthly)}</td>
+                  <td className={`py-2 px-3 text-right font-medium ${q.paid > q.approved ? 'text-warning' : 'text-success'}`}>
+                    {q.paid > q.approved ? '+' : '-'}{formatCurrencyFull(Math.abs(q.approved - q.paid))}
                   </td>
                 </tr>
               ))}
@@ -317,6 +319,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 <td className="py-2 px-3 text-right text-success">$5,681,152</td>
                 <td className="py-2 px-3 text-right text-muted-foreground">$516,468</td>
                 <td className="py-2 px-3 text-right">$6,181,166</td>
+                <td className="py-2 px-3 text-right text-muted-foreground">$561,924</td>
                 <td className="py-2 px-3 text-right text-success">-$500,014</td>
               </tr>
             </tbody>
