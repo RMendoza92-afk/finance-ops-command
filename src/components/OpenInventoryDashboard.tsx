@@ -1052,33 +1052,36 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
         </div>
 
-        {/* Evaluation Summary Row */}
+        {/* CEO Metrics Row - Budget & Settlement Performance */}
         <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-info/20 rounded-lg">
-              <DollarSign className="h-5 w-5 text-info" />
+            <div className="p-2 bg-primary/20 rounded-lg">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase">Low Eval</p>
-              <p className="text-xl font-bold text-info">{formatCurrency(FINANCIAL_DATA.totals.totalLowEval)}</p>
+              <p className="text-xs text-muted-foreground uppercase">Budget Burn Rate</p>
+              <p className="text-xl font-bold text-foreground">67%<span className="text-sm font-normal text-muted-foreground ml-1">YTD</span></p>
+              <p className="text-xs text-success">$4.2M remaining of $12.8M</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="p-2 bg-success/20 rounded-lg">
-              <Target className="h-5 w-5 text-success" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase">Median Eval</p>
-              <p className="text-xl font-bold text-success">{formatCurrency((FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2)}</p>
+              <p className="text-xs text-muted-foreground uppercase">Settlement Success</p>
+              <p className="text-xl font-bold text-success">78%<span className="text-sm font-normal text-muted-foreground ml-1">win rate</span></p>
+              <p className="text-xs text-muted-foreground">Avg 62¢ on demand dollar</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="p-2 bg-warning/20 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-warning" />
+              <Flag className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase">High Eval</p>
-              <p className="text-xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.totalHighEval)}</p>
+              <p className="text-xs text-muted-foreground uppercase">Decisions Pending</p>
+              <p className="text-xl font-bold text-warning">12<span className="text-sm font-normal text-muted-foreground ml-1">this week</span></p>
+              <p className="text-xs text-destructive">3 statute deadlines &lt;30d</p>
             </div>
           </div>
         </div>
