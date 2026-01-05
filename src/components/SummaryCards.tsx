@@ -104,7 +104,7 @@ export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
           value={totalMatters}
           subtitle="In filtered view"
           icon={Briefcase}
-          variant="primary"
+          variant="default"
         />
         <KPICard
           title="Closed (CWP)"
@@ -138,7 +138,7 @@ export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
           title="Total Net"
           value={formatLargeCurrency(totalNet)}
           icon={DollarSign}
-          variant="primary"
+          variant="default"
         />
       </div>
     );
@@ -152,7 +152,7 @@ export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
         value={totalMatters}
         subtitle="Active assignments"
         icon={Briefcase}
-        variant="primary"
+        variant="default"
       />
         <KPICard
           title="High Pain Cases"
