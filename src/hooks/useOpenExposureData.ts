@@ -27,9 +27,22 @@ export interface TypeGroupSummary {
   grandTotal: number;
 }
 
+export interface CP1Data {
+  total: number;
+  age365Plus: number;
+  age181To365: number;
+  age61To180: number;
+  ageUnder60: number;
+  demandTypes: {
+    type: string;
+    count: number;
+  }[];
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
+  cp1Data: CP1Data | null;
   totals: {
     age365Plus: number;
     age181To365: number;
@@ -56,6 +69,7 @@ export function useOpenExposureData() {
         const lines = csvText.split('\n');
         const litPhases: OpenExposurePhase[] = [];
         const typeGroupSummaries: TypeGroupSummary[] = [];
+        let cp1Data: CP1Data | null = null;
         
         let currentPhase: OpenExposurePhase | null = null;
         let inLitSection = false;
@@ -128,6 +142,21 @@ export function useOpenExposureData() {
               currentPhase.total61To180 = age61To180;
               currentPhase.totalUnder60 = ageUnder60;
               currentPhase.grandTotal = grandTotal;
+              
+              // Parse CP1 data from Limits Tendered CP1 Total
+              if (evalPhase === 'Limits Tendered CP1 Total') {
+                cp1Data = {
+                  total: grandTotal,
+                  age365Plus,
+                  age181To365,
+                  age61To180,
+                  ageUnder60,
+                  demandTypes: currentPhase.demandTypes.map(dt => ({
+                    type: dt.type,
+                    count: dt.total
+                  }))
+                };
+              }
             } else if (!evalPhase && currentPhase) {
               // Demand type row
               currentPhase.demandTypes.push({
@@ -155,6 +184,7 @@ export function useOpenExposureData() {
             setData({
               litPhases,
               typeGroupSummaries,
+              cp1Data,
               totals: {
                 age365Plus,
                 age181To365,

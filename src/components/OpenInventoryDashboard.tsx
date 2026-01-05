@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
+import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User } from "lucide-react";
@@ -1781,6 +1781,24 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
             <ArrowUpRight className="h-4 w-4 text-warning ml-auto" />
           </div>
+          
+          {/* CP1 - Limits Tendered Claims */}
+          {data?.cp1Data && (
+            <div className="flex items-center gap-4 bg-accent/10 rounded-lg p-2 -m-2 border border-accent/20">
+              <div className="p-2 bg-accent/20 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground uppercase">CP1 - Limits Tendered</p>
+                <p className="text-xl font-bold text-accent-foreground">{data.cp1Data.total}<span className="text-sm font-normal text-muted-foreground ml-1">claims</span></p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-destructive font-medium">{data.cp1Data.age365Plus}</span> aged 365+ •{' '}
+                  <span className="text-warning font-medium">{data.cp1Data.age181To365}</span> aged 181-365 •{' '}
+                  <span className="text-success font-medium">{data.cp1Data.age61To180 + data.cp1Data.ageUnder60}</span> current
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         </div>
         )}
