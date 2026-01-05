@@ -217,10 +217,12 @@ export function OpenInventoryDashboard() {
   const handleExportSummary = useCallback(() => {
     if (!metrics) return;
     const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
+    const manager = selectedReviewer || 'Richie Mendoza';
     const exportData: ExportableData = {
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
       timestamp,
+      affectsManager: manager,
       summary: {
         'Total Open Claims': formatNumber(metrics.totalOpenClaims),
         'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
@@ -242,14 +244,16 @@ export function OpenInventoryDashboard() {
     };
     exportBoth(exportData);
     toast.success('PDF + Excel exported: Open Inventory Summary');
-  }, [exportBoth, timestamp, metrics]);
+  }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
   const handleExportByAge = useCallback(() => {
     if (!metrics) return;
+    const manager = selectedReviewer || 'Richie Mendoza';
     const exportData: ExportableData = {
       title: 'Reserves vs Evaluation by Age',
       subtitle: 'Financial breakdown by claim age bucket',
       timestamp,
+      affectsManager: manager,
       columns: ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval', 'Median Eval'],
       rows: metrics.ageDistribution.map(item => [
         item.age,
@@ -262,14 +266,16 @@ export function OpenInventoryDashboard() {
     };
     exportBoth(exportData);
     toast.success('PDF + Excel exported: Reserves by Age');
-  }, [exportBoth, timestamp, metrics]);
+  }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
   const handleExportByQueue = useCallback(() => {
     if (!metrics) return;
+    const manager = selectedReviewer || 'Richie Mendoza';
     const exportData: ExportableData = {
       title: 'Reserve Adequacy by Queue',
       subtitle: 'Queue-level reserve analysis',
       timestamp,
+      affectsManager: manager,
       columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'Median Eval', 'Variance %', 'Status'],
       rows: metrics.financials.byQueue.map(queue => {
         const qMedian = (queue.lowEval + queue.highEval) / 2;
@@ -289,7 +295,7 @@ export function OpenInventoryDashboard() {
     };
     exportBoth(exportData);
     toast.success('PDF + Excel exported: Reserve Adequacy by Queue');
-  }, [exportBoth, timestamp, metrics]);
+  }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
   if (loading) {
     return (

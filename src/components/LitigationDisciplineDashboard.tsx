@@ -102,6 +102,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
       title: '2025 Litigation Discipline Summary',
       subtitle: 'Key Financial Metrics',
       timestamp,
+      affectsManager: 'Litigation Management',
       summary: {
         'Total Matters': stats.totalMatters,
         'Total Expenses': formatCurrencyFull(totalExpense),
@@ -127,6 +128,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
       title: 'Posture ROI Analysis',
       subtitle: 'Did Posture Spend Change Outcomes?',
       timestamp,
+      affectsManager: 'Litigation Management',
       columns: ['Outcome Band', 'Expert Spend', 'Posture Spend', 'Observation'],
       rows: outcomeData.map(row => [
         row.outcomeBand,
@@ -145,6 +147,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
       title: 'Pain vs Paid Analysis',
       subtitle: 'Decision Gates Dashboard',
       timestamp,
+      affectsManager: 'Litigation Management',
       columns: ['Pain Bucket', 'Count', 'Avg Pain Level', 'Total Paid', 'Avg Paid per Claim'],
       rows: entries.map(([bucket, s]) => [
         bucket,
