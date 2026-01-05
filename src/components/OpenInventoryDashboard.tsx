@@ -20,18 +20,27 @@ export function OpenInventoryDashboard() {
 
   const formatNumber = (val: number) => val.toLocaleString();
 
-  // Known totals from user (January 2, 2026 report)
-  const KNOWN_TOTAL_OPEN = 18325;
-  const KNOWN_LIT_TOTAL = 3289;
+  // Known totals from user source (January 2, 2026)
+  const KNOWN_TOTALS = {
+    totalOpenClaims: 10109,
+    totalOpenExposures: 19501,
+    atr: { claims: 3994, exposures: 8385 },
+    lit: { claims: 3747, exposures: 6161 },
+    bi3: { claims: 2227, exposures: 4616 },
+    earlyBI: { claims: 141, exposures: 339 },
+    flagged: 252,
+    newClaims: 1,
+    closed: 2,
+  };
 
   // Calculate derived metrics
   const metrics = useMemo(() => {
     if (!data) return null;
 
-    const litTotal = KNOWN_LIT_TOTAL;
+    const litTotal = KNOWN_TOTALS.lit.claims;
     const aged365Plus = data.totals.age365Plus;
-    const agedPct = KNOWN_TOTAL_OPEN > 0 
-      ? ((aged365Plus / KNOWN_TOTAL_OPEN) * 100).toFixed(1)
+    const agedPct = KNOWN_TOTALS.totalOpenClaims > 0 
+      ? ((aged365Plus / KNOWN_TOTALS.totalOpenClaims) * 100).toFixed(1)
       : '0';
 
     // Top 5 phases by count
@@ -47,11 +56,13 @@ export function OpenInventoryDashboard() {
       { age: 'Under 60 Days', count: data.totals.ageUnder60, fill: 'hsl(var(--success))' },
     ];
 
-    // Non-LIT type groups for chart
-    const nonLitGroups = data.typeGroupSummaries
-      .filter(g => g.grandTotal > 100)
-      .sort((a, b) => b.grandTotal - a.grandTotal)
-      .slice(0, 10);
+    // Type groups from known data
+    const typeGroups = [
+      { typeGroup: 'ATR', claims: KNOWN_TOTALS.atr.claims, exposures: KNOWN_TOTALS.atr.exposures },
+      { typeGroup: 'Litigation', claims: KNOWN_TOTALS.lit.claims, exposures: KNOWN_TOTALS.lit.exposures },
+      { typeGroup: 'BI3', claims: KNOWN_TOTALS.bi3.claims, exposures: KNOWN_TOTALS.bi3.exposures },
+      { typeGroup: 'Early BI', claims: KNOWN_TOTALS.earlyBI.claims, exposures: KNOWN_TOTALS.earlyBI.exposures },
+    ];
 
     return {
       litTotal,
@@ -59,8 +70,10 @@ export function OpenInventoryDashboard() {
       agedPct,
       topPhases,
       ageDistribution,
-      nonLitGroups,
-      totalOpen: KNOWN_TOTAL_OPEN,
+      typeGroups,
+      totalOpenClaims: KNOWN_TOTALS.totalOpenClaims,
+      totalOpenExposures: KNOWN_TOTALS.totalOpenExposures,
+      flagged: KNOWN_TOTALS.flagged,
     };
   }, [data]);
 
@@ -88,15 +101,15 @@ export function OpenInventoryDashboard() {
       <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpen)} Claims</h2>
+            <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              As of January 2, 2026 • Litigation: <span className="font-semibold text-foreground">{formatNumber(metrics.litTotal)}</span> files
+              As of January 2, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Aged 365+ Days</p>
-            <p className="text-2xl font-bold text-destructive">{formatNumber(metrics.aged365Plus)}</p>
-            <p className="text-xs text-muted-foreground">{metrics.agedPct}% of total inventory</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Flagged Claims</p>
+            <p className="text-2xl font-bold text-warning">{formatNumber(metrics.flagged)}</p>
+            <p className="text-xs text-muted-foreground">Require review</p>
           </div>
         </div>
       </div>
@@ -104,39 +117,39 @@ export function OpenInventoryDashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-5 gap-4">
         <KPICard
-          title="Total Open"
-          value={formatNumber(metrics.totalOpen)}
-          subtitle="All claim types"
+          title="Total Open Claims"
+          value={formatNumber(metrics.totalOpenClaims)}
+          subtitle={`${formatNumber(metrics.totalOpenExposures)} exposures`}
           icon={FileStack}
           variant="default"
         />
         <KPICard
-          title="Litigation (LIT)"
-          value={formatNumber(metrics.litTotal)}
-          subtitle={`${((metrics.litTotal / metrics.totalOpen) * 100).toFixed(1)}% of open`}
+          title="ATR"
+          value={formatNumber(KNOWN_TOTALS.atr.claims)}
+          subtitle={`${formatNumber(KNOWN_TOTALS.atr.exposures)} exposures`}
           icon={AlertTriangle}
           variant="warning"
         />
         <KPICard
-          title="365+ Days Old"
-          value={formatNumber(data.totals.age365Plus)}
-          subtitle="Requires attention"
-          icon={Clock}
+          title="Litigation"
+          value={formatNumber(KNOWN_TOTALS.lit.claims)}
+          subtitle={`${formatNumber(KNOWN_TOTALS.lit.exposures)} exposures`}
+          icon={AlertTriangle}
           variant="danger"
         />
         <KPICard
-          title="Under 60 Days"
-          value={formatNumber(data.totals.ageUnder60)}
-          subtitle="Fresh inventory"
-          icon={TrendingUp}
-          variant="success"
+          title="BI3"
+          value={formatNumber(KNOWN_TOTALS.bi3.claims)}
+          subtitle={`${formatNumber(KNOWN_TOTALS.bi3.exposures)} exposures`}
+          icon={Clock}
+          variant="default"
         />
         <KPICard
-          title="ATR Pending"
-          value={formatNumber(data.typeGroupSummaries.find(g => g.typeGroup === 'ATR')?.grandTotal || 0)}
-          subtitle="Attorney Rep'd"
-          icon={FileStack}
-          variant="default"
+          title="Early BI"
+          value={formatNumber(KNOWN_TOTALS.earlyBI.claims)}
+          subtitle={`${formatNumber(KNOWN_TOTALS.earlyBI.exposures)} exposures`}
+          icon={TrendingUp}
+          variant="success"
         />
       </div>
 
@@ -186,14 +199,14 @@ export function OpenInventoryDashboard() {
 
         {/* Type Group Distribution */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory by Type Group</h3>
-          <p className="text-xs text-muted-foreground mb-4">Top claim categories (excluding LIT detail breakdown)</p>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Open Claims by Queue</h3>
+          <p className="text-xs text-muted-foreground mb-4">Claims vs Exposures by handling unit</p>
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.nonLitGroups} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={metrics.typeGroups} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="typeGroup" stroke="hsl(var(--muted-foreground))" fontSize={10} angle={-30} textAnchor="end" height={50} />
+                <XAxis dataKey="typeGroup" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={formatNumber} />
                 <Tooltip 
                   contentStyle={{ 
@@ -202,11 +215,23 @@ export function OpenInventoryDashboard() {
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number) => [formatNumber(value), 'Claims']}
+                  formatter={(value: number, name: string) => [formatNumber(value), name === 'claims' ? 'Claims' : 'Exposures']}
                 />
-                <Bar dataKey="grandTotal" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Total" />
+                <Bar dataKey="claims" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Claims" />
+                <Bar dataKey="exposures" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Exposures" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          
+          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-primary"></div>
+              <span className="text-xs text-muted-foreground">Claims</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-warning"></div>
+              <span className="text-xs text-muted-foreground">Exposures</span>
+            </div>
           </div>
         </div>
       </div>
