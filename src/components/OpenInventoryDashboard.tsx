@@ -37,24 +37,25 @@ export function OpenInventoryDashboard() {
   };
 
   // Financial reserves by age bucket (placeholder data - replace with actual)
-  // Open Reserves vs High Set Amount - null means no evaluation
+  // Open Reserves vs Low/High Evaluation - null means no evaluation
   const FINANCIAL_DATA = {
     byAge: [
-      { age: '365+ Days', claims: 5630, openReserves: 48750000, highSetAmount: 72500000 },
-      { age: '181-365 Days', claims: 3953, openReserves: 31200000, highSetAmount: 45800000 },
-      { age: '61-180 Days', claims: 5576, openReserves: 28900000, highSetAmount: 38200000 },
-      { age: 'Under 60 Days', claims: 8420, openReserves: 18600000, highSetAmount: null }, // No evaluation yet
+      { age: '365+ Days', claims: 5630, openReserves: 48750000, lowEval: 28500000, highEval: 32100000 },
+      { age: '181-365 Days', claims: 3953, openReserves: 31200000, lowEval: 18200000, highEval: 20500000 },
+      { age: '61-180 Days', claims: 5576, openReserves: 28900000, lowEval: 10800000, highEval: 12200000 },
+      { age: 'Under 60 Days', claims: 8420, openReserves: 18600000, lowEval: 3600000, highEval: 3800000 },
     ],
     byQueue: [
-      { queue: 'Litigation', openReserves: 68500000, highSetAmount: 112000000, noEvalCount: 0 },
-      { queue: 'ATR', openReserves: 34200000, highSetAmount: 48500000, noEvalCount: 1245 },
-      { queue: 'BI3', openReserves: 18900000, highSetAmount: 28200000, noEvalCount: 892 },
-      { queue: 'Early BI', openReserves: 5850000, highSetAmount: null, noEvalCount: 141 }, // No evaluation
+      { queue: 'Litigation', openReserves: 68500000, lowEval: 38200000, highEval: 42800000, noEvalCount: 0 },
+      { queue: 'ATR', openReserves: 34200000, lowEval: 14500000, highEval: 16200000, noEvalCount: 1245 },
+      { queue: 'BI3', openReserves: 18900000, lowEval: 6800000, highEval: 7600000, noEvalCount: 892 },
+      { queue: 'Early BI', openReserves: 5850000, lowEval: 1600000, highEval: 2000000, noEvalCount: 141 },
     ],
     totals: {
       totalOpenReserves: 127450000,
-      totalHighSet: 156500000, // Sum of evaluated high set amounts
-      noEvalCount: 2278, // Claims with no high set evaluation
+      totalLowEval: 61100000,  // $61.1M
+      totalHighEval: 68600000, // $68.6M
+      noEvalCount: 2278,
     }
   };
 
@@ -139,8 +140,12 @@ export function OpenInventoryDashboard() {
               <p className="text-2xl font-bold text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</p>
             </div>
             <div className="text-center border-r border-border pr-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">High Set Amount</p>
-              <p className="text-2xl font-bold text-warning">{formatCurrency(metrics.financials.totals.totalHighSet)}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Low Eval</p>
+              <p className="text-2xl font-bold text-accent-foreground">{formatCurrency(metrics.financials.totals.totalLowEval)}</p>
+            </div>
+            <div className="text-center border-r border-border pr-6">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">High Eval</p>
+              <p className="text-2xl font-bold text-warning">{formatCurrency(metrics.financials.totals.totalHighEval)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">No Evaluation</p>
@@ -160,18 +165,18 @@ export function OpenInventoryDashboard() {
           variant="default"
         />
         <KPICard
-          title="High Set Amount"
-          value={formatCurrency(metrics.financials.totals.totalHighSet)}
-          subtitle="Maximum evaluated exposure"
+          title="Low Evaluation"
+          value={formatCurrency(metrics.financials.totals.totalLowEval)}
+          subtitle="Minimum exposure estimate"
           icon={DollarSign}
-          variant="warning"
+          variant="default"
         />
         <KPICard
-          title="365+ Day Reserves"
-          value={formatCurrency(metrics.financials.byAge[0].openReserves)}
-          subtitle={`${formatNumber(metrics.financials.byAge[0].claims)} aged claims`}
-          icon={AlertTriangle}
-          variant="danger"
+          title="High Evaluation"
+          value={formatCurrency(metrics.financials.totals.totalHighEval)}
+          subtitle="Maximum exposure estimate"
+          icon={DollarSign}
+          variant="warning"
         />
         <KPICard
           title="No Evaluation"
@@ -184,14 +189,14 @@ export function OpenInventoryDashboard() {
 
       {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Reserves vs High Set by Age Bucket */}
+        {/* Reserves vs Eval by Age Bucket */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs High Set by Age</h3>
-          <p className="text-xs text-muted-foreground mb-4">Open reserves compared to high set amount by claim age</p>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Age</h3>
+          <p className="text-xs text-muted-foreground mb-4">Open reserves compared to low/high evaluation by claim age</p>
           
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.ageDistribution.filter(d => d.highSetAmount !== null)} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
                 <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={85} />
@@ -202,10 +207,14 @@ export function OpenInventoryDashboard() {
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'openReserves' ? 'Open Reserves' : 'High Set Amount']}
+                  formatter={(value: number, name: string) => [
+                    formatCurrencyFull(value), 
+                    name === 'openReserves' ? 'Open Reserves' : name === 'lowEval' ? 'Low Eval' : 'High Eval'
+                  ]}
                 />
                 <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Open Reserves" />
-                <Bar dataKey="highSetAmount" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} name="High Set Amount" />
+                <Bar dataKey="lowEval" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} name="Low Eval" />
+                <Bar dataKey="highEval" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} name="High Eval" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -216,16 +225,20 @@ export function OpenInventoryDashboard() {
               <span className="text-xs text-muted-foreground">Open Reserves</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
+              <span className="text-xs text-muted-foreground">Low Eval</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-warning"></div>
-              <span className="text-xs text-muted-foreground">High Set Amount</span>
+              <span className="text-xs text-muted-foreground">High Eval</span>
             </div>
           </div>
         </div>
 
         {/* Reserves by Queue */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs High Set by Queue</h3>
-          <p className="text-xs text-muted-foreground mb-4">Open reserves & high set by handling unit</p>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Queue</h3>
+          <p className="text-xs text-muted-foreground mb-4">Open reserves & evaluation by handling unit</p>
           
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -242,11 +255,12 @@ export function OpenInventoryDashboard() {
                   }}
                   formatter={(value: number | null, name: string) => [
                     value !== null ? formatCurrencyFull(value) : 'No Evaluation', 
-                    name === 'openReserves' ? 'Open Reserves' : 'High Set Amount'
+                    name === 'openReserves' ? 'Open Reserves' : name === 'lowEval' ? 'Low Eval' : 'High Eval'
                   ]}
                 />
                 <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Open Reserves" />
-                <Bar dataKey="highSetAmount" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="High Set Amount" />
+                <Bar dataKey="lowEval" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Low Eval" />
+                <Bar dataKey="highEval" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="High Eval" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -257,8 +271,12 @@ export function OpenInventoryDashboard() {
               <span className="text-xs text-muted-foreground">Open Reserves</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
+              <span className="text-xs text-muted-foreground">Low Eval</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-warning"></div>
-              <span className="text-xs text-muted-foreground">High Set Amount</span>
+              <span className="text-xs text-muted-foreground">High Eval</span>
             </div>
           </div>
         </div>
@@ -267,7 +285,7 @@ export function OpenInventoryDashboard() {
       {/* Financial Summary Table */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Financial Summary by Age</h3>
-        <p className="text-xs text-muted-foreground mb-4">Claims, reserves, and high set amounts by age bucket</p>
+        <p className="text-xs text-muted-foreground mb-4">Claims, reserves, and evaluation amounts by age bucket</p>
         
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -276,35 +294,28 @@ export function OpenInventoryDashboard() {
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium">Age Bucket</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Claims</th>
                 <th className="text-right py-2 px-3 text-primary font-medium">Open Reserves</th>
-                <th className="text-right py-2 px-3 text-warning font-medium">High Set Amount</th>
-                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Variance</th>
+                <th className="text-right py-2 px-3 text-accent-foreground font-medium">Low Eval</th>
+                <th className="text-right py-2 px-3 text-warning font-medium">High Eval</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Avg Reserve</th>
               </tr>
             </thead>
             <tbody>
-              {metrics.financials.byAge.map((item) => {
-                const variance = item.highSetAmount !== null ? item.highSetAmount - item.openReserves : null;
-                return (
-                  <tr key={item.age} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-2 px-3 font-medium">{item.age}</td>
-                    <td className="py-2 px-3 text-right">{formatNumber(item.claims)}</td>
-                    <td className="py-2 px-3 text-right text-primary font-semibold">{formatCurrency(item.openReserves)}</td>
-                    <td className="py-2 px-3 text-right text-warning">
-                      {item.highSetAmount !== null ? formatCurrency(item.highSetAmount) : <span className="text-muted-foreground italic">No Evaluation</span>}
-                    </td>
-                    <td className="py-2 px-3 text-right text-muted-foreground">
-                      {variance !== null ? formatCurrency(variance) : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(Math.round(item.openReserves / item.claims))}</td>
-                  </tr>
-                );
-              })}
+              {metrics.financials.byAge.map((item) => (
+                <tr key={item.age} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="py-2 px-3 font-medium">{item.age}</td>
+                  <td className="py-2 px-3 text-right">{formatNumber(item.claims)}</td>
+                  <td className="py-2 px-3 text-right text-primary font-semibold">{formatCurrency(item.openReserves)}</td>
+                  <td className="py-2 px-3 text-right">{formatCurrency(item.lowEval)}</td>
+                  <td className="py-2 px-3 text-right text-warning">{formatCurrency(item.highEval)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(Math.round(item.openReserves / item.claims))}</td>
+                </tr>
+              ))}
               <tr className="bg-muted/50 font-bold">
                 <td className="py-2 px-3">Total</td>
                 <td className="py-2 px-3 text-right">{formatNumber(metrics.financials.byAge.reduce((s, i) => s + i.claims, 0))}</td>
                 <td className="py-2 px-3 text-right text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</td>
-                <td className="py-2 px-3 text-right text-warning">{formatCurrency(metrics.financials.totals.totalHighSet)}</td>
-                <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrency(metrics.financials.totals.totalHighSet - metrics.financials.totals.totalOpenReserves)}</td>
+                <td className="py-2 px-3 text-right">{formatCurrency(metrics.financials.totals.totalLowEval)}</td>
+                <td className="py-2 px-3 text-right text-warning">{formatCurrency(metrics.financials.totals.totalHighEval)}</td>
                 <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(Math.round(metrics.financials.totals.totalOpenReserves / metrics.financials.byAge.reduce((s, i) => s + i.claims, 0)))}</td>
               </tr>
             </tbody>
