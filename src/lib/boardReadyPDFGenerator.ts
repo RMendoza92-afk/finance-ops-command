@@ -120,47 +120,51 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
 
   // ============ HEADER ============
   doc.setFillColor(...C.headerBg);
-  doc.rect(0, 0, pw, 28, 'F');
+  doc.rect(0, 0, pw, 24, 'F');
   doc.setFillColor(...C.gold);
-  doc.rect(0, 28, pw, 0.5, 'F');
+  doc.rect(0, 24, pw, 0.5, 'F');
 
-  // Logo with white circular background
+  // Logo - simple rectangle placement
   try {
-    doc.setFillColor(255, 255, 255);
-    doc.circle(m.l + 10, 14, 9, 'F');
-    doc.addImage(loyaLogo, 'JPEG', m.l + 2, 6, 16, 16);
+    doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
   } catch (e) {
     // Logo failed
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setTextColor(...C.white);
-  doc.text('CEO CONTROL PANEL', m.l + 24, 16);
+  doc.text('CEO CONTROL PANEL', m.l + 20, 13);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(...C.muted);
-  doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 16, { align: 'right' });
+  doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 13, { align: 'right' });
 
-  y = 34;
+  y = 28;
 
   // ============ BUILD DATA ============
   const data = buildControlData(config);
 
-  // ============ CEO STATEMENT ============
-  const ceoStatement = buildCEOStatement(data, config);
+  // ============ CEO STATEMENT (FULL DETAILS) ============
+  const ceoLines = buildCEOStatementLines(data, config);
+  const lineH = 6;
+  const stmtH = ceoLines.length * lineH + 6;
+  
   doc.setFillColor(...C.rowDark);
-  doc.roundedRect(m.l, y, cw, 10, 0.5, 0.5, 'F');
+  doc.roundedRect(m.l, y, cw, stmtH, 1, 1, 'F');
   doc.setFillColor(...C.gold);
-  doc.rect(m.l, y, 1, 10, 'F');
+  doc.rect(m.l, y, 1.5, stmtH, 'F');
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setTextColor(...C.offWhite);
-  doc.text(ceoStatement, m.l + 4, y + 6, { maxWidth: cw - 8 });
+  
+  ceoLines.forEach((line, i) => {
+    doc.text(line, m.l + 5, y + 5 + (i * lineH));
+  });
 
-  y += 13;
+  y += stmtH + 4;
 
   // ============ STATUS BANNER ============
   const bannerColor = data.status === 'FAIL' ? C.red : data.status === 'WARN' ? C.amber : C.green;
@@ -378,7 +382,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setTextColor(...C.muted);
   doc.text('CONFIDENTIAL', m.l, ph - 3);
   doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
-  doc.text('Page 1 of 1', pw - m.r, ph - 3, { align: 'right' });
+  const pageCount = doc.internal.pages.length - 1;
+  doc.text(`Page 1 of ${pageCount}`, pw - m.r, ph - 3, { align: 'right' });
 
   // Save
   const filename = `CEO_Control_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
@@ -518,30 +523,44 @@ function buildControlData(config: ExecutivePackageConfig) {
 
 // ==================== CEO STATEMENT BUILDER ====================
 
-function buildCEOStatement(
+function buildCEOStatementLines(
   data: ReturnType<typeof buildControlData>,
   config: ExecutivePackageConfig
-): string {
+): string[] {
   const bd = config.budgetData;
   const dd = config.decisionsData;
   const cp = config.cp1Data;
   
+  const lines: string[] = [];
+  
+  // Line 1: Status
+  lines.push(`STATUS: ${data.status === 'OK' ? 'IN CONTROL' : data.status === 'WARN' ? 'IN CONTROL (MONITOR)' : 'NOT IN CONTROL'}`);
+  
+  // Line 2: Budget
+  const budgetStatus = bd.onTrack ? 'On Track' : 'Over Budget';
+  lines.push(`BUDGET: ${formatCurrency(bd.ytdPaid, true)} YTD paid | ${formatCurrency(bd.remaining, true)} remaining | ${budgetStatus} | YOY: ${bd.yoyChangePercent >= 0 ? '+' : ''}${bd.yoyChangePercent.toFixed(1)}%`);
+  
+  // Line 3: Decisions
+  lines.push(`DECISIONS: ${dd.total} total pending | ${dd.critical} critical | ${dd.thisWeek} due this week | ${dd.statuteDeadlines} statute deadlines | Exposure: ${formatCurrency(dd.totalExposure, true)}`);
+  
+  // Line 4: CP1
+  lines.push(`CP1: ${cp.cp1Rate} overall rate | BI CP1: ${cp.biCP1Rate} | ${cp.totalClaims} total claims | ${cp.cp1Count} in CP1`);
+  
+  // Line 5: Primary Issue (if any)
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      return `STATUS: Not in control | ISSUE: BI indemnities ${formatCurrency(bd.ytdPaid, true)} YTD exceeds forecast by ${formatCurrency(Math.abs(bd.projectedVariance), true)} | YOY: ${bd.yoyChangePercent >= 0 ? '+' : ''}${bd.yoyChangePercent.toFixed(1)}% | ACTION: Enhanced auth controls effective Friday`;
+      lines.push(`ISSUE: BI indemnities exceed forecast by ${formatCurrency(Math.abs(bd.projectedVariance), true)}`);
+    } else if (data.breaking.includes('DECISIONS')) {
+      lines.push(`ISSUE: ${dd.critical} critical matters require same-day disposition`);
+    } else if (data.breaking.includes('AGED')) {
+      lines.push(`ISSUE: Aged BI at ${data.agedValue} of inventory - escalation required`);
     }
-    if (data.breaking.includes('DECISIONS')) {
-      return `STATUS: Not in control | ISSUE: ${dd.critical} critical / ${dd.total} total pending | EXPOSURE: ${formatCurrency(dd.totalExposure, true)} | DEADLINES: ${dd.statuteDeadlines} statute | ACTION: Same-day disposition required`;
-    }
-    if (data.breaking.includes('AGED')) {
-      return `STATUS: Not in control | ISSUE: Aged BI at ${data.agedValue} of inventory | BI TOTAL: ${cp.biTotal.total} claims | CP1: ${cp.biCP1Rate} | ACTION: Escalation protocol initiated`;
-    }
-    return `STATUS: Not in control | ISSUE: Multiple deficiencies | ACTION: Execute corrective orders below`;
+  } else if (data.status === 'WARN') {
+    lines.push(`MONITOR: CP1 rate ${cp.cp1Rate} elevated - review in 7 days`);
   }
   
-  if (data.status === 'WARN') {
-    return `STATUS: In control | MONITOR: CP1 rate ${cp.cp1Rate} elevated | BI CP1: ${cp.biCP1Rate} | TOTAL CLAIMS: ${cp.totalClaims} | ACTION: Review in 7 days`;
-  }
+  // Line 6: Action
+  lines.push(`ACTION: ${data.action.replace('YES - ', '').replace('NO - ', '').replace('MONITOR - ', '')}`);
   
-  return `STATUS: In control | BUDGET: ${formatCurrency(bd.ytdPaid, true)} YTD / ${formatCurrency(bd.remaining, true)} remaining | CP1: ${cp.cp1Rate} | DECISIONS: ${dd.total} pending | ACTION: Maintain cadence`;
+  return lines;
 }
