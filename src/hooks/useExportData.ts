@@ -2,11 +2,19 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
+export interface ManagerTracking {
+  name: string;
+  value: string | number;
+  category: string;
+}
+
 export interface ExportableData {
   title: string;
   subtitle?: string;
   timestamp: string;
   affectsManager?: string; // Who this report affects/is prepared for
+  directive?: string; // Directive statement for action
+  managerTracking?: ManagerTracking[]; // High eval managers, no eval tracking, etc.
   summary?: Record<string, string | number>;
   columns: string[];
   rows: (string | number)[][];
@@ -77,6 +85,91 @@ export function useExportData() {
     doc.setLineWidth(0.5);
     doc.line(14, yPos, pageWidth - 14, yPos);
     yPos += 10;
+
+    // Directive Section - Bold action statement
+    if (data.directive) {
+      doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.roundedRect(14, yPos, pageWidth - 28, 22, 3, 3, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text('DIRECTIVE:', 18, yPos + 8);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 50);
+      doc.text(directiveLines.slice(0, 2).join(' '), 50, yPos + 8);
+      if (directiveLines.length > 2) {
+        doc.text(directiveLines.slice(2, 4).join(' '), 18, yPos + 16);
+      }
+      yPos += 30;
+    }
+
+    // Manager Tracking Section - High Eval Managers & No Eval Assignment
+    if (data.managerTracking && data.managerTracking.length > 0) {
+      const highEvalManagers = data.managerTracking.filter(m => m.category === 'high_eval');
+      const noEvalTracking = data.managerTracking.filter(m => m.category === 'no_eval');
+
+      if (highEvalManagers.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.text('HIGH EVALUATION TOP 10 MANAGERS', 14, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(8);
+        doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
+        doc.text('Managers issuing the highest evaluations - requires immediate review', 14, yPos);
+        yPos += 6;
+
+        // Two-column layout for managers
+        const colWidth = (pageWidth - 32) / 2;
+        highEvalManagers.forEach((manager, idx) => {
+          const col = idx % 2;
+          const row = Math.floor(idx / 2);
+          const xPos = 14 + col * (colWidth + 4);
+          const rowY = yPos + row * 10;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.text(`${idx + 1}. ${manager.name}`, xPos, rowY);
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+          doc.text(String(manager.value), xPos + colWidth - 20, rowY);
+        });
+        yPos += Math.ceil(highEvalManagers.length / 2) * 10 + 8;
+      }
+
+      if (noEvalTracking.length > 0) {
+        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+        doc.setLineWidth(0.3);
+        doc.line(14, yPos, pageWidth - 14, yPos);
+        yPos += 8;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.text('NO EVALUATION TRACKING', 14, yPos);
+        yPos += 6;
+
+        doc.setFontSize(8);
+        doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
+        doc.text('Claims without evaluation assigned for accountability tracking', 14, yPos);
+        yPos += 6;
+
+        noEvalTracking.forEach((item) => {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.text(`${item.name}: ${item.value} claims`, 14, yPos);
+          yPos += 6;
+        });
+        yPos += 6;
+      }
+    }
 
     // Summary section with cards
     if (data.summary && Object.keys(data.summary).length > 0) {
@@ -234,6 +327,37 @@ export function useExportData() {
       data.affectsManager ? [`Prepared For: ${data.affectsManager}`] : [],
       [],
     ];
+
+    // Add directive if exists
+    if (data.directive) {
+      wsData.push(['DIRECTIVE']);
+      wsData.push([data.directive]);
+      wsData.push([]);
+    }
+
+    // Add manager tracking if exists
+    if (data.managerTracking && data.managerTracking.length > 0) {
+      const highEvalManagers = data.managerTracking.filter(m => m.category === 'high_eval');
+      const noEvalTracking = data.managerTracking.filter(m => m.category === 'no_eval');
+
+      if (highEvalManagers.length > 0) {
+        wsData.push(['HIGH EVALUATION TOP 10 MANAGERS']);
+        wsData.push(['Rank', 'Manager', 'High Eval Amount']);
+        highEvalManagers.forEach((manager, idx) => {
+          wsData.push([idx + 1, manager.name, String(manager.value)]);
+        });
+        wsData.push([]);
+      }
+
+      if (noEvalTracking.length > 0) {
+        wsData.push(['NO EVALUATION TRACKING']);
+        wsData.push(['Assigned To', 'Claims Count']);
+        noEvalTracking.forEach((item) => {
+          wsData.push([item.name, String(item.value)]);
+        });
+        wsData.push([]);
+      }
+    }
 
     // Add summary if exists
     if (data.summary && Object.keys(data.summary).length > 0) {

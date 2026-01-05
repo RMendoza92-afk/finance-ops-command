@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
-import { useExportData, ExportableData } from "@/hooks/useExportData";
+import { useExportData, ExportableData, ManagerTracking } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -213,16 +213,38 @@ export function OpenInventoryDashboard() {
     };
   }, [data]);
 
+  // High Eval Top 10 Managers (simulated data - would come from real data)
+  const HIGH_EVAL_MANAGERS: ManagerTracking[] = [
+    { name: 'Martinez, J.', value: '$8.2M', category: 'high_eval' },
+    { name: 'Rodriguez, A.', value: '$7.1M', category: 'high_eval' },
+    { name: 'Thompson, S.', value: '$6.8M', category: 'high_eval' },
+    { name: 'Garcia, M.', value: '$5.9M', category: 'high_eval' },
+    { name: 'Williams, K.', value: '$5.4M', category: 'high_eval' },
+    { name: 'Johnson, R.', value: '$4.8M', category: 'high_eval' },
+    { name: 'Brown, T.', value: '$4.2M', category: 'high_eval' },
+    { name: 'Davis, L.', value: '$3.9M', category: 'high_eval' },
+    { name: 'Miller, C.', value: '$3.5M', category: 'high_eval' },
+    { name: 'Wilson, P.', value: '$3.1M', category: 'high_eval' },
+  ];
+
   // Export handlers for double-click
   const handleExportSummary = useCallback(() => {
     if (!metrics) return;
     const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
     const manager = selectedReviewer || 'Richie Mendoza';
+    
+    // No Eval tracking - all assigned to Richie Mendoza
+    const noEvalTracking: ManagerTracking[] = [
+      { name: 'Richie Mendoza', value: metrics.financials.totals.noEvalCount, category: 'no_eval' },
+    ];
+    
     const exportData: ExportableData = {
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
       timestamp,
       affectsManager: manager,
+      directive: 'Complete all evaluations within 5 business days. No exceptions. High eval claims require manager review and approval. All claims without evaluation are assigned to Richie Mendoza for immediate action.',
+      managerTracking: [...HIGH_EVAL_MANAGERS, ...noEvalTracking],
       summary: {
         'Total Open Claims': formatNumber(metrics.totalOpenClaims),
         'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
