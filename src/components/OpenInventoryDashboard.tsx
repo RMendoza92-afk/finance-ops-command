@@ -257,37 +257,105 @@ export function OpenInventoryDashboard() {
         </div>
       </div>
 
-      {/* Financial KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <KPICard
-          title="Total Open Reserves"
-          value={formatCurrency(metrics.financials.totals.totalOpenReserves)}
-          subtitle="Outstanding liability"
-          icon={Wallet}
-          variant="default"
-        />
-        <KPICard
-          title="Low Evaluation"
-          value={formatCurrency(metrics.financials.totals.totalLowEval)}
-          subtitle="Minimum exposure estimate"
-          icon={DollarSign}
-          variant="default"
-        />
-        <KPICard
-          title="High Evaluation"
-          value={formatCurrency(metrics.financials.totals.totalHighEval)}
-          subtitle="Maximum exposure estimate"
-          icon={DollarSign}
-          variant="warning"
-        />
-        <KPICard
-          title="No Evaluation"
-          value={formatNumber(metrics.financials.totals.noEvalCount)}
-          subtitle="Claims pending eval"
-          icon={Clock}
-          variant="default"
-        />
-      </div>
+      {/* Financial KPI Cards with Reserve Adequacy */}
+      {(() => {
+        const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
+        const reserves = metrics.financials.totals.totalOpenReserves;
+        const variance = reserves - medianEval;
+        const variancePct = ((variance / medianEval) * 100).toFixed(1);
+        const isOverReserved = variance > 0;
+        
+        return (
+          <>
+            <div className="grid grid-cols-5 gap-4">
+              <KPICard
+                title="Total Open Reserves"
+                value={formatCurrency(reserves)}
+                subtitle="Outstanding liability"
+                icon={Wallet}
+                variant="default"
+              />
+              <KPICard
+                title="Low Evaluation"
+                value={formatCurrency(metrics.financials.totals.totalLowEval)}
+                subtitle="Minimum exposure estimate"
+                icon={DollarSign}
+                variant="default"
+              />
+              <KPICard
+                title="Median Evaluation"
+                value={formatCurrency(medianEval)}
+                subtitle="(Low + High) / 2"
+                icon={Target}
+                variant="default"
+              />
+              <KPICard
+                title="High Evaluation"
+                value={formatCurrency(metrics.financials.totals.totalHighEval)}
+                subtitle="Maximum exposure estimate"
+                icon={DollarSign}
+                variant="warning"
+              />
+              <div className={`rounded-xl p-4 border-2 ${isOverReserved ? 'bg-success/10 border-success/40' : 'bg-destructive/10 border-destructive/40'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {isOverReserved ? (
+                    <TrendingUp className="h-4 w-4 text-success" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  )}
+                  <span className="text-xs font-medium text-muted-foreground uppercase">Reserve Adequacy</span>
+                </div>
+                <p className={`text-2xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
+                  {isOverReserved ? '+' : ''}{variancePct}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isOverReserved ? 'Over-reserved' : 'Under-reserved'} by {formatCurrency(Math.abs(variance))}
+                </p>
+              </div>
+            </div>
+
+            {/* Reserve Adequacy by Queue */}
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">Reserve Adequacy by Queue</h3>
+              <div className="grid grid-cols-4 gap-4">
+                {metrics.financials.byQueue.map((queue) => {
+                  const qMedian = (queue.lowEval + queue.highEval) / 2;
+                  const qVariance = queue.openReserves - qMedian;
+                  const qVariancePct = ((qVariance / qMedian) * 100).toFixed(1);
+                  const qIsOver = qVariance > 0;
+                  
+                  return (
+                    <div key={queue.queue} className={`rounded-lg p-4 border ${qIsOver ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-foreground">{queue.queue}</span>
+                        <span className={`text-sm font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
+                          {qIsOver ? '+' : ''}{qVariancePct}%
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Reserves</span>
+                          <span className="font-medium">{formatCurrency(queue.openReserves)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Median Eval</span>
+                          <span className="font-medium">{formatCurrency(qMedian)}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-border pt-1 mt-1">
+                          <span className="text-muted-foreground">{qIsOver ? 'Over' : 'Under'}</span>
+                          <span className={`font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
+                            {qIsOver ? '+' : '-'}{formatCurrency(Math.abs(qVariance))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-2 gap-6">
