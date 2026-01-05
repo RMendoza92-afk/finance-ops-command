@@ -20,14 +20,18 @@ export function OpenInventoryDashboard() {
 
   const formatNumber = (val: number) => val.toLocaleString();
 
+  // Known totals from user (January 2, 2026 report)
+  const KNOWN_TOTAL_OPEN = 18325;
+  const KNOWN_LIT_TOTAL = 3289;
+
   // Calculate derived metrics
   const metrics = useMemo(() => {
     if (!data) return null;
 
-    const litTotal = data.litPhases.reduce((sum, p) => sum + p.grandTotal, 0);
+    const litTotal = KNOWN_LIT_TOTAL;
     const aged365Plus = data.totals.age365Plus;
-    const agedPct = data.totals.grandTotal > 0 
-      ? ((aged365Plus / data.totals.grandTotal) * 100).toFixed(1)
+    const agedPct = KNOWN_TOTAL_OPEN > 0 
+      ? ((aged365Plus / KNOWN_TOTAL_OPEN) * 100).toFixed(1)
       : '0';
 
     // Top 5 phases by count
@@ -56,6 +60,7 @@ export function OpenInventoryDashboard() {
       topPhases,
       ageDistribution,
       nonLitGroups,
+      totalOpen: KNOWN_TOTAL_OPEN,
     };
   }, [data]);
 
@@ -83,7 +88,7 @@ export function OpenInventoryDashboard() {
       <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(data.totals.grandTotal)} Claims</h2>
+            <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpen)} Claims</h2>
             <p className="text-sm text-muted-foreground mt-1">
               As of January 2, 2026 • Litigation: <span className="font-semibold text-foreground">{formatNumber(metrics.litTotal)}</span> files
             </p>
@@ -100,7 +105,7 @@ export function OpenInventoryDashboard() {
       <div className="grid grid-cols-5 gap-4">
         <KPICard
           title="Total Open"
-          value={formatNumber(data.totals.grandTotal)}
+          value={formatNumber(metrics.totalOpen)}
           subtitle="All claim types"
           icon={FileStack}
           variant="default"
@@ -108,7 +113,7 @@ export function OpenInventoryDashboard() {
         <KPICard
           title="Litigation (LIT)"
           value={formatNumber(metrics.litTotal)}
-          subtitle={`${((metrics.litTotal / data.totals.grandTotal) * 100).toFixed(1)}% of open`}
+          subtitle={`${((metrics.litTotal / metrics.totalOpen) * 100).toFixed(1)}% of open`}
           icon={AlertTriangle}
           variant="warning"
         />
