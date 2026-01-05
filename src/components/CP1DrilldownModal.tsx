@@ -1,11 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ExternalLink, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, ExternalLink, AlertTriangle, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  calculateExecutiveReview, 
+  estimateClaimAge, 
+  getLitigationStage,
+  ExecutiveReviewResult 
+} from "@/lib/executiveReview";
 
 interface CP1Claim {
   matter_id: string;
@@ -18,6 +25,11 @@ interface CP1Claim {
   matter_lead: string | null;
   location: string | null;
   filing_date: string | null;
+}
+
+interface ClaimWithReview extends CP1Claim {
+  executiveReview: ExecutiveReviewResult;
+  claimAge: number;
 }
 
 interface CP1DrilldownModalProps {
@@ -71,6 +83,36 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
     }
   };
 
+  // Calculate executive review for each claim
+  const claimsWithReview = useMemo<ClaimWithReview[]>(() => {
+    return claims.map(claim => {
+      // Extract prefix from matter_id (e.g., "78" from "78-12345")
+      const prefix = claim.matter_id.split('-')[0] || '';
+      const claimAge = estimateClaimAge(prefix, claim.filing_date || undefined);
+      
+      // Convert days_open to pain level estimate (rough mapping)
+      const painLvl = claim.days_open ? Math.min(10, Math.floor((claim.days_open || 0) / 60) + 1) : 1;
+      const stage = getLitigationStage(painLvl);
+      
+      // Calculate executive review - using available data
+      const executiveReview = calculateExecutiveReview(
+        claimAge,
+        stage,
+        0, // expertSpend - not available in this context
+        claim.total_amount || 0, // use total_amount as reactive proxy
+        0, // painEscalation
+        painLvl,
+        claim.severity || ''
+      );
+      
+      return {
+        ...claim,
+        executiveReview,
+        claimAge
+      };
+    }).sort((a, b) => b.executiveReview.score - a.executiveReview.score);
+  }, [claims]);
+
   const formatCurrency = (amount: number | null) => {
     if (!amount) return '-';
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -85,20 +127,13 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
     return <Badge variant="secondary" className="text-xs">{days}d</Badge>;
   };
 
-  const getSeverityBadge = (severity: string | null) => {
-    if (!severity) return null;
-    const s = severity.toLowerCase();
-    if (s === 'critical' || s === 'high') return <Badge variant="destructive" className="text-xs">{severity}</Badge>;
-    if (s === 'medium') return <Badge className="bg-warning text-warning-foreground text-xs">{severity}</Badge>;
-    return <Badge variant="secondary" className="text-xs">{severity}</Badge>;
-  };
-
   // Stats for the drilldown header
   const stats = {
     aged365Plus: claims.filter(c => (c.days_open || 0) >= 365).length,
     aged181To365: claims.filter(c => (c.days_open || 0) >= 181 && (c.days_open || 0) < 365).length,
     totalExposure: claims.reduce((sum, c) => sum + (c.total_amount || 0), 0),
-    criticalCount: claims.filter(c => c.severity?.toLowerCase() === 'critical' || c.severity?.toLowerCase() === 'high').length,
+    criticalCount: claimsWithReview.filter(c => c.executiveReview.level === 'CRITICAL').length,
+    requiredCount: claimsWithReview.filter(c => c.executiveReview.level === 'REQUIRED').length,
   };
 
   return (
@@ -115,7 +150,15 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
         </DialogHeader>
 
         {/* Quick Stats Row */}
-        <div className="grid grid-cols-4 gap-3 py-4 border-b">
+        <div className="grid grid-cols-5 gap-3 py-4 border-b">
+          <div className="bg-destructive/10 rounded-lg p-3 text-center">
+            <p className="text-xs text-muted-foreground mb-1">🔥 CRITICAL</p>
+            <p className="text-xl font-bold text-destructive">{stats.criticalCount}</p>
+          </div>
+          <div className="bg-amber-500/10 rounded-lg p-3 text-center">
+            <p className="text-xs text-muted-foreground mb-1">⚠️ REQUIRED</p>
+            <p className="text-xl font-bold text-amber-600">{stats.requiredCount}</p>
+          </div>
           <div className="bg-destructive/10 rounded-lg p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">365+ Days</p>
             <p className="text-xl font-bold text-destructive">{stats.aged365Plus}</p>
@@ -127,10 +170,6 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
           <div className="bg-primary/10 rounded-lg p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Total Exposure</p>
             <p className="text-xl font-bold text-primary">{formatCurrency(stats.totalExposure)}</p>
-          </div>
-          <div className="bg-muted rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">High/Critical</p>
-            <p className="text-xl font-bold">{stats.criticalCount}</p>
           </div>
         </div>
 
@@ -159,29 +198,63 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
+                  <TableHead className="text-xs w-[80px]">Review</TableHead>
                   <TableHead className="text-xs w-[120px]">Matter ID</TableHead>
                   <TableHead className="text-xs">Claimant</TableHead>
                   <TableHead className="text-xs">Lead</TableHead>
-                  <TableHead className="text-xs">Location</TableHead>
                   <TableHead className="text-xs text-right">Age</TableHead>
                   <TableHead className="text-xs text-right">Exposure</TableHead>
-                  <TableHead className="text-xs text-center">Severity</TableHead>
+                  <TableHead className="text-xs">Reasons</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {claims.map((claim) => (
-                  <TableRow key={claim.matter_id} className="hover:bg-muted/50">
+                {claimsWithReview.map((claim) => (
+                  <TableRow 
+                    key={claim.matter_id} 
+                    className={`hover:bg-muted/50 ${
+                      claim.executiveReview.level === 'CRITICAL' ? 'bg-destructive/5' : 
+                      claim.executiveReview.level === 'REQUIRED' ? 'bg-amber-500/5' : ''
+                    }`}
+                  >
+                    <TableCell>
+                      {claim.executiveReview.level !== 'NONE' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={`flex items-center gap-1.5 cursor-help px-2 py-1 rounded-md ${
+                                claim.executiveReview.level === 'CRITICAL' 
+                                  ? 'bg-destructive/10 text-destructive' 
+                                  : 'bg-amber-500/10 text-amber-600'
+                              }`}>
+                                <Flame className="h-3 w-3" />
+                                <span className="text-xs font-bold">{claim.executiveReview.score}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs p-3 text-xs">
+                              <p className="font-bold mb-2 text-foreground">
+                                {claim.executiveReview.level} - Score: {claim.executiveReview.score}
+                              </p>
+                              <div className="space-y-1 text-muted-foreground">
+                                {claim.executiveReview.reasons.map((r, i) => (
+                                  <p key={i}>• {r}</p>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {(claim.executiveReview.level === 'NONE' || claim.executiveReview.level === 'WATCH') && (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-mono text-xs font-medium">
                       {claim.matter_id}
                     </TableCell>
-                    <TableCell className="text-sm max-w-[180px] truncate" title={claim.claimant || ''}>
+                    <TableCell className="text-sm max-w-[150px] truncate" title={claim.claimant || ''}>
                       {claim.claimant || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {claim.matter_lead || '-'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {claim.location || '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       {getAgeBadge(claim.days_open)}
@@ -189,8 +262,14 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
                     <TableCell className="text-right font-semibold text-sm">
                       {formatCurrency(claim.total_amount)}
                     </TableCell>
-                    <TableCell className="text-center">
-                      {getSeverityBadge(claim.severity)}
+                    <TableCell className="text-[10px] text-muted-foreground max-w-[200px]">
+                      {claim.executiveReview.reasons.length > 0 ? (
+                        <span className="truncate block" title={claim.executiveReview.reasons.join(' • ')}>
+                          {claim.executiveReview.reasons.slice(0, 2).join(' • ')}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
