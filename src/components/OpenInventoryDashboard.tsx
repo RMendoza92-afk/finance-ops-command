@@ -1060,19 +1060,19 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       },
       { 
         label: 'Total Claims', 
-        value: formatNumber(metrics.totalOpenClaims),
+        value: formatNumber(KNOWN_TOTALS.totalOpenClaims),
         trend: 'Steady',
         trendDirection: 'neutral'
       },
       { 
-        label: 'Pending Eval', 
-        value: formatNumber(metrics.financials.totals.noEvalCount),
-        trend: 'Action Required',
-        trendDirection: 'down'
+        label: 'Litigation Exposures', 
+        value: formatNumber(KNOWN_TOTALS.lit.exposures),
+        trend: `${KNOWN_TOTALS.lit.claims} matters`,
+        trendDirection: 'neutral'
       },
       { 
         label: 'Aged 365+', 
-        value: `${((FINANCIAL_DATA.byAge[0].claims / metrics.totalOpenClaims) * 100).toFixed(0)}%`,
+        value: `${((EXECUTIVE_METRICS.aging.over365Days / KNOWN_TOTALS.totalOpenClaims) * 100).toFixed(0)}%`,
         trend: 'High Priority',
         trendDirection: 'down'
       },
@@ -1086,25 +1086,27 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
     ];
 
-    // Charts for visual representation
+    // Charts for visual representation - using actual inventory data
     const charts: PDFChart[] = [
       {
         type: 'horizontalBar',
-        title: 'Reserves by Age Bucket',
-        data: FINANCIAL_DATA.byAge.map((item, i) => ({
-          label: item.age,
-          value: item.openReserves,
-          color: i === 0 ? 'red' : i === 3 ? 'green' : 'blue',
-        })),
+        title: 'Exposures by Queue',
+        data: [
+          { label: 'ATR', value: KNOWN_TOTALS.atr.exposures, color: 'blue' },
+          { label: 'Litigation', value: KNOWN_TOTALS.lit.exposures, color: 'red' },
+          { label: 'BI3', value: KNOWN_TOTALS.bi3.exposures, color: 'amber' },
+          { label: 'Early BI', value: KNOWN_TOTALS.earlyBI.exposures, color: 'green' },
+        ],
       },
       {
         type: 'donut',
-        title: 'Reserves by Queue',
-        data: FINANCIAL_DATA.byQueue.map((q, i) => ({
-          label: q.queue,
-          value: q.openReserves,
-          color: (['red', 'amber', 'green', 'blue', 'muted'] as const)[i % 5],
-        })),
+        title: 'Claims by Queue',
+        data: [
+          { label: 'ATR', value: KNOWN_TOTALS.atr.claims, color: 'blue' },
+          { label: 'Litigation', value: KNOWN_TOTALS.lit.claims, color: 'red' },
+          { label: 'BI3', value: KNOWN_TOTALS.bi3.claims, color: 'amber' },
+          { label: 'Early BI', value: KNOWN_TOTALS.earlyBI.claims, color: 'green' },
+        ],
       },
     ];
 
