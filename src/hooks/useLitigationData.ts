@@ -105,8 +105,17 @@ function transformRow(row: CSVRow, index: number): LitigationMatter {
 function transformDBRow(row: any): LitigationMatter {
   // Parse pain level - could be "5", "0-3", etc.
   const painLevel = row.pain_levels?.pain_level || '0';
-  const painNum = parseFloat(painLevel.split('-')[0]) || 0;
-  
+  const painNum = parseFloat(String(painLevel).split('-')[0]) || 0;
+
+  // Use resolution_date as the closest proxy for "payment date" / closure timing in DB mode.
+  // (CSV mode has an explicit Payment Date column.)
+  const paymentDate = row.resolution_date || '';
+
+  // Map DB status + indemnities to a CWP/CWN approximation.
+  const isClosed = String(row.status || '').toLowerCase() === 'closed';
+  const hasPayment = (Number(row.indemnities_amount) || 0) > 0;
+  const cwpCwn: 'CWP' | 'CWN' = isClosed && hasPayment ? 'CWP' : 'CWN';
+
   return {
     id: row.id,
     class: row.class || '',
@@ -122,13 +131,13 @@ function transformDBRow(row: any): LitigationMatter {
     adjusterName: row.matter_lead || '',
     creditedTeam: row.team || '',
     creditedAdj: row.matter_lead || '',
-    paymentDate: '',
+    paymentDate,
     indemnitiesAmount: Number(row.indemnities_amount) || 0,
     indemnitiesCheckCount: 0,
     expensesCheckCount: 0,
     totalAmount: Number(row.total_amount) || 0,
     netAmount: Number(row.total_amount) || 0,
-    cwpCwn: row.status === 'Closed' ? 'CWP' : 'CWN',
+    cwpCwn,
     startPainLvl: painNum,
     endPainLvl: painNum,
     transferDate: '',
