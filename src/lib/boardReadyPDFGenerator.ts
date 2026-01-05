@@ -80,19 +80,20 @@ export interface CP1Analysis {
   totals: { grandTotal: number; yes: number; noCP: number };
 }
 
-// ==================== COLORS - TRUE DARK MODE ====================
+// ==================== COLORS - EXECUTIVE DARK ====================
 const C = {
-  bg: [18, 18, 18] as [number, number, number],
-  headerBg: [28, 28, 28] as [number, number, number],
-  rowDark: [24, 24, 24] as [number, number, number],
-  rowLight: [32, 32, 32] as [number, number, number],
-  border: [60, 60, 60] as [number, number, number],
+  bg: [12, 12, 12] as [number, number, number],
+  headerBg: [22, 22, 22] as [number, number, number],
+  rowDark: [18, 18, 18] as [number, number, number],
+  rowLight: [24, 24, 24] as [number, number, number],
+  border: [45, 45, 45] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  muted: [160, 160, 160] as [number, number, number],
-  green: [34, 197, 94] as [number, number, number],
-  red: [239, 68, 68] as [number, number, number],
-  amber: [251, 191, 36] as [number, number, number],
-  accent: [180, 180, 180] as [number, number, number],
+  offWhite: [240, 240, 240] as [number, number, number],
+  muted: [140, 140, 140] as [number, number, number],
+  green: [16, 185, 129] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+  amber: [245, 158, 11] as [number, number, number],
+  gold: [212, 175, 55] as [number, number, number],
 };
 
 // ==================== GENERATOR ====================
@@ -119,29 +120,30 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
 
   // ============ HEADER ============
   doc.setFillColor(...C.headerBg);
-  doc.rect(0, 0, pw, 32, 'F');
-  doc.setFillColor(...C.accent);
-  doc.rect(0, 32, pw, 1, 'F');
+  doc.rect(0, 0, pw, 28, 'F');
+  doc.setFillColor(...C.gold);
+  doc.rect(0, 28, pw, 0.5, 'F');
 
-  // Logo - smaller and properly positioned
+  // Logo with white circular background
   try {
-    doc.addImage(loyaLogo, 'JPEG', m.l, 6, 18, 18);
+    doc.setFillColor(255, 255, 255);
+    doc.circle(m.l + 10, 14, 9, 'F');
+    doc.addImage(loyaLogo, 'JPEG', m.l + 2, 6, 16, 16);
   } catch (e) {
-    // Logo failed to load
+    // Logo failed
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
+  doc.setFontSize(14);
   doc.setTextColor(...C.white);
-  doc.text('CEO CONTROL PANEL', m.l + 22, 20);
+  doc.text('CEO CONTROL PANEL', m.l + 24, 16);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...C.muted);
-  doc.text(ctx.reportPeriod, pw - m.r, 14, { align: 'right' });
-  doc.text(`Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 24, { align: 'right' });
+  doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 16, { align: 'right' });
 
-  y = 40;
+  y = 34;
 
   // ============ BUILD DATA ============
   const data = buildControlData(config);
@@ -149,17 +151,17 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // ============ STATUS BANNER ============
   const bannerColor = data.status === 'FAIL' ? C.red : data.status === 'WARN' ? C.amber : C.green;
   doc.setFillColor(...bannerColor);
-  doc.roundedRect(m.l, y, cw, 18, 2, 2, 'F');
+  doc.roundedRect(m.l, y, cw, 14, 1, 1, 'F');
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(10);
   doc.setTextColor(...C.white);
-  doc.text(data.statusLabel, pw / 2, y + 12, { align: 'center' });
-  y += 24;
+  doc.text(data.statusLabel, pw / 2, y + 9, { align: 'center' });
+  y += 18;
 
   // ============ CONTROL QUESTIONS TABLE ============
-  const colW = [50, cw - 50];
-  const rowH = 18;
+  const colW = [48, cw - 48];
+  const rowH = 12;
 
   const questions = [
     ['1. IN CONTROL?', data.control],
@@ -167,44 +169,44 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     ['3. ACTION THIS WEEK?', data.action],
   ];
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   questions.forEach((row, i) => {
     doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
     doc.rect(m.l, y, cw, rowH, 'F');
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.muted);
-    doc.text(row[0], m.l + 4, y + 12);
+    doc.setTextColor(...C.gold);
+    doc.text(row[0], m.l + 3, y + 8);
     
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.white);
-    doc.text(row[1], m.l + colW[0] + 4, y + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.offWhite);
+    doc.text(row[1], m.l + colW[0] + 3, y + 8);
     
     y += rowH;
   });
 
-  y += 8;
+  y += 6;
 
   // ============ METRICS TABLE ============
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...C.white);
-  doc.text('METRICS', m.l, y + 4);
-  y += 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...C.gold);
+  doc.text('METRICS', m.l, y + 3);
+  y += 7;
 
-  const metricColW = [45, 40, 45, cw - 130];
-  const metricRowH = 14;
+  const metricColW = [42, 38, 32, cw - 112];
+  const metricRowH = 10;
 
   // Header row
   doc.setFillColor(...C.headerBg);
   doc.rect(m.l, y, cw, metricRowH, 'F');
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.muted);
-  doc.text('AREA', m.l + 4, y + 9);
-  doc.text('VALUE', m.l + metricColW[0] + 4, y + 9);
-  doc.text('STATE', m.l + metricColW[0] + metricColW[1] + 4, y + 9);
-  doc.text('OWNER', m.l + metricColW[0] + metricColW[1] + metricColW[2] + 4, y + 9);
+  doc.text('AREA', m.l + 3, y + 7);
+  doc.text('VALUE', m.l + metricColW[0] + 3, y + 7);
+  doc.text('STATE', m.l + metricColW[0] + metricColW[1] + 3, y + 7);
+  doc.text('OWNER', m.l + metricColW[0] + metricColW[1] + metricColW[2] + 3, y + 7);
   y += metricRowH;
 
   const metrics = [
@@ -214,152 +216,155 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     ['AGED BI', data.agedValue, data.agedState, 'Claims + Litigation'],
   ];
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   metrics.forEach((row, i) => {
     doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
     doc.rect(m.l, y, cw, metricRowH, 'F');
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.white);
-    doc.text(row[0], m.l + 4, y + 9);
+    doc.setTextColor(...C.offWhite);
+    doc.text(row[0], m.l + 3, y + 7);
     
     doc.setFont('helvetica', 'normal');
-    doc.text(row[1], m.l + metricColW[0] + 4, y + 9);
+    doc.text(row[1], m.l + metricColW[0] + 3, y + 7);
     
     const stateColor = row[2] === 'FAIL' ? C.red : row[2] === 'WARN' ? C.amber : C.green;
     doc.setTextColor(...stateColor);
     doc.setFont('helvetica', 'bold');
-    doc.text(row[2], m.l + metricColW[0] + metricColW[1] + 4, y + 9);
+    doc.text(row[2], m.l + metricColW[0] + metricColW[1] + 3, y + 7);
     
     doc.setTextColor(...C.muted);
     doc.setFont('helvetica', 'normal');
-    doc.text(row[3], m.l + metricColW[0] + metricColW[1] + metricColW[2] + 4, y + 9);
+    doc.text(row[3], m.l + metricColW[0] + metricColW[1] + metricColW[2] + 3, y + 7);
     
     y += metricRowH;
   });
 
-  y += 8;
+  y += 6;
 
   // ============ DRIVERS TABLE ============
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...C.white);
-  doc.text('DRIVERS', m.l, y + 4);
-  y += 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...C.gold);
+  doc.text('DRIVERS', m.l, y + 3);
+  y += 7;
 
-  const driverColW = [30, 50, cw - 80];
+  const driverColW = [25, 45, cw - 70];
 
   // Header
   doc.setFillColor(...C.headerBg);
   doc.rect(m.l, y, cw, metricRowH, 'F');
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.muted);
-  doc.text('COV', m.l + 4, y + 9);
-  doc.text('YOY CHANGE', m.l + driverColW[0] + 4, y + 9);
-  doc.text('IMPACT', m.l + driverColW[0] + driverColW[1] + 4, y + 9);
+  doc.text('COV', m.l + 3, y + 7);
+  doc.text('YOY CHANGE', m.l + driverColW[0] + 3, y + 7);
+  doc.text('IMPACT', m.l + driverColW[0] + driverColW[1] + 3, y + 7);
   y += metricRowH;
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   data.drivers.forEach((d, i) => {
     doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
     doc.rect(m.l, y, cw, metricRowH, 'F');
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.white);
-    doc.text(d.cov, m.l + 4, y + 9);
+    doc.setTextColor(...C.offWhite);
+    doc.text(d.cov, m.l + 3, y + 7);
     
     const changeColor = d.change > 0 ? C.red : C.green;
     doc.setTextColor(...changeColor);
-    doc.text(d.changeStr, m.l + driverColW[0] + 4, y + 9);
+    doc.text(d.changeStr, m.l + driverColW[0] + 3, y + 7);
     
     doc.setTextColor(...C.muted);
     doc.setFont('helvetica', 'normal');
-    doc.text(d.impact, m.l + driverColW[0] + driverColW[1] + 4, y + 9);
+    doc.text(d.impact, m.l + driverColW[0] + driverColW[1] + 3, y + 7);
     
     y += metricRowH;
   });
 
-  y += 8;
+  y += 6;
 
   // ============ ORDERS TABLE ============
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...C.white);
-  doc.text('ORDERS', m.l, y + 4);
-  y += 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...C.gold);
+  doc.text('ORDERS', m.l, y + 3);
+  y += 7;
 
-  const orderColW = [50, cw - 50];
+  const orderColW = [42, cw - 42];
 
   // Header
   doc.setFillColor(...C.headerBg);
   doc.rect(m.l, y, cw, metricRowH, 'F');
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.muted);
-  doc.text('AREA', m.l + 4, y + 9);
-  doc.text('ORDER', m.l + orderColW[0] + 4, y + 9);
+  doc.text('AREA', m.l + 3, y + 7);
+  doc.text('ORDER', m.l + orderColW[0] + 3, y + 7);
   y += metricRowH;
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   data.orders.forEach((o, i) => {
     doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
     doc.rect(m.l, y, cw, metricRowH, 'F');
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.white);
-    doc.text(o.area, m.l + 4, y + 9);
+    doc.setTextColor(...C.offWhite);
+    doc.text(o.area, m.l + 3, y + 7);
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...C.muted);
-    doc.text(o.order, m.l + orderColW[0] + 4, y + 9);
+    doc.text(o.order, m.l + orderColW[0] + 3, y + 7);
     
     y += metricRowH;
   });
 
-  y += 8;
+  y += 6;
 
   // ============ CONSEQUENCES TABLE ============
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...C.white);
-  doc.text('CONSEQUENCES IF UNCHANGED', m.l, y + 4);
-  y += 10;
+  doc.setFontSize(8);
+  doc.setTextColor(...C.gold);
+  doc.text('CONSEQUENCES IF UNCHANGED', m.l, y + 3);
+  y += 7;
 
   // Header
   doc.setFillColor(...C.headerBg);
   doc.rect(m.l, y, cw, metricRowH, 'F');
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.muted);
-  doc.text('AREA', m.l + 4, y + 9);
-  doc.text('CONSEQUENCE', m.l + orderColW[0] + 4, y + 9);
+  doc.text('AREA', m.l + 3, y + 7);
+  doc.text('CONSEQUENCE', m.l + orderColW[0] + 3, y + 7);
   y += metricRowH;
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   data.consequences.forEach((c, i) => {
     doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
     doc.rect(m.l, y, cw, metricRowH, 'F');
     
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.white);
-    doc.text(c.area, m.l + 4, y + 9);
+    doc.setTextColor(...C.offWhite);
+    doc.text(c.area, m.l + 3, y + 7);
     
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.red);
-    doc.text(c.consequence, m.l + orderColW[0] + 4, y + 9);
+    const conseqColor = c.consequence === 'None' ? C.muted : C.red;
+    doc.setTextColor(...conseqColor);
+    doc.text(c.consequence, m.l + orderColW[0] + 3, y + 7);
     
     y += metricRowH;
   });
 
   // ============ FOOTER ============
   doc.setFillColor(...C.headerBg);
-  doc.rect(0, ph - 12, pw, 12, 'F');
-  doc.setFontSize(7);
+  doc.rect(0, ph - 10, pw, 10, 'F');
+  doc.setFillColor(...C.gold);
+  doc.rect(0, ph - 10, pw, 0.3, 'F');
+  doc.setFontSize(6);
   doc.setTextColor(...C.muted);
-  doc.text('CONFIDENTIAL', m.l, ph - 4);
-  doc.text('Fred Loya Insurance', pw / 2, ph - 4, { align: 'center' });
-  doc.text('Page 1 of 1', pw - m.r, ph - 4, { align: 'right' });
+  doc.text('CONFIDENTIAL', m.l, ph - 3);
+  doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
+  doc.text('Page 1 of 1', pw - m.r, ph - 3, { align: 'right' });
 
   // Save
   const filename = `CEO_Control_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
