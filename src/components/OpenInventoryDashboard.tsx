@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
-import { useExportData, ExportableData, ManagerTracking } from "@/hooks/useExportData";
+import { useExportData, ExportableData, ManagerTracking, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,7 @@ const REVIEWERS = ['Richie Mendoza'];
 
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
-  const { exportBoth } = useExportData();
+  const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
   const [selectedClaimFilter, setSelectedClaimFilter] = useState<string>('');
@@ -499,6 +499,317 @@ export function OpenInventoryDashboard() {
     toast.success('PDF + Excel exported: Reserve Adequacy by Queue');
   }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
+  const handleExportLitPhases = useCallback(async () => {
+    if (!metrics || !data) return;
+    const manager = selectedReviewer || 'Richie Mendoza';
+    const exportData: ExportableData = {
+      title: 'Litigation Evaluation Phases',
+      subtitle: 'Open LIT files by phase and age',
+      timestamp,
+      affectsManager: manager,
+      columns: ['Phase', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Total', '% Aged'],
+      rows: metrics.topPhases.map(phase => {
+        const agedPct = phase.grandTotal > 0 
+          ? ((phase.total365Plus / phase.grandTotal) * 100).toFixed(0)
+          : '0';
+        return [
+          phase.phase,
+          phase.total365Plus,
+          phase.total181To365,
+          phase.total61To180,
+          phase.totalUnder60,
+          phase.grandTotal,
+          `${agedPct}%`,
+        ];
+      }),
+    };
+    await exportBoth(exportData);
+    toast.success('PDF + Excel exported: Litigation Phases');
+  }, [exportBoth, timestamp, metrics, data, selectedReviewer]);
+
+  const handleExportTexasRearEnd = useCallback(async () => {
+    const manager = selectedReviewer || 'Richie Mendoza';
+    const areaRawData: RawClaimData = {
+      columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval', 'Avg Reserve'],
+      rows: TEXAS_REAR_END_DATA.byArea.map(a => [
+        a.area,
+        a.claims,
+        a.reserves,
+        a.lowEval,
+        a.highEval,
+        Math.round(a.reserves / a.claims),
+      ]),
+      sheetName: 'By Area',
+    };
+    const ageRawData: RawClaimData = {
+      columns: ['Age Bucket', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+      rows: TEXAS_REAR_END_DATA.byAge.map(a => [
+        a.age,
+        a.claims,
+        a.reserves,
+        a.lowEval,
+        a.highEval,
+      ]),
+      sheetName: 'By Age',
+    };
+    const exportData: ExportableData = {
+      title: 'Texas Rear End Claims (101-110)',
+      subtitle: `Loss Description: ${TEXAS_REAR_END_DATA.lossDescription}`,
+      timestamp,
+      affectsManager: manager,
+      summary: {
+        'Total Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
+        'Total Reserves': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.totalReserves),
+        'Low Eval': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.lowEval),
+        'High Eval': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.highEval),
+      },
+      columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+      rows: TEXAS_REAR_END_DATA.byArea.map(a => [
+        a.area,
+        a.claims,
+        formatCurrencyFullValue(a.reserves),
+        formatCurrencyFullValue(a.lowEval),
+        formatCurrencyFullValue(a.highEval),
+      ]),
+      rawClaimData: [areaRawData, ageRawData],
+    };
+    await exportBoth(exportData);
+    toast.success('PDF + Excel exported: Texas Rear End Claims');
+  }, [exportBoth, timestamp, selectedReviewer]);
+
+  const handleExportClaimsByQueue = useCallback(async () => {
+    if (!metrics) return;
+    const manager = selectedReviewer || 'Richie Mendoza';
+    const exportData: ExportableData = {
+      title: 'Claims by Queue',
+      subtitle: 'Claims vs Exposures by handling unit',
+      timestamp,
+      affectsManager: manager,
+      columns: ['Queue', 'Claims', 'Exposures', 'Ratio'],
+      rows: metrics.typeGroups.map(g => [
+        g.typeGroup,
+        g.claims,
+        g.exposures,
+        (g.exposures / g.claims).toFixed(2),
+      ]),
+    };
+    await exportBoth(exportData);
+    toast.success('PDF + Excel exported: Claims by Queue');
+  }, [exportBoth, timestamp, metrics, selectedReviewer]);
+
+  const handleExportInventoryAge = useCallback(async () => {
+    if (!metrics) return;
+    const manager = selectedReviewer || 'Richie Mendoza';
+    const exportData: ExportableData = {
+      title: 'Inventory Age Distribution',
+      subtitle: 'Claim counts by age bucket',
+      timestamp,
+      affectsManager: manager,
+      columns: ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval'],
+      rows: metrics.ageDistribution.map(a => [
+        a.age,
+        a.claims,
+        formatCurrencyFullValue(a.openReserves),
+        formatCurrencyFullValue(a.lowEval),
+        formatCurrencyFullValue(a.highEval),
+      ]),
+    };
+    await exportBoth(exportData);
+    toast.success('PDF + Excel exported: Inventory Age');
+  }, [exportBoth, timestamp, metrics, selectedReviewer]);
+
+  // Full Export - all sections in one workbook
+  const handleFullExport = useCallback(() => {
+    if (!metrics || !data) return;
+    
+    const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
+    const noEvalTracking: ManagerTracking[] = [
+      { name: 'Richie Mendoza', value: metrics.financials.totals.noEvalCount, category: 'no_eval' },
+    ];
+    
+    const sections = [
+      {
+        title: 'Summary',
+        data: {
+          title: 'Open Inventory Summary',
+          subtitle: 'Claims and Financial Overview',
+          timestamp,
+          affectsManager: 'Richie Mendoza',
+          managerTracking: [...ALL_HIGH_EVAL_ADJUSTERS, ...noEvalTracking],
+          summary: {
+            'Total Open Claims': formatNumber(metrics.totalOpenClaims),
+            'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
+            'Open Reserves': formatCurrencyFullValue(metrics.financials.totals.totalOpenReserves),
+            'Median Evaluation': formatCurrencyFullValue(medianEval),
+            'No Evaluation': formatNumber(metrics.financials.totals.noEvalCount),
+          },
+          columns: ['Metric', 'Value'],
+          rows: [
+            ['Total Open Claims', formatNumber(metrics.totalOpenClaims)],
+            ['Total Open Exposures', formatNumber(metrics.totalOpenExposures)],
+            ['Open Reserves', formatCurrencyFullValue(metrics.financials.totals.totalOpenReserves)],
+            ['Low Evaluation', formatCurrencyFullValue(metrics.financials.totals.totalLowEval)],
+            ['High Evaluation', formatCurrencyFullValue(metrics.financials.totals.totalHighEval)],
+          ],
+        } as ExportableData,
+      },
+      {
+        title: 'By Age',
+        data: {
+          title: 'Reserves vs Evaluation by Age',
+          subtitle: 'Financial breakdown by claim age bucket',
+          timestamp,
+          columns: ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval'],
+          rows: metrics.ageDistribution.map(item => [
+            item.age,
+            item.claims,
+            item.openReserves,
+            item.lowEval,
+            item.highEval,
+          ]),
+          rawClaimData: [{
+            columns: ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval', 'Median Eval'],
+            rows: metrics.ageDistribution.map(item => [
+              item.age,
+              item.claims,
+              item.openReserves,
+              item.lowEval,
+              item.highEval,
+              (item.lowEval + item.highEval) / 2,
+            ]),
+            sheetName: 'Age Detail',
+          }],
+        } as ExportableData,
+      },
+      {
+        title: 'By Queue',
+        data: {
+          title: 'Reserve Adequacy by Queue',
+          subtitle: 'Queue-level reserve analysis',
+          timestamp,
+          columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval Count'],
+          rows: metrics.financials.byQueue.map(queue => [
+            queue.queue,
+            queue.openReserves,
+            queue.lowEval,
+            queue.highEval,
+            queue.noEvalCount,
+          ]),
+          rawClaimData: [{
+            columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval Count', 'Median Eval', 'Variance'],
+            rows: metrics.financials.byQueue.map(queue => {
+              const median = (queue.lowEval + queue.highEval) / 2;
+              return [
+                queue.queue,
+                queue.openReserves,
+                queue.lowEval,
+                queue.highEval,
+                queue.noEvalCount,
+                median,
+                queue.openReserves - median,
+              ];
+            }),
+            sheetName: 'Queue Detail',
+          }],
+        } as ExportableData,
+      },
+      {
+        title: 'Lit Phases',
+        data: {
+          title: 'Litigation Evaluation Phases',
+          subtitle: 'Open LIT files by phase and age',
+          timestamp,
+          columns: ['Phase', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Total'],
+          rows: metrics.topPhases.map(phase => [
+            phase.phase,
+            phase.total365Plus,
+            phase.total181To365,
+            phase.total61To180,
+            phase.totalUnder60,
+            phase.grandTotal,
+          ]),
+          rawClaimData: [{
+            columns: ['Phase', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Total', '% Aged'],
+            rows: data.litPhases.map(phase => [
+              phase.phase,
+              phase.total365Plus,
+              phase.total181To365,
+              phase.total61To180,
+              phase.totalUnder60,
+              phase.grandTotal,
+              phase.grandTotal > 0 ? ((phase.total365Plus / phase.grandTotal) * 100).toFixed(1) : 0,
+            ]),
+            sheetName: 'All Phases',
+          }],
+        } as ExportableData,
+      },
+      {
+        title: 'TX Rear End',
+        data: {
+          title: 'Texas Rear End Claims (101-110)',
+          subtitle: `Loss Description: ${TEXAS_REAR_END_DATA.lossDescription}`,
+          timestamp,
+          summary: {
+            'Total Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
+            'Total Reserves': TEXAS_REAR_END_DATA.summary.totalReserves,
+            'Low Eval': TEXAS_REAR_END_DATA.summary.lowEval,
+            'High Eval': TEXAS_REAR_END_DATA.summary.highEval,
+          },
+          columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+          rows: TEXAS_REAR_END_DATA.byArea.map(a => [
+            a.area,
+            a.claims,
+            a.reserves,
+            a.lowEval,
+            a.highEval,
+          ]),
+          rawClaimData: [
+            {
+              columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval', 'Avg Reserve'],
+              rows: TEXAS_REAR_END_DATA.byArea.map(a => [
+                a.area,
+                a.claims,
+                a.reserves,
+                a.lowEval,
+                a.highEval,
+                Math.round(a.reserves / a.claims),
+              ]),
+              sheetName: 'TX By Area',
+            },
+            {
+              columns: ['Age Bucket', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+              rows: TEXAS_REAR_END_DATA.byAge.map(a => [
+                a.age,
+                a.claims,
+                a.reserves,
+                a.lowEval,
+                a.highEval,
+              ]),
+              sheetName: 'TX By Age',
+            },
+          ],
+        } as ExportableData,
+      },
+      {
+        title: 'High Eval Mgrs',
+        data: {
+          title: 'High Evaluation Managers',
+          subtitle: 'All adjusters with high evaluations',
+          timestamp,
+          columns: ['Rank', 'Adjuster Name', 'High Eval Amount'],
+          rows: ALL_HIGH_EVAL_ADJUSTERS.map((m, idx) => [
+            idx + 1,
+            m.name,
+            m.value,
+          ]),
+        } as ExportableData,
+      },
+    ];
+
+    generateFullExcel(sections);
+    toast.success('Full Excel workbook exported with all Open Inventory data!');
+  }, [generateFullExcel, timestamp, metrics, data]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -519,10 +830,30 @@ export function OpenInventoryDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Export Hint */}
-      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-        <Download className="h-3.5 w-3.5" />
-        <span>Double-click any section to export PDF + Excel</span>
+      {/* Professional Header Banner */}
+      <div className="bg-[#0c2340] rounded-xl p-5 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <FileStack className="h-8 w-8 text-white" />
+            <div className="border-l-2 border-[#b41e1e] pl-4">
+              <h2 className="text-lg font-bold text-white tracking-wide">OPEN INVENTORY COMMAND</h2>
+              <p className="text-xs text-gray-300">Claims & Financial Overview</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleFullExport}
+              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Full Export
+            </button>
+            <div className="flex items-center gap-2 text-xs text-gray-300">
+              <Download className="h-3.5 w-3.5" />
+              <span>Double-click sections</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Summary Banner with Financials */}
@@ -713,7 +1044,11 @@ export function OpenInventoryDashboard() {
         </div>
 
         {/* Reserves by Queue */}
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportByQueue}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Queue</h3>
           <p className="text-xs text-muted-foreground mb-4">Open reserves & evaluation by handling unit</p>
           
@@ -760,7 +1095,11 @@ export function OpenInventoryDashboard() {
       </div>
 
       {/* Financial Summary Table */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div 
+        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportByAge}
+        title="Double-click to export"
+      >
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Financial Summary by Age</h3>
         <p className="text-xs text-muted-foreground mb-4">Claims, reserves, and evaluation amounts by age bucket</p>
         
@@ -802,7 +1141,11 @@ export function OpenInventoryDashboard() {
 
       {/* Claims by Queue */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportClaimsByQueue}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Claims by Queue</h3>
           <p className="text-xs text-muted-foreground mb-4">Claims vs Exposures by handling unit</p>
           
@@ -840,7 +1183,11 @@ export function OpenInventoryDashboard() {
         </div>
 
         {/* Inventory Age */}
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportInventoryAge}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory Age Distribution</h3>
           <p className="text-xs text-muted-foreground mb-4">Claim counts by age bucket</p>
           
@@ -883,7 +1230,11 @@ export function OpenInventoryDashboard() {
       </div>
 
       {/* Litigation Phases Table */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div 
+        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportLitPhases}
+        title="Double-click to export"
+      >
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Litigation Evaluation Phases</h3>
         <p className="text-xs text-muted-foreground mb-4">Open LIT files by phase and age — focus on 365+ day aged claims</p>
         
@@ -936,7 +1287,11 @@ export function OpenInventoryDashboard() {
       </div>
 
       {/* QUICK ACTION: Rear Ends - Texas Areas 101-110 with In-Platform Directive */}
-      <div className="bg-gradient-to-r from-warning/10 to-warning/5 border-2 border-warning/40 rounded-xl p-5">
+      <div 
+        className="bg-gradient-to-r from-warning/10 to-warning/5 border-2 border-warning/40 rounded-xl p-5 cursor-pointer hover:border-warning transition-colors"
+        onDoubleClick={handleExportTexasRearEnd}
+        title="Double-click to export"
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-warning/20">
