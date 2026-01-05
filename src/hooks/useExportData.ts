@@ -835,7 +835,147 @@ export function useExportData() {
     return filename;
   };
 
-  return { generatePDF, generateExcel, exportBoth, generateFullExcel, generateExecutivePDF };
+  // Generate Executive Package: PDF summary + Excel with granular data
+  const generateExecutivePackage = async (metrics: {
+    totalOpenReserves: number;
+    pendingEval: number;
+    pendingEvalPct: number;
+    closuresThisMonth: number;
+    avgDaysToClose: number;
+    closureTrend: number;
+    aged365Count: number;
+    aged365Reserves: number;
+    aged365Pct: number;
+    reservesMoM: number;
+    reservesYoY: number;
+    lowEval: number;
+    medianEval: number;
+    highEval: number;
+  }, granularData: {
+    byAge: { age: string; claims: number; openReserves: number; lowEval: number; highEval: number }[];
+    byQueue: { queue: string; openReserves: number; lowEval: number; highEval: number; noEvalCount: number }[];
+    byTypeGroup: { typeGroup: string; reserves: number }[];
+    highEvalAdjusters: { name: string; value: string }[];
+  }) => {
+    const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+    const dateStamp = format(new Date(), 'yyyyMMdd_HHmm');
+    
+    // Generate Excel with granular data
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet 1: Executive Summary
+    const summaryData: (string | number)[][] = [
+      ['EXECUTIVE COMMAND CENTER - SUMMARY'],
+      [`Generated: ${timestamp}`],
+      [],
+      ['KEY PERFORMANCE INDICATORS'],
+      [],
+      ['Metric', 'Value', 'Trend'],
+      ['Total Open Reserves', `$${(metrics.totalOpenReserves / 1000000).toFixed(1)}M`, `${metrics.reservesMoM > 0 ? '+' : ''}${metrics.reservesMoM}% MoM`],
+      ['Pending Evaluation', `$${(metrics.pendingEval / 1000000).toFixed(1)}M`, `${metrics.pendingEvalPct.toFixed(0)}% of reserves`],
+      ['Low Eval Total', `$${(metrics.lowEval / 1000000).toFixed(1)}M`, ''],
+      ['Median Eval', `$${(metrics.medianEval / 1000000).toFixed(1)}M`, ''],
+      ['High Eval Total', `$${(metrics.highEval / 1000000).toFixed(1)}M`, ''],
+      [],
+      ['CLOSURES'],
+      ['Closures This Month', metrics.closuresThisMonth, `+${metrics.closureTrend}% trend`],
+      ['Average Days to Close', metrics.avgDaysToClose, ''],
+      [],
+      ['AGING ALERTS'],
+      ['Claims 365+ Days', metrics.aged365Count, `${metrics.aged365Pct}% of inventory`],
+      ['Reserves 365+ Days', `$${(metrics.aged365Reserves / 1000000).toFixed(1)}M`, ''],
+      [],
+      ['YEAR OVER YEAR'],
+      ['Reserves YoY', `${metrics.reservesYoY > 0 ? '+' : ''}${metrics.reservesYoY}%`, ''],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Executive Summary');
+    
+    // Sheet 2: Reserves by Age Bucket
+    const ageData: (string | number)[][] = [
+      ['RESERVES BY AGE BUCKET'],
+      [`Generated: ${timestamp}`],
+      [],
+      ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval', 'Gap (No Eval)'],
+    ];
+    granularData.byAge.forEach(row => {
+      const gap = row.openReserves - row.highEval;
+      ageData.push([row.age, row.claims, row.openReserves, row.lowEval, row.highEval, gap]);
+    });
+    // Totals row
+    const ageTotals = granularData.byAge.reduce((acc, row) => ({
+      claims: acc.claims + row.claims,
+      reserves: acc.reserves + row.openReserves,
+      low: acc.low + row.lowEval,
+      high: acc.high + row.highEval,
+    }), { claims: 0, reserves: 0, low: 0, high: 0 });
+    ageData.push([]);
+    ageData.push(['TOTAL', ageTotals.claims, ageTotals.reserves, ageTotals.low, ageTotals.high, ageTotals.reserves - ageTotals.high]);
+    
+    const ageSheet = XLSX.utils.aoa_to_sheet(ageData);
+    ageSheet['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ageSheet, 'By Age Bucket');
+    
+    // Sheet 3: Reserves by Queue/Type
+    const queueData: (string | number)[][] = [
+      ['RESERVES BY QUEUE'],
+      [`Generated: ${timestamp}`],
+      [],
+      ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval Count', '% of Total'],
+    ];
+    const totalReserves = granularData.byQueue.reduce((sum, q) => sum + q.openReserves, 0);
+    granularData.byQueue.forEach(row => {
+      const pct = totalReserves > 0 ? ((row.openReserves / totalReserves) * 100).toFixed(1) + '%' : '0%';
+      queueData.push([row.queue, row.openReserves, row.lowEval, row.highEval, row.noEvalCount, pct]);
+    });
+    const queueSheet = XLSX.utils.aoa_to_sheet(queueData);
+    queueSheet['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, queueSheet, 'By Queue');
+    
+    // Sheet 4: Full Type Group Breakdown
+    const typeData: (string | number)[][] = [
+      ['RESERVES BY TYPE GROUP'],
+      [`Generated: ${timestamp}`],
+      [],
+      ['Type Group', 'Reserves', '% of Total'],
+    ];
+    const typeTotal = granularData.byTypeGroup.reduce((sum, t) => sum + t.reserves, 0);
+    granularData.byTypeGroup.forEach(row => {
+      const pct = typeTotal > 0 ? ((row.reserves / typeTotal) * 100).toFixed(2) + '%' : '0%';
+      typeData.push([row.typeGroup, row.reserves, pct]);
+    });
+    typeData.push([]);
+    typeData.push(['TOTAL', typeTotal, '100%']);
+    const typeSheet = XLSX.utils.aoa_to_sheet(typeData);
+    typeSheet['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, typeSheet, 'By Type Group');
+    
+    // Sheet 5: High Eval Adjusters (Full List)
+    const adjusterData: (string | number)[][] = [
+      ['HIGH EVALUATION ADJUSTERS - COMPLETE LIST'],
+      [`Generated: ${timestamp}`],
+      [],
+      ['Rank', 'Adjuster Name', 'High Eval Amount'],
+    ];
+    granularData.highEvalAdjusters.forEach((adj, idx) => {
+      adjusterData.push([idx + 1, adj.name, adj.value]);
+    });
+    const adjusterSheet = XLSX.utils.aoa_to_sheet(adjusterData);
+    adjusterSheet['!cols'] = [{ wch: 8 }, { wch: 35 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, adjusterSheet, 'High Eval Adjusters');
+    
+    // Save Excel
+    const excelFilename = `Executive_Command_Center_Data_${dateStamp}.xlsx`;
+    XLSX.writeFile(wb, excelFilename);
+    
+    // Generate PDF
+    await generateExecutivePDF(metrics);
+    
+    return { pdf: `Executive_Command_Center_${dateStamp}.pdf`, excel: excelFilename };
+  };
+
+  return { generatePDF, generateExcel, exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage };
 }
 
 // Export type definitions for different dashboard sections
