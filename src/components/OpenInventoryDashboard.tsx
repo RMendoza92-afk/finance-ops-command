@@ -127,25 +127,59 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     closed: 2,
   };
 
-  // Financial reserves by age bucket (placeholder data - replace with actual)
-  // Open Reserves vs Low/High Evaluation - null means no evaluation
+  // Financial reserves by age bucket and type group - ACTUAL DATA
   const FINANCIAL_DATA = {
     byAge: [
       { age: '365+ Days', claims: 5630, openReserves: 115000000, lowEval: 72000000, highEval: 81000000 },
       { age: '181-365 Days', claims: 3953, openReserves: 78000000, lowEval: 46000000, highEval: 52000000 },
       { age: '61-180 Days', claims: 5576, openReserves: 68000000, lowEval: 27000000, highEval: 31000000 },
-      { age: 'Under 60 Days', claims: 8420, openReserves: 39840000, lowEval: 8500000, highEval: 9600000 },
+      { age: 'Under 60 Days', claims: 8420, openReserves: 39841051, lowEval: 8500000, highEval: 9600000 },
     ],
     byQueue: [
-      { queue: 'Litigation', openReserves: 162000000, lowEval: 96000000, highEval: 108000000, noEvalCount: 0 },
-      { queue: 'ATR', openReserves: 81000000, lowEval: 36500000, highEval: 41000000, noEvalCount: 1245 },
-      { queue: 'BI3', openReserves: 44840000, lowEval: 17000000, highEval: 19200000, noEvalCount: 892 },
-      { queue: 'Early BI', openReserves: 13000000, lowEval: 4000000, highEval: 5400000, noEvalCount: 141 },
+      { queue: 'ATR', openReserves: 109732166, lowEval: 36762202, highEval: 41000000, noEvalCount: 1245 },
+      { queue: 'Litigation', openReserves: 67319959, lowEval: 33561499, highEval: 38000000, noEvalCount: 0 },
+      { queue: 'BI3', openReserves: 55241032, lowEval: 26233823, highEval: 29500000, noEvalCount: 892 },
+      { queue: 'UM-UIM', openReserves: 12127676, lowEval: 1698151, highEval: 2000000, noEvalCount: 85 },
+      { queue: 'Non Rep', openReserves: 12829329, lowEval: 2680853, highEval: 3000000, noEvalCount: 120 },
+      { queue: 'TLL', openReserves: 9638100, lowEval: 0, highEval: 0, noEvalCount: 0 },
+      { queue: 'SUB', openReserves: 7252200, lowEval: 5400, highEval: 6000, noEvalCount: 0 },
+      { queue: 'PD', openReserves: 7258000, lowEval: 0, highEval: 0, noEvalCount: 0 },
+      { queue: 'Other', openReserves: 19442589, lowEval: 470000, highEval: 520000, noEvalCount: 36 },
+    ],
+    // Full Type Group breakdown
+    byTypeGroup: [
+      { typeGroup: 'ATR', reserves: 109732166 },
+      { typeGroup: 'LIT', reserves: 67319959 },
+      { typeGroup: 'BI3', reserves: 55241032 },
+      { typeGroup: 'Non Rep', reserves: 12829329 },
+      { typeGroup: 'UM-UIM', reserves: 12127676 },
+      { typeGroup: 'TLL', reserves: 9638100 },
+      { typeGroup: 'PD', reserves: 7258000 },
+      { typeGroup: 'SUB', reserves: 7252200 },
+      { typeGroup: 'O30', reserves: 5210000 },
+      { typeGroup: 'DTL', reserves: 2847000 },
+      { typeGroup: 'TLC', reserves: 2818100 },
+      { typeGroup: 'ARB', reserves: 2397600 },
+      { typeGroup: 'FIR', reserves: 1818100 },
+      { typeGroup: 'LPD', reserves: 1225000 },
+      { typeGroup: 'CL', reserves: 1130226 },
+      { typeGroup: 'COVG', reserves: 603340 },
+      { typeGroup: 'SCP', reserves: 426800 },
+      { typeGroup: 'TLO', reserves: 330000 },
+      { typeGroup: 'TCP', reserves: 170100 },
+      { typeGroup: 'TLU', reserves: 153900 },
+      { typeGroup: 'OC', reserves: 129000 },
+      { typeGroup: 'ACP', reserves: 57200 },
+      { typeGroup: 'ROP', reserves: 50125 },
+      { typeGroup: 'PI', reserves: 48297 },
+      { typeGroup: 'SCL', reserves: 11400 },
+      { typeGroup: 'UP', reserves: 11400 },
+      { typeGroup: 'U30', reserves: 5000 },
     ],
     totals: {
-      totalOpenReserves: 300840000,  // $300.84M
-      totalLowEval: 153500000,       // $153.5M
-      totalHighEval: 173600000,      // $173.6M
+      totalOpenReserves: 300841051,   // $300.84M - ACTUAL
+      totalLowEval: 101412928,        // $101.4M - Manager HIGH with money
+      totalHighEval: 114000000,       // $114M estimated
       noEvalCount: 2278,
     }
   };
