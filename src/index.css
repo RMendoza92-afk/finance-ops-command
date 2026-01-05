@@ -293,3 +293,86 @@
   .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
   .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }
+
+/* Print Styles - Make dark sections print-friendly */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Executive Command Center - print version */
+  .print-friendly,
+  [class*="from-slate-900"],
+  [class*="bg-slate-"] {
+    background: white !important;
+    border: 2px solid #333 !important;
+  }
+
+  .print-friendly *,
+  [class*="from-slate-900"] *,
+  [class*="bg-slate-"] * {
+    color: black !important;
+  }
+
+  /* Alert boxes - keep visible borders */
+  [class*="from-amber-900"],
+  [class*="from-red-900"] {
+    background: #fff8e1 !important;
+    border: 2px solid #f59e0b !important;
+  }
+
+  [class*="from-red-900"] {
+    background: #ffebee !important;
+    border: 2px solid #ef4444 !important;
+  }
+
+  /* Text colors for print */
+  [class*="text-white"],
+  [class*="text-slate-"],
+  [class*="text-amber-"],
+  [class*="text-red-"],
+  [class*="text-emerald-"],
+  [class*="text-blue-"] {
+    color: #1a1a1a !important;
+  }
+
+  /* Keep colored indicators visible */
+  [class*="text-emerald-400"] {
+    color: #059669 !important;
+  }
+
+  [class*="text-red-400"],
+  [class*="text-red-300"] {
+    color: #dc2626 !important;
+  }
+
+  [class*="text-amber-400"],
+  [class*="text-amber-300"] {
+    color: #d97706 !important;
+  }
+
+  /* Hide non-essential print elements */
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* Ensure borders show */
+  [class*="border-slate-"],
+  [class*="border-amber-"],
+  [class*="border-red-"] {
+    border-color: #666 !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Hide interactive elements */
+  button:not(.print-button) {
+    display: none !important;
+  }
+}
