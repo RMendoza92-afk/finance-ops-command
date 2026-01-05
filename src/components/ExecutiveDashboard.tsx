@@ -3,6 +3,7 @@ import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { DollarSign, TrendingUp, AlertTriangle, Target, Download } from "lucide-react";
+import loyaLogo from "@/assets/fli_logo.jpg";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -394,54 +395,65 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
   return (
     <div className="space-y-6">
-      {/* Export Hint */}
-      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-        <Download className="h-3.5 w-3.5" />
-        <span>Double-click any section to export PDF + Excel</span>
+      {/* Professional Header Banner */}
+      <div className="bg-[#0c2340] rounded-xl p-5 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-10 object-contain" />
+            <div className="border-l-2 border-[#b41e1e] pl-4">
+              <h2 className="text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
+              <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <Download className="h-3.5 w-3.5" />
+            <span>Double-click sections to export</span>
+          </div>
+        </div>
       </div>
 
       {/* 2025 BI Spend Summary Banner */}
       <div 
-        className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-gradient-to-r from-[#0c2340] to-[#1a3a5c] border-2 border-[#b41e1e]/30 rounded-xl p-5 cursor-pointer hover:border-[#b41e1e] transition-colors shadow-lg"
         onDoubleClick={handleExportKPIs}
         title="Double-click to export"
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">2025 YTD BI Spend: $395M Total</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Litigation Expenses: <span className="font-semibold text-foreground">$19M</span> • Through November 2025
+            <h2 className="text-xl font-bold text-white">2025 YTD BI Spend: $395M Total</h2>
+            <p className="text-sm text-gray-300 mt-1">
+              Litigation Expenses: <span className="font-semibold text-white">$19M</span> • Through November 2025
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">$19M Expense Breakdown</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">$19M Expense Breakdown</p>
             <div className="flex items-center gap-3">
-              <span className="text-success font-bold">$5.68M Expert</span>
-              <span className="text-muted-foreground">vs</span>
-              <span className="text-destructive font-bold">$13.32M Waste</span>
+              <span className="text-emerald-400 font-bold">$5.68M Expert</span>
+              <span className="text-gray-400">vs</span>
+              <span className="text-[#b41e1e] font-bold">$13.32M Waste</span>
             </div>
           </div>
         </div>
         
         {/* Visual expense breakdown */}
-        <div className="mt-4 pt-4 border-t border-border/50">
+        <div className="mt-4 pt-4 border-t border-white/10">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
                 <span>Expert (Intentional Leverage)</span>
                 <span>Pre-Lit ATR Waste + Litigation Fees</span>
               </div>
-              <div className="w-full h-4 rounded-full bg-muted overflow-hidden flex">
-                <div className="bg-success h-full flex items-center justify-center text-[10px] font-bold text-success-foreground" style={{ width: '29.9%' }}>
+              <div className="w-full h-5 rounded-full bg-gray-700 overflow-hidden flex">
+                <div className="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: '29.9%' }}>
                   $5.68M
                 </div>
-                <div className="bg-destructive h-full flex items-center justify-center text-[10px] font-bold text-destructive-foreground" style={{ width: '70.1%' }}>
+                <div className="bg-[#b41e1e] h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: '70.1%' }}>
                   $13.32M
                 </div>
               </div>
               <div className="flex justify-between text-xs mt-1">
-                <span className="text-success font-medium">30% Strategic</span>
-                <span className="text-destructive font-medium">70% Reactive</span>
+                <span className="text-emerald-400 font-medium">30% Strategic</span>
+                <span className="text-[#b41e1e] font-medium">70% Reactive</span>
               </div>
             </div>
           </div>
@@ -489,12 +501,15 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
       {/* Quarterly Expert Spend Table */}
       <div 
-        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
         onDoubleClick={handleExportQuarterly}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">2025 Litigation Expert Spend by Quarter</h3>
-        <p className="text-xs text-muted-foreground mb-4">YTD through November — Paid vs Approved</p>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
+          <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">2025 Litigation Expert Spend by Quarter</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4 ml-3">YTD through November — Paid vs Approved</p>
         
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -538,12 +553,15 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       <div className="grid grid-cols-2 gap-6">
         {/* Reactive Cost Curve */}
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
           onDoubleClick={handleExportCostCurve}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reactive Cost Curve</h3>
-          <p className="text-xs text-muted-foreground mb-4">Cumulative posture spend by litigation stage — shows capital deployed reactively</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
+            <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Reactive Cost Curve</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4 ml-3">Cumulative posture spend by litigation stage — shows capital deployed reactively</p>
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -602,12 +620,15 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
         {/* Spend Comparison by Stage */}
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
           onDoubleClick={handleExportCostCurve}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Expert vs Reactive by Stage</h3>
-          <p className="text-xs text-muted-foreground mb-4">Strategic expert spend vs reactive posture spend — leverage decay visible</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
+            <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Expert vs Reactive by Stage</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4 ml-3">Strategic expert spend vs reactive posture spend — leverage decay visible</p>
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -656,18 +677,21 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
       {/* Executive Review Required */}
       <div 
-        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
         onDoubleClick={handleExportExecutiveReview}
         title="Double-click to export all cases"
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Executive Review Required</h3>
-            <p className="text-xs text-muted-foreground">Files requiring executive closure — double-click section header for all, or individual claim for detail</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
+              <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Executive Review Required</h3>
+            </div>
+            <p className="text-xs text-muted-foreground ml-3">Files requiring executive closure — double-click section header for all, or individual claim for detail</p>
           </div>
           <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive animate-pulse"></span> CRITICAL</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-warning"></span> REQUIRED</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#b41e1e] animate-pulse"></span> CRITICAL</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500"></span> REQUIRED</span>
           </div>
         </div>
 
@@ -680,46 +704,46 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 e.stopPropagation();
                 handleExportClaim(caseItem);
               }}
-              className="text-left p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-all hover:border-primary/50 group"
+              className="text-left p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm"
               title="Click for drilldown, double-click to export"
             >
               <div className="flex items-start justify-between mb-2">
-                <span className="text-xs font-mono text-muted-foreground">#{idx + 1}</span>
+                <span className="text-xs font-mono text-[#0c2340]/60">#{idx + 1}</span>
                 <span className={`w-2.5 h-2.5 rounded-full ${
-                  caseItem.executiveReview.level === 'CRITICAL' ? 'bg-destructive animate-pulse' : 'bg-warning'
+                  caseItem.executiveReview.level === 'CRITICAL' ? 'bg-[#b41e1e] animate-pulse' : 'bg-amber-500'
                 }`}></span>
               </div>
               
-              <p className="text-sm font-medium text-foreground truncate mb-1 group-hover:text-primary transition-colors">
+              <p className="text-sm font-medium text-[#0c2340] truncate mb-1 group-hover:text-[#b41e1e] transition-colors">
                 {caseItem.claim}
               </p>
               
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Exposure</span>
-                  <span className="font-semibold text-foreground">{formatCurrency(caseItem.expense)}</span>
+                  <span className="text-gray-500">Exposure</span>
+                  <span className="font-semibold text-[#0c2340]">{formatCurrency(caseItem.expense)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Age</span>
-                  <span className={`font-medium ${caseItem.claimAge >= 5 ? 'text-destructive' : 'text-warning'}`}>
+                  <span className="text-gray-500">Age</span>
+                  <span className={`font-medium ${caseItem.claimAge >= 5 ? 'text-[#b41e1e]' : 'text-amber-600'}`}>
                     {caseItem.claimAge}yr
                   </span>
                 </div>
-                <div className="flex justify-between text-xs pt-1 border-t border-border/50">
-                  <span className="text-muted-foreground">Score</span>
+                <div className="flex justify-between text-xs pt-1 border-t border-[#0c2340]/10">
+                  <span className="text-gray-500">Score</span>
                   <span className={`font-bold ${
-                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-destructive' : 'text-warning'
+                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-[#b41e1e]' : 'text-amber-600'
                   }`}>
                     {caseItem.executiveReview.score}
                   </span>
                 </div>
               </div>
               
-              <p className="text-xs text-muted-foreground mt-2 truncate">{caseItem.adjuster} • {caseItem.stage}</p>
+              <p className="text-xs text-gray-500 mt-2 truncate">{caseItem.adjuster} • {caseItem.stage}</p>
               
               {/* Top reason */}
               {caseItem.executiveReview.reasons.length > 0 && (
-                <p className="text-[10px] text-destructive/80 mt-1 truncate">
+                <p className="text-[10px] text-[#b41e1e]/80 mt-1 truncate">
                   {caseItem.executiveReview.reasons[0]}
                 </p>
               )}
