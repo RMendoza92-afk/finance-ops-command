@@ -5,6 +5,7 @@
  */
 
 import { format } from 'date-fns';
+import loyaLogo from '@/assets/fli_logo.jpg';
 import { 
   getReportContext,
   formatCurrency,
@@ -122,10 +123,17 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(...C.blue);
   doc.rect(0, 28, pw, 2, 'F');
 
+  // Logo
+  try {
+    doc.addImage(loyaLogo, 'JPEG', m.l, 4, 20, 20);
+  } catch (e) {
+    // Logo failed to load, continue without it
+  }
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(...C.white);
-  doc.text('CEO CONTROL PANEL', m.l, 18);
+  doc.text('CEO CONTROL PANEL', m.l + 24, 18);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
