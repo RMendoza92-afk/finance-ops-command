@@ -927,7 +927,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       </div>
 
       {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-2xl">
+      <div id="executive-command-center" className="print-section bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/20 rounded-lg">
