@@ -74,6 +74,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [generatingDecisionsPDF, setGeneratingDecisionsPDF] = useState(false);
   const [showBudgetDrawer, setShowBudgetDrawer] = useState(false);
   const [generatingBudgetPDF, setGeneratingBudgetPDF] = useState(false);
+  const [showCP1Drawer, setShowCP1Drawer] = useState(false);
+  const [generatingCP1PDF, setGeneratingCP1PDF] = useState(false);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -624,6 +626,170 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       setGeneratingBudgetPDF(false);
     }
   }, [budgetMetrics]);
+
+  // Generate PDF for CP1 Analysis
+  const generateCP1PDF = useCallback(async () => {
+    setGeneratingCP1PDF(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Header
+      doc.setFillColor(12, 35, 64);
+      doc.rect(0, 0, pageWidth, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CP1 LIMITS TENDERED ANALYSIS', 14, 16);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - 14, 16, { align: 'right' });
+      
+      let y = 35;
+      doc.setTextColor(0, 0, 0);
+      
+      // Executive Summary
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EXECUTIVE SUMMARY', 14, y);
+      y += 10;
+      
+      doc.setFillColor(240, 245, 250);
+      doc.roundedRect(14, y, pageWidth - 28, 35, 3, 3, 'F');
+      y += 10;
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Claims: ${CP1_DATA.totals.grandTotal.toLocaleString()}`, 20, y);
+      doc.text(`CP1 Tendered: ${CP1_DATA.totals.yes.toLocaleString()} (${CP1_DATA.cp1Rate}%)`, pageWidth / 2, y);
+      y += 8;
+      doc.text(`No CP: ${CP1_DATA.totals.noCP.toLocaleString()}`, 20, y);
+      doc.text(`BI CP1 Rate: 34.2% (highest)`, pageWidth / 2, y);
+      y += 20;
+      
+      // BI Age Breakdown
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BODILY INJURY - CP1 BY AGE', 14, y);
+      y += 8;
+      
+      doc.setFillColor(12, 35, 64);
+      doc.rect(14, y, pageWidth - 28, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.text('Age Bucket', 18, y + 6);
+      doc.text('No CP', 70, y + 6);
+      doc.text('CP1 Yes', 100, y + 6);
+      doc.text('Total', 135, y + 6);
+      doc.text('CP1 Rate', 165, y + 6);
+      y += 10;
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      CP1_DATA.biByAge.forEach((row, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
+        }
+        
+        const cp1Rate = ((row.yes / row.total) * 100).toFixed(1);
+        doc.text(row.age, 18, y);
+        doc.text(row.noCP.toLocaleString(), 70, y);
+        doc.text(row.yes.toLocaleString(), 100, y);
+        doc.text(row.total.toLocaleString(), 135, y);
+        doc.text(`${cp1Rate}%`, 165, y);
+        y += 8;
+      });
+      
+      // BI Total row
+      doc.setFont('helvetica', 'bold');
+      doc.setFillColor(220, 230, 240);
+      doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
+      doc.text('BI Total', 18, y);
+      doc.text(CP1_DATA.biTotal.noCP.toLocaleString(), 70, y);
+      doc.text(CP1_DATA.biTotal.yes.toLocaleString(), 100, y);
+      doc.text(CP1_DATA.biTotal.total.toLocaleString(), 135, y);
+      doc.text('34.2%', 165, y);
+      y += 15;
+      
+      // Coverage Summary
+      doc.setFont('helvetica', 'bold');
+      doc.text('CP1 BY COVERAGE TYPE', 14, y);
+      y += 8;
+      
+      doc.setFillColor(12, 35, 64);
+      doc.rect(14, y, pageWidth - 28, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.text('Coverage', 18, y + 6);
+      doc.text('No CP', 60, y + 6);
+      doc.text('CP1 Yes', 95, y + 6);
+      doc.text('Total', 130, y + 6);
+      doc.text('CP1 Rate', 165, y + 6);
+      y += 10;
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      CP1_DATA.byCoverage.forEach((row, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
+        }
+        
+        doc.text(row.coverage, 18, y);
+        doc.text(row.noCP.toLocaleString(), 60, y);
+        doc.text(row.yes.toLocaleString(), 95, y);
+        doc.text(row.total.toLocaleString(), 130, y);
+        doc.text(`${row.cp1Rate}%`, 165, y);
+        y += 8;
+      });
+      
+      // Grand Total row
+      doc.setFont('helvetica', 'bold');
+      doc.setFillColor(220, 230, 240);
+      doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
+      doc.text('GRAND TOTAL', 18, y);
+      doc.text(CP1_DATA.totals.noCP.toLocaleString(), 60, y);
+      doc.text(CP1_DATA.totals.yes.toLocaleString(), 95, y);
+      doc.text(CP1_DATA.totals.grandTotal.toLocaleString(), 130, y);
+      doc.text(`${CP1_DATA.cp1Rate}%`, 165, y);
+      y += 15;
+      
+      // Key Insights
+      doc.setFont('helvetica', 'bold');
+      doc.text('KEY INSIGHTS', 14, y);
+      y += 8;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const insights = [
+        `• BI represents ${((CP1_DATA.biTotal.yes / CP1_DATA.totals.yes) * 100).toFixed(1)}% of all CP1 tendered claims (${CP1_DATA.biTotal.yes.toLocaleString()} of ${CP1_DATA.totals.yes.toLocaleString()})`,
+        `• Aged 365+ BI claims have highest CP1 rate at 45.7% (${CP1_DATA.biByAge[0].yes.toLocaleString()} claims)`,
+        `• UI coverage has highest CP1 rate at 51.9% but only ${CP1_DATA.byCoverage.find(c => c.coverage === 'UI')?.total} claims`,
+        `• Under 60 Days BI claims have lowest CP1 rate at 13.5% - early resolution opportunity`,
+      ];
+      insights.forEach(insight => {
+        doc.text(insight, 14, y);
+        y += 6;
+      });
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text('Confidential - For Internal Use Only', 14, 285);
+      doc.text(`Page 1 of 1`, pageWidth - 14, 285, { align: 'right' });
+      
+      doc.save(`CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('CP1 Analysis PDF generated');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setGeneratingCP1PDF(false);
+    }
+  }, []);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -699,25 +865,31 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     closed: 2,
   };
 
-  // CP1 (Limits Tendered / Policy Limits Offered) Data by Coverage
+  // CP1 (Limits Tendered / Policy Limits Offered) Data by Coverage with Age Breakdown
   const CP1_DATA = {
+    // BI Coverage with full age breakdown
+    biByAge: [
+      { age: '365+ Days', noCP: 3593, yes: 3019, total: 6612 },
+      { age: '181-365 Days', noCP: 2168, yes: 1656, total: 3824 },
+      { age: '61-180 Days', noCP: 3117, yes: 1086, total: 4203 },
+      { age: 'Under 60 Days', noCP: 3188, yes: 497, total: 3685 },
+    ],
+    biTotal: { noCP: 12066, yes: 6258, total: 18324 },
+    // All coverages summary
     byCoverage: [
-      { coverage: 'BI', noCP: 12066, yes: 6258, total: 18324 },
-      { coverage: 'PD', noCP: 5844, yes: 566, total: 6410 },
-      { coverage: 'UM', noCP: 866, yes: 219, total: 1085 },
-      { coverage: 'CL', noCP: 640, yes: 31, total: 671 },
-      { coverage: 'OC', noCP: 173, yes: 1, total: 174 },
-      { coverage: 'UI', noCP: 26, yes: 28, total: 54 },
-      { coverage: 'UP', noCP: 2, yes: 22, total: 24 },
+      { coverage: 'BI', noCP: 12066, yes: 6258, total: 18324, cp1Rate: 34.2 },
+      { coverage: 'PD', noCP: 5844, yes: 566, total: 6410, cp1Rate: 8.8 },
+      { coverage: 'UM', noCP: 866, yes: 219, total: 1085, cp1Rate: 20.2 },
+      { coverage: 'CL', noCP: 640, yes: 31, total: 671, cp1Rate: 4.6 },
+      { coverage: 'OC', noCP: 173, yes: 1, total: 174, cp1Rate: 0.6 },
+      { coverage: 'UI', noCP: 26, yes: 28, total: 54, cp1Rate: 51.9 },
+      { coverage: 'UP', noCP: 22, yes: 2, total: 24, cp1Rate: 8.3 },
     ],
     totals: {
       noCP: 19637,
       yes: 7105,
       grandTotal: 26742,
     },
-    // Top CP1 coverages (BI has most CP1 offers)
-    topCP1Coverage: 'BI',
-    topCP1Count: 6258,
     cp1Rate: ((7105 / 26742) * 100).toFixed(1), // 26.6%
   };
 
@@ -1805,7 +1977,11 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
           
           {/* CP1 - Limits Tendered Claims */}
-          <div className="flex items-center gap-4 bg-success/10 rounded-lg p-2 -m-2 border border-success/30">
+          <div 
+            className="flex items-center gap-4 bg-success/10 rounded-lg p-2 -m-2 border border-success/30 cursor-pointer hover:bg-success/20 transition-colors"
+            onClick={() => setShowCP1Drawer(true)}
+            title="Click to view CP1 details"
+          >
             <div className="p-2 bg-success/20 rounded-lg">
               <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
@@ -1818,6 +1994,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 UM: <span className="font-medium">{CP1_DATA.byCoverage[2].yes.toLocaleString()}</span>
               </p>
             </div>
+            <ArrowUpRight className="h-4 w-4 text-success ml-auto" />
           </div>
         </div>
         </div>
@@ -3081,6 +3258,172 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                   {budgetMetrics.onTrack ? '✓ On Track to Finish Under Budget' : '⚠️ Projected to Exceed Budget'}
                 </p>
               </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* CP1 Analysis Drawer */}
+      <Sheet open={showCP1Drawer} onOpenChange={setShowCP1Drawer}>
+        <SheetContent className="w-[650px] sm:max-w-[650px] overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                CP1 Limits Tendered Analysis
+              </SheetTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={generateCP1PDF}
+                disabled={generatingCP1PDF}
+              >
+                {generatingCP1PDF ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Export PDF
+              </Button>
+            </div>
+            <SheetDescription>
+              Policy limits tendered claims analysis by coverage type and age
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 pt-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-success/10 rounded-lg border border-success/30">
+                <p className="text-xs text-muted-foreground uppercase">CP1 Tendered</p>
+                <p className="text-2xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}</p>
+                <p className="text-xs text-success">{CP1_DATA.cp1Rate}% of claims</p>
+              </div>
+              <div className="p-4 bg-secondary/50 rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground uppercase">No CP</p>
+                <p className="text-2xl font-bold text-foreground">{CP1_DATA.totals.noCP.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{(100 - parseFloat(CP1_DATA.cp1Rate)).toFixed(1)}% of claims</p>
+              </div>
+              <div className="p-4 bg-secondary/50 rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground uppercase">Total Claims</p>
+                <p className="text-2xl font-bold text-foreground">{CP1_DATA.totals.grandTotal.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* BI Age Breakdown */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary"></span>
+                Bodily Injury - CP1 by Age
+              </h4>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-xs">Age Bucket</TableHead>
+                      <TableHead className="text-xs text-right">No CP</TableHead>
+                      <TableHead className="text-xs text-right">CP1 Yes</TableHead>
+                      <TableHead className="text-xs text-right">Total</TableHead>
+                      <TableHead className="text-xs text-right">CP1 Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {CP1_DATA.biByAge.map((row) => {
+                      const cp1Rate = ((row.yes / row.total) * 100).toFixed(1);
+                      return (
+                        <TableRow key={row.age}>
+                          <TableCell className="font-medium">{row.age}</TableCell>
+                          <TableCell className="text-right">{row.noCP.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-success font-medium">{row.yes.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{row.total.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={parseFloat(cp1Rate) > 30 ? "default" : "secondary"} className="text-xs">
+                              {cp1Rate}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    <TableRow className="bg-muted/30 font-bold">
+                      <TableCell>BI Total</TableCell>
+                      <TableCell className="text-right">{CP1_DATA.biTotal.noCP.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-success">{CP1_DATA.biTotal.yes.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{CP1_DATA.biTotal.total.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge className="text-xs">34.2%</Badge>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* All Coverages */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accent"></span>
+                CP1 by Coverage Type
+              </h4>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-xs">Coverage</TableHead>
+                      <TableHead className="text-xs text-right">No CP</TableHead>
+                      <TableHead className="text-xs text-right">CP1 Yes</TableHead>
+                      <TableHead className="text-xs text-right">Total</TableHead>
+                      <TableHead className="text-xs text-right">CP1 Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {CP1_DATA.byCoverage.map((row) => (
+                      <TableRow key={row.coverage}>
+                        <TableCell className="font-medium">{row.coverage}</TableCell>
+                        <TableCell className="text-right">{row.noCP.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-success font-medium">{row.yes.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{row.total.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={row.cp1Rate > 20 ? "default" : "secondary"} className="text-xs">
+                            {row.cp1Rate}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/30 font-bold">
+                      <TableCell>GRAND TOTAL</TableCell>
+                      <TableCell className="text-right">{CP1_DATA.totals.noCP.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-success">{CP1_DATA.totals.yes.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{CP1_DATA.totals.grandTotal.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge className="text-xs">{CP1_DATA.cp1Rate}%</Badge>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Key Insights */}
+            <div className="bg-muted/30 rounded-lg p-4 border border-border">
+              <h4 className="text-sm font-semibold mb-3">Key Insights</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">•</span>
+                  BI represents <span className="font-medium text-foreground">{((CP1_DATA.biTotal.yes / CP1_DATA.totals.yes) * 100).toFixed(1)}%</span> of all CP1 tendered claims
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-warning mt-0.5">•</span>
+                  Aged 365+ BI claims have highest CP1 rate at <span className="font-medium text-foreground">45.7%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  UI coverage has highest CP1 rate at <span className="font-medium text-foreground">51.9%</span> (28 of 54 claims)
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-muted-foreground mt-0.5">•</span>
+                  Under 60 Days BI claims have lowest CP1 rate at <span className="font-medium text-foreground">13.5%</span>
+                </li>
+              </ul>
             </div>
           </div>
         </SheetContent>
