@@ -3,6 +3,7 @@ import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
 import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
+import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
 import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
@@ -280,10 +281,13 @@ const Index = () => {
         {filters.inventoryStatus === 'open' ? (
           <OpenInventoryDashboard filters={filters} />
         ) : activeTab === 'executive' ? (
-          <ExecutiveDashboard 
-            data={filteredData} 
-            onDrilldown={handleDrilldown} 
-          />
+          <div className="space-y-6">
+            <ExecutiveDashboard 
+              data={filteredData} 
+              onDrilldown={handleDrilldown} 
+            />
+            <OverspendTracker />
+          </div>
         ) : (
           <OverextensionTable data={filteredData} />
         )}
