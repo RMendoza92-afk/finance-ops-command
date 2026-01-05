@@ -45,69 +45,17 @@ serve(async (req) => {
     const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
     const year = now.getFullYear();
 
-    const systemPrompt = `You are an AI assistant for the Fred Loya Insurance Litigation Command Center. You have access to real litigation portfolio data and can answer questions accurately.
+    const systemPrompt = `You are an AI for Fred Loya Insurance Litigation Command Center. Answer with real data.
 
-## CURRENT DATA (as of ${now.toLocaleDateString()}):
-
-### Portfolio Overview:
+DATA (${now.toLocaleDateString()}):
 - Total Matters: ${ctx.totalMatters?.toLocaleString() || 0}
-- CWP (Closed With Payment): ${ctx.totalCWP?.toLocaleString() || 0}
-- CWN (Closed Without Payment): ${ctx.totalCWN?.toLocaleString() || 0}
-- Total Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(1)}M
-- Total Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(1)}M
+- CWP: ${ctx.totalCWP?.toLocaleString() || 0}, CWN: ${ctx.totalCWN?.toLocaleString() || 0}
+- Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(1)}M
+- Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(1)}M
+- MTD Closures (${monthName}): ${ctx.monthToDate?.closures || 0}, Paid: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
+- Without Evaluation: ${ctx.evaluationStatus?.withoutEvaluation || 0} (${ctx.evaluationStatus?.percentWithoutEval || 0}%)
 
-### Month-to-Date (MTD) Closures - ${monthName} ${year}:
-- Closures this month: ${ctx.monthToDate?.closures || 0}
-- Total Paid MTD: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
-- Average Payment: $${(ctx.monthToDate?.avgPayment || 0).toLocaleString()}
-
-### Evaluation Status:
-- Matters WITH evaluation/indemnity: ${(ctx.evaluationStatus?.withEvaluation || 0).toLocaleString()}
-- Matters WITHOUT evaluation: ${(ctx.evaluationStatus?.withoutEvaluation || 0).toLocaleString()}
-- Percent without evaluation: ${ctx.evaluationStatus?.percentWithoutEval || 0}%
-
-### By Expense Category (EXP Category):
-${JSON.stringify(ctx.byExpenseCategory || {}, null, 2)}
-
-NOTE: Categories include:
-- LIT = Litigation
-- SPD = Special Damages
-- BI3 = Bodily Injury Level 3
-- ATR = Auto Third Party Recovery
-- L3L = Level 3 Litigation
-- BI = Bodily Injury
-
-### By Coverage Type:
-${JSON.stringify(ctx.byCoverage || {}, null, 2)}
-
-### By Team Performance:
-${JSON.stringify(ctx.byTeam || {}, null, 2)}
-
-### MTD Closed Matters (sample - ${(ctx.monthToDate?.closedMatters?.length || 0)} shown):
-${JSON.stringify(ctx.monthToDate?.closedMatters?.slice(0, 30) || [], null, 2)}
-
-### Matters Without Evaluation (sample - showing first 50):
-${JSON.stringify(ctx.mattersWithoutEvaluation?.slice(0, 50) || [], null, 2)}
-
-## HOW TO ANSWER QUESTIONS:
-
-1. **"What was closed MTD?"** = Month-to-Date closures. Answer: ${ctx.monthToDate?.closures || 0} matters closed, $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()} paid.
-
-2. **"Without evaluation"** = Matters where indemnityPaid = 0. There are ${ctx.evaluationStatus?.withoutEvaluation || 0} such matters.
-
-3. **Category Questions**: Use the byExpenseCategory data.
-
-4. **Team Questions**: Use the byTeam data for team-level stats.
-
-## RESPONSE GUIDELINES:
-- ALWAYS cite specific numbers from the data above
-- Be concise but complete
-- Format currency with $ and commas
-- If data shows 0, say the source data may not include payment/closure dates
-
-## REPORT FORMAT:
-When generating a PDF report, end your response with:
-REPORT_DATA:{"title":"Report Title","summary":"Summary text","items":[{"matter_id":"...","type":"...","claimant":"...","status":"...","days_open":0,"total_amount":0}]}`;
+Be concise, cite numbers, format currency with $ and commas.`;
 
     console.log("Sending request to Lovable AI...");
 
