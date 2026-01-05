@@ -1,15 +1,16 @@
 /**
- * BOARD-READY EXECUTIVE PACKAGE GENERATOR
- * ========================================
- * This module generates STELLAR executive packages for CFO/CEO/COO review.
+ * CEO CONTROL PANEL GENERATOR
+ * ===========================
+ * This dashboard must read like a CEO control panel, not a management report.
+ * If interpretation is required, the output is wrong.
  * 
- * QUALITY STANDARD: Would a CFO trust this immediately?
- * RULE: If any output would not survive board review, REWRITE IT AUTOMATICALLY.
+ * EVERY PAGE MUST DO ONE OF:
+ * - CALL OUT A FAILURE
+ * - DEFEND A POSITION
+ * - DEMAND AN ACTION
+ * - CONFIRM DISCIPLINE IS HOLDING
  * 
- * Every page must:
- * - State financial impact in first 10 seconds
- * - Make the decision obvious without explanation
- * - Be clean, tight, and defensible
+ * If a page only "informs," it has failed. Neutral tone is NOT ALLOWED.
  */
 
 import { format } from 'date-fns';
@@ -214,11 +215,11 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'BUDGET BURN RATE ANALYSIS', `FY${ctx.fiscalYear} Claims Payment Tracking`, ctx);
   y = 44;
   
-  // Budget key takeaway
+  // Budget key takeaway — AUTHORITATIVE VOICE
   const budgetBand = config.budgetData.onTrack ? 'holding' : 'failure';
   const budgetTakeaway = config.budgetData.onTrack
-    ? `✅ Discipline Holding. ${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(config.budgetData.projectedVariance, true)} under. Owner: Claims. Consequence 30d: No exec action.`
-    : `❌ Discipline Failure. Tracking ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over. Primary driver: BI severity + litigation velocity. Owner: Claims. Enforcement: tighten BI payment gate + litigation spend review. 30d run-rate: ${formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true)} over.`;
+    ? `I am defending this position: we are ${formatCurrency(config.budgetData.projectedVariance, true)} under plan. Gates are holding. No intervention needed—maintain cadence.`
+    : `I am calling out a failure: we are ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over plan. BI severity broke discipline. I am demanding Claims tighten the BI payment gate this week. Litigation spend review is required by Friday.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, budgetTakeaway, config.budgetData.onTrack ? 'positive' : 'negative');
   y += 26;
@@ -326,13 +327,13 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
-  doc.text('DRIVER:', margins.left + 4, y + 8);
+  doc.text('I AM CALLING THIS OUT:', margins.left + 4, y + 8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   const biPct = ((config.budgetData.coverageBreakdown.bi.change / totalChange) * 100).toFixed(0);
   const biClaimDiff = config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024;
-  doc.text(`BI = ${biPct}% of increase. ${biClaimDiff.toLocaleString()} more BI claims YoY.`, margins.left + 28, y + 8);
-  doc.text('ACTION: Review BI severity and lit spend.', margins.left + 4, y + 16);
+  doc.text(`BI is ${biPct}% of the problem. ${biClaimDiff.toLocaleString()} more BI claims YoY.`, margins.left + 58, y + 8);
+  doc.text('I DEMAND: BI payment gate tightened. Litigation spend review by Friday.', margins.left + 4, y + 16);
   
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
@@ -354,10 +355,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     .filter(d => d.severity === 'critical')
     .reduce((s, d) => s + (d.amount || 0), 0);
 
-  // Decision takeaway
+  // Decision takeaway — AUTHORITATIVE VOICE
   const decisionTakeaway = config.decisionsData.critical > 0
-    ? `❌ Discipline Failure. ${config.decisionsData.critical} critical pending (${formatCurrency(criticalExposure, true)}). Owner: Litigation. Enforcement this week: clear critical items same-day; tighten authority gates on new filings. Consequence 30d: ${formatCurrency(criticalExposure / 12, true)} exposure at risk.`
-    : `✅ Discipline Holding. ${config.decisionsData.total} pending (${formatCurrency(config.decisionsData.totalExposure, true)}). Owner: Litigation. No exec intervention required this week.`;
+    ? `I am calling out a failure: ${config.decisionsData.critical} critical matters are stalled (${formatCurrency(criticalExposure, true)} exposed). Litigation must clear these today—not tomorrow. I am demanding same-day resolution and tighter authority gates on new filings.`
+    : `I am confirming discipline is holding: ${config.decisionsData.total} matters pending (${formatCurrency(config.decisionsData.totalExposure, true)}). Queue is moving. No executive intervention required—maintain cadence.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'neutral');
   y += 26;
@@ -457,10 +458,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const agedSharePct = (agedShare * 100);
   const agedEscalation = agedSharePct >= 40;
 
-  // CP1 takeaway
+  // CP1 takeaway — AUTHORITATIVE VOICE
   const cp1Takeaway = agedEscalation
-    ? `❌ Discipline Failure. CP1 ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI ${agedSharePct.toFixed(1)}% (>=40% escalation). Owner: Claims + Litigation. Enforcement: aged BI escalation + settlement authority review. Consequence 30d: ${formatCurrency(config.decisionsData.totalExposure / 12, true)} exposure at risk.`
-    : `⚠️ Discipline Degrading. CP1 ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI ${agedSharePct.toFixed(1)}%. Owner: Claims. Enforcement: monitor; escalate if aged BI > 40%.`;
+    ? `I am calling out a failure: aged BI hit ${agedSharePct.toFixed(1)}%—that triggers automatic escalation. CP1 rate is ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). I am demanding Claims and Litigation execute the escalation protocol and review settlement authority immediately.`
+    : `I am defending this position: CP1 at ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI at ${agedSharePct.toFixed(1)}% is below the 40% escalation threshold. Discipline is holding—maintain monitoring cadence.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, parseFloat(config.cp1Data.cp1Rate) > 28 ? 'negative' : 'neutral');
   y += 26;
@@ -896,31 +897,31 @@ function buildCEOControlPanel(config: ExecutivePackageConfig): {
   const agedEscalation = agedShare >= 0.40;
 
   const disciplineBand: DisciplineBand = overBudget || critical || agedEscalation ? 'failure' : (cp1High || biDriver ? 'degrading' : 'holding');
-  const disciplineLabel = disciplineBand === 'failure' ? '❌ DISCIPLINE FAILURE' : disciplineBand === 'degrading' ? '⚠️ DISCIPLINE DEGRADING' : '✅ DISCIPLINE HOLDING';
+  const disciplineLabel = disciplineBand === 'failure' ? '❌ FAILURE — INTERVENTION REQUIRED' : disciplineBand === 'degrading' ? '⚠️ DEGRADING — WATCH ACTIVE' : '✅ HOLDING — NO ACTION';
 
   const statusLine = overBudget
-    ? `OVER BUDGET — DISCIPLINE FAILURE (${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over)`
-    : `AHEAD OF PLAN — DISCIPLINE HOLDING (${formatCurrency(config.budgetData.projectedVariance, true)} under)`;
+    ? `OVER BUDGET — I AM CALLING OUT A FAILURE (${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over)`
+    : `AHEAD OF PLAN — I AM DEFENDING THIS POSITION (${formatCurrency(config.budgetData.projectedVariance, true)} under)`;
 
   const planAnswer = overBudget
-    ? `Behind plan by ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} (annual).`
-    : `Ahead of plan by ${formatCurrency(config.budgetData.projectedVariance, true)} (annual).`;
+    ? `We are ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over. This is unacceptable.`
+    : `We are ${formatCurrency(config.budgetData.projectedVariance, true)} under. I am defending this position.`;
 
   const breakAnswer = (() => {
-    if (overBudget) return `Primary cause: BI severity + litigation velocity.`;
-    if (critical) return `Decision queue is blocking discipline.`;
-    if (agedEscalation) return `Aged BI exceeded 40% — automatic escalation.`;
-    if (cp1High) return `Limits rate elevated; aged BI trending up.`;
-    return `No breaks detected. Discipline holding.`;
+    if (overBudget) return `BI severity broke discipline. Litigation velocity compounded it.`;
+    if (critical) return `Decision queue is stalled. This is blocking discipline.`;
+    if (agedEscalation) return `Aged BI exceeded 40%. Escalation protocol is now mandatory.`;
+    if (cp1High) return `Limits rate is elevated. I am watching this closely.`;
+    return `Nothing is breaking. I am confirming discipline is holding.`;
   })();
 
   const enforcementAnswer = (() => {
     const actions: string[] = [];
-    if (overBudget) actions.push('Tighten BI payment gate; litigation spend review');
-    if (critical) actions.push('Clear critical decisions today');
-    if (agedEscalation) actions.push('Escalate aged BI; settlement authority review');
-    if (!overBudget && !critical && !agedEscalation) return 'No executive intervention required this week. Discipline holding.';
-    return actions.join(' / ');
+    if (overBudget) actions.push('I demand Claims tighten the BI gate. Litigation spend review by Friday.');
+    if (critical) actions.push('I demand Litigation clear critical decisions today.');
+    if (agedEscalation) actions.push('I demand the escalation protocol be executed immediately.');
+    if (!overBudget && !critical && !agedEscalation) return 'No intervention required. I am confirming gates are holding. Maintain cadence.';
+    return actions.join(' ');
   })();
 
   const primaryOwner = overBudget ? 'Claims (BI) + Litigation' : critical ? 'Litigation' : agedEscalation ? 'Claims + Litigation' : 'Claims';
@@ -932,16 +933,16 @@ function buildCEOControlPanel(config: ExecutivePackageConfig): {
     .reduce((s, d) => s + (d.amount || 0), 0);
   const monthlyCritical = criticalExposure > 0 ? (criticalExposure / 12) : 0;
   const consequence30d = overBudget
-    ? `Run-rate over plan: ${formatCurrency(monthlyOverPlan, true)} (30d pro‑rata).`
+    ? `If unchanged: we bleed ${formatCurrency(monthlyOverPlan, true)} every 30 days. I will not accept that.`
     : critical
-      ? `Exposure held up: ${formatCurrency(monthlyCritical, true)} (30d pro‑rata).`
+      ? `If unchanged: ${formatCurrency(monthlyCritical, true)} stays at risk every 30 days. Unacceptable.`
       : agedEscalation
-        ? `Escalation active (aged BI ≥ 40%).`
-        : `No executive consequence expected in next 30 days.`;
+        ? `If unchanged: escalation stays active. Exposure compounds. I demand resolution.`
+        : `If unchanged: no consequence. I am confirming discipline is holding.`;
 
   const confirmationLine = disciplineBand === 'holding'
-    ? 'Confirm: no intervention required; hold gates and cadence.'
-    : 'Confirm: enforcement assigned and executed this week.';
+    ? 'I confirm: no intervention required. Gates are holding. Maintain cadence.'
+    : 'I demand confirmation: enforcement has been assigned and will execute this week.';
 
   return {
     disciplineBand,
