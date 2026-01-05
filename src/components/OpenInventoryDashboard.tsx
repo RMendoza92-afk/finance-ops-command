@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [testMode, setTestMode] = useState(true);
+  const [executiveExpanded, setExecutiveExpanded] = useState(true);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -928,7 +929,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
       <div id="executive-command-center" className="print-section bg-card rounded-xl p-6 border border-border shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning/20 rounded-lg">
               <Activity className="h-5 w-5 text-warning" />
@@ -980,12 +981,23 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <Download className="h-4 w-4 mr-2" />
               Export Package
             </Button>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 rounded-full">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-emerald-400">LIVE DATA</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-success/20 rounded-full">
+              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-success">LIVE DATA</span>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExecutiveExpanded(!executiveExpanded)}
+              className="text-muted-foreground hover:text-foreground print:hidden"
+            >
+              {executiveExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
+
+        {executiveExpanded && (
+        <div className="mt-6">
 
         <div className="grid grid-cols-4 gap-4 mb-6">
           {/* Total Open Reserves with Trend */}
@@ -1079,6 +1091,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
           </div>
         </div>
+        </div>
+        )}
       </div>
 
       {/* Summary Banner with Financials */}
