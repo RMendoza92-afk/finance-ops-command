@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import {
   BarChart,
   Bar,
@@ -19,8 +23,12 @@ import {
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
 
+  const [selectedClaims, setSelectedClaims] = useState<string[]>([]);
+  const [sendingText, setSendingText] = useState(false);
+  
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
+  const formatCurrencyK = (val: number) => `$${(val / 1000).toFixed(0)}K`;
   const formatCurrencyFull = (val: number) => `$${val.toLocaleString()}`;
 
   // Known totals from user source (January 2, 2026)
@@ -57,6 +65,29 @@ export function OpenInventoryDashboard() {
       totalHighEval: 68600000, // $68.6M
       noEvalCount: 2278,
     }
+  };
+
+  // Rear Ends - Texas Areas 101-110 (placeholder data for quick action)
+  const TEXAS_REAR_END_DATA = {
+    summary: { totalClaims: 47, totalReserves: 2850000, lowEval: 1420000, highEval: 1680000 },
+    byArea: [
+      { area: '101', claims: 8, reserves: 485000, lowEval: 245000, highEval: 290000 },
+      { area: '102', claims: 6, reserves: 365000, lowEval: 180000, highEval: 215000 },
+      { area: '103', claims: 5, reserves: 310000, lowEval: 155000, highEval: 185000 },
+      { area: '104', claims: 4, reserves: 245000, lowEval: 120000, highEval: 145000 },
+      { area: '105', claims: 7, reserves: 420000, lowEval: 210000, highEval: 250000 },
+      { area: '106', claims: 3, reserves: 185000, lowEval: 90000, highEval: 110000 },
+      { area: '107', claims: 5, reserves: 295000, lowEval: 145000, highEval: 175000 },
+      { area: '108', claims: 4, reserves: 240000, lowEval: 120000, highEval: 145000 },
+      { area: '109', claims: 3, reserves: 175000, lowEval: 85000, highEval: 100000 },
+      { area: '110', claims: 2, reserves: 130000, lowEval: 70000, highEval: 85000 },
+    ],
+    byAge: [
+      { age: '365+ Days', claims: 18, reserves: 1180000, lowEval: 590000, highEval: 700000 },
+      { age: '181-365 Days', claims: 14, reserves: 850000, lowEval: 420000, highEval: 500000 },
+      { age: '61-180 Days', claims: 10, reserves: 520000, lowEval: 260000, highEval: 310000 },
+      { age: 'Under 60 Days', claims: 5, reserves: 300000, lowEval: 150000, highEval: 170000 },
+    ],
   };
 
   // Calculate derived metrics
@@ -458,7 +489,138 @@ export function OpenInventoryDashboard() {
         </div>
       </div>
 
-      {/* High Priority Aged Claims */}
+      {/* QUICK ACTION: Rear Ends - Texas Areas 101-110 */}
+      <div className="bg-gradient-to-r from-warning/10 to-warning/5 border-2 border-warning/40 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-warning/20">
+              <Car className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
+                Quick Action: Rear Ends — Texas Areas 101-110
+                <span className="px-2 py-0.5 bg-warning/20 text-warning text-xs rounded-full font-medium">ACTION REQUIRED</span>
+              </h3>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> West Texas Region • {TEXAS_REAR_END_DATA.summary.totalClaims} open claims
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-6 items-center">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground uppercase">Open Reserves</p>
+              <p className="text-xl font-bold text-primary">{formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground uppercase">Low Eval</p>
+              <p className="text-xl font-bold text-accent-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground uppercase">High Eval</p>
+              <p className="text-xl font-bold text-warning">{formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {/* By Area */}
+          <div className="bg-card rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Area Code</h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {TEXAS_REAR_END_DATA.byArea.map((item) => (
+                <div key={item.area} className="flex justify-between items-center py-1 border-b border-border/50">
+                  <span className="text-sm font-medium">Area {item.area}</span>
+                  <div className="flex gap-3 text-xs">
+                    <span className="text-muted-foreground">{item.claims} claims</span>
+                    <span className="text-primary font-semibold">{formatCurrencyK(item.reserves)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* By Age */}
+          <div className="bg-card rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Age Bucket</h4>
+            <div className="space-y-2">
+              {TEXAS_REAR_END_DATA.byAge.map((item) => (
+                <div key={item.age} className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className={`text-sm font-medium ${
+                    item.age === '365+ Days' ? 'text-destructive' : 
+                    item.age === '181-365 Days' ? 'text-warning' : ''
+                  }`}>{item.age}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">{item.claims} claims</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrencyK(item.reserves)} reserves • {formatCurrencyK(item.highEval)} high
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SMS Action */}
+          <div className="bg-card rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3 flex items-center gap-2">
+              <MessageSquare className="h-3 w-3" /> Request File Review
+            </h4>
+            <RadioGroup 
+              value={selectedClaims.length > 0 ? selectedClaims[0] : ''} 
+              onValueChange={(val) => setSelectedClaims([val])}
+              className="space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all-claims" />
+                <Label htmlFor="all-claims" className="text-sm cursor-pointer">All 47 claims</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="aged-365" id="aged-365" />
+                <Label htmlFor="aged-365" className="text-sm cursor-pointer">365+ day aged only (18)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="high-reserve" id="high-reserve" />
+                <Label htmlFor="high-reserve" className="text-sm cursor-pointer">High reserve &gt; $50K (12)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no-eval" id="no-eval" />
+                <Label htmlFor="no-eval" className="text-sm cursor-pointer">No evaluation set (5)</Label>
+              </div>
+            </RadioGroup>
+
+            <Button 
+              className="w-full mt-4" 
+              variant="default"
+              disabled={selectedClaims.length === 0 || sendingText}
+              onClick={() => {
+                setSendingText(true);
+                // Simulate SMS send to 9154875798
+                setTimeout(() => {
+                  toast.success("Text sent to (915) 487-5798", {
+                    description: `Review request for ${selectedClaims[0] === 'all' ? '47 claims' : 
+                      selectedClaims[0] === 'aged-365' ? '18 aged claims' :
+                      selectedClaims[0] === 'high-reserve' ? '12 high reserve claims' : '5 no-eval claims'} sent.`,
+                    icon: <CheckCircle2 className="h-4 w-4" />
+                  });
+                  setSendingText(false);
+                  setSelectedClaims([]);
+                }, 1500);
+              }}
+            >
+              {sendingText ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send Text to (915) 487-5798
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Reviewer will receive claim list for immediate action
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-card border border-destructive/30 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="h-5 w-5 text-destructive" />
