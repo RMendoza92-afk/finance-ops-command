@@ -294,85 +294,157 @@
   .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }
 
-/* Print Styles - Make dark sections print-friendly */
+/* Print Styles - Make Executive Dashboard print-friendly */
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
+  * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Executive Command Center - print version */
-  .print-friendly,
-  [class*="from-slate-900"],
-  [class*="bg-slate-"] {
+  body {
     background: white !important;
-    border: 2px solid #333 !important;
-  }
-
-  .print-friendly *,
-  [class*="from-slate-900"] *,
-  [class*="bg-slate-"] * {
     color: black !important;
+    font-size: 11pt !important;
   }
 
-  /* Alert boxes - keep visible borders */
-  [class*="from-amber-900"],
-  [class*="from-red-900"] {
+  /* Main print section styling */
+  .print-section {
+    background: white !important;
+    border: 2px solid #1a1a1a !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  /* Executive Command Center - full print support */
+  #executive-command-center {
+    background: #ffffff !important;
+    padding: 20px !important;
+  }
+
+  #executive-command-center h3 {
+    color: #0c2340 !important;
+    font-size: 16pt !important;
+    border-bottom: 2px solid #0c2340 !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Metric cards in print */
+  #executive-command-center > div > div {
+    background: #f5f5f5 !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px !important;
+  }
+
+  /* Alert boxes for print - Pending Eval */
+  [class*="from-amber-900"] {
     background: #fff8e1 !important;
-    border: 2px solid #f59e0b !important;
+    border: 3px solid #f59e0b !important;
   }
 
+  [class*="from-amber-900"]::before {
+    content: "⚠️ ";
+  }
+
+  /* Alert boxes for print - Aged Claims */
   [class*="from-red-900"] {
     background: #ffebee !important;
-    border: 2px solid #ef4444 !important;
+    border: 3px solid #ef4444 !important;
   }
 
-  /* Text colors for print */
+  /* All text must be dark */
+  .print-section *,
+  #executive-command-center *,
   [class*="text-white"],
   [class*="text-slate-"],
-  [class*="text-amber-"],
-  [class*="text-red-"],
-  [class*="text-emerald-"],
-  [class*="text-blue-"] {
+  [class*="text-gray-"] {
     color: #1a1a1a !important;
   }
 
-  /* Keep colored indicators visible */
-  [class*="text-emerald-400"] {
-    color: #059669 !important;
+  /* Preserve semantic colors for key indicators */
+  [class*="text-emerald-400"],
+  [class*="text-emerald-300"],
+  .text-emerald-400 {
+    color: #047857 !important;
+    font-weight: 700 !important;
   }
 
   [class*="text-red-400"],
-  [class*="text-red-300"] {
-    color: #dc2626 !important;
+  [class*="text-red-300"],
+  .text-red-400 {
+    color: #b91c1c !important;
+    font-weight: 700 !important;
   }
 
   [class*="text-amber-400"],
-  [class*="text-amber-300"] {
-    color: #d97706 !important;
+  [class*="text-amber-300"],
+  [class*="text-amber-500"],
+  .text-amber-400 {
+    color: #b45309 !important;
+    font-weight: 700 !important;
   }
 
-  /* Hide non-essential print elements */
-  .animate-pulse {
+  [class*="text-blue-400"],
+  [class*="text-blue-300"] {
+    color: #1d4ed8 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Large numbers stay prominent */
+  .print-section p[class*="text-2xl"],
+  .print-section p[class*="text-xl"],
+  #executive-command-center p[class*="text-2xl"],
+  #executive-command-center p[class*="text-xl"] {
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    color: #0c2340 !important;
+  }
+
+  /* Progress bars print properly */
+  .print-section [class*="h-1.5"],
+  .print-section [class*="h-2"] {
+    height: 8px !important;
+    border: 1px solid #666 !important;
+  }
+
+  /* Disable animations */
+  .animate-pulse,
+  [class*="animate-"] {
     animation: none !important;
   }
 
-  /* Ensure borders show */
-  [class*="border-slate-"],
-  [class*="border-amber-"],
-  [class*="border-red-"] {
-    border-color: #666 !important;
-  }
-
-  /* Page breaks */
-  .page-break {
-    page-break-before: always;
-  }
-
-  /* Hide interactive elements */
-  button:not(.print-button) {
+  /* Hide non-essential elements */
+  .no-print,
+  button:not(.print-button),
+  [class*="animate-pulse"]::after {
     display: none !important;
+  }
+
+  /* Header for print */
+  .print-section .flex.items-center.gap-2.px-3 {
+    background: #1a1a1a !important;
+    color: white !important;
+  }
+
+  /* Grid layout prints well */
+  .print-section .grid {
+    display: grid !important;
+  }
+
+  /* Page settings */
+  @page {
+    margin: 0.5in;
+    size: landscape;
+  }
+
+  /* Add header info for print */
+  .print-section::before {
+    content: "FLI LITIGATION COMMAND CENTER • Executive Summary";
+    display: block;
+    font-size: 8pt;
+    color: #666;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
   }
 }
