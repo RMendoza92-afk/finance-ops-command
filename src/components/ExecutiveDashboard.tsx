@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
-import { useExportData, ExportableData } from "@/hooks/useExportData";
+import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { DollarSign, TrendingUp, AlertTriangle, Target, Download } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -270,6 +270,27 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
+  // Helper to build raw claim data for Excel
+  const buildRawClaimData = useCallback((filterFn?: (m: typeof aggregatedData[0]) => boolean): RawClaimData => {
+    const filteredData = filterFn ? aggregatedData.filter(filterFn) : aggregatedData;
+    return {
+      columns: ['Unique Record', 'Claim', 'Stage', 'Adjuster', 'Team', 'Indemnity', 'Expense', 'Expert Spend', 'Posture Spend', 'Total Paid'],
+      rows: filteredData.map(m => [
+        m.uniqueRecord,
+        m.claim,
+        m.stage,
+        m.adjuster,
+        m.team,
+        m.indemnity,
+        m.expense,
+        m.expertSpend,
+        m.postureSpend,
+        m.totalPaid,
+      ]),
+      sheetName: 'Claim Detail',
+    };
+  }, [aggregatedData]);
+
   // Export handlers for double-click
   const handleExportKPIs = useCallback(async () => {
     const exportData: ExportableData = {
@@ -293,10 +314,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         ['Expert %', '29.9%', 'Strategic spend ratio'],
         ['Reactive %', '70.1%', 'Friction spend ratio'],
       ],
+      rawClaimData: [buildRawClaimData()],
     };
     await exportBoth(exportData);
     toast.success('PDF + Excel exported: KPI Summary');
-  }, [exportBoth, timestamp]);
+  }, [exportBoth, timestamp, buildRawClaimData]);
 
   const handleExportQuarterly = useCallback(async () => {
     const exportData: ExportableData = {
@@ -318,12 +340,31 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         formatCurrencyFull(q.approvedAvgMonthly),
         formatCurrencyFull(q.approved - q.paid),
       ]),
+      rawClaimData: [buildRawClaimData()],
     };
     await exportBoth(exportData);
     toast.success('PDF + Excel exported: Quarterly Expert Spend');
-  }, [exportBoth, timestamp, quarterlyExpertData]);
+  }, [exportBoth, timestamp, quarterlyExpertData, buildRawClaimData]);
 
   const handleExportCostCurve = useCallback(async () => {
+    // Build stage-specific claim data sheets
+    const stageClaimData: RawClaimData[] = costCurveData.map(stage => ({
+      columns: ['Unique Record', 'Claim', 'Stage', 'Adjuster', 'Team', 'Indemnity', 'Expense', 'Expert Spend', 'Posture Spend', 'Total Paid'],
+      rows: aggregatedData.filter(m => m.stage === stage.stage).map(m => [
+        m.uniqueRecord,
+        m.claim,
+        m.stage,
+        m.adjuster,
+        m.team,
+        m.indemnity,
+        m.expense,
+        m.expertSpend,
+        m.postureSpend,
+        m.totalPaid,
+      ]),
+      sheetName: `${stage.stage} Stage Claims`,
+    }));
+
     const exportData: ExportableData = {
       title: 'Reactive Cost Curve Analysis',
       subtitle: 'Cumulative posture spend by litigation stage',
@@ -337,12 +378,34 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         formatCurrencyFull(d.cumulative),
         d.count,
       ]),
+      rawClaimData: stageClaimData,
     };
     await exportBoth(exportData);
     toast.success('PDF + Excel exported: Cost Curve');
-  }, [exportBoth, timestamp, costCurveData]);
+  }, [exportBoth, timestamp, costCurveData, aggregatedData]);
 
   const handleExportExecutiveReview = useCallback(async () => {
+    // Build raw claim data for all executive review cases
+    const execReviewClaimData: RawClaimData = {
+      columns: ['Claim', 'Unique Record', 'Review Level', 'Score', 'Total Exposure', 'Expert Spend', 'Reactive Spend', 'Claim Age (Years)', 'Stage', 'Adjuster', 'Pain Escalation', 'Max Pain', 'All Review Reasons'],
+      rows: executiveReviewCases.map(c => [
+        c.claim,
+        c.uniqueRecord,
+        c.executiveReview.level,
+        c.executiveReview.score,
+        c.expense,
+        c.expertSpend,
+        c.reactiveSpend,
+        c.claimAge,
+        c.stage,
+        c.adjuster,
+        c.painEscalation,
+        c.maxPain,
+        c.executiveReview.reasons.join('; '),
+      ]),
+      sheetName: 'Executive Review Claims',
+    };
+
     const exportData: ExportableData = {
       title: 'Executive Review Required',
       subtitle: 'Files requiring executive closure',
@@ -364,12 +427,33 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         c.executiveReview.score,
         c.executiveReview.reasons[0] || '',
       ]),
+      rawClaimData: [execReviewClaimData],
     };
     await exportBoth(exportData);
     toast.success('PDF + Excel exported: Executive Review Cases');
   }, [exportBoth, timestamp, executiveReviewCases]);
 
   const handleExportClaim = useCallback(async (caseItem: typeof executiveReviewCases[0]) => {
+    // Get all raw matter data for this specific claim from original data
+    const claimMatters = data.filter(m => (m.uniqueRecord || m.claim) === caseItem.uniqueRecord);
+    const claimRawData: RawClaimData = {
+      columns: ['Claim', 'Unique Record', 'Adjuster', 'Team', 'Prefix', 'Start Pain', 'End Pain', 'Indemnity', 'Total Amount', 'Expense Category', 'Transfer Date'],
+      rows: claimMatters.map(m => [
+        m.claim || '',
+        m.uniqueRecord || '',
+        m.adjusterName || '',
+        m.team || '',
+        m.prefix || '',
+        m.startPainLvl || 0,
+        m.endPainLvl || 0,
+        m.indemnitiesAmount || 0,
+        m.totalAmount || 0,
+        m.expCategory || '',
+        m.transferDate || '',
+      ]),
+      sheetName: 'Claim Transactions',
+    };
+
     const exportData: ExportableData = {
       title: `Claim Detail: ${caseItem.claim}`,
       subtitle: `Executive Review - ${caseItem.executiveReview.level}`,
@@ -388,10 +472,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       },
       columns: ['Review Reason'],
       rows: caseItem.executiveReview.reasons.map(r => [r]),
+      rawClaimData: [claimRawData],
     };
     await exportBoth(exportData);
     toast.success(`PDF + Excel exported: ${caseItem.claim}`);
-  }, [exportBoth, timestamp]);
+  }, [exportBoth, timestamp, data]);
 
   return (
     <div className="space-y-6">
