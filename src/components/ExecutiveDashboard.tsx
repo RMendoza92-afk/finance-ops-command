@@ -39,6 +39,7 @@ interface ExecutiveDashboardProps {
   onDrilldown: (claimId: string) => void;
   onPainLevelDataApplied?: (data: PainLevelRow[]) => void;
   painLevelDataActive?: boolean;
+  onDataUploaded?: () => void;
 }
 
 // Determine litigation stage based on pain level
@@ -61,7 +62,7 @@ function getExpertType(expCategory: string): string {
   return 'Other';
 }
 
-export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, painLevelDataActive }: ExecutiveDashboardProps) {
+export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, painLevelDataActive, onDataUploaded }: ExecutiveDashboardProps) {
   const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   // Aggregate data by unique record (claim)
@@ -640,7 +641,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
           </div>
           <div className="flex items-center gap-4">
-            <DataUploadPanel />
+            <DataUploadPanel onDataUploaded={onDataUploaded} />
             <PainLevelUpload onDataUploaded={onPainLevelDataApplied} isActive={painLevelDataActive} />
             <button
               onClick={handleFullExport}

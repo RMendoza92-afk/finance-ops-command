@@ -29,7 +29,7 @@ const Index = () => {
     return defaultGlobalFilters;
   });
   const [drilldownClaimId, setDrilldownClaimId] = useState<string | null>(null);
-  const { data: litigationData, loading, error, stats } = useLitigationData();
+  const { data: litigationData, loading, error, stats, refetch, dataSource } = useLitigationData();
 
   // Handle pain level data updates from PainLevelUpload
   const handlePainLevelDataApplied = (data: PainLevelRow[]) => {
@@ -235,6 +235,9 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span>{filteredData.length.toLocaleString()} of {litigationData.length.toLocaleString()} records</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
+                {dataSource === 'database' ? '📊 Database' : '📄 CSV'}
+              </span>
             </div>
             <span>CWP: {stats.cwpCount.toLocaleString()} | CWN: {stats.cwnCount.toLocaleString()}</span>
           </div>
@@ -287,6 +290,7 @@ const Index = () => {
             onDrilldown={handleDrilldown} 
             onPainLevelDataApplied={handlePainLevelDataApplied}
             painLevelDataActive={filters.painLevelData.length > 0}
+            onDataUploaded={refetch}
           />
         ) : (
           <OverextensionTable data={filteredData} />
