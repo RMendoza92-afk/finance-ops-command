@@ -531,20 +531,20 @@ function buildCEOStatement(
 ): string {
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      return `We are not in control this week. BI spend is driving us over budget. I am ordering a tightened gate on Friday. No exceptions until we correct course.`;
+      return `I'm not in control. BI is bleeding us dry. Friday I'm tightening the gate personally. No one moves paper without my sign-off until this stops.`;
     }
     if (data.breaking.includes('DECISIONS')) {
-      return `We have ${config.decisionsData.critical} critical decisions pending. This is unacceptable. I expect the queue cleared by end of day. Exposure compounds every week we delay.`;
+      return `${config.decisionsData.critical} critical files sitting on desks. Unacceptable. I want them cleared today. Every week we wait, our exposure grows.`;
     }
     if (data.breaking.includes('AGED')) {
-      return `Our aged BI inventory is out of control. ${data.agedValue} of claims are 365+ days. Execute escalation protocol immediately. I will not tolerate authority erosion.`;
+      return `${data.agedValue} of my BI inventory is over a year old. That's a failure. I'm escalating now. We fix this or I start making changes.`;
     }
-    return `We are not in control. Multiple areas require immediate intervention. Review the orders below and execute without delay.`;
+    return `Multiple failures this week. I'm intervening directly. Follow the orders below exactly.`;
   }
   
   if (data.status === 'WARN') {
-    return `We are in control but I am watching CP1 closely. Current rate of ${config.cp1Data.cp1Rate} is elevated. No action required this week but I want a report in 7 days.`;
+    return `In control, but CP1 at ${config.cp1Data.cp1Rate} has my attention. No action yet. I want an update in 7 days. Don't make me ask twice.`;
   }
   
-  return `We are in control. All metrics are within acceptable range. Maintain current cadence. I expect the same discipline next week.`;
+  return `In control. Numbers are where I want them. Keep the discipline. I expect the same next week.`;
 }
