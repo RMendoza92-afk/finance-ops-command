@@ -309,10 +309,7 @@ export function OpenInventoryDashboard() {
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number, name: string) => [
-                    formatCurrencyFull(value), 
-                    name === 'openReserves' ? 'Open Reserves' : name === 'lowEval' ? 'Low Eval' : 'High Eval'
-                  ]}
+                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name]}
                 />
                 <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Open Reserves" />
                 <Bar dataKey="lowEval" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} name="Low Eval" />
@@ -357,7 +354,7 @@ export function OpenInventoryDashboard() {
                   }}
                   formatter={(value: number | null, name: string) => [
                     value !== null ? formatCurrencyFull(value) : 'No Evaluation', 
-                    name === 'openReserves' ? 'Open Reserves' : name === 'lowEval' ? 'Low Eval' : 'High Eval'
+                    name
                   ]}
                 />
                 <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Open Reserves" />
