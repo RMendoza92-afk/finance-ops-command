@@ -531,20 +531,20 @@ function buildCEOStatement(
 ): string {
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      return `I'm not in control. BI is bleeding us dry. Friday I'm tightening the gate personally. No one moves paper without my sign-off until this stops.`;
+      return `I am not in control of spend. BI indemnities are exceeding forecast. Effective Friday, I am implementing enhanced authorization controls. No disbursements without my approval.`;
     }
     if (data.breaking.includes('DECISIONS')) {
-      return `${config.decisionsData.critical} critical files sitting on desks. Unacceptable. I want them cleared today. Every week we wait, our exposure grows.`;
+      return `${config.decisionsData.critical} matters require immediate disposition. Delayed resolution compounds our exposure. I am directing same-day clearance of all critical items.`;
     }
     if (data.breaking.includes('AGED')) {
-      return `${data.agedValue} of my BI inventory is over a year old. That's a failure. I'm escalating now. We fix this or I start making changes.`;
+      return `Aged inventory at ${data.agedValue} exceeds acceptable thresholds. This represents material risk to our reserves position. I am initiating escalation protocols immediately.`;
     }
-    return `Multiple failures this week. I'm intervening directly. Follow the orders below exactly.`;
+    return `Multiple control deficiencies identified. I am directing corrective action per the orders below. Execution is expected without delay.`;
   }
   
   if (data.status === 'WARN') {
-    return `In control, but CP1 at ${config.cp1Data.cp1Rate} has my attention. No action yet. I want an update in 7 days. Don't make me ask twice.`;
+    return `Operations are in control. CP1 rate at ${config.cp1Data.cp1Rate} warrants monitoring. No intervention required. I expect a status update within 7 business days.`;
   }
   
-  return `In control. Numbers are where I want them. Keep the discipline. I expect the same next week.`;
+  return `All key indicators are within target parameters. Current operational cadence is satisfactory. I expect continued discipline through next reporting period.`;
 }
