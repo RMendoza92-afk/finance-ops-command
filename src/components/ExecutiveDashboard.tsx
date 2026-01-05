@@ -135,12 +135,12 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     };
   }, [aggregatedData]);
 
-  // Expert spend by quarter - actual 2025 YTD data
+  // Expert spend by quarter - actual 2025 YTD data (corrected: paid vs approved)
   const quarterlyExpertData = [
-    { quarter: 'Q1 2025', paid: 1553080, approved: 2141536, avgMonthly: 517693 },
-    { quarter: 'Q2 2025', paid: 1727599, approved: 1680352, avgMonthly: 575866 },
-    { quarter: 'Q3 2025', paid: 1383717, approved: 1449627, avgMonthly: 461239 },
-    { quarter: 'Q4 2025', paid: 1016756, approved: 909651, avgMonthly: 508378 },
+    { quarter: 'Q1 2025', paid: 2141536, approved: 1553080, avgMonthly: 713845 },
+    { quarter: 'Q2 2025', paid: 1680352, approved: 1727599, avgMonthly: 560117 },
+    { quarter: 'Q3 2025', paid: 1449627, approved: 1383717, avgMonthly: 483209 },
+    { quarter: 'Q4 2025', paid: 909651, approved: 1016756, avgMonthly: 454826 },
   ];
 
   // Reactive cost curve by stage - using actual expert ratio
