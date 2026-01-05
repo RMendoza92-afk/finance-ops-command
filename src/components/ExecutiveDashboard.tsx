@@ -994,45 +994,36 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-[#0c2340]/60">#{idx + 1}</span>
-                <span className={`w-2.5 h-2.5 rounded-full ${
-                  caseItem.executiveReview.level === 'CRITICAL' ? 'bg-[#b41e1e] animate-pulse' : 'bg-amber-500'
-                }`}></span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${
+                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-[#b41e1e]' : 'text-amber-600'
+                  }`}>
+                    {caseItem.executiveReview.score}pts
+                  </span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${
+                    caseItem.executiveReview.level === 'CRITICAL' ? 'bg-[#b41e1e] animate-pulse' : 'bg-amber-500'
+                  }`}></span>
+                </div>
               </div>
               
               {/* Matter ID - Primary Identifier for correlation */}
-              <p className="text-lg font-bold text-[#0c2340] truncate mb-1 group-hover:text-[#b41e1e] transition-colors font-mono">
+              <p className="text-base font-bold text-[#0c2340] truncate mb-2 group-hover:text-[#b41e1e] transition-colors font-mono">
                 {caseItem.matterId}
               </p>
               
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Exposure</span>
-                  <span className="font-semibold text-[#0c2340]">{formatCurrency(caseItem.expense)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Age</span>
-                  <span className={`font-medium ${caseItem.claimAge >= 5 ? 'text-[#b41e1e]' : 'text-amber-600'}`}>
-                    {caseItem.claimAge}yr
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs pt-1 border-t border-[#0c2340]/10">
-                  <span className="text-gray-500">Score</span>
-                  <span className={`font-bold ${
-                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-[#b41e1e]' : 'text-amber-600'
-                  }`}>
-                    {caseItem.executiveReview.score}
-                  </span>
-                </div>
+              {/* Score breakdown - all reasons */}
+              <div className="space-y-1 text-[10px]">
+                {caseItem.executiveReview.reasons.map((reason, rIdx) => (
+                  <div key={rIdx} className="flex items-start gap-1.5 text-[#b41e1e]/90">
+                    <span className="text-[#b41e1e] mt-0.5">•</span>
+                    <span className="leading-tight">{reason}</span>
+                  </div>
+                ))}
               </div>
               
-              <p className="text-xs text-gray-500 mt-2 truncate">{caseItem.adjuster} • {caseItem.stage}</p>
-              
-              {/* Top reason */}
-              {caseItem.executiveReview.reasons.length > 0 && (
-                <p className="text-[10px] text-[#b41e1e]/80 mt-1 truncate">
-                  {caseItem.executiveReview.reasons[0]}
-                </p>
-              )}
+              <p className="text-[10px] text-gray-500 mt-2 pt-1 border-t border-[#0c2340]/10 truncate">
+                {caseItem.adjuster} • {caseItem.stage} • {caseItem.claimAge}yr old
+              </p>
             </button>
           ))}
         </div>
