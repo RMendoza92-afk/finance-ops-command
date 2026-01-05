@@ -100,9 +100,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return Array.from(grouped.values());
   }, [data]);
 
-  // Calculate KPIs - Known 2025 Litigation figures:
-  // Grand Total: $395M (Indemnity + Expenses)
-  // Total Expenses: $19M  
+  // Calculate KPIs - Known 2025 figures:
+  // Total BI Spend: $395M (all bodily injury)
+  // Litigation Expenses: $19M  
   // Expert Spend (intentional): $5.6M
   // Reactive (pre-lit ATR waste + lit fees): $13.4M ($19M - $5.6M)
   const kpis = useMemo(() => {
@@ -111,14 +111,13 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     const expense = aggregatedData.reduce((sum, m) => sum + m.expense, 0);
     
     // Known 2025 figures
-    const KNOWN_GRAND_TOTAL = 395000000;   // $395M total litigation
-    const KNOWN_INDEMNITY = 376000000;     // $376M indemnity ($395M - $19M)
-    const KNOWN_EXPENSE = 19000000;        // $19M expenses
+    const KNOWN_BI_TOTAL = 395000000;      // $395M total BI spend
+    const KNOWN_LIT_EXPENSE = 19000000;    // $19M litigation expenses
     const KNOWN_EXPERT = 5600000;          // $5.6M actual expert spend
     const KNOWN_REACTIVE = 13400000;       // $13.4M waste (pre-lit ATR + lit fees)
     
     // Calculate proportional spend based on filtered data
-    const expenseRatio = expense / KNOWN_EXPENSE;
+    const expenseRatio = expense > 0 ? expense / KNOWN_LIT_EXPENSE : 0;
     const expertSpend = KNOWN_EXPERT * expenseRatio;
     const postureSpend = KNOWN_REACTIVE * expenseRatio;
     
@@ -128,11 +127,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       postureSpend, 
       indemnity,
       expense,
-      grandTotal: totalPaid, // For filtered view
       // Known figures (full dataset)
-      knownGrandTotal: KNOWN_GRAND_TOTAL,
-      knownIndemnity: KNOWN_INDEMNITY,
-      knownExpense: KNOWN_EXPENSE,
+      knownBITotal: KNOWN_BI_TOTAL,
+      knownLitExpense: KNOWN_LIT_EXPENSE,
       knownExpert: KNOWN_EXPERT,
       knownReactive: KNOWN_REACTIVE,
     };
@@ -198,17 +195,17 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
   return (
     <div className="space-y-6">
-      {/* 2025 Litigation Grand Summary Banner */}
+      {/* 2025 BI Spend Summary Banner */}
       <div className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">2025 Litigation: $395M Total Paid</h2>
+            <h2 className="text-xl font-bold text-foreground">2025 BI Spend: $395M Total</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-semibold text-foreground">$376M</span> Indemnity + <span className="font-semibold text-foreground">$19M</span> Expenses
+              Litigation Expenses: <span className="font-semibold text-foreground">$19M</span> of total BI spend
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Expense Breakdown</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">$19M Expense Breakdown</p>
             <div className="flex items-center gap-3">
               <span className="text-success font-bold">$5.6M Expert</span>
               <span className="text-muted-foreground">vs</span>
@@ -222,7 +219,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Expert (Intentional)</span>
+                <span>Expert (Intentional Leverage)</span>
                 <span>Pre-Lit ATR Waste + Litigation Fees</span>
               </div>
               <div className="w-full h-4 rounded-full bg-muted overflow-hidden flex">
@@ -242,42 +239,42 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         </div>
       </div>
 
-      {/* KPI Cards - 5 cards now */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-5 gap-4">
         <KPICard
-          title="Grand Total"
-          value={formatCurrency(kpis.totalPaid)}
-          subtitle="Indemnity + Expenses"
+          title="Total BI Spend"
+          value="$395M"
+          subtitle="All Bodily Injury"
           icon={DollarSign}
           variant="default"
         />
         <KPICard
-          title="Indemnity"
-          value={formatCurrency(kpis.indemnity)}
-          subtitle="Settlement payments"
-          icon={DollarSign}
-          variant="default"
-        />
-        <KPICard
-          title="Total Expenses"
-          value={formatCurrency(kpis.expense)}
-          subtitle="Expert + Reactive"
+          title="Lit Expenses"
+          value="$19M"
+          subtitle="Litigation portion"
           icon={DollarSign}
           variant="default"
         />
         <KPICard
           title="Expert Spend"
-          value={formatCurrency(kpis.expertSpend)}
+          value="$5.6M"
           subtitle="Intentional leverage"
           icon={Target}
           variant="success"
         />
         <KPICard
           title="Reactive Waste"
-          value={formatCurrency(kpis.postureSpend)}
+          value="$13.4M"
           subtitle="Pre-lit ATR + Lit fees"
           icon={AlertTriangle}
           variant="danger"
+        />
+        <KPICard
+          title="Waste Ratio"
+          value="2.4x"
+          subtitle="$1 expert = $2.40 waste"
+          icon={TrendingUp}
+          variant="warning"
         />
       </div>
 
