@@ -262,103 +262,64 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   });
   y += 36;
   
-  // Coverage breakdown table
+  // CEO FORMAT: Drivers / Order / Consequence (no dense tables)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('COVERAGE BREAKDOWN - YoY COMPARISON', margins.left, y);
-  y += 6;
-  
-  // Header - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  const covCols = [40, 35, 35, 35, 35];
-  colX = margins.left + 4;
-  ['COVERAGE', '2024 YTD', '2025 YTD', 'CHANGE', 'IMPACT'].forEach((h, i) => {
-    doc.text(h, colX, y + 6);
-    colX += covCols[i];
-  });
-  y += 10;
-  
-  // Coverage rows
-  const coverages = [
-    { ...config.budgetData.coverageBreakdown.bi },
-    { ...config.budgetData.coverageBreakdown.cl },
-    { ...config.budgetData.coverageBreakdown.oc }
-  ];
-  
-  coverages.forEach((cov, idx) => {
-    if (idx % 2 === 0) {
-      doc.setFillColor(25, 25, 25);
-      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
-    } else {
-      doc.setFillColor(18, 18, 18);
-      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
-    }
-    
-    colX = margins.left + 4;
-    doc.setFontSize(8);
+  doc.text('DRIVERS (WHAT IS MOVING THE MONEY)', margins.left, y);
+  y += 8;
+
+  const drivers = [
+    { label: 'BI', change: config.budgetData.coverageBreakdown.bi.change, count: config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024 },
+    { label: 'CL', change: config.budgetData.coverageBreakdown.cl.change, count: config.budgetData.coverageBreakdown.cl.claimCount2025 - config.budgetData.coverageBreakdown.cl.claimCount2024 },
+    { label: 'OC', change: config.budgetData.coverageBreakdown.oc.change, count: config.budgetData.coverageBreakdown.oc.claimCount2025 - config.budgetData.coverageBreakdown.oc.claimCount2024 },
+  ].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+  const rowH = 14;
+  drivers.slice(0, 3).forEach((d, idx) => {
+    doc.setFillColor(idx % 2 === 0 ? 25 : 18, idx % 2 === 0 ? 25 : 18, idx % 2 === 0 ? 25 : 18);
+    doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, rowH, 2, 2, 'F');
+
+    const c = d.change > 0 ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.success;
+
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
     doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.text(cov.name, colX, y + 5);
-    colX += covCols[0];
-    
+    doc.text(d.label, margins.left + 6, y + 10);
+
+    doc.setTextColor(...c);
+    doc.text(`${d.change >= 0 ? '+' : ''}${formatCurrency(d.change, true)}`, margins.left + 28, y + 10);
+
     doc.setFont('helvetica', 'normal');
-    doc.text(formatCurrency(cov.ytd2024, true), colX, y + 5);
-    colX += covCols[1];
-    doc.text(formatCurrency(cov.ytd2025, true), colX, y + 5);
-    colX += covCols[2];
-    
-    const changeColor = cov.change > 0 ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.success;
-    doc.setTextColor(...changeColor);
-    doc.text(`${cov.change >= 0 ? '+' : ''}${formatCurrency(cov.change, true)}`, colX, y + 5);
-    colX += covCols[3];
-    
-    const impact = cov.change > 20000000 ? 'ACT' : cov.change > 0 ? 'WATCH' : 'OK';
-    doc.text(impact, colX, y + 5);
-    
-    y += 10;
+    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+    doc.text(`${d.count >= 0 ? '+' : ''}${d.count.toLocaleString()} claims YoY`, margins.left + 88, y + 10);
+
+    y += rowH + 6;
   });
-  
-  // Total row
-  const totalYtd2024 = coverages.reduce((s, c) => s + c.ytd2024, 0);
-  const totalYtd2025 = coverages.reduce((s, c) => s + c.ytd2025, 0);
-  const totalChange = totalYtd2025 - totalYtd2024;
-  
-  // Total row - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
-  doc.setTextColor(255, 255, 255);
+
+  // ORDER THIS WEEK
+  doc.setFillColor(40, 18, 18);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 26, 3, 3, 'F');
   doc.setFont('helvetica', 'bold');
-  colX = margins.left + 4;
-  doc.text('TOTAL', colX, y + 5);
-  colX += covCols[0];
-  doc.text(formatCurrency(totalYtd2024, true), colX, y + 5);
-  colX += covCols[1];
-  doc.text(formatCurrency(totalYtd2025, true), colX, y + 5);
-  colX += covCols[2];
-  doc.text(`${totalChange >= 0 ? '+' : ''}${formatCurrency(totalChange, true)}`, colX, y + 5);
-  y += 16;
-  
-  // Budget insight (dark theme with amber accent border)
-  doc.setFillColor(30, 27, 18);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 20, 2, 2, 'F');
-  doc.setDrawColor(...EXECUTIVE_COLORS.warning);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 20, 2, 2, 'S');
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.warning);
-  doc.text('I AM CALLING THIS OUT:', margins.left + 4, y + 8);
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  const biPct = ((config.budgetData.coverageBreakdown.bi.change / totalChange) * 100).toFixed(0);
-  const biClaimDiff = config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024;
-  doc.text(`BI is ${biPct}% of the problem. ${biClaimDiff.toLocaleString()} more BI claims YoY.`, margins.left + 58, y + 8);
-  doc.text('I DEMAND: BI payment gate tightened. Litigation spend review by Friday.', margins.left + 4, y + 16);
-  
+  doc.text('ORDER THIS WEEK:', margins.left + 6, y + 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...EXECUTIVE_COLORS.danger);
+  doc.text(config.budgetData.onTrack ? 'Maintain cadence. No changes.' : 'Tighten BI gate immediately. Litigation spend review by Friday.', margins.left + 6, y + 20);
+  y += 34;
+
+  // CONSEQUENCE
+  doc.setFillColor(15, 35, 25);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 18, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text('CONSEQUENCE IF UNCHANGED:', margins.left + 6, y + 12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...EXECUTIVE_COLORS.success);
+  doc.text(budgetConsequence, margins.left + 66, y + 12);
+
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
@@ -402,67 +363,61 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   });
   y += 36;
   
-  // Critical decisions table (top 15)
+  // CEO FORMAT: only the list that forces action
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('DECISION QUEUE - BY PRIORITY', margins.left, y);
-  y += 6;
-  
-  // Header - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(6);
-  const decCols = [28, 42, 28, 22, 30, 36];
-  colX = margins.left + 3;
-  ['MATTER', 'CLAIMANT', 'LEAD', 'DAYS', 'EXPOSURE', 'ACTION'].forEach((h, i) => {
-    doc.text(h, colX, y + 6);
-    colX += decCols[i];
-  });
-  y += 10;
-  
-  // Decision rows (top 15)
-  const topDecisions = config.decisionsData.decisions.slice(0, 15);
-  topDecisions.forEach((dec, idx) => {
-    const rowColor = dec.severity === 'critical' ? [50, 20, 20] :
-                     dec.severity === 'high' ? [45, 35, 15] :
-                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
-    doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
-    doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 8, 'F');
-    
-    colX = margins.left + 3;
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
+  doc.text('TOP DECISIONS THAT REQUIRE ACTION', margins.left, y);
+  y += 8;
+
+  const actionList = config.decisionsData.decisions
+    .filter(d => d.severity === 'critical' || d.severity === 'high')
+    .slice(0, 6);
+
+  if (actionList.length === 0) {
+    doc.setFillColor(15, 35, 25);
+    doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 24, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
     doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    
-    doc.text(dec.matterId.substring(0, 12), colX, y + 4);
-    colX += decCols[0];
-    doc.text(dec.claimant.substring(0, 18), colX, y + 4);
-    colX += decCols[1];
-    doc.text(dec.lead.substring(0, 12), colX, y + 4);
-    colX += decCols[2];
-    doc.text(dec.daysOpen.toString(), colX, y + 4);
-    colX += decCols[3];
-    
-    const expColor = dec.amount >= 1000000 ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.textPrimary;
-    doc.setTextColor(...expColor);
-    doc.text(formatCurrency(dec.amount, true), colX, y + 4);
-    colX += decCols[4];
-    
-    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-    doc.text(dec.recommendedAction.substring(0, 20), colX, y + 4);
-    
-    y += 8;
-  });
-  
-  if (config.decisionsData.decisions.length > 15) {
-    y += 2;
-    doc.setFontSize(7);
-    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-    doc.text(`+ ${config.decisionsData.decisions.length - 15} additional decisions (see appendix)`, margins.left, y);
+    doc.text('🟢 DISCIPLINE HOLDING — NO ACTION REQUIRED', margins.left + 6, y + 15);
+    y += 32;
+  } else {
+    actionList.forEach((d, idx) => {
+      const band = d.severity === 'critical' ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.warning;
+      doc.setFillColor(18, 18, 18);
+      doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 18, 2, 2, 'F');
+      doc.setFillColor(band[0], band[1], band[2]);
+      doc.rect(margins.left, y + 3, 4, 12, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+      const line = `${d.severity.toUpperCase()} | ${d.matterId} | ${formatCurrency(d.amount, true)} | ${d.daysOpen}d | LEAD: ${d.lead}`;
+      const l1 = (doc.splitTextToSize(line, pageWidth - margins.left - margins.right - 14) as string[])[0] || '';
+      doc.text(l1, margins.left + 8, y + 9);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+      const order = `ORDER: ${d.recommendedAction}`;
+      const o1 = (doc.splitTextToSize(order, pageWidth - margins.left - margins.right - 14) as string[])[0] || '';
+      doc.text(o1, margins.left + 8, y + 15);
+
+      y += 24;
+    });
+
+    doc.setFillColor(40, 18, 18);
+    doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.text('NON-NEGOTIABLE:', margins.left + 6, y + 9);
+    doc.setTextColor(...EXECUTIVE_COLORS.danger);
+    doc.text('Critical decisions clear today. I expect confirmation by EOD.', margins.left + 6, y + 17);
+    y += 28;
   }
-  
+
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
@@ -510,155 +465,69 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   });
   y += 36;
   
-  // CP1 by Coverage table
+  // CEO FORMAT: thresholds + top drivers only
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('CP1 RATE BY COVERAGE TYPE', margins.left, y);
-  y += 6;
-  
-  // Header - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  const cp1Cols = [35, 30, 30, 30, 35, 26];
-  colX = margins.left + 4;
-  ['COVERAGE', 'TOTAL', 'CP1', 'NO CP', 'CP1 RATE', 'SHARE'].forEach((h, i) => {
-    doc.text(h, colX, y + 6);
-    colX += cp1Cols[i];
-  });
-  y += 10;
-  
-  // Coverage rows
-  config.cp1Data.byCoverage.forEach((cov, idx) => {
-    const rowColor = cov.cp1Rate > 40 ? [50, 20, 20] :
-                     cov.cp1Rate > 30 ? [45, 35, 15] :
-                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
-    doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
-    doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-    
-    colX = margins.left + 4;
-    doc.setFontSize(7);
+  doc.text('CONTROL THRESHOLDS (NO DISCUSSION)', margins.left, y);
+  y += 8;
+
+  const thresholdLines = [
+    `CP1 WATCH: > 28%  |  CP1 FAIL: > 30%`,
+    `AGED BI FAIL: ≥ 40% at 365+ days (AUTO ESCALATION)`,
+  ];
+
+  doc.setFillColor(25, 25, 25);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text(thresholdLines[0], margins.left + 6, y + 9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+  doc.text(thresholdLines[1], margins.left + 6, y + 17);
+  y += 30;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text('TOP DRIVERS (WHERE THIS BREAKS)', margins.left, y);
+  y += 8;
+
+  const topCov = [...config.cp1Data.byCoverage].sort((a, b) => b.cp1Rate - a.cp1Rate).slice(0, 4);
+  topCov.forEach((c, idx) => {
+    const band = c.cp1Rate >= 40 ? EXECUTIVE_COLORS.danger : c.cp1Rate >= 30 ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success;
+    doc.setFillColor(18, 18, 18);
+    doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 16, 2, 2, 'F');
+    doc.setFillColor(band[0], band[1], band[2]);
+    doc.rect(margins.left, y + 3, 4, 10, 'F');
+
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
     doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.text(cov.coverage, colX, y + 5);
-    colX += cp1Cols[0];
-    
+    doc.text(`${c.coverage} — ${c.cp1Rate}% CP1`, margins.left + 8, y + 10);
+
     doc.setFont('helvetica', 'normal');
-    doc.text(cov.total.toLocaleString(), colX, y + 5);
-    colX += cp1Cols[1];
-    doc.text(cov.yes.toLocaleString(), colX, y + 5);
-    colX += cp1Cols[2];
-    doc.text(cov.noCP.toLocaleString(), colX, y + 5);
-    colX += cp1Cols[3];
-    
-    const rateColor = cov.cp1Rate > 40 ? EXECUTIVE_COLORS.danger :
-                      cov.cp1Rate > 30 ? EXECUTIVE_COLORS.warning :
-                      EXECUTIVE_COLORS.success;
-    doc.setTextColor(...rateColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${cov.cp1Rate}%`, colX, y + 5);
-    colX += cp1Cols[4];
-    
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-    doc.setFont('helvetica', 'normal');
-    const share = ((cov.yes / config.cp1Data.totals.yes) * 100).toFixed(1);
-    doc.text(`${share}%`, colX, y + 5);
-    
-    y += 9;
+    doc.text(`TOTAL ${c.total.toLocaleString()} | CP1 ${c.yes.toLocaleString()} | NO CP ${c.noCP.toLocaleString()}`, margins.left + 92, y + 10);
+
+    y += 22;
   });
-  
-  // Total row - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-  doc.setTextColor(255, 255, 255);
+
+  // ACTION BLOCK
+  doc.setFillColor(agedEscalation ? 40 : 30, agedEscalation ? 18 : 27, agedEscalation ? 18 : 18);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 26, 3, 3, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  colX = margins.left + 4;
-  doc.text('TOTAL', colX, y + 5);
-  colX += cp1Cols[0];
-  doc.text(config.cp1Data.totals.grandTotal.toLocaleString(), colX, y + 5);
-  colX += cp1Cols[1];
-  doc.text(config.cp1Data.totals.yes.toLocaleString(), colX, y + 5);
-  colX += cp1Cols[2];
-  doc.text(config.cp1Data.totals.noCP.toLocaleString(), colX, y + 5);
-  colX += cp1Cols[3];
-  doc.text(config.cp1Data.cp1Rate, colX, y + 5);
-  colX += cp1Cols[4];
-  doc.text('100%', colX, y + 5);
-  y += 14;
-  
-  // BI by Age section
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('BODILY INJURY CP1 BY CLAIM AGE', margins.left, y);
-  y += 6;
-  
-  // BI Age header - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  const biAgeCols = [45, 35, 35, 35, 36];
-  colX = margins.left + 4;
-  ['AGE BUCKET', 'NO CP', 'CP1 YES', 'TOTAL', 'CP1 RATE'].forEach((h, i) => {
-    doc.text(h, colX, y + 6);
-    colX += biAgeCols[i];
-  });
-  y += 10;
-  
-  // BI Age rows
-  config.cp1Data.biByAge.forEach((age, idx) => {
-    const cp1Rate = (age.yes / age.total) * 100;
-    const rowColor = age.age === '365+ Days' ? [50, 20, 20] :
-                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
-    doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
-    doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-    
-    colX = margins.left + 4;
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.text(age.age, colX, y + 5);
-    colX += biAgeCols[0];
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text(age.noCP.toLocaleString(), colX, y + 5);
-    colX += biAgeCols[1];
-    doc.text(age.yes.toLocaleString(), colX, y + 5);
-    colX += biAgeCols[2];
-    doc.text(age.total.toLocaleString(), colX, y + 5);
-    colX += biAgeCols[3];
-    
-    const rateColor = cp1Rate > 40 ? EXECUTIVE_COLORS.danger :
-                      cp1Rate > 30 ? EXECUTIVE_COLORS.warning :
-                      EXECUTIVE_COLORS.success;
-    doc.setTextColor(...rateColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${cp1Rate.toFixed(1)}%`, colX, y + 5);
-    
-    y += 9;
-  });
-  
-  // BI Total - red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  colX = margins.left + 4;
-  doc.text('BI TOTAL', colX, y + 5);
-  colX += biAgeCols[0];
-  doc.text(config.cp1Data.biTotal.noCP.toLocaleString(), colX, y + 5);
-  colX += biAgeCols[1];
-  doc.text(config.cp1Data.biTotal.yes.toLocaleString(), colX, y + 5);
-  colX += biAgeCols[2];
-  doc.text(config.cp1Data.biTotal.total.toLocaleString(), colX, y + 5);
-  colX += biAgeCols[3];
-  doc.text(config.cp1Data.biCP1Rate, colX, y + 5);
-  
+  doc.text('ORDER THIS WEEK:', margins.left + 6, y + 10);
+  doc.setTextColor(...(agedEscalation ? EXECUTIVE_COLORS.danger : cp1High ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success));
+  doc.text(
+    agedEscalation ? `Execute escalation now. Aged BI at ${agedSharePct.toFixed(0)}%.` : cp1High ? `Monitor. CP1 at ${config.cp1Data.cp1Rate}. Review in 7 days.` : `No action. Control holds.`,
+    margins.left + 6,
+    y + 20
+  );
+
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
@@ -673,90 +542,55 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     doc.setFillColor(0, 0, 0);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
     
-    drawPageHeader(doc, pageWidth, 'QUARTERLY TREND', 'Expert Spend', ctx);
+    drawPageHeader(doc, pageWidth, 'EXPERT SPEND CONTROL', 'Quarterly Trend (CEO Cut)', ctx);
     y = 44;
-    
-    // Quarterly data table
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.text('EXPERT SPEND - 7 QUARTER TREND', margins.left, y);
-    y += 6;
-    
-    // Header - red accent
-    doc.setFillColor(...EXECUTIVE_COLORS.azure);
-    doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    const qCols = [32, 32, 32, 32, 32, 26];
-    colX = margins.left + 4;
-    ['QUARTER', 'PAID', 'MONTHLY AVG', 'APPROVED', 'MONTHLY AVG', 'VARIANCE'].forEach((h, i) => {
-      doc.text(h, colX, y + 6);
-      colX += qCols[i];
-    });
-    y += 10;
-    
+
+    // Aggregate
     let totalPaid = 0;
     let totalApproved = 0;
-    
-    config.quarterlyExpertData.forEach((q, idx) => {
+    config.quarterlyExpertData.forEach((q) => {
       totalPaid += q.paid;
       totalApproved += q.approved;
-      
-      if (idx % 2 === 0) {
-        doc.setFillColor(25, 25, 25);
-        doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-      } else {
-        doc.setFillColor(18, 18, 18);
-        doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-      }
-      
-      colX = margins.left + 4;
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-      doc.text(q.quarter, colX, y + 5);
-      colX += qCols[0];
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...EXECUTIVE_COLORS.success);
-      doc.text(formatCurrency(q.paid, true), colX, y + 5);
-      colX += qCols[1];
-      
-      doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-      doc.text(formatCurrency(q.paidMonthly, true), colX, y + 5);
-      colX += qCols[2];
-      
-      doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-      doc.text(formatCurrency(q.approved, true), colX, y + 5);
-      colX += qCols[3];
-      
-      doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-      doc.text(formatCurrency(q.approvedMonthly, true), colX, y + 5);
-      colX += qCols[4];
-      
-      const varColor = q.variance >= 0 ? EXECUTIVE_COLORS.success : EXECUTIVE_COLORS.danger;
-      doc.setTextColor(...varColor);
-      doc.text(`${q.variance >= 0 ? '+' : ''}${formatCurrency(q.variance, true)}`, colX, y + 5);
-      
-      y += 9;
     });
-    
-    // Total row - red accent
-    doc.setFillColor(...EXECUTIVE_COLORS.azure);
-    doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
-    doc.setTextColor(255, 255, 255);
+    const totalVariance = totalPaid - totalApproved;
+
+    const trendBand = totalVariance < 0 ? '🔴 DISCIPLINE BROKEN' : totalVariance === 0 ? '🟢 DISCIPLINE HOLDING' : '🟢 DISCIPLINE HOLDING';
+    const trendOwner = 'Claims Ops';
+    const trendImpact = formatCurrency(Math.abs(totalVariance), true);
+    const trendOrder = totalVariance < 0 ? 'Freeze non-essential experts. Require pre-approval for all new requests.' : 'No action. Maintain cadence.';
+
+    drawKeyTakeaway(
+      doc,
+      margins.left,
+      y,
+      pageWidth - margins.left - margins.right,
+      `${trendBand} | OWNER: ${trendOwner} | 7Q variance ${totalVariance >= 0 ? '+' : ''}${formatCurrency(totalVariance, true)}. ${totalVariance < 0 ? 'Overspend.' : 'Within control.'}`,
+      totalVariance < 0 ? 'negative' : 'positive'
+    );
+    y += 34;
+
+    // Big numbers
+    const qkpi = [
+      { label: '7Q PAID', value: formatCurrency(totalPaid, true), sub: 'cash out' },
+      { label: '7Q APPROVED', value: formatCurrency(totalApproved, true), sub: 'authority' },
+      { label: 'VARIANCE', value: `${totalVariance >= 0 ? '+' : ''}${formatCurrency(totalVariance, true)}`, sub: totalVariance < 0 ? 'FAIL' : 'OK' },
+      { label: 'STATE', value: totalVariance < 0 ? 'BROKEN' : 'HOLDING', sub: 'discipline' },
+    ];
+    qkpi.forEach((m, i) => {
+      drawCompactKPI(doc, margins.left + i * (bkWidth + 8), y, bkWidth, 28, m);
+    });
+    y += 40;
+
+    // ORDER
+    doc.setFillColor(totalVariance < 0 ? 40 : 15, totalVariance < 0 ? 18 : 35, totalVariance < 0 ? 18 : 25);
+    doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 26, 3, 3, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    colX = margins.left + 4;
-    doc.text('7Q TOTAL', colX, y + 5);
-    colX += qCols[0];
-    doc.text(formatCurrency(totalPaid, true), colX, y + 5);
-    colX += qCols[1] + qCols[2];
-    doc.text(formatCurrency(totalApproved, true), colX, y + 5);
-    colX += qCols[3] + qCols[4];
-    doc.text(`${totalPaid - totalApproved >= 0 ? '+' : ''}${formatCurrency(totalPaid - totalApproved, true)}`, colX, y + 5);
-    
+    doc.setFontSize(9);
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.text('ORDER THIS WEEK:', margins.left + 6, y + 10);
+    doc.setTextColor(...(totalVariance < 0 ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.success));
+    doc.text(trendOrder, margins.left + 6, y + 20);
+
     drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   }
   
