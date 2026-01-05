@@ -116,7 +116,78 @@ export function DataTable({ data, view }: DataTableProps) {
 
   return (
     <div className="rounded-xl border border-border overflow-hidden bg-card">
-      <div className="overflow-x-auto">
+      {/* Mobile Card View */}
+      <div className="block sm:hidden">
+        {sortedData.slice(0, 50).map((matter, index) => (
+          <div 
+            key={`mobile-${matter.id}-${index}`}
+            className="p-3 border-b border-border last:border-b-0"
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <p className="font-mono text-sm text-primary font-medium">{matter.prefix}-{matter.claim}</p>
+                <p className="text-xs text-muted-foreground">{matter.uniqueRecord}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <StatusBadge status={matter.cwpCwn} />
+                <PainBadge level={matter.endPainLvl} />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <span className="text-muted-foreground">Team: </span>
+                <span>{matter.team}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Dept: </span>
+                <span>{matter.dept}</span>
+              </div>
+              {showAssignees && (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Adjuster: </span>
+                  <span>{matter.adjusterName}</span>
+                </div>
+              )}
+            </div>
+            
+            {showFinancials && (
+              <div className="flex items-center justify-between text-xs border-t border-border/50 pt-2 mt-2">
+                <div>
+                  <span className="text-muted-foreground">Net: </span>
+                  <span className={matter.netAmount > 100000 ? "text-red-400 font-medium" : ""}>
+                    {formatCurrency(matter.netAmount)}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => {
+                    setSelectedMatter(matter);
+                    setSmsDialogOpen(true);
+                  }}
+                  className="p-2 rounded-lg bg-primary/10 text-primary"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {sortedData.length === 0 && (
+          <div className="py-8 text-center text-muted-foreground text-sm">
+            No matters match your filters.
+          </div>
+        )}
+        
+        {sortedData.length > 50 && (
+          <div className="py-3 text-center text-xs text-muted-foreground border-t border-border">
+            Showing 50 of {sortedData.length} records
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr>
@@ -207,13 +278,13 @@ export function DataTable({ data, view }: DataTableProps) {
       </div>
       
       {sortedData.length === 0 && (
-        <div className="py-12 text-center text-muted-foreground">
+        <div className="hidden sm:block py-12 text-center text-muted-foreground">
           No matters match your current filters.
         </div>
       )}
       
       {sortedData.length > 100 && (
-        <div className="py-3 text-center text-sm text-muted-foreground border-t border-border">
+        <div className="hidden sm:block py-3 text-center text-sm text-muted-foreground border-t border-border">
           Showing first 100 of {sortedData.length} records
         </div>
       )}

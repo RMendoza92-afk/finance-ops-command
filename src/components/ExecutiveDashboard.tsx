@@ -678,20 +678,20 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
 
       {/* 2025 BI Spend Summary Banner */}
       <div 
-        className="bg-gradient-to-r from-[#0c2340] to-[#1a3a5c] border-2 border-[#b41e1e]/30 rounded-xl p-5 cursor-pointer hover:border-[#b41e1e] transition-colors shadow-lg"
+        className="bg-gradient-to-r from-[#0c2340] to-[#1a3a5c] border-2 border-[#b41e1e]/30 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#b41e1e] transition-colors shadow-lg"
         onDoubleClick={handleExportKPIs}
         title="Double-click to export"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-white">2025 YTD BI Spend: $395M Total</h2>
-            <p className="text-sm text-gray-300 mt-1">
-              Litigation Expenses: <span className="font-semibold text-white">$19M</span> • Through November 2025
+            <h2 className="text-lg sm:text-xl font-bold text-white">2025 YTD BI Spend: $395M</h2>
+            <p className="text-xs sm:text-sm text-gray-300 mt-1">
+              Lit Expenses: <span className="font-semibold text-white">$19M</span> • Nov 2025
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">$19M Expense Breakdown</p>
-            <div className="flex items-center gap-3">
+          <div className="text-left sm:text-right">
+            <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mb-1">Expense Breakdown</p>
+            <div className="flex items-center gap-2 sm:gap-3 text-sm">
               <span className="text-emerald-400 font-bold">$5.68M Expert</span>
               <span className="text-gray-400">vs</span>
               <span className="text-[#b41e1e] font-bold">$13.32M Waste</span>
@@ -700,24 +700,20 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
         </div>
         
         {/* Visual expense breakdown */}
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="flex items-center gap-4">
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex-1">
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
-                <span>Expert (Intentional Leverage)</span>
-                <span>Pre-Lit ATR Waste + Litigation Fees</span>
+              <div className="flex justify-between text-[10px] sm:text-xs text-gray-400 mb-1">
+                <span>Expert</span>
+                <span>Reactive Waste</span>
               </div>
-              <div className="w-full h-5 rounded-full bg-gray-700 overflow-hidden flex">
-                <div className="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: '29.9%' }}>
-                  $5.68M
+              <div className="w-full h-4 sm:h-5 rounded-full bg-gray-700 overflow-hidden flex">
+                <div className="bg-emerald-500 h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" style={{ width: '29.9%' }}>
+                  30%
                 </div>
-                <div className="bg-[#b41e1e] h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: '70.1%' }}>
-                  $13.32M
+                <div className="bg-[#b41e1e] h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" style={{ width: '70.1%' }}>
+                  70%
                 </div>
-              </div>
-              <div className="flex justify-between text-xs mt-1">
-                <span className="text-emerald-400 font-medium">30% Strategic</span>
-                <span className="text-[#b41e1e] font-medium">70% Reactive</span>
               </div>
             </div>
           </div>
@@ -765,25 +761,43 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
 
       {/* Quarterly Expert Spend Table */}
       <div 
-        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
+        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
         onDoubleClick={handleExportQuarterly}
         title="Double-click to export"
       >
         <div className="flex items-center gap-2 mb-1">
           <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
-          <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">2025 Litigation Expert Spend by Quarter</h3>
+          <h3 className="text-xs sm:text-sm font-semibold text-[#0c2340] uppercase tracking-wide">2025 Expert Spend</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-4 ml-3">YTD through November — Paid vs Approved</p>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4 ml-3">YTD through November</p>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Cards */}
+        <div className="block sm:hidden space-y-2">
+          {quarterlyExpertData.map((q) => (
+            <div key={q.quarter} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+              <span className="font-medium text-sm">{q.quarter}</span>
+              <div className="text-right">
+                <span className="text-sm text-success font-semibold">{formatCurrency(q.paid)}</span>
+                <span className="text-xs text-muted-foreground ml-2">paid</span>
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between p-2 bg-muted/50 rounded-lg font-bold">
+            <span className="text-sm">2025 YTD</span>
+            <span className="text-sm text-success">$5.68M</span>
+          </div>
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium">Quarter</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Paid</th>
-                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Paid Monthly Avg</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Monthly Avg</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Approved</th>
-                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Approved Monthly Avg</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Monthly Avg</th>
                 <th className="text-right py-2 px-3 text-muted-foreground font-medium">Variance</th>
               </tr>
             </thead>
@@ -792,9 +806,9 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                 <tr key={q.quarter} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="py-2 px-3 font-medium">{q.quarter}</td>
                   <td className="py-2 px-3 text-right text-success font-semibold">{formatCurrencyFull(q.paid)}</td>
-                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.paidAvgMonthly)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground hidden lg:table-cell">{formatCurrencyFull(q.paidAvgMonthly)}</td>
                   <td className="py-2 px-3 text-right">{formatCurrencyFull(q.approved)}</td>
-                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.approvedAvgMonthly)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground hidden lg:table-cell">{formatCurrencyFull(q.approvedAvgMonthly)}</td>
                   <td className={`py-2 px-3 text-right font-medium ${q.paid > q.approved ? 'text-warning' : 'text-success'}`}>
                     {q.paid > q.approved ? '+' : '-'}{formatCurrencyFull(Math.abs(q.approved - q.paid))}
                   </td>
@@ -803,9 +817,9 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
               <tr className="bg-muted/50 font-bold">
                 <td className="py-2 px-3">2025 YTD</td>
                 <td className="py-2 px-3 text-right text-success">$5,681,152</td>
-                <td className="py-2 px-3 text-right text-muted-foreground">$516,468</td>
+                <td className="py-2 px-3 text-right text-muted-foreground hidden lg:table-cell">$516,468</td>
                 <td className="py-2 px-3 text-right">$6,181,166</td>
-                <td className="py-2 px-3 text-right text-muted-foreground">$561,924</td>
+                <td className="py-2 px-3 text-right text-muted-foreground hidden lg:table-cell">$561,924</td>
                 <td className="py-2 px-3 text-right text-success">-$500,014</td>
               </tr>
             </tbody>
@@ -814,20 +828,20 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Reactive Cost Curve */}
         <div 
-          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
+          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
           onDoubleClick={handleExportCostCurve}
           title="Double-click to export"
         >
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
-            <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Reactive Cost Curve</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Reactive Cost Curve</h3>
           </div>
-          <p className="text-xs text-muted-foreground mb-4 ml-3">Cumulative posture spend by litigation stage — shows capital deployed reactively</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4 ml-3">Cumulative posture spend by stage</p>
           
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={costCurveData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -840,24 +854,25 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                 <XAxis 
                   dataKey="stage" 
                   stroke="hsl(var(--muted-foreground))" 
-                  fontSize={11}
+                  fontSize={10}
                   tickLine={false}
                 />
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))" 
-                  fontSize={11}
+                  fontSize={10}
                   tickFormatter={(v) => formatCurrency(v)}
                   tickLine={false}
                   axisLine={false}
+                  width={45}
                 />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
-                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'cumulative' ? 'Cumulative Spend' : 'Stage Spend']}
+                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'cumulative' ? 'Cumulative' : 'Stage']}
                   labelFormatter={(label) => `Stage: ${label}`}
                 />
                 <Area 
@@ -871,12 +886,12 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             </ResponsiveContainer>
           </div>
 
-          <div className="flex gap-4 mt-4 pt-4 border-t border-border">
+          <div className="grid grid-cols-4 gap-1 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
             {costCurveData.map(item => (
-              <div key={item.stage} className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground">{item.stage}</p>
-                <p className="text-sm font-semibold text-foreground">{formatCurrency(item.reactiveSpend)}</p>
-                <p className="text-xs text-muted-foreground">{item.count} claims</p>
+              <div key={item.stage} className="text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{item.stage}</p>
+                <p className="text-xs sm:text-sm font-semibold text-foreground">{formatCurrency(item.reactiveSpend)}</p>
+                <p className="text-[10px] text-muted-foreground hidden sm:block">{item.count} claims</p>
               </div>
             ))}
           </div>
@@ -884,41 +899,42 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
 
         {/* Spend Comparison by Stage */}
         <div 
-          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
+          className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
           onDoubleClick={handleExportCostCurve}
           title="Double-click to export"
         >
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
-            <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Expert vs Reactive by Stage</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Expert vs Reactive</h3>
           </div>
-          <p className="text-xs text-muted-foreground mb-4 ml-3">Strategic expert spend vs reactive posture spend — leverage decay visible</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4 ml-3">By litigation stage</p>
           
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costCurveData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
                   dataKey="stage" 
                   stroke="hsl(var(--muted-foreground))" 
-                  fontSize={11}
+                  fontSize={10}
                   tickLine={false}
                 />
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))" 
-                  fontSize={11}
+                  fontSize={10}
                   tickFormatter={(v) => formatCurrency(v)}
                   tickLine={false}
                   axisLine={false}
+                  width={45}
                 />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
-                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'expertSpend' ? 'Expert (Strategic)' : 'Reactive (Friction)']}
+                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'expertSpend' ? 'Expert' : 'Reactive']}
                 />
                 <Bar dataKey="expertSpend" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} name="Expert Spend" />
                 <Bar dataKey="reactiveSpend" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Reactive Spend" />
@@ -926,14 +942,14 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             </ResponsiveContainer>
           </div>
 
-          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-success"></div>
-              <span className="text-xs text-muted-foreground">Expert (Intentional)</span>
+          <div className="flex gap-4 sm:gap-6 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded bg-success"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Expert</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-destructive"></div>
-              <span className="text-xs text-muted-foreground">Reactive (Friction)</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded bg-destructive"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Reactive</span>
             </div>
           </div>
         </div>
@@ -941,32 +957,32 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
 
       {/* Executive Review Required */}
       <div 
-        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
+        className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#0c2340]/50 transition-colors shadow-md"
         onDoubleClick={handleExportExecutiveReview}
         title="Double-click to export all cases"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
-              <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Executive Review Required</h3>
-              <span className="text-xs font-bold text-[#b41e1e] bg-[#b41e1e]/10 px-2 py-0.5 rounded-full">
-                {executiveReviewCases.length} TOTAL
+              <h3 className="text-xs sm:text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Executive Review</h3>
+              <span className="text-[10px] sm:text-xs font-bold text-[#b41e1e] bg-[#b41e1e]/10 px-1.5 sm:px-2 py-0.5 rounded-full">
+                {executiveReviewCases.length}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground ml-3">
-              Complete list of high-risk files • Click to correlate with open inventory • Double-click to export
+            <p className="text-[10px] sm:text-xs text-muted-foreground ml-3 hidden sm:block">
+              Click to correlate with open inventory
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
+              <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#b41e1e] animate-pulse"></span>
-                CRITICAL ({executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length})
+                <span className="hidden sm:inline">CRITICAL</span> ({executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length})
               </span>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                REQUIRED ({executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length})
+                <span className="hidden sm:inline">REQUIRED</span> ({executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length})
               </span>
             </div>
             {executiveReviewCases.length > 8 && (
@@ -977,29 +993,28 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                   e.stopPropagation();
                   setShowAllBombs(!showAllBombs);
                 }}
-                className="text-xs h-7"
+                className="text-[10px] sm:text-xs h-6 sm:h-7 px-2"
               >
                 {showAllBombs ? (
-                  <>Show Less <ChevronUp className="ml-1 h-3 w-3" /></>
+                  <>Less <ChevronUp className="ml-1 h-3 w-3" /></>
                 ) : (
-                  <>Show All ({executiveReviewCases.length}) <ChevronDown className="ml-1 h-3 w-3" /></>
+                  <>All ({executiveReviewCases.length}) <ChevronDown className="ml-1 h-3 w-3" /></>
                 )}
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 max-h-[400px] sm:max-h-[600px] overflow-y-auto">
           {(showAllBombs ? executiveReviewCases : executiveReviewCases.slice(0, 8)).map((caseItem, idx) => (
             <div
               key={caseItem.uniqueRecord}
-              className="relative text-left p-3 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm cursor-pointer"
+              className="relative text-left p-2 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm cursor-pointer"
               onClick={() => onDrilldown(caseItem.uniqueRecord)}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 handleExportClaim(caseItem);
               }}
-              title={`Matter ID: ${caseItem.matterId} • Click for drilldown, double-click to export`}
             >
               {/* SMS Button */}
               <button
@@ -1014,7 +1029,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                   });
                   setSmsDialogOpen(true);
                 }}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10"
                 title="Send SMS Alert"
               >
                 <MessageSquare className="h-3.5 w-3.5" />

@@ -521,10 +521,10 @@ export function LitigationChat() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50"
         size="icon"
       >
-        <MessageCircle className="h-6 w-6" />
+        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
     );
   }
@@ -532,8 +532,8 @@ export function LitigationChat() {
   return (
     <Card className={`fixed z-50 shadow-2xl transition-all duration-300 ${
       isMinimized 
-        ? "bottom-6 right-6 w-72 h-14" 
-        : "bottom-6 right-6 w-[420px] h-[600px] max-h-[80vh]"
+        ? "bottom-4 right-4 sm:bottom-6 sm:right-6 w-64 sm:w-72 h-12 sm:h-14" 
+        : "inset-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[600px] sm:max-h-[80vh]"
     }`}>
       <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
