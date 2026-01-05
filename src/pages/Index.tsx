@@ -233,21 +233,7 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="font-medium text-foreground">{filteredData.length.toLocaleString()}</span>
-                <span>of {litigationData.length.toLocaleString()} records</span>
-              </div>
-              <div className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-semibold">
-                {dataSource === 'database' ? 'DATABASE' : 'CSV'}
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center gap-4 text-sm text-muted-foreground">
-              <span>CWP: <span className="font-semibold text-foreground">{stats.cwpCount.toLocaleString()}</span></span>
-              <span className="w-px h-4 bg-border"></span>
-              <span>CWN: <span className="font-semibold text-foreground">{stats.cwnCount.toLocaleString()}</span></span>
-            </div>
+            {/* Removed record count and CWP/CWN stats per user request */}
           </div>
         </div>
 
