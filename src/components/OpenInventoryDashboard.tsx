@@ -687,7 +687,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       
       // Build executive report configuration with quality gates
       const reportConfig: ExecutiveReportConfig = {
-        title: 'CP1 Limits Tendered Analysis',
+        title: 'CP1 Analysis',
         subtitle: ctx.isMonday ? 'Weekly Status Report' : 
                   ctx.isQuarterEnd ? 'Quarter-End Analysis' : 
                   ctx.isMonthEnd ? 'Month-End Report' : 'Status Report',
@@ -695,7 +695,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         classification: 'CONFIDENTIAL',
         
         executiveSummary: {
-          keyTakeaway: `CP1 tendered rate is ${CP1_DATA.cp1Rate}% (${CP1_DATA.totals.yes.toLocaleString()} of ${CP1_DATA.totals.grandTotal.toLocaleString()} claims). ${wowDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(wowDelta).toFixed(1)}% WoW. BI exposure at 34.2% CP1 rate drives 88% of limits tendered volume. 365+ day claims represent highest risk concentration.`,
+          keyTakeaway: `CP1 rate is ${CP1_DATA.cp1Rate}% (${CP1_DATA.totals.yes.toLocaleString()} of ${CP1_DATA.totals.grandTotal.toLocaleString()} claims). ${wowDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(wowDelta).toFixed(1)}% WoW. BI exposure at 34.2% CP1 rate drives 88% of CP1 volume. 365+ day claims represent highest risk concentration.`,
           
           metrics: [
             {
@@ -704,7 +704,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               context: 'Current Inventory'
             },
             {
-              label: 'CP1 Tendered',
+              label: 'CP1',
               value: CP1_DATA.totals.yes.toLocaleString(),
               delta: wowDelta,
               deltaLabel: 'WoW',
@@ -728,7 +728,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             {
               priority: 'critical',
               headline: `365+ day BI claims: ${((CP1_DATA.biByAge[0].yes / CP1_DATA.biTotal.yes) * 100).toFixed(0)}% of total CP1 exposure`,
-              action: 'Prioritize aged claim resolution to reduce limits tendered concentration'
+              action: 'Prioritize aged claim resolution to reduce CP1 concentration'
             },
             {
               priority: 'high',
@@ -742,18 +742,18 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             },
             {
               priority: 'info',
-              headline: `WoW trend: ${wowDelta >= 0 ? '+' : ''}${wowDelta.toFixed(1)}% indicates ${wowDelta >= 0 ? 'rising' : 'declining'} limits tendered activity`,
+              headline: `WoW trend: ${wowDelta >= 0 ? '+' : ''}${wowDelta.toFixed(1)}% indicates ${wowDelta >= 0 ? 'rising' : 'declining'} CP1 activity`,
               action: wowDelta >= 0 ? 'Monitor closely for continued upward pressure' : 'Maintain current resolution velocity'
             }
           ],
           
-          bottomLine: `Limits tendered exposure increased ${Math.abs(yoyDelta).toFixed(1)}% year-over-year. Aged BI claims (365+ days) represent the largest concentration risk at ${((CP1_DATA.biByAge[0].yes / CP1_DATA.totals.yes) * 100).toFixed(0)}% of total CP1 inventory. Recommend focused resolution initiative for claims exceeding policy limits.`
+          bottomLine: `CP1 exposure increased ${Math.abs(yoyDelta).toFixed(1)}% year-over-year. Aged BI claims (365+ days) represent the largest concentration risk at ${((CP1_DATA.biByAge[0].yes / CP1_DATA.totals.yes) * 100).toFixed(0)}% of total CP1 inventory. Recommend focused resolution initiative for claims exceeding policy limits.`
         },
         
         tables: [
           {
             title: 'CP1 Rate by Coverage Type',
-            headers: ['Coverage', 'Total Claims', 'CP1 Tendered', 'CP1 Rate', 'Share of CP1'],
+            headers: ['Coverage', 'Total Claims', 'CP1', 'CP1 Rate', 'Share of CP1'],
             rows: [
               ...CP1_DATA.byCoverage.map(row => ({
                 cells: [
@@ -926,13 +926,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       // Sheet 1: Executive Summary
       const summaryData = [
-        ['CP1 LIMITS TENDERED ANALYSIS'],
+        ['CP1 ANALYSIS'],
         [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
         [],
         ['EXECUTIVE SUMMARY'],
         ['Metric', 'Value'],
         ['Total Claims', CP1_DATA.totals.grandTotal],
-        ['CP1 Tendered', CP1_DATA.totals.yes],
+        ['CP1', CP1_DATA.totals.yes],
         ['No CP', CP1_DATA.totals.noCP],
         ['CP1 Rate', `${CP1_DATA.cp1Rate}%`],
         ['BI CP1 Rate', '34.2%'],
@@ -2328,7 +2328,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <ArrowUpRight className="h-5 w-5 text-warning" />
           </div>
           
-          {/* CP1 - Limits Tendered Claims */}
+          {/* CP1 Claims */}
           <div 
             className="flex items-center gap-4 p-4 bg-success/5 rounded-xl border border-success/30 cursor-pointer hover:border-success/50 transition-all hover:shadow-lg"
             onClick={() => setShowCP1Drawer(true)}
@@ -2337,7 +2337,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <CheckCircle2 className="h-6 w-6 text-success" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1 Limits Tendered</p>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1</p>
               <p className="text-2xl font-bold text-success mt-1">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-2">({CP1_DATA.cp1Rate}%)</span></p>
               <p className="text-sm text-muted-foreground mt-1">
                 BI: <span className="text-success font-semibold">{CP1_DATA.byCoverage[0].yes.toLocaleString()}</span> • PD: <span className="font-medium">{CP1_DATA.byCoverage[1].yes.toLocaleString()}</span>
@@ -3617,7 +3617,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-success" />
-                CP1 Limits Tendered Analysis
+                CP1 Analysis
               </SheetTitle>
               <div className="flex gap-2">
                 <Button 
@@ -3649,7 +3649,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               </div>
             </div>
             <SheetDescription>
-              Policy limits tendered claims analysis by coverage type and age
+              CP1 claims analysis by coverage type and age
             </SheetDescription>
           </SheetHeader>
 
@@ -3657,7 +3657,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             {/* Summary Cards */}
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-success/10 rounded-lg border border-success/30">
-                <p className="text-xs text-muted-foreground uppercase">CP1 Tendered</p>
+                <p className="text-xs text-muted-foreground uppercase">CP1</p>
                 <p className="text-2xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}</p>
                 <p className="text-xs text-success">{CP1_DATA.cp1Rate}% of claims</p>
               </div>
