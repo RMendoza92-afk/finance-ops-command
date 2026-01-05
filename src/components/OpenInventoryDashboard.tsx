@@ -1530,14 +1530,20 @@ export function OpenInventoryDashboard() {
                 const areas = filterData.areas;
                 const sampleSize = Math.min(filterData.count, 15);
                 
+                // Generate claim IDs in format Prefix-Claim (matching CSV format)
+                const prefixes = ['39', '78', '72', '65', '62', '89', '63', '66', '68', '80', '73', '67', '40'];
                 for (let i = 0; i < sampleSize; i++) {
                   const area = areas[i % areas.length];
                   const ageBucket = filterData.ageBucket === 'Mixed' 
                     ? ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'][i % 4]
                     : filterData.ageBucket;
                   
+                  // Use format matching actual claim numbers: Prefix-ClaimNumber
+                  const prefix = prefixes[i % prefixes.length];
+                  const claimNum = 100000 + Math.floor(Math.random() * 900000);
+                  
                   claimsToInsert.push({
-                    claim_id: `CLM-${area.area.split(' ')[0]}-${1000 + i}`,
+                    claim_id: `${prefix}-${claimNum}`,
                     area: area.area,
                     loss_description: TEXAS_REAR_END_DATA.lossDescription,
                     reserves: Math.round(area.reserves / area.claims),
@@ -1709,12 +1715,54 @@ export function OpenInventoryDashboard() {
         )}
       </div>
 
-      <div className="bg-card border border-destructive/30 rounded-xl p-5">
+      <div 
+        className="bg-card border border-destructive/30 rounded-xl p-5 cursor-pointer hover:bg-muted/30 transition-colors"
+        onDoubleClick={async () => {
+          const agedGroups = data.typeGroupSummaries
+            .filter(g => g.age365Plus > 50)
+            .sort((a, b) => b.age365Plus - a.age365Plus)
+            .slice(0, 10);
+          
+          const manager = selectedReviewer || 'Richie Mendoza';
+          const exportData: ExportableData = {
+            title: 'Aged Inventory Alert',
+            subtitle: 'Claims over 365 days by type requiring executive attention',
+            timestamp,
+            affectsManager: manager,
+            directive: 'Immediate attention required for all aged claims over 365 days. These claims represent significant exposure and require executive review and resolution strategy.',
+            columns: ['Type Group', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Total', '% Aged'],
+            rows: agedGroups.map(group => [
+              group.typeGroup,
+              formatNumber(group.age365Plus),
+              formatNumber(group.age181To365),
+              formatNumber(group.age61To180),
+              formatNumber(group.ageUnder60),
+              formatNumber(group.grandTotal),
+              `${((group.age365Plus / group.grandTotal) * 100).toFixed(0)}%`,
+            ]),
+            rawClaimData: [{
+              columns: ['Type Group', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Grand Total', 'Aged Percentage'],
+              rows: agedGroups.map(group => [
+                group.typeGroup,
+                group.age365Plus,
+                group.age181To365,
+                group.age61To180,
+                group.ageUnder60,
+                group.grandTotal,
+                ((group.age365Plus / group.grandTotal) * 100).toFixed(1),
+              ]),
+              sheetName: 'Aged Claims Detail',
+            }],
+          };
+          await exportBoth(exportData);
+          toast.success('PDF + Excel exported: Aged Inventory Alert');
+        }}
+      >
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="h-5 w-5 text-destructive" />
           <div>
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Aged Inventory Alert</h3>
-            <p className="text-xs text-muted-foreground">Claims over 365 days by type require immediate executive attention</p>
+            <p className="text-xs text-muted-foreground">Claims over 365 days by type require immediate executive attention • Double-click to export</p>
           </div>
         </div>
 
