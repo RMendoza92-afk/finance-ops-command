@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ExternalLink, AlertTriangle, Clock, Flame } from "lucide-react";
+import { Loader2, AlertTriangle, Clock, Flame, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   calculateExecutiveReview, 
@@ -281,10 +282,49 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
         {/* Footer */}
         {claims.length > 0 && (
           <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-            <span>Showing {claims.length} claims (max 100) • Sorted by age descending</span>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Close
-            </Button>
+            <span>Showing {claimsWithReview.length} claims • Sorted by executive review score</span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  const exportData = claimsWithReview.map(c => ({
+                    'Matter ID': c.matter_id,
+                    'Review Level': c.executiveReview.level,
+                    'Score': c.executiveReview.score,
+                    'Claimant': c.claimant || '',
+                    'Lead': c.matter_lead || '',
+                    'Location': c.location || '',
+                    'Days Open': c.days_open || 0,
+                    'Claim Age (Years)': c.claimAge,
+                    'Exposure': c.total_amount || 0,
+                    'Severity': c.severity || '',
+                    'Filing Date': c.filing_date || '',
+                    'Reasons': c.executiveReview.reasons.join(' | '),
+                  }));
+                  
+                  const ws = XLSX.utils.json_to_sheet(exportData);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
+                  
+                  // Set column widths
+                  ws['!cols'] = [
+                    { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 25 }, 
+                    { wch: 18 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
+                    { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 50 }
+                  ];
+                  
+                  XLSX.writeFile(wb, `CP1_${coverage}_Executive_Review_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                }}
+                className="gap-1.5"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
