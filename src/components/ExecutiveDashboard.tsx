@@ -270,10 +270,10 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
   };
 
   // Export handlers for double-click
-  const handleExportKPIs = useCallback(() => {
+  const handleExportKPIs = useCallback(async () => {
     const exportData: ExportableData = {
-      title: '2025 YTD BI Spend Summary',
-      subtitle: 'Litigation Discipline Command Center - KPI Overview',
+      title: 'KPI Dashboard Summary',
+      subtitle: 'Expert Spend and Friction Metrics',
       timestamp,
       affectsManager: 'Executive Leadership',
       summary: {
@@ -293,11 +293,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         ['Reactive %', '70.1%', 'Friction spend ratio'],
       ],
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: KPI Summary');
   }, [exportBoth, timestamp]);
 
-  const handleExportQuarterly = useCallback(() => {
+  const handleExportQuarterly = useCallback(async () => {
     const exportData: ExportableData = {
       title: '2025 Quarterly Expert Spend',
       subtitle: 'Paid vs Approved by Quarter',
@@ -318,11 +318,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         formatCurrencyFull(q.approved - q.paid),
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Quarterly Expert Spend');
   }, [exportBoth, timestamp, quarterlyExpertData]);
 
-  const handleExportCostCurve = useCallback(() => {
+  const handleExportCostCurve = useCallback(async () => {
     const exportData: ExportableData = {
       title: 'Reactive Cost Curve Analysis',
       subtitle: 'Cumulative posture spend by litigation stage',
@@ -337,11 +337,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         d.count,
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Cost Curve');
   }, [exportBoth, timestamp, costCurveData]);
 
-  const handleExportExecutiveReview = useCallback(() => {
+  const handleExportExecutiveReview = useCallback(async () => {
     const exportData: ExportableData = {
       title: 'Executive Review Required',
       subtitle: 'Files requiring executive closure',
@@ -364,11 +364,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         c.executiveReview.reasons[0] || '',
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Executive Review Cases');
   }, [exportBoth, timestamp, executiveReviewCases]);
 
-  const handleExportClaim = useCallback((caseItem: typeof executiveReviewCases[0]) => {
+  const handleExportClaim = useCallback(async (caseItem: typeof executiveReviewCases[0]) => {
     const exportData: ExportableData = {
       title: `Claim Detail: ${caseItem.claim}`,
       subtitle: `Executive Review - ${caseItem.executiveReview.level}`,
@@ -388,7 +388,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       columns: ['Review Reason'],
       rows: caseItem.executiveReview.reasons.map(r => [r]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success(`PDF + Excel exported: ${caseItem.claim}`);
   }, [exportBoth, timestamp]);
 

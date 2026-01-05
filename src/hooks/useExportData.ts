@@ -1,9 +1,7 @@
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
-
-// Base64 encoded Loya logo (FLI logo)
-const LOYA_LOGO_BASE64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCABkAGQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==';
+import loyaLogo from '@/assets/fli_logo.jpg';
 
 export interface ManagerTracking {
   name: string;
@@ -23,11 +21,33 @@ export interface ExportableData {
   rows: (string | number)[][];
 }
 
+// Helper to load image as base64
+const loadImageAsBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      } else {
+        reject(new Error('Could not get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
 export function useExportData() {
-  const generatePDF = (data: ExportableData) => {
+  const generatePDF = async (data: ExportableData) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 20;
+    let yPos = 28;
 
     // Professional color palette
     const navy = { r: 12, g: 35, b: 64 };
@@ -35,16 +55,17 @@ export function useExportData() {
     const gray = { r: 120, g: 120, b: 120 };
     const lightGray = { r: 245, g: 245, b: 245 };
 
-    // ====== CLEAN HEADER ======
-    // Logo placeholder box
-    doc.setFillColor(navy.r, navy.g, navy.b);
-    doc.rect(14, 12, 8, 8, 'F');
-    
-    // Company name
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(navy.r, navy.g, navy.b);
-    doc.text('FRED LOYA INSURANCE', 26, 18);
+    // ====== HEADER WITH LOGO ======
+    try {
+      const logoBase64 = await loadImageAsBase64(loyaLogo);
+      doc.addImage(logoBase64, 'JPEG', 14, 8, 50, 14);
+    } catch (e) {
+      // Fallback text if logo fails
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text('FRED LOYA INSURANCE', 14, 18);
+    }
     
     // Thin accent line
     doc.setDrawColor(red.r, red.g, red.b);
@@ -383,8 +404,8 @@ export function useExportData() {
     return filename;
   };
 
-  const exportBoth = (data: ExportableData) => {
-    const pdfFile = generatePDF(data);
+  const exportBoth = async (data: ExportableData) => {
+    const pdfFile = await generatePDF(data);
     const xlsFile = generateExcel(data);
     return { pdfFile, xlsFile };
   };
