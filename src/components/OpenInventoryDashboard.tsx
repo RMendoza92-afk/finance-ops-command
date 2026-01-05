@@ -699,6 +699,28 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     closed: 2,
   };
 
+  // CP1 (Limits Tendered / Policy Limits Offered) Data by Coverage
+  const CP1_DATA = {
+    byCoverage: [
+      { coverage: 'BI', noCP: 12066, yes: 6258, total: 18324 },
+      { coverage: 'PD', noCP: 5844, yes: 566, total: 6410 },
+      { coverage: 'UM', noCP: 866, yes: 219, total: 1085 },
+      { coverage: 'CL', noCP: 640, yes: 31, total: 671 },
+      { coverage: 'OC', noCP: 173, yes: 1, total: 174 },
+      { coverage: 'UI', noCP: 26, yes: 28, total: 54 },
+      { coverage: 'UP', noCP: 2, yes: 22, total: 24 },
+    ],
+    totals: {
+      noCP: 19637,
+      yes: 7105,
+      grandTotal: 26742,
+    },
+    // Top CP1 coverages (BI has most CP1 offers)
+    topCP1Coverage: 'BI',
+    topCP1Count: 6258,
+    cp1Rate: ((7105 / 26742) * 100).toFixed(1), // 26.6%
+  };
+
   // EXECUTIVE METRICS - Trend Analysis & Closure Data
   const EXECUTIVE_METRICS = {
     // Month-over-month trends (simulated - would come from historical data)
@@ -1783,22 +1805,20 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
           
           {/* CP1 - Limits Tendered Claims */}
-          {data?.cp1Data && (
-            <div className="flex items-center gap-4 bg-accent/10 rounded-lg p-2 -m-2 border border-accent/20">
-              <div className="p-2 bg-accent/20 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground uppercase">CP1 - Limits Tendered</p>
-                <p className="text-xl font-bold text-accent-foreground">{data.cp1Data.total}<span className="text-sm font-normal text-muted-foreground ml-1">claims</span></p>
-                <p className="text-xs text-muted-foreground">
-                  <span className="text-destructive font-medium">{data.cp1Data.age365Plus}</span> aged 365+ •{' '}
-                  <span className="text-warning font-medium">{data.cp1Data.age181To365}</span> aged 181-365 •{' '}
-                  <span className="text-success font-medium">{data.cp1Data.age61To180 + data.cp1Data.ageUnder60}</span> current
-                </p>
-              </div>
+          <div className="flex items-center gap-4 bg-success/10 rounded-lg p-2 -m-2 border border-success/30">
+            <div className="p-2 bg-success/20 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
-          )}
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground uppercase">CP1 - Limits Tendered</p>
+              <p className="text-xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-1">claims ({CP1_DATA.cp1Rate}%)</span></p>
+              <p className="text-xs text-muted-foreground">
+                BI: <span className="text-success font-medium">{CP1_DATA.byCoverage[0].yes.toLocaleString()}</span> •{' '}
+                PD: <span className="font-medium">{CP1_DATA.byCoverage[1].yes.toLocaleString()}</span> •{' '}
+                UM: <span className="font-medium">{CP1_DATA.byCoverage[2].yes.toLocaleString()}</span>
+              </p>
+            </div>
+          </div>
         </div>
         </div>
         )}
