@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
@@ -23,6 +24,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { format, addDays } from "date-fns";
 
 type ClaimReview = Tables<"claim_reviews">;
 
@@ -37,6 +39,10 @@ export function OpenInventoryDashboard() {
   const [deploying, setDeploying] = useState(false);
   const [reviews, setReviews] = useState<ClaimReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
+  const [deadline, setDeadline] = useState<string>(format(addDays(new Date(), 3), 'yyyy-MM-dd'));
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [testMode, setTestMode] = useState(true);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -632,7 +638,10 @@ export function OpenInventoryDashboard() {
             </h4>
             <RadioGroup 
               value={selectedClaimFilter} 
-              onValueChange={setSelectedClaimFilter}
+              onValueChange={(val) => {
+                setSelectedClaimFilter(val);
+                setAiSummary(''); // Reset summary when filter changes
+              }}
               className="space-y-2"
             >
               <div className="flex items-center space-x-2">
@@ -653,23 +662,123 @@ export function OpenInventoryDashboard() {
               </div>
             </RadioGroup>
 
-            <div className="mt-3">
+            <div className="mt-3 space-y-2">
               <select
                 value={selectedReviewer}
-                onChange={(e) => setSelectedReviewer(e.target.value)}
-                className="w-full p-2 rounded-lg border border-border bg-background text-sm mb-2"
+                onChange={(e) => {
+                  setSelectedReviewer(e.target.value);
+                  setAiSummary(''); // Reset summary when reviewer changes
+                }}
+                className="w-full p-2 rounded-lg border border-border bg-background text-sm"
               >
                 <option value="">Select reviewer...</option>
                 {REVIEWERS.map(r => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
+
+              {/* Deadline Picker */}
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => {
+                    setDeadline(e.target.value);
+                    setAiSummary(''); // Reset summary when deadline changes
+                  }}
+                  min={format(new Date(), 'yyyy-MM-dd')}
+                  className="flex-1 p-2 rounded-lg border border-border bg-background text-sm"
+                />
+              </div>
+
+              {/* Test Mode Toggle */}
+              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
+                <div className="flex items-center gap-2">
+                  <TestTube className="h-4 w-4 text-amber-500" />
+                  <span className="text-xs font-medium">SMS Test Mode</span>
+                </div>
+                <Switch checked={testMode} onCheckedChange={setTestMode} />
+              </div>
+              {testMode && (
+                <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+                  Test mode: SMS will be simulated (shown in-app only)
+                </p>
+              )}
             </div>
+
+            {/* Generate AI Summary Button */}
+            <Button 
+              className="w-full mt-3" 
+              variant="outline"
+              disabled={!selectedClaimFilter || !selectedReviewer || generatingSummary}
+              onClick={async () => {
+                setGeneratingSummary(true);
+                const claimCount = selectedClaimFilter === 'all' ? 47 : 
+                  selectedClaimFilter === 'aged-365' ? 18 :
+                  selectedClaimFilter === 'high-reserve' ? 12 : 5;
+                
+                const reserves = selectedClaimFilter === 'aged-365' ? 13600000 :
+                  selectedClaimFilter === 'high-reserve' ? 8500000 :
+                  selectedClaimFilter === 'no-eval' ? 2100000 : 33000000;
+                
+                try {
+                  const { data, error } = await supabase.functions.invoke('generate-directive-summary', {
+                    body: {
+                      claimFilter: selectedClaimFilter,
+                      claimCount,
+                      region: 'Texas 101-110',
+                      lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                      reviewer: selectedReviewer,
+                      deadline: format(new Date(deadline), 'MMMM d, yyyy'),
+                      totalReserves: reserves,
+                    }
+                  });
+
+                  if (error) throw error;
+                  setAiSummary(data.summary);
+                  toast.success("Directive summary generated", { icon: <Sparkles className="h-4 w-4" /> });
+                } catch (err: any) {
+                  console.error('Summary error:', err);
+                  toast.error("Failed to generate summary");
+                  // Fallback summary
+                  setAiSummary(`DIRECTIVE: Review ${claimCount} ${selectedClaimFilter.replace('-', ' ')} claims in Texas 101-110. Total exposure: $${(reserves/1000000).toFixed(1)}M. Deadline: ${format(new Date(deadline), 'MMMM d, yyyy')}. Assigned to: ${selectedReviewer}.`);
+                }
+                setGeneratingSummary(false);
+              }}
+            >
+              {generatingSummary ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Generate AI Summary
+            </Button>
+
+            {/* AI Summary Display */}
+            {aiSummary && (
+              <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  <span className="text-xs font-semibold text-primary uppercase">Executive Directive</span>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{aiSummary}</p>
+                <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Due: {format(new Date(deadline), 'MMM d, yyyy')}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedReviewer}
+                  </Badge>
+                </div>
+              </div>
+            )}
 
             <Button 
               className="w-full mt-2" 
               variant="default"
-              disabled={!selectedClaimFilter || !selectedReviewer || deploying}
+              disabled={!selectedClaimFilter || !selectedReviewer || !aiSummary || deploying}
               onClick={async () => {
                 setDeploying(true);
                 const claimCount = selectedClaimFilter === 'all' ? 47 : 
@@ -698,7 +807,7 @@ export function OpenInventoryDashboard() {
                     status: 'assigned' as const,
                     assigned_to: selectedReviewer,
                     assigned_at: new Date().toISOString(),
-                    notes: directive || `Review batch: ${selectedClaimFilter}`,
+                    notes: `${aiSummary}\n\nDeadline: ${format(new Date(deadline), 'MMMM d, yyyy')}`,
                   });
                 }
                 
@@ -710,13 +819,29 @@ export function OpenInventoryDashboard() {
                   console.error('Deploy error:', error);
                   toast.error("Failed to deploy directive");
                 } else {
+                  // Handle SMS notification
+                  if (testMode) {
+                    // Simulate SMS in test mode
+                    toast.success(
+                      <div className="space-y-1">
+                        <p className="font-semibold">📱 SMS Simulated (Test Mode)</p>
+                        <p className="text-xs text-muted-foreground">
+                          To: {selectedReviewer}<br/>
+                          {aiSummary.slice(0, 100)}...
+                        </p>
+                      </div>,
+                      { duration: 8000 }
+                    );
+                  }
+                  
                   toast.success(`Deployed ${claimsToInsert.length} claims to ${selectedReviewer}`, {
-                    description: "Track progress in real-time below",
+                    description: `Deadline: ${format(new Date(deadline), 'MMM d, yyyy')}`,
                     icon: <CheckCircle2 className="h-4 w-4" />
                   });
                   setSelectedClaimFilter('');
                   setSelectedReviewer('');
                   setDirective('');
+                  setAiSummary('');
                 }
                 setDeploying(false);
               }}
@@ -726,10 +851,10 @@ export function OpenInventoryDashboard() {
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Deploy to {selectedReviewer || 'Reviewer'}
+              Deploy Directive
             </Button>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Track progress in real-time below
+              {!aiSummary ? "Generate summary first to deploy" : "Track progress in real-time below"}
             </p>
           </div>
         </div>
