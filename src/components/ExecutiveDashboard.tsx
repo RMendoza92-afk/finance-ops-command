@@ -1,7 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { DollarSign, TrendingUp, AlertTriangle, Target } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   AreaChart,
   Area,
@@ -47,6 +50,8 @@ function getExpertType(expCategory: string): string {
 }
 
 export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProps) {
+  const { exportBoth } = useExportData();
+  const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   // Aggregate data by unique record (claim)
   const aggregatedData = useMemo(() => {
     const grouped = new Map<string, {
@@ -264,10 +269,138 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
+  // Export handlers for double-click
+  const handleExportKPIs = useCallback(() => {
+    const exportData: ExportableData = {
+      title: '2025 YTD BI Spend Summary',
+      subtitle: 'Litigation Discipline Command Center - KPI Overview',
+      timestamp,
+      summary: {
+        'Total BI Spend': '$395,000,000',
+        'Litigation Expenses': '$19,000,000',
+        'Expert Spend': '$5,681,152',
+        'Reactive Waste': '$13,318,848',
+        'Waste Ratio': '2.3x',
+      },
+      columns: ['Metric', 'Value', 'Notes'],
+      rows: [
+        ['Total BI Spend', '$395,000,000', 'All Bodily Injury YTD'],
+        ['Litigation Expenses', '$19,000,000', 'Litigation portion'],
+        ['Expert Spend', '$5,681,152', '$516K avg/month'],
+        ['Reactive Waste', '$13,318,848', 'Pre-lit ATR + Lit fees'],
+        ['Expert %', '29.9%', 'Strategic spend ratio'],
+        ['Reactive %', '70.1%', 'Friction spend ratio'],
+      ],
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: KPI Summary');
+  }, [exportBoth, timestamp]);
+
+  const handleExportQuarterly = useCallback(() => {
+    const exportData: ExportableData = {
+      title: '2025 Quarterly Expert Spend',
+      subtitle: 'Paid vs Approved by Quarter',
+      timestamp,
+      summary: {
+        'YTD Paid': '$5,681,152',
+        'YTD Approved': '$6,181,166',
+        'Monthly Avg Paid': '$516,468',
+      },
+      columns: ['Quarter', 'Paid', 'Paid Monthly Avg', 'Approved', 'Approved Monthly Avg', 'Variance'],
+      rows: quarterlyExpertData.map(q => [
+        q.quarter,
+        formatCurrencyFull(q.paid),
+        formatCurrencyFull(q.paidAvgMonthly),
+        formatCurrencyFull(q.approved),
+        formatCurrencyFull(q.approvedAvgMonthly),
+        formatCurrencyFull(q.approved - q.paid),
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Quarterly Expert Spend');
+  }, [exportBoth, timestamp, quarterlyExpertData]);
+
+  const handleExportCostCurve = useCallback(() => {
+    const exportData: ExportableData = {
+      title: 'Reactive Cost Curve Analysis',
+      subtitle: 'Cumulative posture spend by litigation stage',
+      timestamp,
+      columns: ['Stage', 'Reactive Spend', 'Expert Spend', 'Cumulative', 'Claim Count'],
+      rows: costCurveData.map(d => [
+        d.stage,
+        formatCurrencyFull(d.reactiveSpend),
+        formatCurrencyFull(d.expertSpend),
+        formatCurrencyFull(d.cumulative),
+        d.count,
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Cost Curve');
+  }, [exportBoth, timestamp, costCurveData]);
+
+  const handleExportExecutiveReview = useCallback(() => {
+    const exportData: ExportableData = {
+      title: 'Executive Review Required',
+      subtitle: 'Files requiring executive closure',
+      timestamp,
+      summary: {
+        'Critical Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length,
+        'Required Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length,
+        'Total Exposure': formatCurrencyFull(executiveReviewCases.reduce((s, c) => s + c.expense, 0)),
+      },
+      columns: ['Claim', 'Level', 'Exposure', 'Age (Years)', 'Stage', 'Adjuster', 'Score', 'Top Reason'],
+      rows: executiveReviewCases.map(c => [
+        c.claim,
+        c.executiveReview.level,
+        formatCurrencyFull(c.expense),
+        c.claimAge,
+        c.stage,
+        c.adjuster,
+        c.executiveReview.score,
+        c.executiveReview.reasons[0] || '',
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Executive Review Cases');
+  }, [exportBoth, timestamp, executiveReviewCases]);
+
+  const handleExportClaim = useCallback((caseItem: typeof executiveReviewCases[0]) => {
+    const exportData: ExportableData = {
+      title: `Claim Detail: ${caseItem.claim}`,
+      subtitle: `Executive Review - ${caseItem.executiveReview.level}`,
+      timestamp,
+      summary: {
+        'Claim ID': caseItem.claim,
+        'Review Level': caseItem.executiveReview.level,
+        'Score': caseItem.executiveReview.score,
+        'Total Exposure': formatCurrencyFull(caseItem.expense),
+        'Expert Spend': formatCurrencyFull(caseItem.expertSpend),
+        'Reactive Spend': formatCurrencyFull(caseItem.reactiveSpend),
+        'Claim Age': `${caseItem.claimAge} years`,
+        'Stage': caseItem.stage,
+        'Adjuster': caseItem.adjuster,
+      },
+      columns: ['Review Reason'],
+      rows: caseItem.executiveReview.reasons.map(r => [r]),
+    };
+    exportBoth(exportData);
+    toast.success(`PDF + Excel exported: ${caseItem.claim}`);
+  }, [exportBoth, timestamp]);
+
   return (
     <div className="space-y-6">
+      {/* Export Hint */}
+      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Download className="h-3.5 w-3.5" />
+        <span>Double-click any section to export PDF + Excel</span>
+      </div>
+
       {/* 2025 BI Spend Summary Banner */}
-      <div className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5">
+      <div 
+        className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportKPIs}
+        title="Double-click to export"
+      >
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-foreground">2025 YTD BI Spend: $395M Total</h2>
@@ -350,7 +483,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       </div>
 
       {/* Quarterly Expert Spend Table */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div 
+        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportQuarterly}
+        title="Double-click to export"
+      >
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">2025 Litigation Expert Spend by Quarter</h3>
         <p className="text-xs text-muted-foreground mb-4">YTD through November — Paid vs Approved</p>
         
@@ -395,7 +532,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       {/* Charts Row */}
       <div className="grid grid-cols-2 gap-6">
         {/* Reactive Cost Curve */}
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportCostCurve}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reactive Cost Curve</h3>
           <p className="text-xs text-muted-foreground mb-4">Cumulative posture spend by litigation stage — shows capital deployed reactively</p>
           
@@ -455,7 +596,11 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         </div>
 
         {/* Spend Comparison by Stage */}
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportCostCurve}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Expert vs Reactive by Stage</h3>
           <p className="text-xs text-muted-foreground mb-4">Strategic expert spend vs reactive posture spend — leverage decay visible</p>
           
@@ -505,11 +650,15 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       </div>
 
       {/* Executive Review Required */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div 
+        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportExecutiveReview}
+        title="Double-click to export all cases"
+      >
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Executive Review Required</h3>
-            <p className="text-xs text-muted-foreground">Files requiring executive closure — zombie claims, duration drift, complex matters</p>
+            <p className="text-xs text-muted-foreground">Files requiring executive closure — double-click section header for all, or individual claim for detail</p>
           </div>
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive animate-pulse"></span> CRITICAL</span>
@@ -522,7 +671,12 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
             <button
               key={caseItem.uniqueRecord}
               onClick={() => onDrilldown(caseItem.uniqueRecord)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                handleExportClaim(caseItem);
+              }}
               className="text-left p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-all hover:border-primary/50 group"
+              title="Click for drilldown, double-click to export"
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-muted-foreground">#{idx + 1}</span>
