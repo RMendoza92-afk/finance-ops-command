@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Send, FileText, X, Loader2, Download, Minimize2, Maximize2 } from "lucide-react";
+import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData } from "@/hooks/useLitigationData";
@@ -11,19 +11,6 @@ import { useLitigationData } from "@/hooks/useLitigationData";
 interface Message {
   role: "user" | "assistant";
   content: string;
-}
-
-interface ReportData {
-  title: string;
-  summary: string;
-  items: Array<{
-    matter_id: string;
-    type: string;
-    claimant: string;
-    status: string;
-    days_open: number;
-    total_amount: number;
-  }>;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/litigation-chat`;
@@ -34,7 +21,6 @@ export function LitigationChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingReport, setPendingReport] = useState<ReportData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { data: litigationData } = useLitigationData();
@@ -167,105 +153,125 @@ export function LitigationChat() {
     }
   }, [messages]);
 
-  const extractReportData = (content: string): { text: string; reportData: ReportData | null } => {
-    const reportMatch = content.match(/REPORT_DATA:(\{[\s\S]*?\})(?:\s|$)/);
-    if (reportMatch) {
-      try {
-        const reportData = JSON.parse(reportMatch[1]);
-        const text = content.replace(/REPORT_DATA:\{[\s\S]*?\}(?:\s|$)/, "").trim();
-        return { text, reportData };
-      } catch {
-        return { text: content, reportData: null };
-      }
-    }
-    return { text: content, reportData: null };
-  };
 
-  const generatePDF = (reportData: ReportData) => {
+  const generateResponsePDF = (question: string, responseContent: string) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - margin * 2;
+
+    // Sanitize text for PDF
+    const sanitize = (text: string): string => {
+      return text
+        .replace(/[–—]/g, '-')
+        .replace(/['']/g, "'")
+        .replace(/[""]/g, '"')
+        .replace(/…/g, '...')
+        .replace(/\*\*/g, '')
+        .replace(/[^\x20-\x7E\n]/g, '');
+    };
+
     // Header
     doc.setFillColor(30, 41, 59);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-    
+    doc.rect(0, 0, pageWidth, 35, 'F');
+
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.text("Fred Loya Insurance", 20, 20);
-    doc.setFontSize(14);
-    doc.text(reportData.title, 20, 32);
-    
-    // Summary
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text("Fred Loya Insurance", margin, 15);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text("Litigation Command Center - Query Report", margin, 25);
+    doc.text(new Date().toLocaleDateString(), pageWidth - margin, 15, { align: 'right' });
+
+    let yPos = 50;
+
+    // Question section
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text("QUERY:", margin, yPos);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    let yPos = 55;
-    
-    doc.setFont(undefined, 'bold');
-    doc.text("Summary", 20, yPos);
-    doc.setFont(undefined, 'normal');
+    const questionLines = doc.splitTextToSize(sanitize(question), contentWidth);
+    doc.text(questionLines, margin, yPos + 6);
+    yPos += 6 + questionLines.length * 5 + 10;
+
+    // Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
+
+    // Response section
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text("RESPONSE:", margin, yPos);
     yPos += 8;
-    
-    const summaryLines = doc.splitTextToSize(reportData.summary, pageWidth - 40);
-    doc.text(summaryLines, 20, yPos);
-    yPos += summaryLines.length * 7 + 10;
-    
-    // Table header
-    if (reportData.items && reportData.items.length > 0) {
-      doc.setFont(undefined, 'bold');
-      doc.text("Details", 20, yPos);
-      yPos += 10;
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    const sanitizedResponse = sanitize(responseContent);
+    const lines = sanitizedResponse.split('\n');
+
+    lines.forEach(line => {
+      if (yPos > pageHeight - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      const trimmedLine = line.trim();
       
-      doc.setFillColor(241, 245, 249);
-      doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F');
-      
-      doc.setFontSize(9);
-      doc.text("Matter ID", 20, yPos);
-      doc.text("Type", 55, yPos);
-      doc.text("Claimant", 90, yPos);
-      doc.text("Status", 130, yPos);
-      doc.text("Days Open", 155, yPos);
-      doc.text("Amount", 180, yPos);
-      yPos += 8;
-      
-      doc.setFont(undefined, 'normal');
-      
-      reportData.items.forEach((item, index) => {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
-        
-        if (index % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
-        }
-        
-        doc.text(String(item.matter_id || "").substring(0, 12), 20, yPos);
-        doc.text(String(item.type || "").substring(0, 12), 55, yPos);
-        doc.text(String(item.claimant || "").substring(0, 15), 90, yPos);
-        doc.text(String(item.status || "").substring(0, 10), 130, yPos);
-        doc.text(String(item.days_open || 0), 155, yPos);
-        doc.text(`$${(item.total_amount || 0).toLocaleString()}`, 180, yPos);
-        yPos += 8;
-      });
-    }
-    
-    // Footer
+      // Handle bullet points
+      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        const bulletText = trimmedLine.slice(2);
+        const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
+        doc.text('•', margin, yPos);
+        doc.text(bulletLines, margin + 8, yPos);
+        yPos += bulletLines.length * 5 + 2;
+      } 
+      // Handle numbered lists
+      else if (/^\d+\./.test(trimmedLine)) {
+        const textLines = doc.splitTextToSize(trimmedLine, contentWidth - 5);
+        doc.text(textLines, margin + 5, yPos);
+        yPos += textLines.length * 5 + 2;
+      }
+      // Handle headers (lines ending with :)
+      else if (trimmedLine.endsWith(':') && trimmedLine.length < 60) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(trimmedLine, margin, yPos);
+        doc.setFont('helvetica', 'normal');
+        yPos += 7;
+      }
+      // Regular text
+      else if (trimmedLine) {
+        const textLines = doc.splitTextToSize(trimmedLine, contentWidth);
+        doc.text(textLines, margin, yPos);
+        yPos += textLines.length * 5 + 2;
+      } else {
+        yPos += 4; // Empty line
+      }
+    });
+
+    // Footer on all pages
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
       doc.setFontSize(8);
       doc.setTextColor(128, 128, 128);
-      doc.text(
-        `Generated ${new Date().toLocaleDateString()} | Page ${i} of ${pageCount}`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
+      doc.text('CONFIDENTIAL - Fred Loya Insurance', margin, pageHeight - 5);
+      doc.text('Page ' + i + ' of ' + pageCount, pageWidth - margin, pageHeight - 5, { align: 'right' });
     }
-    
-    doc.save(`${reportData.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
-    toast.success("PDF report downloaded!");
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = 'FLI_Query_Report_' + timestamp + '.pdf';
+    doc.save(filename);
+    toast.success("PDF report downloaded: " + filename);
   };
 
   const sendMessage = async () => {
@@ -280,7 +286,6 @@ export function LitigationChat() {
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-    setPendingReport(null);
     
     let assistantContent = "";
     
@@ -346,12 +351,14 @@ export function LitigationChat() {
         }
       }
       
-      // Check for report data in the final response
-      const { text, reportData } = extractReportData(assistantContent);
-      if (reportData) {
-        setPendingReport(reportData);
+      // Auto-generate PDF with the response
+      if (assistantContent.trim()) {
+        generateResponsePDF(userMessage.content, assistantContent);
+        // Update the message to show it was exported
         setMessages(prev => 
-          prev.map((m, i) => i === prev.length - 1 ? { ...m, content: text } : m)
+          prev.map((m, i) => i === prev.length - 1 && m.role === 'assistant' 
+            ? { ...m, content: 'PDF report generated and downloaded.' } 
+            : m)
         );
       }
       
@@ -474,19 +481,6 @@ export function LitigationChat() {
               </div>
             )}
             
-            {pendingReport && (
-              <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <p className="text-sm font-medium mb-2">Report ready to download:</p>
-                <Button
-                  size="sm"
-                  onClick={() => generatePDF(pendingReport)}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
-            )}
           </ScrollArea>
           
           <div className="p-4 border-t">
