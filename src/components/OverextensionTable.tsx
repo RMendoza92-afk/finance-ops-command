@@ -461,51 +461,51 @@ export function OverextensionTable({ data }: OverextensionTableProps) {
   return (
     <>
       {/* Executive Review Summary - Priority Row */}
-      <div className="mb-4 p-4 rounded-xl border-2 border-purple-500/30 bg-purple-500/5">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-purple-400 font-bold text-sm uppercase tracking-wide">Executive Review Required</span>
-          <span className="text-muted-foreground text-xs">(Hybrid: Age + Stage Mismatch + Spend Drift + Complexity)</span>
+      <div className="mb-4 p-3 sm:p-4 rounded-xl border-2 border-purple-500/30 bg-purple-500/5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-3">
+          <span className="text-purple-400 font-bold text-xs sm:text-sm uppercase tracking-wide">Executive Review Required</span>
+          <span className="text-muted-foreground text-[10px] sm:text-xs hidden sm:inline">(Hybrid: Age + Stage Mismatch + Spend Drift + Complexity)</span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-red-600/15 border border-red-500/30 rounded-lg p-3 text-center">
-            <div className="text-red-300 text-3xl font-bold font-mono">{stats.execCritical}</div>
-            <div className="text-red-400/80 text-xs uppercase tracking-wide">CRITICAL</div>
-            <div className="text-red-400/60 text-[10px] mt-0.5">Exec Closure Needed</div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="bg-red-600/15 border border-red-500/30 rounded-lg p-2 sm:p-3 text-center">
+            <div className="text-red-300 text-xl sm:text-3xl font-bold font-mono">{stats.execCritical}</div>
+            <div className="text-red-400/80 text-[10px] sm:text-xs uppercase tracking-wide">CRITICAL</div>
+            <div className="text-red-400/60 text-[8px] sm:text-[10px] mt-0.5 hidden sm:block">Exec Closure Needed</div>
           </div>
-          <div className="bg-purple-500/15 border border-purple-500/30 rounded-lg p-3 text-center">
-            <div className="text-purple-300 text-3xl font-bold font-mono">{stats.execRequired}</div>
-            <div className="text-purple-400/80 text-xs uppercase tracking-wide">REQUIRED</div>
-            <div className="text-purple-400/60 text-[10px] mt-0.5">Needs Exec Decision</div>
+          <div className="bg-purple-500/15 border border-purple-500/30 rounded-lg p-2 sm:p-3 text-center">
+            <div className="text-purple-300 text-xl sm:text-3xl font-bold font-mono">{stats.execRequired}</div>
+            <div className="text-purple-400/80 text-[10px] sm:text-xs uppercase tracking-wide">REQUIRED</div>
+            <div className="text-purple-400/60 text-[8px] sm:text-[10px] mt-0.5 hidden sm:block">Needs Exec Decision</div>
           </div>
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-center">
-            <div className="text-amber-300 text-3xl font-bold font-mono">{stats.execWatch}</div>
-            <div className="text-amber-400/80 text-xs uppercase tracking-wide">WATCH</div>
-            <div className="text-amber-400/60 text-[10px] mt-0.5">Monitor Closely</div>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 sm:p-3 text-center">
+            <div className="text-amber-300 text-xl sm:text-3xl font-bold font-mono">{stats.execWatch}</div>
+            <div className="text-amber-400/80 text-[10px] sm:text-xs uppercase tracking-wide">WATCH</div>
+            <div className="text-amber-400/60 text-[8px] sm:text-[10px] mt-0.5 hidden sm:block">Monitor Closely</div>
           </div>
         </div>
       </div>
 
       {/* Risk Summary Bar */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-          <div className="text-red-400 text-2xl font-bold font-mono">{stats.redCount}</div>
-          <div className="text-red-400/70 text-xs uppercase tracking-wide">Critical (≥3x)</div>
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 sm:p-4">
+          <div className="text-red-400 text-lg sm:text-2xl font-bold font-mono">{stats.redCount}</div>
+          <div className="text-red-400/70 text-[10px] sm:text-xs uppercase tracking-wide">Critical</div>
         </div>
-        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
-          <div className="text-orange-400 text-2xl font-bold font-mono">{stats.orangeCount}</div>
-          <div className="text-orange-400/70 text-xs uppercase tracking-wide">Warning (1.5-3x)</div>
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-2 sm:p-4">
+          <div className="text-orange-400 text-lg sm:text-2xl font-bold font-mono">{stats.orangeCount}</div>
+          <div className="text-orange-400/70 text-[10px] sm:text-xs uppercase tracking-wide">Warning</div>
         </div>
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-          <div className="text-emerald-400 text-2xl font-bold font-mono">{stats.greenCount}</div>
-          <div className="text-emerald-400/70 text-xs uppercase tracking-wide">Normal (&lt;1.5x)</div>
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 sm:p-4">
+          <div className="text-emerald-400 text-lg sm:text-2xl font-bold font-mono">{stats.greenCount}</div>
+          <div className="text-emerald-400/70 text-[10px] sm:text-xs uppercase tracking-wide">Normal</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-foreground text-2xl font-bold font-mono">{formatCurrency(stats.totalReactive)}</div>
-          <div className="text-muted-foreground text-xs uppercase tracking-wide">Total Reactive</div>
+        <div className="bg-card border border-border rounded-lg p-2 sm:p-4 hidden sm:block">
+          <div className="text-foreground text-lg sm:text-2xl font-bold font-mono">{formatCurrency(stats.totalReactive)}</div>
+          <div className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wide">Total Reactive</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-foreground text-2xl font-bold font-mono">{formatCurrency(stats.totalExpert)}</div>
-          <div className="text-muted-foreground text-xs uppercase tracking-wide">Total Expert</div>
+        <div className="bg-card border border-border rounded-lg p-2 sm:p-4 hidden sm:block">
+          <div className="text-foreground text-lg sm:text-2xl font-bold font-mono">{formatCurrency(stats.totalExpert)}</div>
+          <div className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wide">Total Expert</div>
         </div>
       </div>
 

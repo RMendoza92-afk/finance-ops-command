@@ -67,43 +67,38 @@ export function GlobalFilterPanel({
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Inventory Status Toggle */}
           <div className="flex rounded-lg overflow-hidden border border-border">
             <button
               onClick={() => onFilterChange('inventoryStatus', 'closed')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                 filters.inventoryStatus === 'closed'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
-              Closed Inventory
+              Closed
             </button>
             <button
               onClick={() => onFilterChange('inventoryStatus', 'open')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                 filters.inventoryStatus === 'open'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
-              Open Inventory
+              Open
             </button>
           </div>
           
-          <div className="h-6 w-px bg-border" />
+          <div className="hidden sm:block h-6 w-px bg-border" />
           
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Filters</h3>
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">Filters</h3>
           {activeFilterCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-              {activeFilterCount} active
-            </span>
-          )}
-          {isOpenInventory && (
-            <span className="text-xs text-muted-foreground italic">
-              (Pain/Stage filters apply to Closed Inventory only)
+              {activeFilterCount}
             </span>
           )}
         </div>
@@ -113,14 +108,14 @@ export function GlobalFilterPanel({
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
           >
             <RotateCcw className="h-3 w-3" />
-            Reset All
+            Reset
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-7 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {/* Search */}
-        <div className="col-span-2 relative">
+        <div className="sm:col-span-2 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search claim, exposure, adjuster..."
@@ -143,7 +138,7 @@ export function GlobalFilterPanel({
           <SelectTrigger className="bg-muted border-border text-sm">
             <SelectValue placeholder="Department" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Departments</SelectItem>
             {filterOptions.departments.map(dept => (
               <SelectItem key={dept} value={dept}>{dept}</SelectItem>
@@ -156,7 +151,7 @@ export function GlobalFilterPanel({
           <SelectTrigger className="bg-muted border-border text-sm">
             <SelectValue placeholder="Team" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Teams</SelectItem>
             {filterOptions.teams.map(team => (
               <SelectItem key={team} value={team}>{team}</SelectItem>
@@ -169,7 +164,7 @@ export function GlobalFilterPanel({
           <SelectTrigger className="bg-muted border-border text-sm">
             <SelectValue placeholder="Adjuster" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Adjusters</SelectItem>
             {filterOptions.adjusters.map(adj => (
               <SelectItem key={adj} value={adj}>{adj}</SelectItem>
@@ -186,7 +181,7 @@ export function GlobalFilterPanel({
           <SelectTrigger className={`bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Stage" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Stages</SelectItem>
             <SelectItem value="Early">Early</SelectItem>
             <SelectItem value="Mid">Mid</SelectItem>
@@ -204,7 +199,7 @@ export function GlobalFilterPanel({
           <SelectTrigger className={`bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Pain Band" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Pain Bands</SelectItem>
             <SelectItem value="low">Low (1-2)</SelectItem>
             <SelectItem value="medium">Medium (3-5)</SelectItem>
@@ -215,16 +210,16 @@ export function GlobalFilterPanel({
       </div>
 
       {/* Expert Type & Executive Review row */}
-      <div className="mt-3 flex gap-3">
+      <div className="mt-3 flex flex-col sm:flex-row gap-3">
         <Select 
           value={filters.expertType} 
           onValueChange={(v) => onFilterChange('expertType', v)}
           disabled={isOpenInventory}
         >
-          <SelectTrigger className={`w-48 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
+          <SelectTrigger className={`w-full sm:w-48 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Expert Type" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Expert Types</SelectItem>
             <SelectItem value="Medical">Medical</SelectItem>
             <SelectItem value="Legal">Legal</SelectItem>
@@ -240,10 +235,10 @@ export function GlobalFilterPanel({
           onValueChange={(v) => onFilterChange('executiveReview', v)}
           disabled={isOpenInventory}
         >
-          <SelectTrigger className={`w-56 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
+          <SelectTrigger className={`w-full sm:w-56 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Executive Review" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all">All Files</SelectItem>
             <SelectItem value="any">⚠️ Any Review Required</SelectItem>
             <SelectItem value="CRITICAL">🔴 Critical</SelectItem>
