@@ -29,169 +29,151 @@ export function useExportData() {
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 20;
 
-    // Colors - Loya brand colors
-    const primaryColor = { r: 0, g: 51, b: 102 }; // Navy blue
-    const accentColor = { r: 204, g: 0, b: 0 }; // Loya Red
-    const mutedColor = { r: 100, g: 116, b: 139 };
-    const lightBg = { r: 248, g: 250, b: 252 };
-    const borderColor = { r: 226, g: 232, b: 240 };
+    // Professional color palette
+    const navy = { r: 12, g: 35, b: 64 };
+    const red = { r: 180, g: 30, b: 30 };
+    const gray = { r: 120, g: 120, b: 120 };
+    const lightGray = { r: 245, g: 245, b: 245 };
 
-    // ====== HEADER WITH LOGO ======
-    doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
-    doc.rect(0, 0, pageWidth, 28, 'F');
-
-    // Add Loya logo
-    try {
-      doc.addImage(LOYA_LOGO_BASE64, 'JPEG', 10, 4, 20, 20);
-    } catch (e) {
-      // Fallback if logo fails
-    }
-
-    // Company name next to logo
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(255, 255, 255);
-    doc.text('FRED LOYA INSURANCE', 34, 14);
+    // ====== CLEAN HEADER ======
+    // Logo placeholder box
+    doc.setFillColor(navy.r, navy.g, navy.b);
+    doc.rect(14, 12, 8, 8, 'F');
     
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Litigation Discipline Command Center', 34, 21);
-
-    // Report badge
-    doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-    doc.roundedRect(pageWidth - 52, 8, 42, 12, 2, 2, 'F');
+    // Company name
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('EXECUTIVE REPORT', pageWidth - 31, 16, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text('FRED LOYA INSURANCE', 26, 18);
+    
+    // Thin accent line
+    doc.setDrawColor(red.r, red.g, red.b);
+    doc.setLineWidth(1.5);
+    doc.line(14, 24, pageWidth - 14, 24);
 
-    yPos = 38;
+    yPos = 34;
 
-    // ====== TITLE SECTION ======
-    doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
-    doc.roundedRect(10, yPos - 4, pageWidth - 20, 24, 3, 3, 'F');
-    doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(10, yPos - 4, pageWidth - 20, 24, 3, 3, 'S');
-
+    // ====== TITLE ======
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-    doc.text(data.title, 16, yPos + 6);
+    doc.setFontSize(20);
+    doc.setTextColor(navy.r, navy.g, navy.b);
+    doc.text(data.title.toUpperCase(), 14, yPos);
+    yPos += 8;
 
     if (data.subtitle) {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-      doc.text(data.subtitle, 16, yPos + 14);
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(data.subtitle, 14, yPos);
+      yPos += 6;
     }
 
-    // Timestamp right aligned
     doc.setFontSize(8);
-    doc.text(`Generated: ${data.timestamp}`, pageWidth - 16, yPos + 6, { align: 'right' });
-
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text(data.timestamp, 14, yPos);
+    
     if (data.affectsManager) {
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.text(`Prepared For: ${data.affectsManager}`, pageWidth - 16, yPos + 14, { align: 'right' });
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      doc.text(`Prepared for: ${data.affectsManager}`, pageWidth - 14, yPos, { align: 'right' });
     }
+    yPos += 10;
 
-    yPos += 28;
-
-    // ====== DIRECTIVE BOX ======
+    // ====== DIRECTIVE ======
     if (data.directive) {
-      doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.roundedRect(10, yPos, pageWidth - 20, 24, 3, 3, 'F');
+      doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+      doc.rect(14, yPos, pageWidth - 28, 18, 'F');
       
-      // White border inside
-      doc.setDrawColor(255, 255, 255);
-      doc.setLineWidth(0.8);
-      doc.roundedRect(12, yPos + 2, pageWidth - 24, 20, 2, 2, 'S');
+      // Left accent bar
+      doc.setFillColor(red.r, red.g, red.b);
+      doc.rect(14, yPos, 3, 18, 'F');
       
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      doc.text('⚡ DIRECTIVE:', 16, yPos + 10);
+      doc.setFontSize(8);
+      doc.setTextColor(red.r, red.g, red.b);
+      doc.text('DIRECTIVE', 20, yPos + 6);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 60);
-      doc.text(directiveLines.slice(0, 2).join(' '), 48, yPos + 10);
-      if (directiveLines.length > 2) {
-        doc.text(directiveLines.slice(2, 4).join(' '), 16, yPos + 18);
-      }
-      yPos += 32;
+      doc.setTextColor(navy.r, navy.g, navy.b);
+      const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 40);
+      doc.text(directiveLines.slice(0, 2), 20, yPos + 12);
+      yPos += 24;
     }
 
-    // ====== MANAGER TRACKING SECTION ======
+    // ====== MANAGER TRACKING ======
     if (data.managerTracking && data.managerTracking.length > 0) {
       const highEvalManagers = data.managerTracking.filter(m => m.category === 'high_eval');
       const noEvalTracking = data.managerTracking.filter(m => m.category === 'no_eval');
 
       if (highEvalManagers.length > 0) {
-        // Section header box
-        doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
-        doc.roundedRect(10, yPos, pageWidth - 20, 10, 2, 2, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
+        doc.setTextColor(navy.r, navy.g, navy.b);
+        doc.text('HIGH EVALUATION — TOP 10', 14, yPos);
+        yPos += 6;
+
+        // Table header
+        doc.setFillColor(navy.r, navy.g, navy.b);
+        doc.rect(14, yPos, pageWidth - 28, 6, 'F');
+        doc.setFontSize(7);
         doc.setTextColor(255, 255, 255);
-        doc.text('HIGH EVALUATION TOP 10 MANAGERS', 16, yPos + 7);
-        yPos += 14;
+        doc.text('RANK', 18, yPos + 4);
+        doc.text('ADJUSTER NAME', 34, yPos + 4);
+        doc.text('HIGH EVAL TOTAL', pageWidth - 18, yPos + 4, { align: 'right' });
+        yPos += 8;
 
-        // Managers box
-        doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
-        const managersBoxHeight = Math.ceil(highEvalManagers.length / 2) * 10 + 8;
-        doc.roundedRect(10, yPos, pageWidth - 20, managersBoxHeight, 2, 2, 'F');
-        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(10, yPos, pageWidth - 20, managersBoxHeight, 2, 2, 'S');
-
-        const colWidth = (pageWidth - 36) / 2;
+        // Table rows
         highEvalManagers.forEach((manager, idx) => {
-          const col = idx % 2;
-          const row = Math.floor(idx / 2);
-          const xPos = 16 + col * (colWidth + 8);
-          const rowY = yPos + 8 + row * 10;
-
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-          doc.text(`${idx + 1}. ${manager.name}`, xPos, rowY);
+          if (idx % 2 === 0) {
+            doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+            doc.rect(14, yPos - 3, pageWidth - 28, 6, 'F');
+          }
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(gray.r, gray.g, gray.b);
+          doc.text(String(idx + 1), 18, yPos);
+          
+          doc.setTextColor(navy.r, navy.g, navy.b);
+          doc.text(manager.name, 34, yPos);
           
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-          doc.text(String(manager.value), xPos + colWidth - 10, rowY, { align: 'right' });
+          doc.setTextColor(red.r, red.g, red.b);
+          doc.text(String(manager.value), pageWidth - 18, yPos, { align: 'right' });
+          yPos += 6;
         });
-        yPos += managersBoxHeight + 6;
+        yPos += 6;
       }
 
       if (noEvalTracking.length > 0) {
-        // No Eval section box
-        doc.setFillColor(255, 240, 240);
-        doc.roundedRect(10, yPos, pageWidth - 20, 20, 2, 2, 'F');
-        doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(10, yPos, pageWidth - 20, 20, 2, 2, 'S');
+        doc.setDrawColor(gray.r, gray.g, gray.b);
+        doc.setLineWidth(0.2);
+        doc.line(14, yPos, pageWidth - 14, yPos);
+        yPos += 6;
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-        doc.text('NO EVALUATION TRACKING', 16, yPos + 8);
+        doc.setFontSize(9);
+        doc.setTextColor(red.r, red.g, red.b);
+        doc.text('NO EVALUATION ASSIGNED', 14, yPos);
+        yPos += 5;
 
-        noEvalTracking.forEach((item, idx) => {
+        noEvalTracking.forEach((item) => {
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-          doc.text(`Assigned to: ${item.name} — ${item.value} claims require evaluation`, 16, yPos + 16);
+          doc.setFontSize(8);
+          doc.setTextColor(navy.r, navy.g, navy.b);
+          doc.text(`${item.name}: ${item.value} claims pending evaluation`, 14, yPos);
+          yPos += 5;
         });
-        yPos += 26;
+        yPos += 4;
       }
     }
 
     // Summary section with cards
     if (data.summary && Object.keys(data.summary).length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.setFontSize(10);
+      doc.setTextColor(navy.r, navy.g, navy.b);
       doc.text('KEY METRICS', 14, yPos);
       yPos += 8;
 
@@ -204,26 +186,17 @@ export function useExportData() {
         const xPos = 14 + col * (cardWidth + 4);
         const cardY = yPos + row * 28;
 
-        // Card background
-        doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
-        doc.roundedRect(xPos, cardY, cardWidth, 24, 2, 2, 'F');
-        
-        // Card border
-        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(xPos, cardY, cardWidth, 24, 2, 2, 'S');
+        doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
+        doc.rect(xPos, cardY, cardWidth, 24, 'F');
 
-        // Value (large)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-        const valueStr = String(value);
-        doc.text(valueStr, xPos + cardWidth / 2, cardY + 10, { align: 'center' });
+        doc.setTextColor(navy.r, navy.g, navy.b);
+        doc.text(String(value), xPos + cardWidth / 2, cardY + 10, { align: 'center' });
 
-        // Label
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
-        doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
+        doc.setTextColor(gray.r, gray.g, gray.b);
         const truncatedKey = key.length > 18 ? key.substring(0, 16) + '...' : key;
         doc.text(truncatedKey, xPos + cardWidth / 2, cardY + 18, { align: 'center' });
       });
@@ -234,8 +207,8 @@ export function useExportData() {
     // Data Table Section
     if (data.columns.length > 0 && data.rows.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.setFontSize(10);
+      doc.setTextColor(navy.r, navy.g, navy.b);
       doc.text('DETAILED DATA', 14, yPos);
       yPos += 8;
 
@@ -245,7 +218,7 @@ export function useExportData() {
       const rowHeight = 9;
 
       // Table header
-      doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.setFillColor(navy.r, navy.g, navy.b);
       doc.rect(14, yPos, tableWidth, rowHeight, 'F');
       
       doc.setFont('helvetica', 'bold');
@@ -268,8 +241,7 @@ export function useExportData() {
           doc.addPage();
           yPos = 25;
           
-          // Repeat header on new page
-          doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.setFillColor(navy.r, navy.g, navy.b);
           doc.rect(14, yPos, tableWidth, rowHeight, 'F');
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(255, 255, 255);
@@ -282,18 +254,16 @@ export function useExportData() {
           doc.setFont('helvetica', 'normal');
         }
 
-        // Alternating row background
         if (rowIdx % 2 === 0) {
-          doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
+          doc.setFillColor(lightGray.r, lightGray.g, lightGray.b);
           doc.rect(14, yPos, tableWidth, rowHeight, 'F');
         }
 
-        // Row border
-        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+        doc.setDrawColor(220, 220, 220);
         doc.setLineWidth(0.2);
         doc.line(14, yPos + rowHeight, pageWidth - 14, yPos + rowHeight);
 
-        doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setTextColor(navy.r, navy.g, navy.b);
         row.forEach((cell, i) => {
           const xPos = 14 + i * colWidth + 3;
           const cellText = String(cell);
@@ -307,21 +277,20 @@ export function useExportData() {
 
     // Footer
     const footerY = 285;
-    doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(navy.r, navy.g, navy.b);
+    doc.setLineWidth(0.3);
     doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
     
     doc.setFontSize(7);
-    doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
-    doc.text('Litigation Discipline Command Center • Confidential Executive Report', 14, footerY);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text('Fred Loya Insurance • Litigation Command Center • Confidential', 14, footerY);
     doc.text(`Page 1 of ${doc.getNumberOfPages()}`, pageWidth - 14, footerY, { align: 'right' });
 
-    // Update page numbers on all pages
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(7);
-      doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
+      doc.setTextColor(gray.r, gray.g, gray.b);
       doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, footerY, { align: 'right' });
     }
 
