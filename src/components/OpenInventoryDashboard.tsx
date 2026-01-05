@@ -39,7 +39,7 @@ interface OpenInventoryDashboardProps {
 
 export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps) {
   const { data, loading, error } = useOpenExposureData();
-  const { exportBoth, generateFullExcel, generateExecutivePDF } = useExportData();
+  const { exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
   const [selectedClaimFilter, setSelectedClaimFilter] = useState<string>('');
@@ -943,28 +943,36 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               variant="outline"
               size="sm"
               onClick={async () => {
-                await generateExecutivePDF({
-                  totalOpenReserves: FINANCIAL_DATA.totals.totalOpenReserves,
-                  pendingEval: FINANCIAL_DATA.totals.noEvalAmount || 0,
-                  pendingEvalPct: 63,
-                  closuresThisMonth: EXECUTIVE_METRICS.closures.closedThisMonth,
-                  avgDaysToClose: EXECUTIVE_METRICS.closures.avgDaysToClose,
-                  closureTrend: 7,
-                  aged365Count: EXECUTIVE_METRICS.aging.over365Days,
-                  aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
-                  aged365Pct: EXECUTIVE_METRICS.aging.over365Pct,
-                  reservesMoM: EXECUTIVE_METRICS.trends.reservesMoM,
-                  reservesYoY: EXECUTIVE_METRICS.trends.reservesYoY,
-                  lowEval: FINANCIAL_DATA.totals.totalLowEval,
-                  medianEval: (FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2,
-                  highEval: FINANCIAL_DATA.totals.totalHighEval,
-                });
-                toast.success('Executive Command Center PDF downloaded!');
+                await generateExecutivePackage(
+                  {
+                    totalOpenReserves: FINANCIAL_DATA.totals.totalOpenReserves,
+                    pendingEval: FINANCIAL_DATA.totals.noEvalAmount || 0,
+                    pendingEvalPct: 63,
+                    closuresThisMonth: EXECUTIVE_METRICS.closures.closedThisMonth,
+                    avgDaysToClose: EXECUTIVE_METRICS.closures.avgDaysToClose,
+                    closureTrend: 7,
+                    aged365Count: EXECUTIVE_METRICS.aging.over365Days,
+                    aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
+                    aged365Pct: EXECUTIVE_METRICS.aging.over365Pct,
+                    reservesMoM: EXECUTIVE_METRICS.trends.reservesMoM,
+                    reservesYoY: EXECUTIVE_METRICS.trends.reservesYoY,
+                    lowEval: FINANCIAL_DATA.totals.totalLowEval,
+                    medianEval: (FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2,
+                    highEval: FINANCIAL_DATA.totals.totalHighEval,
+                  },
+                  {
+                    byAge: FINANCIAL_DATA.byAge,
+                    byQueue: FINANCIAL_DATA.byQueue,
+                    byTypeGroup: FINANCIAL_DATA.byTypeGroup,
+                    highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ name: a.name, value: String(a.value) })),
+                  }
+                );
+                toast.success('Executive Package downloaded! (PDF + Excel with granular data)');
               }}
               className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 print:hidden"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export PDF
+              Export Package
             </Button>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 rounded-full">
               <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
