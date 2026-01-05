@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -13,12 +13,15 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
 
   const formatNumber = (val: number) => val.toLocaleString();
+  const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
+  const formatCurrencyFull = (val: number) => `$${val.toLocaleString()}`;
 
   // Known totals from user source (January 2, 2026)
   const KNOWN_TOTALS = {
@@ -31,6 +34,27 @@ export function OpenInventoryDashboard() {
     flagged: 252,
     newClaims: 1,
     closed: 2,
+  };
+
+  // Financial reserves by age bucket (placeholder data - replace with actual)
+  const FINANCIAL_DATA = {
+    byAge: [
+      { age: '365+ Days', claims: 5630, openReserves: 48750000, paidToDate: 22400000 },
+      { age: '181-365 Days', claims: 3953, openReserves: 31200000, paidToDate: 14800000 },
+      { age: '61-180 Days', claims: 5576, openReserves: 28900000, paidToDate: 8200000 },
+      { age: 'Under 60 Days', claims: 8420, openReserves: 18600000, paidToDate: 2100000 },
+    ],
+    byQueue: [
+      { queue: 'Litigation', openReserves: 68500000, paidToDate: 31200000, avgReserve: 18283 },
+      { queue: 'ATR', openReserves: 34200000, paidToDate: 12400000, avgReserve: 8563 },
+      { queue: 'BI3', openReserves: 18900000, paidToDate: 3200000, avgReserve: 8483 },
+      { queue: 'Early BI', openReserves: 5850000, paidToDate: 700000, avgReserve: 41489 },
+    ],
+    totals: {
+      totalOpenReserves: 127450000,
+      totalPaidToDate: 47500000,
+      totalExposure: 174950000,
+    }
   };
 
   // Calculate derived metrics
@@ -48,13 +72,14 @@ export function OpenInventoryDashboard() {
       .sort((a, b) => b.grandTotal - a.grandTotal)
       .slice(0, 8);
 
-    // Age distribution for chart
-    const ageDistribution = [
-      { age: '365+ Days', count: data.totals.age365Plus, fill: 'hsl(var(--destructive))' },
-      { age: '181-365 Days', count: data.totals.age181To365, fill: 'hsl(var(--warning))' },
-      { age: '61-180 Days', count: data.totals.age61To180, fill: 'hsl(var(--accent))' },
-      { age: 'Under 60 Days', count: data.totals.ageUnder60, fill: 'hsl(var(--success))' },
-    ];
+    // Age distribution for chart with financials
+    const ageDistribution = FINANCIAL_DATA.byAge.map(item => ({
+      ...item,
+      fill: item.age === '365+ Days' ? 'hsl(var(--destructive))' :
+            item.age === '181-365 Days' ? 'hsl(var(--warning))' :
+            item.age === '61-180 Days' ? 'hsl(var(--accent))' :
+            'hsl(var(--success))'
+    }));
 
     // Type groups from known data
     const typeGroups = [
@@ -74,6 +99,7 @@ export function OpenInventoryDashboard() {
       totalOpenClaims: KNOWN_TOTALS.totalOpenClaims,
       totalOpenExposures: KNOWN_TOTALS.totalOpenExposures,
       flagged: KNOWN_TOTALS.flagged,
+      financials: FINANCIAL_DATA,
     };
   }, [data]);
 
@@ -97,7 +123,7 @@ export function OpenInventoryDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Summary Banner */}
+      {/* Summary Banner with Financials */}
       <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
@@ -106,66 +132,68 @@ export function OpenInventoryDashboard() {
               As of January 2, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Flagged Claims</p>
-            <p className="text-2xl font-bold text-warning">{formatNumber(metrics.flagged)}</p>
-            <p className="text-xs text-muted-foreground">Require review</p>
+          <div className="flex gap-8 items-center">
+            <div className="text-center border-r border-border pr-6">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Open Reserves</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</p>
+            </div>
+            <div className="text-center border-r border-border pr-6">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Paid to Date</p>
+              <p className="text-2xl font-bold text-warning">{formatCurrency(metrics.financials.totals.totalPaidToDate)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total Exposure</p>
+              <p className="text-2xl font-bold text-destructive">{formatCurrency(metrics.financials.totals.totalExposure)}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-5 gap-4">
+      {/* Financial KPI Cards */}
+      <div className="grid grid-cols-4 gap-4">
         <KPICard
-          title="Total Open Claims"
-          value={formatNumber(metrics.totalOpenClaims)}
-          subtitle={`${formatNumber(metrics.totalOpenExposures)} exposures`}
-          icon={FileStack}
+          title="Total Open Reserves"
+          value={formatCurrency(metrics.financials.totals.totalOpenReserves)}
+          subtitle="Outstanding liability"
+          icon={Wallet}
           variant="default"
         />
         <KPICard
-          title="ATR"
-          value={formatNumber(KNOWN_TOTALS.atr.claims)}
-          subtitle={`${formatNumber(KNOWN_TOTALS.atr.exposures)} exposures`}
-          icon={AlertTriangle}
+          title="Paid to Date"
+          value={formatCurrency(metrics.financials.totals.totalPaidToDate)}
+          subtitle="Indemnity + expense"
+          icon={DollarSign}
           variant="warning"
         />
         <KPICard
-          title="Litigation"
-          value={formatNumber(KNOWN_TOTALS.lit.claims)}
-          subtitle={`${formatNumber(KNOWN_TOTALS.lit.exposures)} exposures`}
+          title="365+ Day Reserves"
+          value={formatCurrency(metrics.financials.byAge[0].openReserves)}
+          subtitle={`${formatNumber(metrics.financials.byAge[0].claims)} aged claims`}
           icon={AlertTriangle}
           variant="danger"
         />
         <KPICard
-          title="BI3"
-          value={formatNumber(KNOWN_TOTALS.bi3.claims)}
-          subtitle={`${formatNumber(KNOWN_TOTALS.bi3.exposures)} exposures`}
-          icon={Clock}
-          variant="default"
-        />
-        <KPICard
-          title="Early BI"
-          value={formatNumber(KNOWN_TOTALS.earlyBI.claims)}
-          subtitle={`${formatNumber(KNOWN_TOTALS.earlyBI.exposures)} exposures`}
-          icon={TrendingUp}
-          variant="success"
+          title="Flagged Claims"
+          value={formatNumber(metrics.flagged)}
+          subtitle="Require review"
+          icon={AlertTriangle}
+          variant="warning"
         />
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Age Distribution */}
+        {/* Reserves by Age Bucket */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory Age Distribution</h3>
-          <p className="text-xs text-muted-foreground mb-4">Claims by age bucket — older claims require escalation</p>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves & Paid by Age Bucket</h3>
+          <p className="text-xs text-muted-foreground mb-4">Where the money sits by claim age</p>
           
-          <div className="h-64">
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={formatNumber} />
-                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={75} />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={85} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
@@ -173,33 +201,110 @@ export function OpenInventoryDashboard() {
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number) => [formatNumber(value), 'Claims']}
+                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'openReserves' ? 'Open Reserves' : 'Paid to Date']}
                 />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {metrics.ageDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
+                <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Open Reserves" />
+                <Bar dataKey="paidToDate" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} name="Paid to Date" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="flex gap-4 mt-4 pt-4 border-t border-border justify-center flex-wrap">
-            {metrics.ageDistribution.map(item => (
-              <div key={item.age} className="text-center">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }}></div>
-                  <span className="text-xs text-muted-foreground">{item.age}</span>
-                </div>
-                <p className="text-sm font-semibold">{formatNumber(item.count)}</p>
-              </div>
-            ))}
+          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-primary"></div>
+              <span className="text-xs text-muted-foreground">Open Reserves</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-warning"></div>
+              <span className="text-xs text-muted-foreground">Paid to Date</span>
+            </div>
           </div>
         </div>
 
-        {/* Type Group Distribution */}
+        {/* Reserves by Queue */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Open Claims by Queue</h3>
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves by Queue</h3>
+          <p className="text-xs text-muted-foreground mb-4">Open reserves & paid by handling unit</p>
+          
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.financials.byQueue} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="queue" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value: number, name: string) => [formatCurrencyFull(value), name === 'openReserves' ? 'Open Reserves' : 'Paid to Date']}
+                />
+                <Bar dataKey="openReserves" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Open Reserves" />
+                <Bar dataKey="paidToDate" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Paid to Date" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-primary"></div>
+              <span className="text-xs text-muted-foreground">Open Reserves</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-warning"></div>
+              <span className="text-xs text-muted-foreground">Paid to Date</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Summary Table */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Financial Summary by Age</h3>
+        <p className="text-xs text-muted-foreground mb-4">Claims, reserves, and paid amounts by age bucket</p>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Age Bucket</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Claims</th>
+                <th className="text-right py-2 px-3 text-primary font-medium">Open Reserves</th>
+                <th className="text-right py-2 px-3 text-warning font-medium">Paid to Date</th>
+                <th className="text-right py-2 px-3 text-destructive font-medium">Total Exposure</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Avg Reserve</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.financials.byAge.map((item) => (
+                <tr key={item.age} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="py-2 px-3 font-medium">{item.age}</td>
+                  <td className="py-2 px-3 text-right">{formatNumber(item.claims)}</td>
+                  <td className="py-2 px-3 text-right text-primary font-semibold">{formatCurrency(item.openReserves)}</td>
+                  <td className="py-2 px-3 text-right text-warning">{formatCurrency(item.paidToDate)}</td>
+                  <td className="py-2 px-3 text-right text-destructive font-semibold">{formatCurrency(item.openReserves + item.paidToDate)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(Math.round(item.openReserves / item.claims))}</td>
+                </tr>
+              ))}
+              <tr className="bg-muted/50 font-bold">
+                <td className="py-2 px-3">Total</td>
+                <td className="py-2 px-3 text-right">{formatNumber(metrics.financials.byAge.reduce((s, i) => s + i.claims, 0))}</td>
+                <td className="py-2 px-3 text-right text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</td>
+                <td className="py-2 px-3 text-right text-warning">{formatCurrency(metrics.financials.totals.totalPaidToDate)}</td>
+                <td className="py-2 px-3 text-right text-destructive">{formatCurrency(metrics.financials.totals.totalExposure)}</td>
+                <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(Math.round(metrics.financials.totals.totalOpenReserves / metrics.financials.byAge.reduce((s, i) => s + i.claims, 0)))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Claims by Queue */}
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Claims by Queue</h3>
           <p className="text-xs text-muted-foreground mb-4">Claims vs Exposures by handling unit</p>
           
           <div className="h-64">
@@ -218,7 +323,7 @@ export function OpenInventoryDashboard() {
                   formatter={(value: number, name: string) => [formatNumber(value), name === 'claims' ? 'Claims' : 'Exposures']}
                 />
                 <Bar dataKey="claims" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Claims" />
-                <Bar dataKey="exposures" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Exposures" />
+                <Bar dataKey="exposures" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Exposures" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -229,9 +334,51 @@ export function OpenInventoryDashboard() {
               <span className="text-xs text-muted-foreground">Claims</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-warning"></div>
+              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
               <span className="text-xs text-muted-foreground">Exposures</span>
             </div>
+          </div>
+        </div>
+
+        {/* Inventory Age */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory Age Distribution</h3>
+          <p className="text-xs text-muted-foreground mb-4">Claim counts by age bucket</p>
+          
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={formatNumber} />
+                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={85} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value: number) => [formatNumber(value), 'Claims']}
+                />
+                <Bar dataKey="claims" radius={[0, 4, 4, 0]}>
+                  {metrics.ageDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="flex gap-4 mt-4 pt-4 border-t border-border justify-center flex-wrap">
+            {metrics.ageDistribution.map(item => (
+              <div key={item.age} className="text-center">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }}></div>
+                  <span className="text-xs text-muted-foreground">{item.age}</span>
+                </div>
+                <p className="text-sm font-semibold">{formatNumber(item.claims)}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
