@@ -72,16 +72,15 @@ export function OpenInventoryDashboard() {
     lossDescription: 'IV R/E CV',
     summary: { totalClaims: 2458, totalReserves: 142500000, lowEval: 71000000, highEval: 84000000 },
     byArea: [
-      { area: '101', claims: 412, reserves: 24200000, lowEval: 12200000, highEval: 14500000 },
-      { area: '102', claims: 318, reserves: 18200000, lowEval: 9000000, highEval: 10800000 },
-      { area: '103', claims: 245, reserves: 15500000, lowEval: 7800000, highEval: 9300000 },
-      { area: '104', claims: 198, reserves: 12200000, lowEval: 6000000, highEval: 7300000 },
-      { area: '105', claims: 387, reserves: 21000000, lowEval: 10500000, highEval: 12500000 },
-      { area: '106', claims: 156, reserves: 9200000, lowEval: 4500000, highEval: 5500000 },
-      { area: '107', claims: 289, reserves: 14800000, lowEval: 7300000, highEval: 8800000 },
-      { area: '108', claims: 213, reserves: 12000000, lowEval: 6000000, highEval: 7300000 },
-      { area: '109', claims: 142, reserves: 8800000, lowEval: 4300000, highEval: 5000000 },
-      { area: '110', claims: 98, reserves: 6600000, lowEval: 3400000, highEval: 4200000 },
+      { area: '101 EL PASO', claims: 412, reserves: 24200000, lowEval: 12200000, highEval: 14500000 },
+      { area: '102 RIO GRANDE/VALL', claims: 318, reserves: 18200000, lowEval: 9000000, highEval: 10800000 },
+      { area: '103 LAREDO/DEL RIO', claims: 245, reserves: 15500000, lowEval: 7800000, highEval: 9300000 },
+      { area: '104 CORPUS', claims: 198, reserves: 12200000, lowEval: 6000000, highEval: 7300000 },
+      { area: '105 SAN ANTONIO', claims: 387, reserves: 21000000, lowEval: 10500000, highEval: 12500000 },
+      { area: '106 WEST TEXAS', claims: 156, reserves: 9200000, lowEval: 4500000, highEval: 5500000 },
+      { area: '107 HOUSTON', claims: 289, reserves: 14800000, lowEval: 7300000, highEval: 8800000 },
+      { area: '109 DALLAS', claims: 142, reserves: 8800000, lowEval: 4300000, highEval: 5000000 },
+      { area: '110 AUSTIN', claims: 98, reserves: 6600000, lowEval: 3400000, highEval: 4200000 },
     ],
     byAge: [
       { age: '365+ Days', claims: 983, reserves: 59000000, lowEval: 29500000, highEval: 35000000 },
@@ -530,7 +529,7 @@ export function OpenInventoryDashboard() {
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {TEXAS_REAR_END_DATA.byArea.map((item) => (
                 <div key={item.area} className="flex justify-between items-center py-1 border-b border-border/50">
-                  <span className="text-sm font-medium">Area {item.area}</span>
+                  <span className="text-sm font-medium">{item.area}</span>
                   <div className="flex gap-3 text-xs">
                     <span className="text-muted-foreground">{item.claims} claims</span>
                     <span className="text-primary font-semibold">{formatCurrencyK(item.reserves)}</span>
