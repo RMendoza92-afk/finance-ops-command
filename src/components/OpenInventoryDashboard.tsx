@@ -2691,14 +2691,61 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       {/* Financial Summary Table */}
       <div 
-        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportByAge}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Financial Summary by Age</h3>
-        <p className="text-xs text-muted-foreground mb-4">Claims, reserves, and evaluation amounts by age bucket</p>
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Financial Summary by Age</h3>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Claims, reserves, and evaluation amounts by age bucket</p>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Cards View */}
+        <div className="block sm:hidden space-y-2">
+          {metrics.financials.byAge.map((item) => (
+            <div key={item.age} className="p-3 bg-muted/30 rounded-lg border border-border/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold text-sm">{item.age}</span>
+                <span className="text-xs text-muted-foreground">{formatNumber(item.claims)} claims</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Reserves</p>
+                  <p className="font-semibold text-primary">{formatCurrency(item.openReserves)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Low</p>
+                  <p className="font-medium">{formatCurrency(item.lowEval)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">High</p>
+                  <p className="font-medium text-warning">{formatCurrency(item.highEval)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="p-3 bg-muted/50 rounded-lg border border-border font-bold">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm">Total</span>
+              <span className="text-xs text-muted-foreground">{formatNumber(metrics.financials.byAge.reduce((s, i) => s + i.claims, 0))} claims</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Reserves</p>
+                <p className="text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Low</p>
+                <p>{formatCurrency(metrics.financials.totals.totalLowEval)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">High</p>
+                <p className="text-warning">{formatCurrency(metrics.financials.totals.totalHighEval)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
@@ -2735,27 +2782,27 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       </div>
 
       {/* Claims by Queue */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
           onDoubleClick={handleExportClaimsByQueue}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Claims by Queue</h3>
-          <p className="text-xs text-muted-foreground mb-4">Claims vs Exposures by handling unit</p>
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Claims by Queue</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Claims vs Exposures by handling unit</p>
           
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.typeGroups} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={metrics.typeGroups} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="typeGroup" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={formatNumber} />
+                <XAxis dataKey="typeGroup" stroke="hsl(var(--muted-foreground))" fontSize={9} interval={0} angle={-25} textAnchor="end" height={40} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickFormatter={formatNumber} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
                   formatter={(value: number, name: string) => [formatNumber(value), name === 'claims' ? 'Claims' : 'Exposures']}
                 />
@@ -2765,39 +2812,39 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </ResponsiveContainer>
           </div>
           
-          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary"></div>
-              <span className="text-xs text-muted-foreground">Claims</span>
+          <div className="flex gap-4 sm:gap-6 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-primary"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Claims</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
-              <span className="text-xs text-muted-foreground">Exposures</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Exposures</span>
             </div>
           </div>
         </div>
 
         {/* Inventory Age */}
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
           onDoubleClick={handleExportInventoryAge}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory Age Distribution</h3>
-          <p className="text-xs text-muted-foreground mb-4">Claim counts by age bucket</p>
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Inventory Age Distribution</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Claim counts by age bucket</p>
           
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 20, left: 55, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={formatNumber} />
-                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={85} />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10} tickFormatter={formatNumber} />
+                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={9} width={50} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
                   formatter={(value: number) => [formatNumber(value), 'Claims']}
                 />
@@ -2810,14 +2857,14 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </ResponsiveContainer>
           </div>
 
-          <div className="flex gap-4 mt-4 pt-4 border-t border-border justify-center flex-wrap">
+          <div className="flex gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border justify-center flex-wrap">
             {metrics.ageDistribution.map(item => (
               <div key={item.age} className="text-center">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }}></div>
-                  <span className="text-xs text-muted-foreground">{item.age}</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 rounded" style={{ backgroundColor: item.fill }}></div>
+                  <span className="text-[9px] sm:text-xs text-muted-foreground">{item.age}</span>
                 </div>
-                <p className="text-sm font-semibold">{formatNumber(item.claims)}</p>
+                <p className="text-xs sm:text-sm font-semibold">{formatNumber(item.claims)}</p>
               </div>
             ))}
           </div>
@@ -2826,14 +2873,76 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       {/* Litigation Phases Table */}
       <div 
-        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportLitPhases}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Litigation Evaluation Phases</h3>
-        <p className="text-xs text-muted-foreground mb-4">Open LIT files by phase and age — focus on 365+ day aged claims</p>
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Litigation Evaluation Phases</h3>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Open LIT files by phase and age — focus on 365+ day aged claims</p>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Cards View */}
+        <div className="block sm:hidden space-y-2">
+          {metrics.topPhases.map((phase) => {
+            const agedPct = phase.grandTotal > 0 
+              ? ((phase.total365Plus / phase.grandTotal) * 100).toFixed(0)
+              : '0';
+            return (
+              <div key={phase.phase} className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold text-sm">{phase.phase}</span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${parseInt(agedPct) > 70 ? 'text-destructive bg-destructive/10' : parseInt(agedPct) > 50 ? 'text-warning bg-warning/10' : 'text-muted-foreground bg-muted'}`}>
+                    {agedPct}% aged
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <p className="text-destructive text-[10px]">365+</p>
+                    <p className="font-semibold text-destructive">{formatNumber(phase.total365Plus)}</p>
+                  </div>
+                  <div>
+                    <p className="text-warning text-[10px]">181-365</p>
+                    <p className="font-medium text-warning">{formatNumber(phase.total181To365)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[10px]">61-180</p>
+                    <p className="font-medium">{formatNumber(phase.total61To180)}</p>
+                  </div>
+                  <div>
+                    <p className="text-success text-[10px]">&lt;60</p>
+                    <p className="font-medium text-success">{formatNumber(phase.totalUnder60)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="p-3 bg-muted/50 rounded-lg border border-border font-bold">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm">LIT Total</span>
+              <span className="text-xs text-destructive">{((data.litPhases.reduce((s, p) => s + p.total365Plus, 0) / metrics.litTotal) * 100).toFixed(0)}% aged</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div>
+                <p className="text-destructive text-[10px]">365+</p>
+                <p className="text-destructive">{formatNumber(data.litPhases.reduce((s, p) => s + p.total365Plus, 0))}</p>
+              </div>
+              <div>
+                <p className="text-warning text-[10px]">181-365</p>
+                <p className="text-warning">{formatNumber(data.litPhases.reduce((s, p) => s + p.total181To365, 0))}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[10px]">61-180</p>
+                <p>{formatNumber(data.litPhases.reduce((s, p) => s + p.total61To180, 0))}</p>
+              </div>
+              <div>
+                <p className="text-success text-[10px]">&lt;60</p>
+                <p className="text-success">{formatNumber(data.litPhases.reduce((s, p) => s + p.totalUnder60, 0))}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
@@ -2883,62 +2992,62 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       {/* Texas Rear End — Age-Based Tracker */}
       <div 
-        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportTexasRearEnd}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Settlement Tracker</h3>
-        <p className="text-xs text-muted-foreground mb-4">Early settlement focus by age • Real-time impact tracking</p>
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Settlement Tracker</h3>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Early settlement focus by age • Real-time impact tracking</p>
 
-        {/* Age Buckets - Horizontal Bar Breakdown */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        {/* Age Buckets - Responsive Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
           {TEXAS_REAR_END_DATA.byAge.map((bucket, idx) => {
             const pctOfTotal = ((bucket.claims / TEXAS_REAR_END_DATA.summary.totalClaims) * 100).toFixed(0);
             const isAged = bucket.age.includes('365+') || bucket.age.includes('181-365');
             return (
               <div 
                 key={bucket.age} 
-                className={`p-3 rounded-lg border ${
+                className={`p-2 sm:p-3 rounded-lg border ${
                   idx === 0 ? 'border-destructive/30 bg-destructive/5' : 
                   idx === 1 ? 'border-warning/30 bg-warning/5' : 
                   'border-border bg-muted/20'
                 }`}
               >
-                <p className={`text-xs font-medium ${idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : 'text-muted-foreground'}`}>
+                <p className={`text-[10px] sm:text-xs font-medium ${idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : 'text-muted-foreground'}`}>
                   {bucket.age}
                 </p>
-                <p className="text-lg font-bold text-foreground">{bucket.claims.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrencyK(bucket.reserves)} • {pctOfTotal}%</p>
+                <p className="text-base sm:text-lg font-bold text-foreground">{bucket.claims.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrencyK(bucket.reserves)} • {pctOfTotal}%</p>
               </div>
             );
           })}
         </div>
 
         {/* Settlement Impact Tracker - Placeholder for real-time data */}
-        <div className="bg-muted/20 rounded-lg border border-border p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase">Settlement Impact This Month</h4>
-            <span className="text-xs text-muted-foreground">Data pending</span>
+        <div className="bg-muted/20 rounded-lg border border-border p-3 sm:p-4 mb-3 sm:mb-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h4 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase">Settlement Impact This Month</h4>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">Data pending</span>
           </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-success">—</p>
-              <p className="text-xs text-muted-foreground">Settled</p>
+              <p className="text-lg sm:text-2xl font-bold text-success">—</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Settled</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-primary">—</p>
-              <p className="text-xs text-muted-foreground">Reserves Released</p>
+              <p className="text-lg sm:text-2xl font-bold text-primary">—</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Reserves Released</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">—</p>
-              <p className="text-xs text-muted-foreground">Avg Days to Settle</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">—</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Avg Days to Settle</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Deploy Directive */}
-          <div className="bg-muted/30 rounded-lg border border-border p-4">
+          <div className="bg-muted/30 rounded-lg border border-border p-3 sm:p-4">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Deploy Review</h4>
             <RadioGroup 
               value={selectedClaimFilter} 
