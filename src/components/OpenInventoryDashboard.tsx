@@ -70,23 +70,23 @@ export function OpenInventoryDashboard() {
   // Rear Ends - Texas Areas 101-110 | Loss Desc: IV R/E CV only
   const TEXAS_REAR_END_DATA = {
     lossDescription: 'IV R/E CV',
-    summary: { totalClaims: 2458, totalReserves: 142500000, lowEval: 71000000, highEval: 84000000 },
+    summary: { totalClaims: 2458, totalReserves: 33000000, lowEval: 9260000, highEval: 10800000 },
     byArea: [
-      { area: '101 EL PASO', claims: 412, reserves: 24200000, lowEval: 12200000, highEval: 14500000 },
-      { area: '102 RIO GRANDE/VALL', claims: 318, reserves: 18200000, lowEval: 9000000, highEval: 10800000 },
-      { area: '103 LAREDO/DEL RIO', claims: 245, reserves: 15500000, lowEval: 7800000, highEval: 9300000 },
-      { area: '104 CORPUS', claims: 198, reserves: 12200000, lowEval: 6000000, highEval: 7300000 },
-      { area: '105 SAN ANTONIO', claims: 387, reserves: 21000000, lowEval: 10500000, highEval: 12500000 },
-      { area: '106 WEST TEXAS', claims: 156, reserves: 9200000, lowEval: 4500000, highEval: 5500000 },
-      { area: '107 HOUSTON', claims: 289, reserves: 14800000, lowEval: 7300000, highEval: 8800000 },
-      { area: '109 DALLAS', claims: 142, reserves: 8800000, lowEval: 4300000, highEval: 5000000 },
-      { area: '110 AUSTIN', claims: 98, reserves: 6600000, lowEval: 3400000, highEval: 4200000 },
+      { area: '101 EL PASO', claims: 412, reserves: 5600000, lowEval: 1550000, highEval: 1810000 },
+      { area: '102 RIO GRANDE/VALL', claims: 318, reserves: 4200000, lowEval: 1170000, highEval: 1360000 },
+      { area: '103 LAREDO/DEL RIO', claims: 245, reserves: 3600000, lowEval: 1010000, highEval: 1180000 },
+      { area: '104 CORPUS', claims: 198, reserves: 2800000, lowEval: 780000, highEval: 910000 },
+      { area: '105 SAN ANTONIO', claims: 387, reserves: 4900000, lowEval: 1370000, highEval: 1600000 },
+      { area: '106 WEST TEXAS', claims: 156, reserves: 2100000, lowEval: 590000, highEval: 690000 },
+      { area: '107 HOUSTON', claims: 289, reserves: 3400000, lowEval: 950000, highEval: 1110000 },
+      { area: '109 DALLAS', claims: 142, reserves: 2000000, lowEval: 560000, highEval: 650000 },
+      { area: '110 AUSTIN', claims: 98, reserves: 1500000, lowEval: 420000, highEval: 490000 },
     ],
     byAge: [
-      { age: '365+ Days', claims: 983, reserves: 59000000, lowEval: 29500000, highEval: 35000000 },
-      { age: '181-365 Days', claims: 712, reserves: 42500000, lowEval: 21000000, highEval: 25000000 },
-      { age: '61-180 Days', claims: 498, reserves: 26000000, lowEval: 13000000, highEval: 15500000 },
-      { age: 'Under 60 Days', claims: 265, reserves: 15000000, lowEval: 7500000, highEval: 8500000 },
+      { age: '365+ Days', claims: 983, reserves: 13600000, lowEval: 3800000, highEval: 4450000 },
+      { age: '181-365 Days', claims: 712, reserves: 9800000, lowEval: 2740000, highEval: 3200000 },
+      { area: '61-180 Days', claims: 498, reserves: 6000000, lowEval: 1680000, highEval: 1960000 },
+      { age: 'Under 60 Days', claims: 265, reserves: 3600000, lowEval: 1040000, highEval: 1190000 },
     ],
   };
 
