@@ -711,13 +711,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         gold: [212, 175, 55] as [number, number, number],
       };
 
-      // CALCULATIONS
+      // CALCULATIONS - Using actual claim counts from data
       const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
-      const yoyDelta = currentCP1Rate - historicalMetrics.lastYear.cp1Rate;
-      const avgClaimCost = 37500;
-      const cp1FinancialExposure = CP1_DATA.totals.yes * avgClaimCost;
-      const agedCP1Exposure = CP1_DATA.biByAge[0].yes * avgClaimCost * 1.4;
       const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
+      
+      // Note: These are claim counts, not dollar exposure (we don't have per-claim financials)
+      const cp1ClaimCount = CP1_DATA.totals.yes;
+      const agedBIClaimCount = CP1_DATA.biByAge[0].yes;
 
       // BACKGROUND
       doc.setFillColor(...C.bg);
@@ -755,7 +755,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...C.white);
-      doc.text(`STATUS: ${status}  |  $${(cp1FinancialExposure / 1000000).toFixed(0)}M AT POLICY LIMITS  |  ${CP1_DATA.cp1Rate}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
+      doc.text(`STATUS: ${status}  |  ${cp1ClaimCount.toLocaleString()} CLAIMS AT LIMITS  |  ${CP1_DATA.cp1Rate}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
       y += 14;
 
       // KEY METRICS ROW
@@ -766,11 +766,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       y += 6;
 
       const metricBoxW = cw / 4 - 2;
+      const biRate = ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1);
+      const agedBIPct = ((agedBIClaimCount / cp1ClaimCount) * 100).toFixed(0);
       const metrics = [
-        { label: 'EXPOSURE', value: `$${(cp1FinancialExposure / 1000000).toFixed(0)}M`, sub: 'At Policy Limits' },
-        { label: 'CP1 RATE', value: CP1_DATA.cp1Rate + '%', sub: `${yoyDelta >= 0 ? '+' : ''}${yoyDelta.toFixed(1)}% YoY` },
-        { label: 'AGED BI RISK', value: `$${(agedCP1Exposure / 1000000).toFixed(0)}M`, sub: '365+ Days' },
-        { label: 'CLAIMS', value: CP1_DATA.totals.yes.toLocaleString(), sub: 'At Limits' },
+        { label: 'CP1 CLAIMS', value: cp1ClaimCount.toLocaleString(), sub: 'At Policy Limits' },
+        { label: 'CP1 RATE', value: CP1_DATA.cp1Rate + '%', sub: 'of Total Inventory' },
+        { label: 'BI CP1 RATE', value: biRate + '%', sub: 'Highest by Coverage' },
+        { label: 'AGED BI', value: agedBIClaimCount.toLocaleString(), sub: `${agedBIPct}% of CP1 (365+)` },
       ];
 
       metrics.forEach((met, i) => {
@@ -800,12 +802,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(...C.gold);
-      doc.text('CFO BOTTOM LINE', m.l + 5, y + 5);
+      doc.text('EXECUTIVE SUMMARY', m.l + 5, y + 5);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.5);
       doc.setTextColor(...C.offWhite);
-      const bottomLine = `$${(cp1FinancialExposure / 1000000).toFixed(0)}M in claims at policy limits (${CP1_DATA.cp1Rate}% of inventory). Aged BI (365+ days) = $${(agedCP1Exposure / 1000000).toFixed(0)}M concentrated risk. ${status === 'CRITICAL' ? 'INTERVENTION REQUIRED.' : status === 'ELEVATED' ? 'CLOSE MONITORING NEEDED.' : 'MAINTAIN CURRENT PROTOCOLS.'}`;
+      const bottomLine = `${cp1ClaimCount.toLocaleString()} claims (${CP1_DATA.cp1Rate}%) at policy limits. BI drives ${biRate}% CP1 rate. Aged BI (365+ days) = ${agedBIClaimCount.toLocaleString()} claims (${agedBIPct}% of all CP1). ${status === 'CRITICAL' ? 'INTERVENTION REQUIRED.' : status === 'ELEVATED' ? 'CLOSE MONITORING NEEDED.' : 'MAINTAIN CURRENT PROTOCOLS.'}`;
       const lines = doc.splitTextToSize(bottomLine, cw - 12);
       doc.text(lines, m.l + 5, y + 11);
       y += 26;
@@ -817,7 +819,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.text('CP1 BY LINE OF BUSINESS', m.l, y + 3);
       y += 6;
 
-      const covColW = [38, 30, 30, 25, cw - 123];
+      const covColW = [45, 35, 35, 25, cw - 140];
       const rowH = 8;
 
       // Header
@@ -825,7 +827,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.rect(m.l, y, cw, rowH, 'F');
       doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      const covHeaders = ['COVERAGE', '$ EXPOSURE', 'CLAIMS', 'RATE', 'STATUS'];
+      const covHeaders = ['COVERAGE', 'CP1 CLAIMS', 'TOTAL', 'RATE', 'STATUS'];
       let xPos = m.l + 3;
       covHeaders.forEach((h, i) => {
         doc.text(h, xPos, y + 5.5);
@@ -836,7 +838,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       // Data rows
       doc.setFontSize(6.5);
       CP1_DATA.byCoverage.forEach((row, i) => {
-        const exposure = row.yes * avgClaimCost;
         const rowStatus = row.cp1Rate > 40 ? 'CRITICAL' : row.cp1Rate > 30 ? 'ELEVATED' : 'STABLE';
         const statusColor = rowStatus === 'CRITICAL' ? C.red : rowStatus === 'ELEVATED' ? C.amber : C.green;
         
@@ -850,9 +851,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         xPos += covColW[0];
         
         doc.setFont('helvetica', 'normal');
-        doc.text(`$${(exposure / 1000000).toFixed(1)}M`, xPos, y + 5.5);
-        xPos += covColW[1];
         doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
+        xPos += covColW[1];
+        doc.text(row.total.toLocaleString(), xPos, y + 5.5);
         xPos += covColW[2];
         doc.text(`${row.cp1Rate}%`, xPos, y + 5.5);
         xPos += covColW[3];
@@ -872,9 +873,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.text('TOTAL', xPos, y + 5.5);
       xPos += covColW[0];
       doc.setTextColor(...C.white);
-      doc.text(`$${(cp1FinancialExposure / 1000000).toFixed(0)}M`, xPos, y + 5.5);
-      xPos += covColW[1];
       doc.text(CP1_DATA.totals.yes.toLocaleString(), xPos, y + 5.5);
+      xPos += covColW[1];
+      doc.text(CP1_DATA.totals.grandTotal.toLocaleString(), xPos, y + 5.5);
       xPos += covColW[2];
       doc.text(CP1_DATA.cp1Rate + '%', xPos, y + 5.5);
       y += rowH + 6;
@@ -891,7 +892,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.rect(m.l, y, cw, rowH, 'F');
       doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      const ageHeaders = ['AGE BUCKET', '$ AT RISK', 'CLAIMS', 'CP1 RATE', 'PRIORITY'];
+      const ageHeaders = ['AGE BUCKET', 'CP1 CLAIMS', 'TOTAL', 'CP1 RATE', 'PRIORITY'];
       xPos = m.l + 3;
       ageHeaders.forEach((h, i) => {
         doc.text(h, xPos, y + 5.5);
@@ -902,8 +903,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       // Age rows
       doc.setFontSize(6.5);
       CP1_DATA.biByAge.forEach((row, i) => {
-        const multiplier = i === 0 ? 1.4 : i === 1 ? 1.2 : i === 2 ? 1.0 : 0.8;
-        const exposure = row.yes * avgClaimCost * multiplier;
         const rate = ((row.yes / row.total) * 100).toFixed(0);
         const priority = i === 0 ? 'URGENT' : i === 1 ? 'HIGH' : 'NORMAL';
         const priorityColor = i === 0 ? C.red : i === 1 ? C.amber : C.green;
@@ -918,9 +917,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         xPos += covColW[0];
         
         doc.setFont('helvetica', 'normal');
-        doc.text(`$${(exposure / 1000000).toFixed(1)}M`, xPos, y + 5.5);
-        xPos += covColW[1];
         doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
+        xPos += covColW[1];
+        doc.text(row.total.toLocaleString(), xPos, y + 5.5);
         xPos += covColW[2];
         doc.text(`${rate}%`, xPos, y + 5.5);
         xPos += covColW[3];
@@ -940,7 +939,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       y += 6;
 
       const actions = [
-        { priority: 'IMMEDIATE', action: `Resolve top 100 aged BI claims to reduce $${(agedCP1Exposure * 0.15 / 1000000).toFixed(0)}M exposure` },
+        { priority: 'IMMEDIATE', action: `Prioritize resolution of ${agedBIClaimCount.toLocaleString()} aged BI claims (365+ days)` },
         { priority: 'STRATEGIC', action: 'Implement early limits evaluation at 60-day mark' },
         { priority: 'PROCESS', action: 'Review BI settlement authority and escalation thresholds' },
       ];
