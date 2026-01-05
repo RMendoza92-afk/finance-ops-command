@@ -640,173 +640,140 @@ export function OpenInventoryDashboard() {
               value={selectedClaimFilter} 
               onValueChange={(val) => {
                 setSelectedClaimFilter(val);
-                setAiSummary(''); // Reset summary when filter changes
+                setAiSummary('');
               }}
-              className="space-y-1"
+              className="grid grid-cols-2 gap-1"
             >
-              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
-                <RadioGroupItem value="all" id="all-claims" className="mt-0.5" />
+              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'all' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50'}`}>
+                <RadioGroupItem value="all" id="all-claims" />
                 <div>
-                  <Label htmlFor="all-claims" className="text-sm cursor-pointer font-medium">All Claims ({TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()})</Label>
-                  <p className="text-xs text-muted-foreground">All 9 areas: 101-110</p>
+                  <span className="font-medium">All ({TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()})</span>
                 </div>
-              </div>
-              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
-                <RadioGroupItem value="aged-365" id="aged-365" className="mt-0.5" />
+              </label>
+              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'aged-365' ? 'border-destructive bg-destructive/10' : 'border-border hover:bg-muted/50'}`}>
+                <RadioGroupItem value="aged-365" id="aged-365" />
                 <div>
-                  <Label htmlFor="aged-365" className="text-sm cursor-pointer font-medium text-destructive">365+ Days Aged ({TEXAS_REAR_END_DATA.byAge[0].claims.toLocaleString()})</Label>
-                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[0].reserves / 1000000).toFixed(1)}M reserves • Highest priority</p>
+                  <span className="font-medium text-destructive">365+ Days ({TEXAS_REAR_END_DATA.byAge[0].claims})</span>
                 </div>
-              </div>
-              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
-                <RadioGroupItem value="aged-181-365" id="aged-181-365" className="mt-0.5" />
+              </label>
+              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'aged-181-365' ? 'border-warning bg-warning/10' : 'border-border hover:bg-muted/50'}`}>
+                <RadioGroupItem value="aged-181-365" id="aged-181-365" />
                 <div>
-                  <Label htmlFor="aged-181-365" className="text-sm cursor-pointer font-medium text-warning">181-365 Days ({TEXAS_REAR_END_DATA.byAge[1].claims.toLocaleString()})</Label>
-                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[1].reserves / 1000000).toFixed(1)}M reserves • High priority</p>
+                  <span className="font-medium text-warning">181-365 Days ({TEXAS_REAR_END_DATA.byAge[1].claims})</span>
                 </div>
-              </div>
-              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
-                <RadioGroupItem value="top-3-areas" id="top-3-areas" className="mt-0.5" />
+              </label>
+              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'top-3-areas' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50'}`}>
+                <RadioGroupItem value="top-3-areas" id="top-3-areas" />
                 <div>
-                  <Label htmlFor="top-3-areas" className="text-sm cursor-pointer font-medium">Top 3 Areas by Volume ({(TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims).toLocaleString()})</Label>
-                  <p className="text-xs text-muted-foreground">101 El Paso, 105 San Antonio, 102 Rio Grande</p>
+                  <span className="font-medium">Top 3 Areas ({(TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims).toLocaleString()})</span>
                 </div>
-              </div>
-              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
-                <RadioGroupItem value="under-60" id="under-60" className="mt-0.5" />
-                <div>
-                  <Label htmlFor="under-60" className="text-sm cursor-pointer font-medium text-success">Under 60 Days ({TEXAS_REAR_END_DATA.byAge[3].claims.toLocaleString()})</Label>
-                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[3].reserves / 1000000).toFixed(1)}M reserves • Early intervention</p>
-                </div>
-              </div>
+              </label>
             </RadioGroup>
 
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <select
                 value={selectedReviewer}
                 onChange={(e) => {
                   setSelectedReviewer(e.target.value);
-                  setAiSummary(''); // Reset summary when reviewer changes
+                  setAiSummary('');
                 }}
-                className="w-full p-2 rounded-lg border border-border bg-background text-sm"
+                className="p-2 rounded border border-border bg-background text-xs"
               >
-                <option value="">Select reviewer...</option>
+                <option value="">Reviewer...</option>
                 {REVIEWERS.map(r => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-
-              {/* Deadline Picker */}
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
                 <input
                   type="date"
                   value={deadline}
                   onChange={(e) => {
                     setDeadline(e.target.value);
-                    setAiSummary(''); // Reset summary when deadline changes
+                    setAiSummary('');
                   }}
                   min={format(new Date(), 'yyyy-MM-dd')}
-                  className="flex-1 p-2 rounded-lg border border-border bg-background text-sm"
+                  className="flex-1 p-2 rounded border border-border bg-background text-xs"
                 />
               </div>
+            </div>
 
-              {/* Test Mode Toggle */}
-              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
-                <div className="flex items-center gap-2">
-                  <TestTube className="h-4 w-4 text-amber-500" />
-                  <span className="text-xs font-medium">SMS Test Mode</span>
-                </div>
-                <Switch checked={testMode} onCheckedChange={setTestMode} />
-              </div>
-              {testMode && (
-                <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
-                  Test mode: SMS will be simulated (shown in-app only)
-                </p>
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <Switch checked={testMode} onCheckedChange={setTestMode} className="scale-75" />
+                <span className="text-muted-foreground">SMS Test</span>
+              </label>
+              {selectedClaimFilter && (
+                <span className="text-muted-foreground">
+                  ${(selectedClaimFilter === 'aged-365' ? TEXAS_REAR_END_DATA.byAge[0].reserves / 1000000 :
+                     selectedClaimFilter === 'aged-181-365' ? TEXAS_REAR_END_DATA.byAge[1].reserves / 1000000 :
+                     selectedClaimFilter === 'top-3-areas' ? (TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves) / 1000000 :
+                     TEXAS_REAR_END_DATA.summary.totalReserves / 1000000).toFixed(1)}M at risk
+                </span>
               )}
             </div>
 
-            {/* Generate AI Summary Button */}
-            <Button 
-              className="w-full mt-3" 
-              variant="outline"
-              disabled={!selectedClaimFilter || !selectedReviewer || generatingSummary}
-              onClick={async () => {
-                setGeneratingSummary(true);
-                const getFilterData = () => {
-                  switch (selectedClaimFilter) {
-                    case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, reserves: TEXAS_REAR_END_DATA.summary.totalReserves, desc: 'All claims' };
-                    case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, reserves: TEXAS_REAR_END_DATA.byAge[0].reserves, desc: '365+ day aged claims' };
-                    case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, reserves: TEXAS_REAR_END_DATA.byAge[1].reserves, desc: '181-365 day aged claims' };
-                    case 'top-3-areas': return { 
-                      count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
-                      reserves: TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves,
-                      desc: 'Top 3 areas (El Paso, San Antonio, Rio Grande)'
-                    };
-                    case 'under-60': return { count: TEXAS_REAR_END_DATA.byAge[3].claims, reserves: TEXAS_REAR_END_DATA.byAge[3].reserves, desc: 'Under 60 day claims' };
-                    default: return { count: 0, reserves: 0, desc: '' };
-                  }
-                };
-                const filterData = getFilterData();
-                const claimCount = filterData.count;
-                const reserves = filterData.reserves;
-                
-                try {
-                  const { data, error } = await supabase.functions.invoke('generate-directive-summary', {
-                    body: {
-                      claimFilter: selectedClaimFilter,
-                      claimCount,
-                      region: 'Texas 101-110',
-                      lossDescription: TEXAS_REAR_END_DATA.lossDescription,
-                      reviewer: selectedReviewer,
-                      deadline: format(new Date(deadline), 'MMMM d, yyyy'),
-                      totalReserves: reserves,
+            {/* Buttons Row */}
+            <div className="mt-3 flex gap-2">
+              <Button 
+                className="flex-1" 
+                variant="outline"
+                size="sm"
+                disabled={!selectedClaimFilter || !selectedReviewer || generatingSummary}
+                onClick={async () => {
+                  setGeneratingSummary(true);
+                  const getFilterData = () => {
+                    switch (selectedClaimFilter) {
+                      case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, reserves: TEXAS_REAR_END_DATA.summary.totalReserves };
+                      case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, reserves: TEXAS_REAR_END_DATA.byAge[0].reserves };
+                      case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, reserves: TEXAS_REAR_END_DATA.byAge[1].reserves };
+                      case 'top-3-areas': return { 
+                        count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
+                        reserves: TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves,
+                      };
+                      default: return { count: 0, reserves: 0 };
                     }
-                  });
+                  };
+                  const filterData = getFilterData();
+                  
+                  try {
+                    const { data, error } = await supabase.functions.invoke('generate-directive-summary', {
+                      body: {
+                        claimFilter: selectedClaimFilter,
+                        claimCount: filterData.count,
+                        region: 'Texas 101-110',
+                        lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                        reviewer: selectedReviewer,
+                        deadline: format(new Date(deadline), 'MMMM d, yyyy'),
+                        totalReserves: filterData.reserves,
+                      }
+                    });
+                    if (error) throw error;
+                    setAiSummary(data.summary);
+                  } catch (err: any) {
+                    console.error('Summary error:', err);
+                    setAiSummary(`DIRECTIVE: Review ${filterData.count} claims. Exposure: $${(filterData.reserves/1000000).toFixed(1)}M. Due: ${format(new Date(deadline), 'MMM d')}. Assigned: ${selectedReviewer}.`);
+                  }
+                  setGeneratingSummary(false);
+                }}
+              >
+                {generatingSummary ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                {generatingSummary ? '' : 'AI Summary'}
+              </Button>
+            </div>
 
-                  if (error) throw error;
-                  setAiSummary(data.summary);
-                  toast.success("Directive summary generated", { icon: <Sparkles className="h-4 w-4" /> });
-                } catch (err: any) {
-                  console.error('Summary error:', err);
-                  toast.error("Failed to generate summary");
-                  // Fallback summary
-                  setAiSummary(`DIRECTIVE: Review ${claimCount} ${selectedClaimFilter.replace('-', ' ')} claims in Texas 101-110. Total exposure: $${(reserves/1000000).toFixed(1)}M. Deadline: ${format(new Date(deadline), 'MMMM d, yyyy')}. Assigned to: ${selectedReviewer}.`);
-                }
-                setGeneratingSummary(false);
-              }}
-            >
-              {generatingSummary ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
-              Generate AI Summary
-            </Button>
-
-            {/* AI Summary Display */}
+            {/* Compact AI Summary */}
             {aiSummary && (
-              <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  <span className="text-xs font-semibold text-primary uppercase">Executive Directive</span>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">{aiSummary}</p>
-                <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="text-xs">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Due: {format(new Date(deadline), 'MMM d, yyyy')}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {selectedReviewer}
-                  </Badge>
-                </div>
+              <div className="mt-2 p-2 rounded bg-primary/10 border border-primary/30 text-xs">
+                <p className="text-foreground leading-snug">{aiSummary}</p>
               </div>
             )}
 
             <Button 
               className="w-full mt-2" 
               variant="default"
+              size="sm"
               disabled={!selectedClaimFilter || !selectedReviewer || !aiSummary || deploying}
               onClick={async () => {
                 setDeploying(true);
