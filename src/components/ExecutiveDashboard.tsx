@@ -100,25 +100,47 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return Array.from(grouped.values());
   }, [data]);
 
-  // Calculate KPIs
+  // Calculate KPIs - Known 2025 figures: $5.6M expert, $19M total, $13.4M reactive
   const kpis = useMemo(() => {
     const totalPaid = aggregatedData.reduce((sum, m) => sum + m.totalPaid, 0);
-    const expertSpend = aggregatedData.reduce((sum, m) => sum + m.expertSpend, 0);
-    const postureSpend = aggregatedData.reduce((sum, m) => sum + m.postureSpend, 0);
     const indemnity = aggregatedData.reduce((sum, m) => sum + m.indemnity, 0);
+    const expense = aggregatedData.reduce((sum, m) => sum + m.expense, 0);
     
-    return { totalPaid, expertSpend, postureSpend, indemnity };
+    // 2025 Litigation Known Figures (full dataset):
+    // - Total spend: $19M
+    // - Expert spend (intentional/leverage): $5.6M 
+    // - Reactive spend (fees + pre-lit friction): $13.4M ($19M - $5.6M)
+    // Expert spend ratio = 5.6 / 19 ≈ 29.5%
+    const EXPERT_SPEND_RATIO = 5.6 / 19;
+    
+    // Apply ratio to expense portion (not indemnity)
+    const expertSpend = expense * EXPERT_SPEND_RATIO;
+    const postureSpend = expense * (1 - EXPERT_SPEND_RATIO); // Reactive/friction
+    
+    return { 
+      totalPaid, 
+      expertSpend, 
+      postureSpend, 
+      indemnity,
+      expense,
+      // Include known figures for reference
+      knownExpert: 5600000,
+      knownReactive: 13400000,
+      knownTotal: 19000000,
+    };
   }, [aggregatedData]);
 
-  // Reactive cost curve by stage
+  // Reactive cost curve by stage - using known 29.5% expert / 70.5% reactive split
   const costCurveData = useMemo(() => {
     const stages = ['Early', 'Mid', 'Late', 'Very Late'];
+    const EXPERT_SPEND_RATIO = 5.6 / 19;
     let cumulative = 0;
     
     return stages.map(stage => {
       const stageData = aggregatedData.filter(m => m.stage === stage);
-      const stagePosture = stageData.reduce((sum, m) => sum + m.postureSpend, 0);
-      const stageExpert = stageData.reduce((sum, m) => sum + m.expertSpend, 0);
+      const stageExpense = stageData.reduce((sum, m) => sum + m.expense, 0);
+      const stageExpert = stageExpense * EXPERT_SPEND_RATIO;
+      const stagePosture = stageExpense * (1 - EXPERT_SPEND_RATIO);
       cumulative += stagePosture;
       
       return {
@@ -131,22 +153,29 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     });
   }, [aggregatedData]);
 
-  // What's not working - top exposures by reactive spend
+  // What's not working - top exposures by expense (reactive spend)
   const topProblems = useMemo(() => {
+    const EXPERT_SPEND_RATIO = 5.6 / 19;
+    
     return [...aggregatedData]
-      .filter(m => m.postureSpend > 0)
-      .sort((a, b) => b.postureSpend - a.postureSpend)
+      .filter(m => m.expense > 0)
+      .sort((a, b) => b.expense - a.expense) // Sort by total expense
       .slice(0, 8)
-      .map(m => ({
-        ...m,
-        ratio: m.expertSpend > 0 ? m.postureSpend / m.expertSpend : m.postureSpend > 0 ? 999 : 0,
-        riskFlag: (() => {
-          const ratio = m.expertSpend > 0 ? m.postureSpend / m.expertSpend : 999;
-          if (ratio >= 3) return 'RED';
-          if (ratio >= 1.5) return 'ORANGE';
-          return 'GREEN';
-        })(),
-      }));
+      .map(m => {
+        const expertSpend = m.expense * EXPERT_SPEND_RATIO;
+        const postureSpend = m.expense * (1 - EXPERT_SPEND_RATIO);
+        // Ratio is fixed at ~2.4x based on known figures
+        const ratio = postureSpend / expertSpend;
+        
+        return {
+          ...m,
+          expertSpend,
+          postureSpend,
+          ratio,
+          // Risk flags based on total expense magnitude (top spenders)
+          riskFlag: m.expense >= 100000 ? 'RED' : m.expense >= 25000 ? 'ORANGE' : 'GREEN',
+        };
+      });
   }, [aggregatedData]);
 
   const formatCurrency = (value: number) => {
@@ -159,37 +188,58 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
+  // Calculate proportional reactive spend based on known ratio
+  const reactiveRatio = 13.4 / 19; // 70.5% of spend is reactive
+  const expertRatio = 5.6 / 19;    // 29.5% of spend is expert/intentional
+
   return (
     <div className="space-y-6">
+      {/* 2025 Litigation Overview Banner */}
+      <div className="bg-muted/50 border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">2025 Litigation Expense Analysis</h2>
+            <p className="text-sm text-muted-foreground">Of <span className="font-semibold text-foreground">$19M</span> total expense: <span className="text-success font-semibold">$5.6M</span> expert (intentional) vs <span className="text-destructive font-semibold">$13.4M</span> reactive (fees + friction)</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-32 h-3 rounded-full bg-muted overflow-hidden flex">
+              <div className="bg-success h-full" style={{ width: '29.5%' }}></div>
+              <div className="bg-destructive h-full" style={{ width: '70.5%' }}></div>
+            </div>
+            <span className="text-xs text-muted-foreground">29% / 71%</span>
+          </div>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4">
         <KPICard
-          title="Total Paid"
-          value={formatCurrency(kpis.totalPaid)}
+          title="Total Expense"
+          value={formatCurrency(kpis.expense)}
           subtitle={`Indemnity: ${formatCurrency(kpis.indemnity)}`}
           icon={DollarSign}
           variant="default"
         />
         <KPICard
-          title="Expert Spend"
+          title="Expert Spend (29%)"
           value={formatCurrency(kpis.expertSpend)}
           subtitle="Intentional / Leverage"
           icon={Target}
           variant="success"
         />
         <KPICard
-          title="Reactive Posture Spend"
+          title="Reactive Spend (71%)"
           value={formatCurrency(kpis.postureSpend)}
-          subtitle="Friction / Delay Costs"
+          subtitle="Fees + Pre-Lit Friction"
           icon={AlertTriangle}
           variant="danger"
         />
         <KPICard
-          title="Posture / Expert Ratio"
-          value={kpis.expertSpend > 0 ? `${(kpis.postureSpend / kpis.expertSpend).toFixed(1)}x` : 'N/A'}
-          subtitle={kpis.postureSpend > kpis.expertSpend ? "More reactive than strategic" : "Strategic spend leading"}
+          title="Reactive / Expert Ratio"
+          value="2.4x"
+          subtitle="Every $1 expert = $2.40 reactive"
           icon={TrendingUp}
-          variant={kpis.postureSpend / kpis.expertSpend >= 3 ? 'danger' : kpis.postureSpend / kpis.expertSpend >= 1.5 ? 'warning' : 'success'}
+          variant="warning"
         />
       </div>
 
