@@ -41,9 +41,13 @@ serve(async (req) => {
     };
 
     // System prompt with comprehensive data context
+    const now = new Date();
+    const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
+    const year = now.getFullYear();
+
     const systemPrompt = `You are an AI assistant for the Fred Loya Insurance Litigation Command Center. You have access to real litigation portfolio data and can answer questions accurately.
 
-## CURRENT DATA (as of ${new Date().toLocaleDateString()}):
+## CURRENT DATA (as of ${now.toLocaleDateString()}):
 
 ### Portfolio Overview:
 - Total Matters: ${ctx.totalMatters?.toLocaleString() || 0}
@@ -52,7 +56,7 @@ serve(async (req) => {
 - Total Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(1)}M
 - Total Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(1)}M
 
-### Month-to-Date (MTD) Closures - JANUARY 2026:
+### Month-to-Date (MTD) Closures - ${monthName} ${year}:
 - Closures this month: ${ctx.monthToDate?.closures || 0}
 - Total Paid MTD: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
 - Average Payment: $${(ctx.monthToDate?.avgPayment || 0).toLocaleString()}
@@ -67,7 +71,7 @@ ${JSON.stringify(ctx.byExpenseCategory || {}, null, 2)}
 
 NOTE: Categories include:
 - LIT = Litigation
-- SPD = Special Damages  
+- SPD = Special Damages
 - BI3 = Bodily Injury Level 3
 - ATR = Auto Third Party Recovery
 - L3L = Level 3 Litigation
@@ -91,17 +95,15 @@ ${JSON.stringify(ctx.mattersWithoutEvaluation?.slice(0, 50) || [], null, 2)}
 
 2. **"Without evaluation"** = Matters where indemnityPaid = 0. There are ${ctx.evaluationStatus?.withoutEvaluation || 0} such matters.
 
-3. **Category Questions**: Use the byExpenseCategory data. LIT is the largest usually.
+3. **Category Questions**: Use the byExpenseCategory data.
 
 4. **Team Questions**: Use the byTeam data for team-level stats.
-
-5. **Rear-end/accident type questions**: These would be in the coverage or expCategory fields. Look for patterns in the data.
 
 ## RESPONSE GUIDELINES:
 - ALWAYS cite specific numbers from the data above
 - Be concise but complete
 - Format currency with $ and commas
-- If data shows 0, explain that data may need to be loaded or refreshed
+- If data shows 0, say the source data may not include payment/closure dates
 
 ## REPORT FORMAT:
 When generating a PDF report, end your response with:
