@@ -446,7 +446,78 @@ export function useExportData() {
     return { pdfFile, xlsFile };
   };
 
-  return { generatePDF, generateExcel, exportBoth };
+  // Generate a comprehensive Excel workbook with multiple sections
+  const generateFullExcel = (sections: { title: string; data: ExportableData }[]) => {
+    const wb = XLSX.utils.book_new();
+
+    sections.forEach((section, sectionIndex) => {
+      const { title, data } = section;
+      
+      // ====== SECTION SUMMARY SHEET ======
+      const summaryData: (string | number)[][] = [
+        [data.title],
+        [data.subtitle || ''],
+        [`Generated: ${data.timestamp}`],
+        data.affectsManager ? [`Prepared For: ${data.affectsManager}`] : [],
+        [],
+      ];
+
+      // Add summary metrics
+      if (data.summary && Object.keys(data.summary).length > 0) {
+        summaryData.push(['KEY METRICS']);
+        Object.entries(data.summary).forEach(([key, value]) => {
+          summaryData.push([key, String(value)]);
+        });
+        summaryData.push([]);
+      }
+
+      // Add report data
+      if (data.columns.length > 0 && data.rows.length > 0) {
+        summaryData.push(['REPORT DATA']);
+        summaryData.push(data.columns);
+        data.rows.forEach(row => {
+          summaryData.push(row.map(cell => typeof cell === 'number' ? cell : String(cell)));
+        });
+      }
+
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      const safeSheetName = `${sectionIndex + 1}. ${title}`.substring(0, 31);
+      XLSX.utils.book_append_sheet(wb, summarySheet, safeSheetName);
+
+      // ====== RAW CLAIM DATA SHEETS FOR THIS SECTION ======
+      if (data.rawClaimData && data.rawClaimData.length > 0) {
+        data.rawClaimData.forEach((rawData, rawIndex) => {
+          const rawRows: (string | number)[][] = [rawData.columns];
+          rawData.rows.forEach(row => {
+            rawRows.push(row.map(cell => typeof cell === 'number' ? cell : String(cell)));
+          });
+
+          const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
+          
+          // Set column widths
+          const rawColWidths = rawData.columns.map((col, i) => {
+            const maxLen = Math.max(
+              col.length,
+              ...rawData.rows.slice(0, 100).map(row => String(row[i] || '').length)
+            );
+            return { wch: Math.min(maxLen + 2, 50) };
+          });
+          rawSheet['!cols'] = rawColWidths;
+
+          const rawSheetName = `${sectionIndex + 1}.${rawIndex + 1} ${rawData.sheetName || 'Data'}`.substring(0, 31);
+          XLSX.utils.book_append_sheet(wb, rawSheet, rawSheetName);
+        });
+      }
+    });
+
+    // Download
+    const filename = `Executive_Dashboard_Full_Export_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    
+    return filename;
+  };
+
+  return { generatePDF, generateExcel, exportBoth, generateFullExcel };
 }
 
 // Export type definitions for different dashboard sections

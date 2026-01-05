@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { DollarSign, TrendingUp, AlertTriangle, Target, Download } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -51,7 +51,7 @@ function getExpertType(expCategory: string): string {
 }
 
 export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProps) {
-  const { exportBoth } = useExportData();
+  const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   // Aggregate data by unique record (claim)
   const aggregatedData = useMemo(() => {
@@ -478,6 +478,147 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     toast.success(`PDF + Excel exported: ${caseItem.claim}`);
   }, [exportBoth, timestamp, data]);
 
+  // Full Export - all sections in one workbook
+  const handleFullExport = useCallback(() => {
+    // Build stage-specific claim data
+    const stageClaimData: RawClaimData[] = costCurveData.map(stage => ({
+      columns: ['Unique Record', 'Claim', 'Stage', 'Adjuster', 'Team', 'Indemnity', 'Expense', 'Expert Spend', 'Posture Spend', 'Total Paid'],
+      rows: aggregatedData.filter(m => m.stage === stage.stage).map(m => [
+        m.uniqueRecord,
+        m.claim,
+        m.stage,
+        m.adjuster,
+        m.team,
+        m.indemnity,
+        m.expense,
+        m.expertSpend,
+        m.postureSpend,
+        m.totalPaid,
+      ]),
+      sheetName: `${stage.stage} Stage Claims`,
+    }));
+
+    // Executive review raw data
+    const execReviewClaimData: RawClaimData = {
+      columns: ['Claim', 'Unique Record', 'Review Level', 'Score', 'Total Exposure', 'Expert Spend', 'Reactive Spend', 'Claim Age (Years)', 'Stage', 'Adjuster', 'Pain Escalation', 'Max Pain', 'All Review Reasons'],
+      rows: executiveReviewCases.map(c => [
+        c.claim,
+        c.uniqueRecord,
+        c.executiveReview.level,
+        c.executiveReview.score,
+        c.expense,
+        c.expertSpend,
+        c.reactiveSpend,
+        c.claimAge,
+        c.stage,
+        c.adjuster,
+        c.painEscalation,
+        c.maxPain,
+        c.executiveReview.reasons.join('; '),
+      ]),
+      sheetName: 'Executive Review Claims',
+    };
+
+    const sections = [
+      {
+        title: 'KPI Summary',
+        data: {
+          title: 'KPI Dashboard Summary',
+          subtitle: 'Expert Spend and Friction Metrics',
+          timestamp,
+          affectsManager: 'Executive Leadership',
+          summary: {
+            'Total BI Spend': '$395,000,000',
+            'Litigation Expenses': '$19,000,000',
+            'Expert Spend': '$5,681,152',
+            'Reactive Waste': '$13,318,848',
+            'Waste Ratio': '2.3x',
+          },
+          columns: ['Metric', 'Value', 'Notes'],
+          rows: [
+            ['Total BI Spend', '$395,000,000', 'All Bodily Injury YTD'],
+            ['Litigation Expenses', '$19,000,000', 'Litigation portion'],
+            ['Expert Spend', '$5,681,152', '$516K avg/month'],
+            ['Reactive Waste', '$13,318,848', 'Pre-lit ATR + Lit fees'],
+            ['Expert %', '29.9%', 'Strategic spend ratio'],
+            ['Reactive %', '70.1%', 'Friction spend ratio'],
+          ],
+          rawClaimData: [buildRawClaimData()],
+        } as ExportableData,
+      },
+      {
+        title: 'Quarterly Expert',
+        data: {
+          title: '2025 Quarterly Expert Spend',
+          subtitle: 'Paid vs Approved by Quarter',
+          timestamp,
+          affectsManager: 'Executive Leadership',
+          summary: {
+            'YTD Paid': '$5,681,152',
+            'YTD Approved': '$6,181,166',
+            'Monthly Avg Paid': '$516,468',
+          },
+          columns: ['Quarter', 'Paid', 'Paid Monthly Avg', 'Approved', 'Approved Monthly Avg', 'Variance'],
+          rows: quarterlyExpertData.map(q => [
+            q.quarter,
+            formatCurrencyFull(q.paid),
+            formatCurrencyFull(q.paidAvgMonthly),
+            formatCurrencyFull(q.approved),
+            formatCurrencyFull(q.approvedAvgMonthly),
+            formatCurrencyFull(q.approved - q.paid),
+          ]),
+        } as ExportableData,
+      },
+      {
+        title: 'Cost Curve',
+        data: {
+          title: 'Reactive Cost Curve Analysis',
+          subtitle: 'Cumulative posture spend by litigation stage',
+          timestamp,
+          affectsManager: 'Executive Leadership',
+          columns: ['Stage', 'Reactive Spend', 'Expert Spend', 'Cumulative', 'Claim Count'],
+          rows: costCurveData.map(d => [
+            d.stage,
+            formatCurrencyFull(d.reactiveSpend),
+            formatCurrencyFull(d.expertSpend),
+            formatCurrencyFull(d.cumulative),
+            d.count,
+          ]),
+          rawClaimData: stageClaimData,
+        } as ExportableData,
+      },
+      {
+        title: 'Exec Review',
+        data: {
+          title: 'Executive Review Required',
+          subtitle: 'Files requiring executive closure',
+          timestamp,
+          affectsManager: 'Executive Leadership',
+          summary: {
+            'Critical Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length,
+            'Required Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length,
+            'Total Exposure': formatCurrencyFull(executiveReviewCases.reduce((s, c) => s + c.expense, 0)),
+          },
+          columns: ['Claim', 'Level', 'Exposure', 'Age (Years)', 'Stage', 'Adjuster', 'Score', 'Top Reason'],
+          rows: executiveReviewCases.map(c => [
+            c.claim,
+            c.executiveReview.level,
+            formatCurrencyFull(c.expense),
+            c.claimAge,
+            c.stage,
+            c.adjuster,
+            c.executiveReview.score,
+            c.executiveReview.reasons[0] || '',
+          ]),
+          rawClaimData: [execReviewClaimData],
+        } as ExportableData,
+      },
+    ];
+
+    generateFullExcel(sections);
+    toast.success('Full Excel workbook exported with all dashboard data!');
+  }, [generateFullExcel, timestamp, buildRawClaimData, quarterlyExpertData, costCurveData, aggregatedData, executiveReviewCases]);
+
   return (
     <div className="space-y-6">
       {/* Professional Header Banner */}
@@ -490,9 +631,18 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
               <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-300">
-            <Download className="h-3.5 w-3.5" />
-            <span>Double-click sections to export</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleFullExport}
+              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Full Export
+            </button>
+            <div className="flex items-center gap-2 text-xs text-gray-300">
+              <Download className="h-3.5 w-3.5" />
+              <span>Double-click sections</span>
+            </div>
           </div>
         </div>
       </div>
