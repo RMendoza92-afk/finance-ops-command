@@ -395,7 +395,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
 // ==================== DATA BUILDER ====================
 
 function buildControlData(config: ExecutivePackageConfig) {
-  const INSUF = 'INSUFFICIENT - EXEC ASSUMPTION MADE';
+  const INSUF = 'INSUFFICIENT DATA';
   
   const overBudget = !config.budgetData.onTrack;
   const hasCritical = config.decisionsData.critical > 0;
@@ -418,14 +418,14 @@ function buildControlData(config: ExecutivePackageConfig) {
 
   // Control questions
   const control = overBudget
-    ? `NO - ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over`
-    : `YES - ${formatCurrency(config.budgetData.projectedVariance, true)} under`;
+    ? 'NO - ' + formatCurrency(Math.abs(config.budgetData.projectedVariance), true) + ' over'
+    : 'YES - ' + formatCurrency(config.budgetData.projectedVariance, true) + ' under';
 
   let breaking = 'NOWHERE';
   if (overBudget) breaking = 'BUDGET - BI overspend';
-  else if (hasCritical) breaking = `DECISIONS - ${config.decisionsData.critical} critical`;
-  else if (agedFail) breaking = `AGED BI - ${agedPct}% at 365+`;
-  else if (cp1High) breaking = `CP1 - ${config.cp1Data.cp1Rate} elevated`;
+  else if (hasCritical) breaking = 'DECISIONS - ' + config.decisionsData.critical + ' critical';
+  else if (agedFail) breaking = 'AGED BI - ' + agedPct + '% at 365+';
+  else if (cp1High) breaking = 'CP1 - ' + config.cp1Data.cp1Rate + ' elevated';
 
   let action = 'NO - Maintain cadence';
   if (overBudget) action = 'YES - Tighten BI gate Friday';
@@ -440,14 +440,14 @@ function buildControlData(config: ExecutivePackageConfig) {
   const budgetState = overBudget ? 'FAIL' : 'OK';
 
   const decisionsValue = config.decisionsData.critical !== undefined 
-    ? `${config.decisionsData.critical} critical` 
+    ? config.decisionsData.critical + ' critical' 
     : INSUF;
   const decisionsState = hasCritical ? 'FAIL' : 'OK';
 
   const cp1Value = config.cp1Data.cp1Rate || INSUF;
   const cp1State = cp1High ? 'WARN' : 'OK';
 
-  const agedValue = agedPct !== undefined ? `${agedPct}%` : INSUF;
+  const agedValue = agedPct !== undefined ? agedPct + '%' : INSUF;
   const agedState = agedFail ? 'FAIL' : 'OK';
 
   // Drivers
@@ -459,19 +459,19 @@ function buildControlData(config: ExecutivePackageConfig) {
     { 
       cov: 'BI', 
       change: bi?.change ?? 0,
-      changeStr: bi ? `${bi.change >= 0 ? '+' : ''}${formatCurrency(bi.change, true)}` : INSUF,
+      changeStr: bi ? (bi.change >= 0 ? '+' : '') + formatCurrency(bi.change, true) : INSUF,
       impact: bi?.change > 0 ? 'Primary overspend driver' : 'Under prior year'
     },
     { 
       cov: 'CL', 
       change: cl?.change ?? 0,
-      changeStr: cl ? `${cl.change >= 0 ? '+' : ''}${formatCurrency(cl.change, true)}` : INSUF,
+      changeStr: cl ? (cl.change >= 0 ? '+' : '') + formatCurrency(cl.change, true) : INSUF,
       impact: cl?.change > 0 ? 'Contributing to overspend' : 'Under prior year'
     },
     { 
       cov: 'OC', 
       change: oc?.change ?? 0,
-      changeStr: oc ? `${oc.change >= 0 ? '+' : ''}${formatCurrency(oc.change, true)}` : INSUF,
+      changeStr: oc ? (oc.change >= 0 ? '+' : '') + formatCurrency(oc.change, true) : INSUF,
       impact: oc?.change > 0 ? 'Contributing to overspend' : 'Under prior year'
     },
   ].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
@@ -488,7 +488,7 @@ function buildControlData(config: ExecutivePackageConfig) {
     { 
       area: 'BUDGET', 
       consequence: overBudget 
-        ? `+${formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true)}/mo bleed` 
+        ? '+' + formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true) + '/mo bleed' 
         : 'None'
     },
     { 
@@ -523,6 +523,16 @@ function buildControlData(config: ExecutivePackageConfig) {
 
 // ==================== CEO STATEMENT BUILDER ====================
 
+// Helper to sanitize text for PDF (ASCII only, no special chars)
+function sanitize(text: string): string {
+  return text
+    .replace(/[–—]/g, '-')
+    .replace(/['']/g, "'")
+    .replace(/[""]/g, '"')
+    .replace(/…/g, '...')
+    .replace(/[^\x20-\x7E]/g, ''); // Remove non-ASCII
+}
+
 function buildCEOStatementLines(
   data: ReturnType<typeof buildControlData>,
   config: ExecutivePackageConfig
@@ -534,33 +544,36 @@ function buildCEOStatementLines(
   const lines: string[] = [];
   
   // Line 1: Status
-  lines.push(`STATUS: ${data.status === 'OK' ? 'IN CONTROL' : data.status === 'WARN' ? 'IN CONTROL (MONITOR)' : 'NOT IN CONTROL'}`);
+  const statusText = data.status === 'OK' ? 'IN CONTROL' : data.status === 'WARN' ? 'IN CONTROL (MONITOR)' : 'NOT IN CONTROL';
+  lines.push(sanitize('STATUS: ' + statusText));
   
   // Line 2: Budget
   const budgetStatus = bd.onTrack ? 'On Track' : 'Over Budget';
-  lines.push(`BUDGET: ${formatCurrency(bd.ytdPaid, true)} YTD paid | ${formatCurrency(bd.remaining, true)} remaining | ${budgetStatus} | YOY: ${bd.yoyChangePercent >= 0 ? '+' : ''}${bd.yoyChangePercent.toFixed(1)}%`);
+  const yoySign = bd.yoyChangePercent >= 0 ? '+' : '';
+  lines.push(sanitize('BUDGET: ' + formatCurrency(bd.ytdPaid, true) + ' YTD paid, ' + formatCurrency(bd.remaining, true) + ' remaining, ' + budgetStatus + ', YOY: ' + yoySign + bd.yoyChangePercent.toFixed(1) + '%'));
   
   // Line 3: Decisions
-  lines.push(`DECISIONS: ${dd.total} total pending | ${dd.critical} critical | ${dd.thisWeek} due this week | ${dd.statuteDeadlines} statute deadlines | Exposure: ${formatCurrency(dd.totalExposure, true)}`);
+  lines.push(sanitize('DECISIONS: ' + dd.total + ' pending, ' + dd.critical + ' critical, ' + dd.thisWeek + ' due this week, ' + dd.statuteDeadlines + ' statute deadlines, Exposure: ' + formatCurrency(dd.totalExposure, true)));
   
   // Line 4: CP1
-  lines.push(`CP1: ${cp.cp1Rate} overall rate | BI CP1: ${cp.biCP1Rate} | ${cp.totalClaims} total claims | ${cp.cp1Count} in CP1`);
+  lines.push(sanitize('CP1: ' + cp.cp1Rate + ' overall, BI CP1: ' + cp.biCP1Rate + ', ' + cp.totalClaims + ' total claims, ' + cp.cp1Count + ' in CP1'));
   
   // Line 5: Primary Issue (if any)
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      lines.push(`ISSUE: BI indemnities exceed forecast by ${formatCurrency(Math.abs(bd.projectedVariance), true)}`);
+      lines.push(sanitize('ISSUE: BI indemnities exceed forecast by ' + formatCurrency(Math.abs(bd.projectedVariance), true)));
     } else if (data.breaking.includes('DECISIONS')) {
-      lines.push(`ISSUE: ${dd.critical} critical matters require same-day disposition`);
+      lines.push(sanitize('ISSUE: ' + dd.critical + ' critical matters require same-day disposition'));
     } else if (data.breaking.includes('AGED')) {
-      lines.push(`ISSUE: Aged BI at ${data.agedValue} of inventory - escalation required`);
+      lines.push(sanitize('ISSUE: Aged BI at ' + data.agedValue + ' of inventory, escalation required'));
     }
   } else if (data.status === 'WARN') {
-    lines.push(`MONITOR: CP1 rate ${cp.cp1Rate} elevated - review in 7 days`);
+    lines.push(sanitize('MONITOR: CP1 rate ' + cp.cp1Rate + ' elevated, review in 7 days'));
   }
   
   // Line 6: Action
-  lines.push(`ACTION: ${data.action.replace('YES - ', '').replace('NO - ', '').replace('MONITOR - ', '')}`);
+  const actionText = data.action.replace('YES - ', '').replace('NO - ', '').replace('MONITOR - ', '');
+  lines.push(sanitize('ACTION: ' + actionText));
   
   return lines;
 }
