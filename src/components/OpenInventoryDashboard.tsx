@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
-import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual } from "@/hooks/useExportData";
+import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1086,6 +1086,28 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
     ];
 
+    // Charts for visual representation
+    const charts: PDFChart[] = [
+      {
+        type: 'horizontalBar',
+        title: 'Reserves by Age Bucket',
+        data: FINANCIAL_DATA.byAge.map((item, i) => ({
+          label: item.age,
+          value: item.openReserves,
+          color: i === 0 ? 'red' : i === 3 ? 'green' : 'blue',
+        })),
+      },
+      {
+        type: 'donut',
+        title: 'Reserves by Queue',
+        data: FINANCIAL_DATA.byQueue.map((q, i) => ({
+          label: q.queue,
+          value: q.openReserves,
+          color: (['red', 'amber', 'green', 'blue', 'muted'] as const)[i % 5],
+        })),
+      },
+    ];
+
     const exportData: ExportableData = {
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
@@ -1095,6 +1117,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       managerTracking: [...allHighEvalTracking, ...noEvalTracking],
       dashboardVisuals,
       bulletInsights,
+      charts,
       summary: {
         'Total Open Claims': formatNumber(metrics.totalOpenClaims),
         'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
@@ -1256,6 +1279,28 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       `Evaluation gap: ${formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)} low vs ${formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)} high`,
     ];
 
+    // Charts for Texas Rear End
+    const texasCharts: PDFChart[] = [
+      {
+        type: 'horizontalBar',
+        title: 'Reserves by Age Bucket',
+        data: TEXAS_REAR_END_DATA.byAge.map((a, i) => ({
+          label: a.age,
+          value: a.reserves,
+          color: i === 0 ? 'red' : i === 3 ? 'green' : 'amber',
+        })),
+      },
+      {
+        type: 'pie',
+        title: 'Claims by Area',
+        data: TEXAS_REAR_END_DATA.byArea.slice(0, 5).map((a, i) => ({
+          label: a.area,
+          value: a.claims,
+          color: (['red', 'amber', 'green', 'blue', 'muted'] as const)[i % 5],
+        })),
+      },
+    ];
+
     const exportData: ExportableData = {
       title: 'Texas Rear End Claims (101-110)',
       subtitle: `Loss Description: ${TEXAS_REAR_END_DATA.lossDescription}`,
@@ -1263,6 +1308,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       affectsManager: manager,
       dashboardVisuals: texasDashboardVisuals,
       bulletInsights: texasBulletInsights,
+      charts: texasCharts,
       summary: {
         'Total Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
         'Total Reserves': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.totalReserves),
