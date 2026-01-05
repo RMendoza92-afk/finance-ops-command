@@ -2082,86 +2082,20 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
       </div>
 
-      {/* QUICK ACTION: Rear Ends - Texas Areas 101-110 with In-Platform Directive */}
+      {/* Texas Rear End Quick Action */}
       <div 
-        className="bg-gradient-to-r from-warning/10 to-warning/5 border-2 border-warning/40 rounded-xl p-5 cursor-pointer hover:border-warning transition-colors"
+        className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportTexasRearEnd}
         title="Double-click to export"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/20">
-              <Target className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
-                Quick Action: Rear Ends — Texas 101-110 | IV R/E CV
-                <span className="px-2 py-0.5 bg-warning/20 text-warning text-xs rounded-full font-medium">ACTION REQUIRED</span>
-              </h3>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> West Texas Region • Loss Desc: {TEXAS_REAR_END_DATA.lossDescription} • {TEXAS_REAR_END_DATA.summary.totalClaims} open claims
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-6 items-center">
-            <div className="text-center border-r border-border pr-4">
-              <p className="text-xs text-muted-foreground uppercase">Open Reserves</p>
-              <p className="text-2xl font-bold text-primary">{formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase">Low Eval</p>
-              <p className="text-lg font-semibold text-muted-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase">High Eval</p>
-              <p className="text-lg font-semibold text-muted-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)}</p>
-            </div>
-          </div>
-        </div>
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Claims — Areas 101-110</h3>
+        <p className="text-xs text-muted-foreground mb-4">IV R/E CV loss description • {TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()} open claims • {formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)} reserves</p>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* By Area - Reserves Emphasized */}
-          <div className="bg-card rounded-lg border border-border p-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Area Code</h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {TEXAS_REAR_END_DATA.byArea.map((item) => (
-                <div key={item.area} className="flex justify-between items-center py-1 border-b border-border/50">
-                  <span className="text-sm font-medium">{item.area}</span>
-                  <div className="flex gap-3 text-xs items-center">
-                    <span className="text-muted-foreground">{item.claims} claims</span>
-                    <span className="text-primary font-bold text-sm">{formatCurrencyK(item.reserves)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* By Age - Reserves Emphasized */}
-          <div className="bg-card rounded-lg border border-border p-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Age Bucket</h4>
-            <div className="space-y-2">
-              {TEXAS_REAR_END_DATA.byAge.map((item) => (
-                <div key={item.age} className="flex justify-between items-center py-2 border-b border-border/50">
-                  <span className={`text-sm font-medium ${
-                    item.age === '365+ Days' ? 'text-destructive' : 
-                    item.age === '181-365 Days' ? 'text-warning' : ''
-                  }`}>{item.age}</span>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-primary">{formatCurrencyK(item.reserves)} reserves</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.claims} claims • {formatCurrencyK(item.highEval)} high
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Deploy Directive - In-Platform */}
-          <div className="bg-card rounded-lg border border-primary/30 p-4">
-            <h4 className="text-xs font-semibold text-primary uppercase mb-3 flex items-center gap-2">
-              <Target className="h-3 w-3" /> Deploy Review Directive
-            </h4>
+          {/* Deploy Directive */}
+          <div className="bg-muted/30 rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Deploy Directive</h4>
             <RadioGroup 
               value={selectedClaimFilter} 
               onValueChange={(val) => {
@@ -2403,7 +2337,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
         {/* Real-Time Progress Tracking */}
         {reviews.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-warning/30">
+          <div className="mt-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-xs font-semibold text-foreground uppercase flex items-center gap-2">
                 <Eye className="h-3 w-3" /> Live Review Progress
