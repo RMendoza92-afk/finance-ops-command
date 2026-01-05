@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User } from "lucide-react";
+import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -109,6 +110,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [generatingCP1PDF, setGeneratingCP1PDF] = useState(false);
   const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
   const [generatingBoardPackage, setGeneratingBoardPackage] = useState(false);
+  const [cp1DrilldownCoverage, setCp1DrilldownCoverage] = useState<string | null>(null);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -3872,10 +3874,11 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
             {/* All Coverages */}
             <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-accent"></span>
                 CP1 by Coverage Type
               </h4>
+              <p className="text-xs text-muted-foreground mb-3">Click any row to drill down into individual claims</p>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -3889,8 +3892,17 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                   </TableHeader>
                   <TableBody>
                     {CP1_DATA.byCoverage.map((row) => (
-                      <TableRow key={row.coverage}>
-                        <TableCell className="font-medium">{row.coverage}</TableCell>
+                      <TableRow 
+                        key={row.coverage} 
+                        className="cursor-pointer hover:bg-primary/5 transition-colors"
+                        onClick={() => setCp1DrilldownCoverage(row.coverage)}
+                      >
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-2">
+                            {row.coverage}
+                            <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right">{row.noCP.toLocaleString()}</TableCell>
                         <TableCell className="text-right text-success font-medium">{row.yes.toLocaleString()}</TableCell>
                         <TableCell className="text-right">{row.total.toLocaleString()}</TableCell>
@@ -3940,6 +3952,16 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* CP1 Drilldown Modal */}
+      {cp1DrilldownCoverage && (
+        <CP1DrilldownModal
+          open={!!cp1DrilldownCoverage}
+          onClose={() => setCp1DrilldownCoverage(null)}
+          coverage={cp1DrilldownCoverage}
+          coverageData={CP1_DATA.byCoverage.find(c => c.coverage === cp1DrilldownCoverage) || { noCP: 0, yes: 0, total: 0, cp1Rate: 0 }}
+        />
+      )}
     </div>
   );
 }
