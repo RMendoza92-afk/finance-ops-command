@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
 import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
-import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
+import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
@@ -17,16 +17,32 @@ type TabType = 'executive' | 'management';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabType>('executive');
-  const [filters, setFilters] = useState<GlobalFilters>(defaultGlobalFilters);
+  const [filters, setFilters] = useState<GlobalFilters>(() => {
+    // Load pain level data from localStorage on init
+    const savedPainData = localStorage.getItem('painLevelOverrides');
+    if (savedPainData) {
+      try {
+        const painLevelData = JSON.parse(savedPainData) as PainLevelRow[];
+        return { ...defaultGlobalFilters, painLevelData };
+      } catch { /* ignore parse errors */ }
+    }
+    return defaultGlobalFilters;
+  });
   const [drilldownClaimId, setDrilldownClaimId] = useState<string | null>(null);
   const { data: litigationData, loading, error, stats } = useLitigationData();
 
-  const handleFilterChange = (key: keyof GlobalFilters, value: string) => {
+  // Handle pain level data updates from PainLevelUpload
+  const handlePainLevelDataApplied = (data: PainLevelRow[]) => {
+    setFilters(prev => ({ ...prev, painLevelData: data }));
+  };
+
+  const handleFilterChange = (key: keyof GlobalFilters, value: string | PainLevelRow[]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFilters = () => {
-    setFilters(defaultGlobalFilters);
+    // Keep pain level data when resetting other filters
+    setFilters(prev => ({ ...defaultGlobalFilters, painLevelData: prev.painLevelData }));
   };
 
   const activeFilterCount = Object.entries(filters).filter(([key, v]) => 
@@ -42,9 +58,57 @@ const Index = () => {
     };
   }, [litigationData]);
 
-  // Apply global filters
+  // Helper to check if pain value matches a pain level row
+  const painValueMatches = (recordPain: number, painRowValue: string): boolean => {
+    if (!painRowValue || painRowValue.trim() === '') return false;
+    const cleaned = painRowValue.trim();
+    
+    // Handle band format like "0-3", "4-6", "7-9"
+    if (cleaned.includes('-')) {
+      const [minStr, maxStr] = cleaned.split('-');
+      const min = parseFloat(minStr);
+      const max = parseFloat(maxStr);
+      if (!isNaN(min) && !isNaN(max)) {
+        return recordPain >= min && recordPain <= max;
+      }
+    }
+    
+    // Handle numeric value
+    const num = parseFloat(cleaned);
+    if (!isNaN(num)) {
+      return recordPain === num;
+    }
+    
+    return false;
+  };
+
+  // Apply global filters including pain level data
   const filteredData = useMemo(() => {
-    return litigationData.filter(matter => {
+    return litigationData.filter((matter, index) => {
+      // Pain level data filter - match by index position if we have pain data
+      if (filters.painLevelData.length > 0) {
+        const painRow = filters.painLevelData[index];
+        if (painRow) {
+          // Check if record's start/end pain matches the expected values
+          const startPainVal = painRow.startPain || painRow.oldStartPain;
+          const endPainVal = painRow.endPain || painRow.oldEndPain;
+          
+          // If pain row has values, verify they match (or at least one matches)
+          const hasStartPain = startPainVal && startPainVal.trim() !== '';
+          const hasEndPain = endPainVal && endPainVal.trim() !== '';
+          
+          if (hasStartPain || hasEndPain) {
+            const startMatches = !hasStartPain || painValueMatches(matter.startPainLvl, startPainVal);
+            const endMatches = !hasEndPain || painValueMatches(matter.endPainLvl, endPainVal);
+            
+            // Include record if it matches the pain level data
+            if (!startMatches || !endMatches) {
+              return false;
+            }
+          }
+        }
+      }
+
       // Department filter
       if (filters.department !== 'all' && matter.dept !== filters.department) return false;
       
@@ -218,7 +282,12 @@ const Index = () => {
         {filters.inventoryStatus === 'open' ? (
           <OpenInventoryDashboard filters={filters} />
         ) : activeTab === 'executive' ? (
-          <ExecutiveDashboard data={filteredData} onDrilldown={handleDrilldown} />
+          <ExecutiveDashboard 
+            data={filteredData} 
+            onDrilldown={handleDrilldown} 
+            onPainLevelDataApplied={handlePainLevelDataApplied}
+            painLevelDataActive={filters.painLevelData.length > 0}
+          />
         ) : (
           <OverextensionTable data={filteredData} />
         )}
