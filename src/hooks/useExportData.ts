@@ -877,15 +877,15 @@ export function useExportData() {
 
     y += 5; // Reduced gap
 
-    // ADJUSTER ACCOUNTABILITY - Files & Money - Compact rows
+    // MANAGER ACCOUNTABILITY - Files & Money - Compact rows
     if (breakdowns.highEvalAdjusters.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...C.gold);
-      doc.text('ADJUSTER ACCOUNTABILITY - FILES & MONEY ON HAND', m.l, y);
+      doc.text('MANAGER ACCOUNTABILITY - FILES & MONEY ON HAND', m.l, y);
       y += 4;
 
-      // Full width table for adjuster data
+      // Full width table for manager data
       const adjColW = [cw * 0.05, cw * 0.30, cw * 0.20, cw * 0.22, cw * 0.23];
       
       doc.setFillColor(...C.header);
@@ -893,7 +893,7 @@ export function useExportData() {
       doc.setFontSize(6);
       doc.setTextColor(...C.muted);
       doc.text('RANK', m.l + 3, y + 3.5);
-      doc.text('ADJUSTER NAME', m.l + adjColW[0] + 3, y + 3.5);
+      doc.text('MANAGER NAME', m.l + adjColW[0] + 3, y + 3.5);
       doc.text('OPEN FILES', m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
       doc.text('TOTAL RESERVES', m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3.5);
       doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3.5);
