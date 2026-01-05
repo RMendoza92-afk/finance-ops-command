@@ -164,107 +164,185 @@ export function useExportData() {
       yPos += 26;
     }
 
-    // ====== DASHBOARD VISUALS (High-Level KPI Cards) ======
+    // ====== PREMIUM DASHBOARD VISUALS (Executive KPI Cards) ======
     if (data.dashboardVisuals && data.dashboardVisuals.length > 0) {
       const visuals = data.dashboardVisuals;
       const maxCols = Math.min(visuals.length, 4);
-      const cardWidth = (pageWidth - 28 - (maxCols - 1) * 8) / maxCols;
-      const cardHeight = 32;
+      const cardWidth = (pageWidth - 28 - (maxCols - 1) * 10) / maxCols;
+      const cardHeight = 40;
       
       visuals.forEach((visual, index) => {
         const col = index % maxCols;
         const row = Math.floor(index / maxCols);
-        const xPos = 14 + col * (cardWidth + 8);
-        const cardY = yPos + row * (cardHeight + 6);
+        const xPos = 14 + col * (cardWidth + 10);
+        const cardY = yPos + row * (cardHeight + 8);
 
-        // Card background
+        // Trend colors with gradients
+        const trendColors = {
+          up: { main: { r: 34, g: 197, b: 94 }, dark: { r: 21, g: 128, b: 61 }, light: { r: 74, g: 222, b: 128 } },
+          down: { main: { r: 239, g: 68, b: 68 }, dark: { r: 153, g: 27, b: 27 }, light: { r: 252, g: 129, b: 129 } },
+          neutral: { main: { r: 156, g: 163, b: 175 }, dark: { r: 107, g: 114, b: 128 }, light: { r: 209, g: 213, b: 219 } },
+        };
+        const colorSet = trendColors[visual.trendDirection || 'neutral'];
+
+        // Card shadow
+        doc.setFillColor(5, 5, 5);
+        doc.roundedRect(xPos + 1.5, cardY + 1.5, cardWidth, cardHeight, 4, 4, 'F');
+
+        // Card background with subtle gradient effect
         doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
-        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 3, 3, 'F');
-        doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 3, 3, 'S');
+        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 4, 4, 'F');
+        
+        // Top highlight
+        doc.setFillColor(30, 30, 30);
+        doc.roundedRect(xPos, cardY, cardWidth, 3, 4, 4, 'F');
+        
+        // Accent bar with gradient
+        doc.setFillColor(colorSet.dark.r, colorSet.dark.g, colorSet.dark.b);
+        doc.roundedRect(xPos, cardY, 5, cardHeight, 4, 0, 'F');
+        doc.rect(xPos + 2, cardY, 3, cardHeight, 'F');
+        doc.setFillColor(colorSet.main.r, colorSet.main.g, colorSet.main.b);
+        doc.roundedRect(xPos, cardY, 4, cardHeight - 4, 4, 0, 'F');
+        doc.rect(xPos + 2, cardY, 2, cardHeight - 4, 'F');
+        
+        // Subtle glow at accent bar
+        doc.setFillColor(colorSet.light.r, colorSet.light.g, colorSet.light.b);
+        doc.roundedRect(xPos, cardY + 4, 2, 8, 1, 0, 'F');
 
-        // Trend indicator bar (left edge)
-        const trendColor = visual.trendDirection === 'up' ? accentGreen : 
-                          visual.trendDirection === 'down' ? accentRed : textMuted;
-        doc.setFillColor(trendColor.r, trendColor.g, trendColor.b);
-        doc.rect(xPos, cardY, 3, cardHeight, 'F');
+        // Border
+        doc.setDrawColor(50, 50, 50);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 4, 4, 'S');
 
         // Label
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-        doc.text(visual.label.toUpperCase(), xPos + 8, cardY + 10);
+        doc.text(visual.label.toUpperCase(), xPos + 12, cardY + 12);
 
-        // Value
+        // Value - large and prominent
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
+        doc.setFontSize(16);
         doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-        doc.text(String(visual.value), xPos + 8, cardY + 22);
+        doc.text(String(visual.value), xPos + 12, cardY + 27);
 
-        // Trend text
+        // Trend badge
         if (visual.trend) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.setTextColor(trendColor.r, trendColor.g, trendColor.b);
-          doc.text(visual.trend, xPos + 8, cardY + 29);
+          // Badge background
+          doc.setFillColor(colorSet.dark.r, colorSet.dark.g, colorSet.dark.b);
+          const trendText = visual.trend.length > 15 ? visual.trend.substring(0, 14) + '…' : visual.trend;
+          const badgeWidth = Math.min(trendText.length * 2.5 + 8, cardWidth - 20);
+          doc.roundedRect(xPos + 12, cardY + 31, badgeWidth, 7, 2, 2, 'F');
+          
+          // Arrow indicator
+          const arrow = visual.trendDirection === 'up' ? '↑' : visual.trendDirection === 'down' ? '↓' : '→';
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6);
+          doc.setTextColor(colorSet.light.r, colorSet.light.g, colorSet.light.b);
+          doc.text(`${arrow} ${trendText}`, xPos + 14, cardY + 36);
         }
       });
 
-      yPos += Math.ceil(visuals.length / maxCols) * (cardHeight + 6) + 8;
+      yPos += Math.ceil(visuals.length / maxCols) * (cardHeight + 8) + 10;
     }
 
-    // ====== BULLET INSIGHTS ======
+    // ====== PREMIUM KEY INSIGHTS ======
     if (data.bulletInsights && data.bulletInsights.length > 0) {
+      const bulletBoxHeight = 14 + data.bulletInsights.length * 10;
+      
+      // Shadow
+      doc.setFillColor(5, 5, 5);
+      doc.roundedRect(15, yPos + 1, pageWidth - 28, bulletBoxHeight, 4, 4, 'F');
+      
+      // Main card
       doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
-      const bulletBoxHeight = 8 + data.bulletInsights.length * 7;
-      doc.roundedRect(14, yPos, pageWidth - 28, bulletBoxHeight, 3, 3, 'F');
+      doc.roundedRect(14, yPos, pageWidth - 28, bulletBoxHeight, 4, 4, 'F');
       
-      // Yellow accent bar
-      doc.setFillColor(245, 158, 11); // Amber-500
-      doc.rect(14, yPos, 4, bulletBoxHeight, 'F');
+      // Top highlight
+      doc.setFillColor(28, 28, 28);
+      doc.roundedRect(14, yPos, pageWidth - 28, 2, 4, 4, 'F');
       
+      // Amber accent bar with gradient
+      doc.setFillColor(180, 83, 9);
+      doc.roundedRect(14, yPos, 5, bulletBoxHeight, 4, 0, 'F');
+      doc.rect(16, yPos, 3, bulletBoxHeight, 'F');
+      doc.setFillColor(245, 158, 11);
+      doc.roundedRect(14, yPos, 4, bulletBoxHeight - 5, 4, 0, 'F');
+      doc.rect(16, yPos, 2, bulletBoxHeight - 5, 'F');
+      
+      // Glow
+      doc.setFillColor(251, 191, 36);
+      doc.roundedRect(14, yPos + 4, 2, 10, 1, 0, 'F');
+      
+      // Border
+      doc.setDrawColor(50, 50, 50);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(14, yPos, pageWidth - 28, bulletBoxHeight, 4, 4, 'S');
+      
+      // Header with icon
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(245, 158, 11);
-      doc.text('KEY INSIGHTS', 24, yPos + 8);
+      doc.text('KEY INSIGHTS', 24, yPos + 10);
       
-      yPos += 14;
+      yPos += 16;
       
-      data.bulletInsights.forEach((insight) => {
+      data.bulletInsights.forEach((insight, idx) => {
+        // Bullet number
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(245, 158, 11);
+        doc.text(`${idx + 1}.`, 24, yPos);
+        
+        // Insight text
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-        doc.text(`• ${insight}`, 24, yPos);
-        yPos += 7;
+        const insightText = insight.length > 100 ? insight.substring(0, 97) + '...' : insight;
+        doc.text(insightText, 32, yPos);
+        yPos += 10;
       });
       
-      yPos += 8;
+      yPos += 10;
     }
 
-    // ====== CHARTS SECTION ======
-    if (data.charts && data.charts.length > 0) {
-      const chartColors = {
-        red: { r: 220, g: 38, b: 38 },
-        green: { r: 34, g: 197, b: 94 },
-        blue: { r: 59, g: 130, b: 246 },
-        amber: { r: 245, g: 158, b: 11 },
-        muted: { r: 163, g: 163, b: 163 },
-      };
-      const defaultColors = ['red', 'green', 'blue', 'amber', 'muted'] as const;
 
-      // Arrange charts side by side if possible
+    // ====== PREMIUM CHARTS SECTION ======
+    if (data.charts && data.charts.length > 0) {
+      // Premium color palette with gradients
+      const chartColors = {
+        red: { main: { r: 239, g: 68, b: 68 }, light: { r: 254, g: 202, b: 202 }, dark: { r: 153, g: 27, b: 27 } },
+        green: { main: { r: 34, g: 197, b: 94 }, light: { r: 187, g: 247, b: 208 }, dark: { r: 21, g: 128, b: 61 } },
+        blue: { main: { r: 59, g: 130, b: 246 }, light: { r: 191, g: 219, b: 254 }, dark: { r: 29, g: 78, b: 216 } },
+        amber: { main: { r: 245, g: 158, b: 11 }, light: { r: 254, g: 243, b: 199 }, dark: { r: 180, g: 83, b: 9 } },
+        muted: { main: { r: 156, g: 163, b: 175 }, light: { r: 229, g: 231, b: 235 }, dark: { r: 75, g: 85, b: 99 } },
+      };
+      const defaultColors = ['red', 'amber', 'green', 'blue', 'muted'] as const;
+      
+      // Section header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text('VISUAL ANALYTICS', 14, yPos);
+      
+      // Accent underline
+      doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
+      doc.setLineWidth(1.5);
+      doc.line(14, yPos + 3, 70, yPos + 3);
+      yPos += 14;
+
+      // Premium chart layout
       const chartsPerRow = data.charts.length === 1 ? 1 : 2;
       const chartWidth = chartsPerRow === 1 ? pageWidth - 28 : (pageWidth - 36) / 2;
-      const chartHeight = 60;
+      const chartHeight = 85;
 
       data.charts.forEach((chart, chartIdx) => {
         const col = chartIdx % chartsPerRow;
         const row = Math.floor(chartIdx / chartsPerRow);
         const xStart = 14 + col * (chartWidth + 8);
-        const chartY = yPos + row * (chartHeight + 20);
+        const chartY = yPos + row * (chartHeight + 12);
 
-        // Check if we need a new page
+        // Page break check
         if (chartY + chartHeight > pageHeight - 30) {
           doc.addPage();
           doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
@@ -272,81 +350,162 @@ export function useExportData() {
           yPos = 20;
         }
 
-        // Chart container
+        // Premium card with gradient effect (simulated with layered rects)
+        // Outer glow/shadow
+        doc.setFillColor(8, 8, 8);
+        doc.roundedRect(xStart + 1, chartY + 1, chartWidth, chartHeight, 4, 4, 'F');
+        
+        // Main card
         doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
-        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 3, 3, 'F');
-        doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 3, 3, 'S');
+        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 4, 4, 'F');
+        
+        // Subtle top highlight
+        doc.setFillColor(28, 28, 28);
+        doc.roundedRect(xStart, chartY, chartWidth, 2, 4, 4, 'F');
+        
+        // Left accent bar
+        const accentColor = chartIdx === 0 ? accentRed : accentGreen;
+        doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.roundedRect(xStart, chartY, 4, chartHeight, 4, 0, 'F');
+        doc.rect(xStart + 2, chartY, 2, chartHeight, 'F');
+        
+        // Border
+        doc.setDrawColor(48, 48, 48);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 4, 4, 'S');
 
-        // Chart title
+        // Chart title with icon indicator
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-        doc.text(chart.title.toUpperCase(), xStart + 8, chartY + 10);
+        doc.text(chart.title.toUpperCase(), xStart + 14, chartY + 14);
+        
+        // Subtitle line
+        doc.setDrawColor(48, 48, 48);
+        doc.setLineWidth(0.3);
+        doc.line(xStart + 14, chartY + 18, xStart + chartWidth - 14, chartY + 18);
 
         const maxValue = Math.max(...chart.data.map(d => d.value));
-        const dataArea = { x: xStart + 8, y: chartY + 16, w: chartWidth - 16, h: chartHeight - 24 };
+        const total = chart.data.reduce((sum, d) => sum + d.value, 0);
+        const dataArea = { x: xStart + 14, y: chartY + 24, w: chartWidth - 28, h: chartHeight - 34 };
 
         if (chart.type === 'horizontalBar' || chart.type === 'bar') {
-          // Horizontal bar chart
-          const barHeight = Math.min(8, (dataArea.h - 4) / chart.data.length);
-          const gap = 2;
+          // Premium horizontal bar chart
+          const barCount = chart.data.length;
+          const barHeight = Math.min(12, (dataArea.h - 8) / barCount);
+          const gap = Math.min(6, (dataArea.h - barCount * barHeight) / (barCount + 1));
+          const labelWidth = 70;
+          const valueWidth = 55;
+          const barAreaWidth = dataArea.w - labelWidth - valueWidth - 8;
 
           chart.data.forEach((item, i) => {
-            const barY = dataArea.y + i * (barHeight + gap);
-            const barWidth = maxValue > 0 ? (item.value / maxValue) * (dataArea.w - 60) : 0;
+            const barY = dataArea.y + gap + i * (barHeight + gap);
+            const barWidth = maxValue > 0 ? (item.value / maxValue) * barAreaWidth : 0;
             const colorKey = item.color || defaultColors[i % defaultColors.length];
-            const color = chartColors[colorKey];
+            const colors = chartColors[colorKey];
+            const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
 
-            // Label
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-            const label = item.label.length > 12 ? item.label.substring(0, 10) + '…' : item.label;
-            doc.text(label, dataArea.x, barY + barHeight - 1);
-
-            // Bar background
-            doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
-            doc.rect(dataArea.x + 55, barY, dataArea.w - 60, barHeight, 'F');
-
-            // Bar fill
-            doc.setFillColor(color.r, color.g, color.b);
-            doc.rect(dataArea.x + 55, barY, Math.max(barWidth, 2), barHeight, 'F');
-
-            // Value
+            // Label with rank indicator
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
+            doc.setTextColor(colors.main.r, colors.main.g, colors.main.b);
+            doc.text(`${i + 1}.`, dataArea.x, barY + barHeight - 2);
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(textLight.r, textLight.g, textLight.b);
+            const label = item.label.length > 12 ? item.label.substring(0, 11) + '…' : item.label;
+            doc.text(label, dataArea.x + 10, barY + barHeight - 2);
+
+            // Bar track (background)
+            doc.setFillColor(30, 30, 30);
+            doc.roundedRect(dataArea.x + labelWidth, barY, barAreaWidth, barHeight, 2, 2, 'F');
+            
+            // Inner track shadow
+            doc.setFillColor(20, 20, 20);
+            doc.roundedRect(dataArea.x + labelWidth, barY, barAreaWidth, 2, 2, 2, 'F');
+
+            // Main bar with gradient effect (darker bottom, lighter top)
+            if (barWidth > 4) {
+              // Dark base
+              doc.setFillColor(colors.dark.r, colors.dark.g, colors.dark.b);
+              doc.roundedRect(dataArea.x + labelWidth, barY, barWidth, barHeight, 2, 2, 'F');
+              
+              // Main color overlay
+              doc.setFillColor(colors.main.r, colors.main.g, colors.main.b);
+              doc.roundedRect(dataArea.x + labelWidth, barY, barWidth, barHeight - 3, 2, 2, 'F');
+              
+              // Highlight at top
+              doc.setFillColor(
+                Math.min(255, colors.main.r + 40),
+                Math.min(255, colors.main.g + 40),
+                Math.min(255, colors.main.b + 40)
+              );
+              doc.roundedRect(dataArea.x + labelWidth + 1, barY + 1, Math.max(barWidth - 2, 2), 3, 1, 1, 'F');
+            } else if (barWidth > 0) {
+              doc.setFillColor(colors.main.r, colors.main.g, colors.main.b);
+              doc.roundedRect(dataArea.x + labelWidth, barY, Math.max(barWidth, 4), barHeight, 2, 2, 'F');
+            }
+
+            // Value with percentage
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
             doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
             const valueStr = item.value >= 1000000 
               ? `$${(item.value / 1000000).toFixed(1)}M` 
               : item.value >= 1000 
-                ? `$${(item.value / 1000).toFixed(0)}K` 
+                ? `$${Math.round(item.value / 1000)}K` 
                 : `$${item.value.toLocaleString()}`;
-            doc.text(valueStr, dataArea.x + dataArea.w, barY + barHeight - 1, { align: 'right' });
+            doc.text(valueStr, dataArea.x + dataArea.w - 2, barY + barHeight - 2, { align: 'right' });
+            
+            // Percentage badge
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+            doc.text(`${pct}%`, dataArea.x + dataArea.w - 2, barY + barHeight + 5, { align: 'right' });
           });
+          
         } else if (chart.type === 'pie' || chart.type === 'donut') {
-          // Pie/Donut chart
-          const centerX = dataArea.x + dataArea.h / 2;
+          // Premium pie/donut chart
+          const centerX = dataArea.x + 45;
           const centerY = dataArea.y + dataArea.h / 2;
-          const radius = dataArea.h / 2 - 4;
-          const innerRadius = chart.type === 'donut' ? radius * 0.5 : 0;
-          const total = chart.data.reduce((sum, d) => sum + d.value, 0);
+          const radius = Math.min(dataArea.h / 2 - 2, 28);
+          const innerRadius = chart.type === 'donut' ? radius * 0.55 : 0;
 
-          let startAngle = -Math.PI / 2; // Start from top
+          // Outer glow ring
+          doc.setDrawColor(40, 40, 40);
+          doc.setLineWidth(3);
+          doc.circle(centerX, centerY, radius + 2, 'S');
 
+          let startAngle = -Math.PI / 2;
+          
+          // Draw slices with enhanced visuals
           chart.data.forEach((item, i) => {
             const sliceAngle = total > 0 ? (item.value / total) * Math.PI * 2 : 0;
-            const endAngle = startAngle + sliceAngle;
-            const colorKey = item.color || defaultColors[i % defaultColors.length];
-            const color = chartColors[colorKey];
-
-            // Draw pie slice using triangle fan
-            doc.setFillColor(color.r, color.g, color.b);
-            doc.setDrawColor(darkCard.r, darkCard.g, darkCard.b);
-            doc.setLineWidth(1);
+            if (sliceAngle < 0.01) return; // Skip tiny slices
             
-            const steps = 20;
+            const colorKey = item.color || defaultColors[i % defaultColors.length];
+            const colors = chartColors[colorKey];
+
+            // Draw wedge with smooth edges
+            const steps = Math.max(20, Math.ceil(sliceAngle * 20));
+            
+            // Dark outline for depth
+            doc.setFillColor(colors.dark.r, colors.dark.g, colors.dark.b);
+            for (let s = 0; s < steps; s++) {
+              const a1 = startAngle + (sliceAngle * s) / steps;
+              const a2 = startAngle + (sliceAngle * (s + 1)) / steps;
+              
+              const x1 = centerX + Math.cos(a1) * (radius + 0.5);
+              const y1 = centerY + Math.sin(a1) * (radius + 0.5);
+              const x2 = centerX + Math.cos(a2) * (radius + 0.5);
+              const y2 = centerY + Math.sin(a2) * (radius + 0.5);
+              
+              doc.triangle(centerX, centerY, x1, y1, x2, y2, 'F');
+            }
+            
+            // Main fill
+            doc.setFillColor(colors.main.r, colors.main.g, colors.main.b);
             for (let s = 0; s < steps; s++) {
               const a1 = startAngle + (sliceAngle * s) / steps;
               const a2 = startAngle + (sliceAngle * (s + 1)) / steps;
@@ -358,39 +517,108 @@ export function useExportData() {
               
               doc.triangle(centerX, centerY, x1, y1, x2, y2, 'F');
             }
+            
+            // Inner highlight arc (top portion only)
+            const highlightSteps = Math.ceil(steps * 0.4);
+            doc.setFillColor(
+              Math.min(255, colors.main.r + 50),
+              Math.min(255, colors.main.g + 50),
+              Math.min(255, colors.main.b + 50)
+            );
+            for (let s = 0; s < highlightSteps; s++) {
+              const a1 = startAngle + (sliceAngle * s) / steps;
+              const a2 = startAngle + (sliceAngle * (s + 1)) / steps;
+              
+              const innerR = radius * 0.7;
+              const x1 = centerX + Math.cos(a1) * innerR;
+              const y1 = centerY + Math.sin(a1) * innerR;
+              const x2 = centerX + Math.cos(a2) * innerR;
+              const y2 = centerY + Math.sin(a2) * innerR;
+              const ox1 = centerX + Math.cos(a1) * (radius - 2);
+              const oy1 = centerY + Math.sin(a1) * (radius - 2);
+              const ox2 = centerX + Math.cos(a2) * (radius - 2);
+              const oy2 = centerY + Math.sin(a2) * (radius - 2);
+              
+              // Draw highlight quad as two triangles
+              doc.triangle(x1, y1, ox1, oy1, ox2, oy2, 'F');
+              doc.triangle(x1, y1, ox2, oy2, x2, y2, 'F');
+            }
 
-            startAngle = endAngle;
+            startAngle += sliceAngle;
           });
           
-          // Draw inner circle for donut
+          // Donut center
           if (innerRadius > 0) {
+            // Shadow ring
+            doc.setFillColor(10, 10, 10);
+            doc.circle(centerX, centerY, innerRadius + 2, 'F');
+            
+            // Main center
             doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
             doc.circle(centerX, centerY, innerRadius, 'F');
+            
+            // Center text - total
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+            const totalStr = total >= 1000000 ? `$${(total / 1000000).toFixed(0)}M` : `$${Math.round(total / 1000)}K`;
+            doc.text(totalStr, centerX, centerY + 2, { align: 'center' });
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(5);
+            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+            doc.text('TOTAL', centerX, centerY - 4, { align: 'center' });
           }
 
-          // Legend on the right
-          const legendX = dataArea.x + dataArea.h + 10;
+          // Premium legend on the right
+          const legendX = dataArea.x + 100;
+          const legendWidth = dataArea.w - 105;
+          
           chart.data.forEach((item, i) => {
-            const legendY = dataArea.y + 4 + i * 9;
+            const legendY = dataArea.y + 2 + i * 11;
             const colorKey = item.color || defaultColors[i % defaultColors.length];
-            const color = chartColors[colorKey];
+            const colors = chartColors[colorKey];
             const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
+            const valueStr = item.value >= 1000000 
+              ? `$${(item.value / 1000000).toFixed(1)}M` 
+              : item.value >= 1000 
+                ? `$${Math.round(item.value / 1000)}K` 
+                : `$${item.value.toLocaleString()}`;
 
-            // Color box
-            doc.setFillColor(color.r, color.g, color.b);
-            doc.rect(legendX, legendY, 6, 6, 'F');
+            // Color indicator with gradient
+            doc.setFillColor(colors.dark.r, colors.dark.g, colors.dark.b);
+            doc.roundedRect(legendX, legendY, 8, 8, 1, 1, 'F');
+            doc.setFillColor(colors.main.r, colors.main.g, colors.main.b);
+            doc.roundedRect(legendX, legendY, 8, 6, 1, 1, 'F');
+            doc.setFillColor(
+              Math.min(255, colors.main.r + 40),
+              Math.min(255, colors.main.g + 40),
+              Math.min(255, colors.main.b + 40)
+            );
+            doc.roundedRect(legendX + 1, legendY + 1, 6, 2, 0.5, 0.5, 'F');
 
             // Label
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
-            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-            const label = item.label.length > 15 ? item.label.substring(0, 13) + '…' : item.label;
-            doc.text(`${label} (${pct}%)`, legendX + 9, legendY + 5);
+            doc.setTextColor(textLight.r, textLight.g, textLight.b);
+            const label = item.label.length > 12 ? item.label.substring(0, 11) + '…' : item.label;
+            doc.text(label, legendX + 12, legendY + 6);
+
+            // Value and percentage on right
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+            doc.text(valueStr, legendX + legendWidth, legendY + 4, { align: 'right' });
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(colors.main.r, colors.main.g, colors.main.b);
+            doc.text(`${pct}%`, legendX + legendWidth, legendY + 9, { align: 'right' });
           });
         }
       });
 
-      yPos += Math.ceil(data.charts.length / chartsPerRow) * (chartHeight + 20) + 8;
+      yPos += Math.ceil(data.charts.length / chartsPerRow) * (chartHeight + 12) + 10;
     }
 
     // ====== MANAGER TRACKING ======
