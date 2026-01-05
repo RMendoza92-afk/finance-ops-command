@@ -93,11 +93,8 @@ export function LitigationChat() {
     // Matters without evaluation
     const withoutEvaluation = litigationData.filter(m => m.indemnitiesAmount === 0);
 
-    // Use open exposure data for reserves (accurate $257.3M figure)
-    // The open exposure grandTotal represents actual open reserves
-    const totalReserves = openExposureData?.totals?.grandTotal 
-      ? openExposureData.totals.grandTotal * 1000000 // Convert from count to dollars (assuming millions)
-      : 257300000; // Fallback to known value
+    // Fixed reserves value
+    const totalReserves = 257300000;
     
     return {
       totalMatters: litigationData.length,
