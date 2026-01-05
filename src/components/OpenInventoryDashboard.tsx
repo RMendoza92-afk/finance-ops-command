@@ -1086,26 +1086,38 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
     ];
 
+    // Litigation Evaluation Phases - actual data from dashboard
+    const LIT_PHASES_DATA = [
+      { phase: 'Pending Demand', aged365: 643, aged181_365: 74, aged61_180: 111, under60: 17, total: 845, pctAged: 76 },
+      { phase: 'Impasse', aged365: 503, aged181_365: 39, aged61_180: 2, under60: 0, total: 544, pctAged: 92 },
+      { phase: 'Active Negotiation', aged365: 462, aged181_365: 51, aged61_180: 8, under60: 3, total: 524, pctAged: 88 },
+      { phase: 'Liability Denial', aged365: 310, aged181_365: 42, aged61_180: 7, under60: 2, total: 361, pctAged: 86 },
+      { phase: 'Low Impact - Negotiation', aged365: 221, aged181_365: 23, aged61_180: 4, under60: 3, total: 251, pctAged: 88 },
+      { phase: 'Non Offer', aged365: 180, aged181_365: 14, aged61_180: 7, under60: 0, total: 201, pctAged: 90 },
+      { phase: 'Low Impact - Impasse', aged365: 155, aged181_365: 32, aged61_180: 0, under60: 0, total: 187, pctAged: 83 },
+      { phase: 'Demand Under Review', aged365: 78, aged181_365: 39, aged61_180: 21, under60: 11, total: 149, pctAged: 52 },
+    ];
+    const LIT_TOTALS = { aged365: 2716, aged181_365: 334, aged61_180: 176, under60: 63, total: 3747, pctAged: 72 };
+
     // Charts for visual representation - using actual inventory data
     const charts: PDFChart[] = [
       {
         type: 'horizontalBar',
-        title: 'Exposures by Queue',
-        data: [
-          { label: 'ATR', value: KNOWN_TOTALS.atr.exposures, color: 'blue' },
-          { label: 'Litigation', value: KNOWN_TOTALS.lit.exposures, color: 'red' },
-          { label: 'BI3', value: KNOWN_TOTALS.bi3.exposures, color: 'amber' },
-          { label: 'Early BI', value: KNOWN_TOTALS.earlyBI.exposures, color: 'green' },
-        ],
+        title: 'Litigation by Evaluation Phase (Total Claims)',
+        data: LIT_PHASES_DATA.map((p, i) => ({
+          label: p.phase,
+          value: p.total,
+          color: (['red', 'amber', 'blue', 'green', 'muted', 'blue', 'amber', 'green'] as const)[i % 8],
+        })),
       },
       {
         type: 'donut',
-        title: 'Claims by Queue',
+        title: 'Litigation Age Distribution',
         data: [
-          { label: 'ATR', value: KNOWN_TOTALS.atr.claims, color: 'blue' },
-          { label: 'Litigation', value: KNOWN_TOTALS.lit.claims, color: 'red' },
-          { label: 'BI3', value: KNOWN_TOTALS.bi3.claims, color: 'amber' },
-          { label: 'Early BI', value: KNOWN_TOTALS.earlyBI.claims, color: 'green' },
+          { label: '365+ Days', value: LIT_TOTALS.aged365, color: 'red' },
+          { label: '181-365 Days', value: LIT_TOTALS.aged181_365, color: 'amber' },
+          { label: '61-180 Days', value: LIT_TOTALS.aged61_180, color: 'blue' },
+          { label: 'Under 60 Days', value: LIT_TOTALS.under60, color: 'green' },
         ],
       },
     ];
