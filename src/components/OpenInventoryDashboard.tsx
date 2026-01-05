@@ -213,18 +213,41 @@ export function OpenInventoryDashboard() {
     };
   }, [data]);
 
-  // High Eval Top 10 Managers (simulated data - would come from real data)
+  // High Eval Top 10 Managers (actual adjusters setting high evaluations)
   const HIGH_EVAL_MANAGERS: ManagerTracking[] = [
-    { name: 'Martinez, J.', value: '$8.2M', category: 'high_eval' },
-    { name: 'Rodriguez, A.', value: '$7.1M', category: 'high_eval' },
-    { name: 'Thompson, S.', value: '$6.8M', category: 'high_eval' },
-    { name: 'Garcia, M.', value: '$5.9M', category: 'high_eval' },
-    { name: 'Williams, K.', value: '$5.4M', category: 'high_eval' },
-    { name: 'Johnson, R.', value: '$4.8M', category: 'high_eval' },
-    { name: 'Brown, T.', value: '$4.2M', category: 'high_eval' },
-    { name: 'Davis, L.', value: '$3.9M', category: 'high_eval' },
-    { name: 'Miller, C.', value: '$3.5M', category: 'high_eval' },
-    { name: 'Wilson, P.', value: '$3.1M', category: 'high_eval' },
+    { name: 'MARIO HELLAM', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'NSF', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'FERNANDO CANALES', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'CHELSEY SHOGREN-MARTINEZ', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'PRISCILLA VEGA', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'JOEL FIERRO', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'CHRYSTAL PEREZ', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'MARC GUEVARA', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'BRITTANY SORIA', value: 'High Eval Set', category: 'high_eval' },
+    { name: 'MANUEL CABALLERO', value: 'High Eval Set', category: 'high_eval' },
+  ];
+  
+  // Full list of adjusters with high evaluations for Excel export
+  const ALL_HIGH_EVAL_ADJUSTERS = [
+    'MARIO HELLAM', 'NSF', 'FERNANDO CANALES', 'CHELSEY SHOGREN-MARTINEZ', 'PRISCILLA VEGA',
+    'JOEL FIERRO', 'CHRYSTAL PEREZ', 'MARC GUEVARA', 'BRITTANY SORIA', 'MANUEL CABALLERO',
+    'LAURA GUERRA', 'STEPHANIE OLIVAS', 'LUIS MARTINEZ', 'SALVADOR GONZALEZ', 'STUART GARY',
+    'LINDA DAVILA', 'ANDREA GARCIA', 'CHRISTINA GARCIA', 'JOSE CANALES HUERTA', 'LUIS VELA',
+    'DIANA RUBIO', 'KIMBERLY AGUILERA', 'JAMES WALLACE', 'DIANA MISSOURI', 'TROY VAZQUEZ',
+    'FERNANDO MEJORADO', 'ROXANN DELOSSANTOS', 'LINDA ROMERO', 'MARIA JURADO', 'CHERYLE HARRIS-CHANEY',
+    'RICHARD SALCEDO', 'ELVA TREVINO', 'KARLA OCHOA', 'SANDRA PARADA GALLEGOS', 'JOHN MIDDLETON',
+    'JASSON MONTOYA', 'ROCHELLE GURULE', 'MANDY SALCEDO', 'ZACH WISEMAN', 'SHERRIE RODRIGUEZ',
+    'BRENDA CASTANEDA', 'DANIA RODRIGUEZ', 'STEPHEN POOLAS', 'ROBERT HOLCOMB', 'ANDREA NIEVES',
+    'ANNA BORDEN', 'MARK TRAVIS', 'STARLA HENDERSON', 'DIANA LANDIN', 'DUSTIN MILLER',
+    'ALEXIS VALLES', 'PRISCILLA HERNANDEZ', 'ANDREA RODRIGUEZ', 'OLIVIA MARTINEZ', 'MANUEL RANGEL',
+    'DIANA SANCHEZ', 'MARIA VELA', 'YULIZZA REYNA', 'FELICIA JACKSON', 'CHRISTOPHER BENNETT',
+    'MIREYA DOMINGUEZ', 'MITZY GARCIA', 'SANDRA PENA', 'RACHAEL BLANCO', 'SUSANA IGLESIAS',
+    'MICHAEL SALAZAR', 'ADRIAN ALVAREZ', 'ERIC RODRIGUEZ', 'PATRICIA MARTINEZ', 'JEANNETTE SALAZAR',
+    'PATRICIA GALINDO', 'MIRIAM ALVARADO', 'NOHELY ARVIZU', 'JOSEPH JIMENEZ', 'EDWARD LUNA',
+    'BOBBI CAMPBELL', 'ROXANN PEREZ', 'LUIS JIMENEZ', 'FELIX CRUZ', 'NAZIRA CHAVEZ',
+    'CARLOS GUEVARA', 'SARAH HENDERSON', 'MARCUS OCHOA', 'ROMAN MARTINEZ', 'ELIAS FRIAS',
+    'LISA GONZALEZ', 'ERIC YANES', 'CHRISTOPHER BACH', 'YVETTE RODRIGUEZ', 'JASON THOMAS',
+    'IRIS GONZALEZ', 'JOSE MEDINA', 'ARTURO LEDEZMA', 'JENNIFER GONZALEZ', 'BRAULIO RUIZ', 'JENNIFER OROZCO',
   ];
 
   // Export handlers for double-click
@@ -238,13 +261,20 @@ export function OpenInventoryDashboard() {
       { name: 'Richie Mendoza', value: metrics.financials.totals.noEvalCount, category: 'no_eval' },
     ];
     
+    // Build all high eval managers for Excel (PDF shows top 10)
+    const allHighEvalTracking: ManagerTracking[] = ALL_HIGH_EVAL_ADJUSTERS.map(name => ({
+      name,
+      value: 'High Eval Set',
+      category: 'high_eval',
+    }));
+    
     const exportData: ExportableData = {
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
       timestamp,
       affectsManager: manager,
       directive: 'Complete all evaluations within 5 business days. No exceptions. High eval claims require manager review and approval. All claims without evaluation are assigned to Richie Mendoza for immediate action.',
-      managerTracking: [...HIGH_EVAL_MANAGERS, ...noEvalTracking],
+      managerTracking: [...allHighEvalTracking, ...noEvalTracking],
       summary: {
         'Total Open Claims': formatNumber(metrics.totalOpenClaims),
         'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
