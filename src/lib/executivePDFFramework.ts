@@ -112,30 +112,31 @@ export interface QualityScore {
 }
 
 // ==================== COLOR PALETTE ====================
+// Command Center Dark Theme: Black, White, Red, Green
 
 export const EXECUTIVE_COLORS = {
-  // Primary palette
-  navy: [12, 35, 64] as [number, number, number],
-  darkNavy: [8, 24, 45] as [number, number, number],
-  steel: [55, 65, 81] as [number, number, number],
+  // Primary palette - Dark command center theme
+  navy: [0, 0, 0] as [number, number, number],           // Pure black background
+  darkNavy: [18, 18, 18] as [number, number, number],    // Slightly lighter black for cards
+  steel: [38, 38, 38] as [number, number, number],       // Dark grey for secondary elements
   
-  // Accent colors
-  azure: [0, 120, 212] as [number, number, number],
-  teal: [0, 163, 191] as [number, number, number],
+  // Accent colors - Red primary (matches --primary: 0 84% 50%)
+  azure: [220, 38, 38] as [number, number, number],      // Red accent (hsl(0, 84%, 50%))
+  teal: [220, 38, 38] as [number, number, number],       // Red accent for consistency
   
-  // Status colors
-  success: [16, 124, 16] as [number, number, number],
-  warning: [202, 128, 0] as [number, number, number],
-  danger: [196, 49, 75] as [number, number, number],
-  critical: [153, 27, 27] as [number, number, number],
+  // Status colors - Green/Red from theme
+  success: [34, 197, 94] as [number, number, number],    // Green (hsl(142, 71%, 45%))
+  warning: [245, 158, 11] as [number, number, number],   // Amber warning
+  danger: [220, 38, 38] as [number, number, number],     // Red (matches primary)
+  critical: [185, 28, 28] as [number, number, number],   // Darker red for critical
   
-  // Neutrals
+  // Neutrals - High contrast for dark theme
   white: [255, 255, 255] as [number, number, number],
-  lightGray: [243, 244, 246] as [number, number, number],
-  mediumGray: [156, 163, 175] as [number, number, number],
-  darkGray: [75, 85, 99] as [number, number, number],
-  textPrimary: [17, 24, 39] as [number, number, number],
-  textSecondary: [107, 114, 128] as [number, number, number],
+  lightGray: [38, 38, 38] as [number, number, number],   // Dark bg for alternating rows
+  mediumGray: [115, 115, 115] as [number, number, number],
+  darkGray: [64, 64, 64] as [number, number, number],
+  textPrimary: [255, 255, 255] as [number, number, number],  // White text on dark
+  textSecondary: [163, 163, 163] as [number, number, number], // Light grey for secondary
 };
 
 // ==================== QUALITY AUDIT ====================
