@@ -26,7 +26,7 @@ import {
 
 type ClaimReview = Tables<"claim_reviews">;
 
-const REVIEWERS = ['M. Rodriguez', 'J. Smith', 'A. Garcia', 'T. Johnson', 'L. Martinez'];
+const REVIEWERS = ['Richie Mendoza'];
 
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
