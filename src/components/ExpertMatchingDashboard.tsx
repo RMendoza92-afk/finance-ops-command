@@ -83,6 +83,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       title: 'Expert Matching Summary',
       subtitle: 'Manager Dashboard - Actionable Items',
       timestamp,
+      affectsManager: 'Claims Management',
       summary: {
         'Actionable Items': totalActionable,
         'Decision Overhang': formatCurrencyFull(decisionOverhang),
@@ -106,6 +107,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       title: 'Expert Matching Action Queue',
       subtitle: 'Full queue with cost analysis',
       timestamp,
+      affectsManager: 'Claims Management',
       summary: {
         'Total Items': actionableItems.length,
         'Total Overhang': formatCurrencyFull(decisionOverhang),
@@ -133,6 +135,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       title: `Action Item: ${item.venue}`,
       subtitle: `Expert Matching - ${item.status}`,
       timestamp,
+      affectsManager: 'Claims Management',
       summary: {
         'Venue': item.venue,
         'Pattern': item.pattern,

@@ -275,6 +275,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       title: '2025 YTD BI Spend Summary',
       subtitle: 'Litigation Discipline Command Center - KPI Overview',
       timestamp,
+      affectsManager: 'Executive Leadership',
       summary: {
         'Total BI Spend': '$395,000,000',
         'Litigation Expenses': '$19,000,000',
@@ -301,6 +302,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       title: '2025 Quarterly Expert Spend',
       subtitle: 'Paid vs Approved by Quarter',
       timestamp,
+      affectsManager: 'Executive Leadership',
       summary: {
         'YTD Paid': '$5,681,152',
         'YTD Approved': '$6,181,166',
@@ -325,6 +327,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       title: 'Reactive Cost Curve Analysis',
       subtitle: 'Cumulative posture spend by litigation stage',
       timestamp,
+      affectsManager: 'Executive Leadership',
       columns: ['Stage', 'Reactive Spend', 'Expert Spend', 'Cumulative', 'Claim Count'],
       rows: costCurveData.map(d => [
         d.stage,
@@ -343,6 +346,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       title: 'Executive Review Required',
       subtitle: 'Files requiring executive closure',
       timestamp,
+      affectsManager: 'Executive Leadership',
       summary: {
         'Critical Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length,
         'Required Cases': executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length,
@@ -369,6 +373,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       title: `Claim Detail: ${caseItem.claim}`,
       subtitle: `Executive Review - ${caseItem.executiveReview.level}`,
       timestamp,
+      affectsManager: caseItem.adjuster || 'Executive Leadership',
       summary: {
         'Claim ID': caseItem.claim,
         'Review Level': caseItem.executiveReview.level,

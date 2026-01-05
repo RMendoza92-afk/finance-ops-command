@@ -6,6 +6,7 @@ export interface ExportableData {
   title: string;
   subtitle?: string;
   timestamp: string;
+  affectsManager?: string; // Who this report affects/is prepared for
   summary?: Record<string, string | number>;
   columns: string[];
   rows: (string | number)[][];
@@ -61,6 +62,14 @@ export function useExportData() {
     doc.setFontSize(9);
     doc.setTextColor(mutedColor.r, mutedColor.g, mutedColor.b);
     doc.text(`Generated: ${data.timestamp}`, 14, yPos);
+    
+    // Affects/Prepared For - Right aligned
+    if (data.affectsManager) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.text(`Prepared For: ${data.affectsManager}`, pageWidth - 14, yPos, { align: 'right' });
+    }
     yPos += 12;
 
     // Divider line
@@ -222,6 +231,7 @@ export function useExportData() {
       [data.title],
       [data.subtitle || ''],
       [`Generated: ${data.timestamp}`],
+      data.affectsManager ? [`Prepared For: ${data.affectsManager}`] : [],
       [],
     ];
 
