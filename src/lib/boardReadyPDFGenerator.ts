@@ -151,16 +151,16 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // ============ CEO STATEMENT ============
   const ceoStatement = buildCEOStatement(data, config);
   doc.setFillColor(...C.rowDark);
-  doc.roundedRect(m.l, y, cw, 16, 1, 1, 'F');
+  doc.roundedRect(m.l, y, cw, 10, 0.5, 0.5, 'F');
   doc.setFillColor(...C.gold);
-  doc.rect(m.l, y, 1.5, 16, 'F');
+  doc.rect(m.l, y, 1, 10, 'F');
   
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
   doc.setTextColor(...C.offWhite);
-  doc.text(ceoStatement, m.l + 5, y + 7, { maxWidth: cw - 10 });
+  doc.text(ceoStatement, m.l + 4, y + 6, { maxWidth: cw - 8 });
 
-  y += 20;
+  y += 13;
 
   // ============ STATUS BANNER ============
   const bannerColor = data.status === 'FAIL' ? C.red : data.status === 'WARN' ? C.amber : C.green;
@@ -522,22 +522,26 @@ function buildCEOStatement(
   data: ReturnType<typeof buildControlData>,
   config: ExecutivePackageConfig
 ): string {
+  const bd = config.budgetData;
+  const dd = config.decisionsData;
+  const cp = config.cp1Data;
+  
   if (data.status === 'FAIL') {
     if (data.breaking.includes('BUDGET')) {
-      return `Not in control. BI over forecast. Enhanced auth controls Friday.`;
+      return `STATUS: Not in control | ISSUE: BI indemnities ${formatCurrency(bd.ytdPaid, true)} YTD exceeds forecast by ${formatCurrency(Math.abs(bd.projectedVariance), true)} | YOY: ${bd.yoyChangePercent >= 0 ? '+' : ''}${bd.yoyChangePercent.toFixed(1)}% | ACTION: Enhanced auth controls effective Friday`;
     }
     if (data.breaking.includes('DECISIONS')) {
-      return `${config.decisionsData.critical} critical matters pending. Same-day disposition required.`;
+      return `STATUS: Not in control | ISSUE: ${dd.critical} critical / ${dd.total} total pending | EXPOSURE: ${formatCurrency(dd.totalExposure, true)} | DEADLINES: ${dd.statuteDeadlines} statute | ACTION: Same-day disposition required`;
     }
     if (data.breaking.includes('AGED')) {
-      return `Aged inventory at ${data.agedValue}. Material reserve risk. Escalating now.`;
+      return `STATUS: Not in control | ISSUE: Aged BI at ${data.agedValue} of inventory | BI TOTAL: ${cp.biTotal.total} claims | CP1: ${cp.biCP1Rate} | ACTION: Escalation protocol initiated`;
     }
-    return `Control deficiencies identified. Corrective action required per orders.`;
+    return `STATUS: Not in control | ISSUE: Multiple deficiencies | ACTION: Execute corrective orders below`;
   }
   
   if (data.status === 'WARN') {
-    return `In control. CP1 at ${config.cp1Data.cp1Rate} under review. Update in 7 days.`;
+    return `STATUS: In control | MONITOR: CP1 rate ${cp.cp1Rate} elevated | BI CP1: ${cp.biCP1Rate} | TOTAL CLAIMS: ${cp.totalClaims} | ACTION: Review in 7 days`;
   }
   
-  return `In control. All indicators within target. Maintain cadence.`;
+  return `STATUS: In control | BUDGET: ${formatCurrency(bd.ytdPaid, true)} YTD / ${formatCurrency(bd.remaining, true)} remaining | CP1: ${cp.cp1Rate} | DECISIONS: ${dd.total} pending | ACTION: Maintain cadence`;
 }
