@@ -87,31 +87,31 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Send SMS Alert
           </DialogTitle>
-          <DialogDescription>
-            Send an urgent SMS notification about this report or claim
+          <DialogDescription className="text-xs sm:text-sm">
+            Send an urgent SMS notification about this report
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
           {/* Quick Export Options */}
           {(onExportPDF || onExportExcel) && (
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm text-muted-foreground flex-1">Export first:</span>
+            <div className="flex flex-wrap items-center gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg">
+              <span className="text-xs sm:text-sm text-muted-foreground flex-1">Export first:</span>
               {onExportPDF && (
-                <Button variant="outline" size="sm" onClick={onExportPDF} className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" />
+                <Button variant="outline" size="sm" onClick={onExportPDF} className="gap-1 h-8 text-xs">
+                  <FileText className="h-3 w-3" />
                   PDF
                 </Button>
               )}
               {onExportExcel && (
-                <Button variant="outline" size="sm" onClick={onExportExcel} className="gap-1.5">
-                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                <Button variant="outline" size="sm" onClick={onExportExcel} className="gap-1 h-8 text-xs">
+                  <FileSpreadsheet className="h-3 w-3" />
                   Excel
                 </Button>
               )}
@@ -119,45 +119,46 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
           )}
 
           {/* Phone Number */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone" className="text-xs sm:text-sm">Phone Number</Label>
             <Input
               id="phone"
               type="tel"
               placeholder="+1 (555) 123-4567"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              className="font-mono"
+              className="font-mono text-sm h-9"
             />
-            <p className="text-xs text-muted-foreground">US numbers only. Include area code.</p>
+            <p className="text-xs text-muted-foreground">US numbers only</p>
           </div>
 
           {/* Message Preview */}
-          <div className="space-y-2">
-            <Label>Message Preview</Label>
-            <div className="p-3 bg-muted/50 rounded-lg text-sm whitespace-pre-wrap max-h-32 overflow-auto border">
+          <div className="space-y-1.5">
+            <Label className="text-xs sm:text-sm">Message Preview</Label>
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 sm:max-h-32 overflow-auto border">
               {defaultMessage}
             </div>
           </div>
 
           {/* Custom Note */}
-          <div className="space-y-2">
-            <Label htmlFor="customMessage">Add Custom Note (optional)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="customMessage" className="text-xs sm:text-sm">Add Note (optional)</Label>
             <Textarea
               id="customMessage"
-              placeholder="Additional details to include..."
+              placeholder="Additional details..."
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
               rows={2}
+              className="text-sm"
             />
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={sending}>
+        <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+          <Button variant="outline" onClick={onClose} disabled={sending} className="w-full sm:w-auto h-9">
             Cancel
           </Button>
-          <Button onClick={handleSendSMS} disabled={sending} className="gap-2">
+          <Button onClick={handleSendSMS} disabled={sending} className="gap-2 w-full sm:w-auto h-9">
             {sending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
