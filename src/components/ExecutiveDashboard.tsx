@@ -100,21 +100,21 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return Array.from(grouped.values());
   }, [data]);
 
-  // Calculate KPIs - Known 2025 figures:
+  // Calculate KPIs - Known 2025 YTD figures (through November):
   // Total BI Spend: $395M (all bodily injury)
   // Litigation Expenses: $19M  
-  // Expert Spend (intentional): $5.6M
-  // Reactive (pre-lit ATR waste + lit fees): $13.4M ($19M - $5.6M)
+  // Expert Spend (actual): $5,681,152 YTD
+  // Reactive (pre-lit ATR waste + lit fees): $13.3M ($19M - $5.68M)
   const kpis = useMemo(() => {
     const totalPaid = aggregatedData.reduce((sum, m) => sum + m.totalPaid, 0);
     const indemnity = aggregatedData.reduce((sum, m) => sum + m.indemnity, 0);
     const expense = aggregatedData.reduce((sum, m) => sum + m.expense, 0);
     
-    // Known 2025 figures
+    // Known 2025 YTD figures (November)
     const KNOWN_BI_TOTAL = 395000000;      // $395M total BI spend
     const KNOWN_LIT_EXPENSE = 19000000;    // $19M litigation expenses
-    const KNOWN_EXPERT = 5600000;          // $5.6M actual expert spend
-    const KNOWN_REACTIVE = 13400000;       // $13.4M waste (pre-lit ATR + lit fees)
+    const KNOWN_EXPERT = 5681152;          // $5.68M actual expert spend (YTD Nov)
+    const KNOWN_REACTIVE = KNOWN_LIT_EXPENSE - KNOWN_EXPERT; // $13.32M waste
     
     // Calculate proportional spend based on filtered data
     const expenseRatio = expense > 0 ? expense / KNOWN_LIT_EXPENSE : 0;
@@ -135,10 +135,18 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     };
   }, [aggregatedData]);
 
-  // Reactive cost curve by stage - using known 29.5% expert / 70.5% reactive split
+  // Expert spend by quarter - actual 2025 YTD data
+  const quarterlyExpertData = [
+    { quarter: 'Q1 2025', paid: 1553080, approved: 2141536, avgMonthly: 517693 },
+    { quarter: 'Q2 2025', paid: 1727599, approved: 1680352, avgMonthly: 575866 },
+    { quarter: 'Q3 2025', paid: 1383717, approved: 1449627, avgMonthly: 461239 },
+    { quarter: 'Q4 2025', paid: 1016756, approved: 909651, avgMonthly: 508378 },
+  ];
+
+  // Reactive cost curve by stage - using actual expert ratio
   const costCurveData = useMemo(() => {
     const stages = ['Early', 'Mid', 'Late', 'Very Late'];
-    const EXPERT_SPEND_RATIO = 5.6 / 19;
+    const EXPERT_SPEND_RATIO = 5681152 / 19000000; // ~29.9%
     let cumulative = 0;
     
     return stages.map(stage => {
@@ -160,24 +168,22 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
   // What's not working - top exposures by expense (reactive spend)
   const topProblems = useMemo(() => {
-    const EXPERT_SPEND_RATIO = 5.6 / 19;
+    const EXPERT_SPEND_RATIO = 5681152 / 19000000;
     
     return [...aggregatedData]
       .filter(m => m.expense > 0)
-      .sort((a, b) => b.expense - a.expense) // Sort by total expense
+      .sort((a, b) => b.expense - a.expense)
       .slice(0, 8)
       .map(m => {
         const expertSpend = m.expense * EXPERT_SPEND_RATIO;
         const postureSpend = m.expense * (1 - EXPERT_SPEND_RATIO);
-        // Ratio is fixed at ~2.4x based on known figures
-        const ratio = postureSpend / expertSpend;
+        const ratio = expertSpend > 0 ? postureSpend / expertSpend : 999;
         
         return {
           ...m,
           expertSpend,
           postureSpend,
           ratio,
-          // Risk flags based on total expense magnitude (top spenders)
           riskFlag: m.expense >= 100000 ? 'RED' : m.expense >= 25000 ? 'ORANGE' : 'GREEN',
         };
       });
@@ -199,17 +205,17 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       <div className="bg-gradient-to-r from-muted/80 to-muted/40 border border-border rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">2025 BI Spend: $395M Total</h2>
+            <h2 className="text-xl font-bold text-foreground">2025 YTD BI Spend: $395M Total</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Litigation Expenses: <span className="font-semibold text-foreground">$19M</span> of total BI spend
+              Litigation Expenses: <span className="font-semibold text-foreground">$19M</span> • Through November 2025
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">$19M Expense Breakdown</p>
             <div className="flex items-center gap-3">
-              <span className="text-success font-bold">$5.6M Expert</span>
+              <span className="text-success font-bold">$5.68M Expert</span>
               <span className="text-muted-foreground">vs</span>
-              <span className="text-destructive font-bold">$13.4M Waste</span>
+              <span className="text-destructive font-bold">$13.32M Waste</span>
             </div>
           </div>
         </div>
@@ -223,16 +229,16 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 <span>Pre-Lit ATR Waste + Litigation Fees</span>
               </div>
               <div className="w-full h-4 rounded-full bg-muted overflow-hidden flex">
-                <div className="bg-success h-full flex items-center justify-center text-[10px] font-bold text-success-foreground" style={{ width: '29.5%' }}>
-                  $5.6M
+                <div className="bg-success h-full flex items-center justify-center text-[10px] font-bold text-success-foreground" style={{ width: '29.9%' }}>
+                  $5.68M
                 </div>
-                <div className="bg-destructive h-full flex items-center justify-center text-[10px] font-bold text-destructive-foreground" style={{ width: '70.5%' }}>
-                  $13.4M
+                <div className="bg-destructive h-full flex items-center justify-center text-[10px] font-bold text-destructive-foreground" style={{ width: '70.1%' }}>
+                  $13.32M
                 </div>
               </div>
               <div className="flex justify-between text-xs mt-1">
-                <span className="text-success font-medium">29% Strategic</span>
-                <span className="text-destructive font-medium">71% Reactive</span>
+                <span className="text-success font-medium">30% Strategic</span>
+                <span className="text-destructive font-medium">70% Reactive</span>
               </div>
             </div>
           </div>
@@ -244,7 +250,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         <KPICard
           title="Total BI Spend"
           value="$395M"
-          subtitle="All Bodily Injury"
+          subtitle="All Bodily Injury YTD"
           icon={DollarSign}
           variant="default"
         />
@@ -257,25 +263,65 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         />
         <KPICard
           title="Expert Spend"
-          value="$5.6M"
-          subtitle="Intentional leverage"
+          value="$5.68M"
+          subtitle="$516K avg/month"
           icon={Target}
           variant="success"
         />
         <KPICard
           title="Reactive Waste"
-          value="$13.4M"
+          value="$13.32M"
           subtitle="Pre-lit ATR + Lit fees"
           icon={AlertTriangle}
           variant="danger"
         />
         <KPICard
           title="Waste Ratio"
-          value="2.4x"
-          subtitle="$1 expert = $2.40 waste"
+          value="2.3x"
+          subtitle="$1 expert = $2.34 waste"
           icon={TrendingUp}
           variant="warning"
         />
+      </div>
+
+      {/* Quarterly Expert Spend Table */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">2025 Litigation Expert Spend by Quarter</h3>
+        <p className="text-xs text-muted-foreground mb-4">YTD through November — Paid vs Approved</p>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Quarter</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Paid</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Monthly Avg</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Approved</th>
+                <th className="text-right py-2 px-3 text-muted-foreground font-medium">Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quarterlyExpertData.map((q) => (
+                <tr key={q.quarter} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="py-2 px-3 font-medium">{q.quarter}</td>
+                  <td className="py-2 px-3 text-right text-success font-semibold">{formatCurrencyFull(q.paid)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground">{formatCurrencyFull(q.avgMonthly)}</td>
+                  <td className="py-2 px-3 text-right">{formatCurrencyFull(q.approved)}</td>
+                  <td className={`py-2 px-3 text-right font-medium ${q.paid < q.approved ? 'text-success' : 'text-warning'}`}>
+                    {q.paid < q.approved ? '-' : '+'}{formatCurrencyFull(Math.abs(q.approved - q.paid))}
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-muted/50 font-bold">
+                <td className="py-2 px-3">2025 YTD</td>
+                <td className="py-2 px-3 text-right text-success">$5,681,152</td>
+                <td className="py-2 px-3 text-right text-muted-foreground">$516,468</td>
+                <td className="py-2 px-3 text-right">$6,181,166</td>
+                <td className="py-2 px-3 text-right text-success">-$500,014</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Charts Row */}
