@@ -3,6 +3,7 @@ import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { PainLevelUpload } from "@/components/PainLevelUpload";
+import { DataUploadPanel } from "@/components/DataUploadPanel";
 import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet } from "lucide-react";
 
 import { toast } from "sonner";
@@ -639,6 +640,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
           </div>
           <div className="flex items-center gap-4">
+            <DataUploadPanel />
             <PainLevelUpload onDataUploaded={onPainLevelDataApplied} isActive={painLevelDataActive} />
             <button
               onClick={handleFullExport}

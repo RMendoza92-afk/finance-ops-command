@@ -68,6 +68,154 @@ export type Database = {
         }
         Relationships: []
       }
+      litigation_matters: {
+        Row: {
+          claimant: string | null
+          class: string | null
+          created_at: string
+          days_open: number | null
+          department: string | null
+          discipline: string | null
+          filing_date: string | null
+          id: string
+          indemnities_amount: number | null
+          location: string | null
+          matter_id: string
+          matter_lead: string | null
+          resolution: string | null
+          resolution_date: string | null
+          severity: string | null
+          status: string | null
+          team: string | null
+          total_amount: number | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimant?: string | null
+          class?: string | null
+          created_at?: string
+          days_open?: number | null
+          department?: string | null
+          discipline?: string | null
+          filing_date?: string | null
+          id?: string
+          indemnities_amount?: number | null
+          location?: string | null
+          matter_id: string
+          matter_lead?: string | null
+          resolution?: string | null
+          resolution_date?: string | null
+          severity?: string | null
+          status?: string | null
+          team?: string | null
+          total_amount?: number | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimant?: string | null
+          class?: string | null
+          created_at?: string
+          days_open?: number | null
+          department?: string | null
+          discipline?: string | null
+          filing_date?: string | null
+          id?: string
+          indemnities_amount?: number | null
+          location?: string | null
+          matter_id?: string
+          matter_lead?: string | null
+          resolution?: string | null
+          resolution_date?: string | null
+          severity?: string | null
+          status?: string | null
+          team?: string | null
+          total_amount?: number | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      open_exposure: {
+        Row: {
+          created_at: string
+          id: string
+          insurance_expectancy: number | null
+          matter_id: string
+          net_exposure: number | null
+          phase: string | null
+          reserves: number | null
+          type_group: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insurance_expectancy?: number | null
+          matter_id: string
+          net_exposure?: number | null
+          phase?: string | null
+          reserves?: number | null
+          type_group?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insurance_expectancy?: number | null
+          matter_id?: string
+          net_exposure?: number | null
+          phase?: string | null
+          reserves?: number | null
+          type_group?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_exposure_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "litigation_matters"
+            referencedColumns: ["matter_id"]
+          },
+        ]
+      }
+      pain_levels: {
+        Row: {
+          created_at: string
+          id: string
+          matter_id: string
+          notes: string | null
+          pain_level: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matter_id: string
+          notes?: string | null
+          pain_level: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matter_id?: string
+          notes?: string | null
+          pain_level?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pain_levels_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: true
+            referencedRelation: "litigation_matters"
+            referencedColumns: ["matter_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
