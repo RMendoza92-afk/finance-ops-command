@@ -632,25 +632,26 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
   }, [generateFullExcel, timestamp, buildRawClaimData, quarterlyExpertData, costCurveData, aggregatedData, executiveReviewCases]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Professional Header Banner */}
-      <div className="bg-[#0c2340] rounded-xl p-5 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="border-l-2 border-[#b41e1e] pl-4">
-            <h2 className="text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
-            <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
+      <div className="bg-[#0c2340] rounded-xl p-4 sm:p-5 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="border-l-2 border-[#b41e1e] pl-3 sm:pl-4">
+            <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
+            <p className="text-[10px] sm:text-xs text-gray-300">Litigation Intelligence Dashboard</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <DataUploadPanel onDataUploaded={onDataUploaded} />
             <PainLevelUpload onDataUploaded={onPainLevelDataApplied} isActive={painLevelDataActive} />
             <button
               onClick={handleFullExport}
-              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-md"
             >
-              <FileSpreadsheet className="h-4 w-4" />
-              Full Export
+              <FileSpreadsheet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Full Export</span>
+              <span className="sm:hidden">Export</span>
             </button>
-            <div className="flex items-center gap-2 text-xs text-gray-300">
+            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-300">
               <Download className="h-3.5 w-3.5" />
               <span>Double-click sections</span>
             </div>
@@ -707,7 +708,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <KPICard
           title="Total BI Spend"
           value="$395M"
@@ -941,7 +942,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {executiveReviewCases.map((caseItem, idx) => (
             <button
               key={caseItem.uniqueRecord}
@@ -950,7 +951,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                 e.stopPropagation();
                 handleExportClaim(caseItem);
               }}
-              className="text-left p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm"
+              className="text-left p-3 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm"
               title="Click for drilldown, double-click to export"
             >
               <div className="flex items-start justify-between mb-2">

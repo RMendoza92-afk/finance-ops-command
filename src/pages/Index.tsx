@@ -219,59 +219,62 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="command-header px-6 py-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-10 w-auto" />
-            <div className="h-8 w-px bg-border" />
+      <header className="command-header px-4 sm:px-6 py-4 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-8 sm:h-10 w-auto" />
+            <div className="h-6 sm:h-8 w-px bg-border hidden sm:block" />
             <div>
-              <h1 className="text-lg font-bold tracking-tight">Litigation Discipline Command Center</h1>
-              <p className="text-xs text-muted-foreground">
-                {filters.inventoryStatus === 'open' ? 'Open Inventory Analysis' : '2025 Litigation Portfolio'} • Decision & Discipline System
+              <h1 className="text-sm sm:text-lg font-bold tracking-tight">Litigation Command Center</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                {filters.inventoryStatus === 'open' ? 'Open Inventory' : '2025 Portfolio'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>{filteredData.length.toLocaleString()} of {litigationData.length.toLocaleString()} records</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
-                {dataSource === 'database' ? '📊 Database' : '📄 CSV'}
+          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{filteredData.length.toLocaleString()} of {litigationData.length.toLocaleString()} records</span>
+              <span className="sm:hidden">{filteredData.length}</span>
+              <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-muted">
+                {dataSource === 'database' ? '📊 DB' : '📄 CSV'}
               </span>
             </div>
-            <span>CWP: {stats.cwpCount.toLocaleString()} | CWN: {stats.cwnCount.toLocaleString()}</span>
+            <span className="hidden lg:inline">CWP: {stats.cwpCount.toLocaleString()} | CWN: {stats.cwnCount.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mt-4">
+        <div className="flex items-center gap-1 mt-3 sm:mt-4 overflow-x-auto">
           <button
             onClick={() => setActiveTab('executive')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === 'executive'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            <LayoutDashboard className="h-4 w-4" />
-            Executive Dashboard
+            <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Executive Dashboard</span>
+            <span className="sm:hidden">Executive</span>
           </button>
           <button
             onClick={() => setActiveTab('management')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === 'management'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            <Table2 className="h-4 w-4" />
-            Management Data
-            <span className="px-1.5 py-0.5 rounded text-xs bg-background/20">{filteredData.length}</span>
+            <Table2 className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Management Data</span>
+            <span className="sm:hidden">Data</span>
+            <span className="px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-background/20">{filteredData.length}</span>
           </button>
         </div>
       </header>
       
-      <main className="px-6 py-6">
+      <main className="px-4 sm:px-6 py-4 sm:py-6">
         {/* Global Filters - Shared across tabs */}
         <GlobalFilterPanel 
           filters={filters}
@@ -298,10 +301,10 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border px-6 py-4 mt-8">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <p>© 2025 Fred Loya Insurance — Litigation Discipline Command Center</p>
-          <p>All calculations dynamically computed • No static values • Signal → Inspection workflow</p>
+      <footer className="border-t border-border px-4 sm:px-6 py-3 sm:py-4 mt-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-xs text-muted-foreground">
+          <p>© 2025 Fred Loya Insurance — Litigation Command Center</p>
+          <p className="hidden sm:block">All calculations dynamically computed</p>
         </div>
       </footer>
     </div>
