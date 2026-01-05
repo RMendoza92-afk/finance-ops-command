@@ -742,34 +742,23 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       { queue: 'BI3', openReserves: 55241032, lowEval: 26233823, highEval: 29500000, noEvalCount: 892 },
       { queue: 'UM-UIM', openReserves: 12127676, lowEval: 1698151, highEval: 2000000, noEvalCount: 85 },
       { queue: 'Non Rep', openReserves: 12829329, lowEval: 2680853, highEval: 3000000, noEvalCount: 120 },
-      { queue: 'TLL', openReserves: 9638100, lowEval: 0, highEval: 0, noEvalCount: 0 },
-      { queue: 'SUB', openReserves: 7252200, lowEval: 5400, highEval: 6000, noEvalCount: 0 },
-      { queue: 'PD', openReserves: 7258000, lowEval: 0, highEval: 0, noEvalCount: 0 },
-      { queue: 'Other', openReserves: 19442589, lowEval: 470000, highEval: 520000, noEvalCount: 36 },
     ],
-    // Full Type Group breakdown
+    // Full Type Group breakdown (BI-focused, excludes Subro, PD, TLL, Other)
     byTypeGroup: [
       { typeGroup: 'ATR', reserves: 109732166 },
       { typeGroup: 'LIT', reserves: 67319959 },
       { typeGroup: 'BI3', reserves: 55241032 },
       { typeGroup: 'Non Rep', reserves: 12829329 },
       { typeGroup: 'UM-UIM', reserves: 12127676 },
-      { typeGroup: 'TLL', reserves: 9638100 },
-      { typeGroup: 'PD', reserves: 7258000 },
-      { typeGroup: 'SUB', reserves: 7252200 },
       { typeGroup: 'O30', reserves: 5210000 },
       { typeGroup: 'DTL', reserves: 2847000 },
       { typeGroup: 'TLC', reserves: 2818100 },
       { typeGroup: 'ARB', reserves: 2397600 },
       { typeGroup: 'FIR', reserves: 1818100 },
-      { typeGroup: 'LPD', reserves: 1225000 },
-      { typeGroup: 'CL', reserves: 1130226 },
       { typeGroup: 'COVG', reserves: 603340 },
       { typeGroup: 'SCP', reserves: 426800 },
-      { typeGroup: 'TLO', reserves: 330000 },
       { typeGroup: 'TCP', reserves: 170100 },
       { typeGroup: 'TLU', reserves: 153900 },
-      { typeGroup: 'OC', reserves: 129000 },
       { typeGroup: 'ACP', reserves: 57200 },
       { typeGroup: 'ROP', reserves: 50125 },
       { typeGroup: 'PI', reserves: 48297 },
@@ -778,11 +767,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       { typeGroup: 'U30', reserves: 5000 },
     ],
     totals: {
-      totalOpenReserves: 300841051,   // $300.84M - ACTUAL
-      totalLowEval: 101426728,        // $101.43M - Low Eval (with money)
-      totalHighEval: 110471228,       // $110.47M - High Eval (with money)
-      noEvalAmount: 190319323,        // $190.32M - No Eval/Pending
-      noEvalCount: 2278,
+      // Adjusted totals excluding Subro ($7.25M), PD ($7.26M), TLL ($9.64M), Other ($19.44M) = $43.59M removed
+      totalOpenReserves: 257250162,   // $257.25M - BI-focused reserves
+      totalLowEval: 100936528,        // $100.94M - Low Eval (excluding Subro/PD/TLL/Other)
+      totalHighEval: 113500000,       // $113.5M - High Eval
+      noEvalAmount: 156313634,        // $156.31M - No Eval/Pending
+      noEvalCount: 2342,
     }
   };
 
