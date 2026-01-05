@@ -91,11 +91,14 @@ export function LitigationChat() {
     // Matters without evaluation
     const withoutEvaluation = litigationData.filter(m => m.indemnitiesAmount === 0);
 
+    // Only count reserves for open matters (CWN = not closed with payment)
+    const openMatters = litigationData.filter(m => m.cwpCwn === 'CWN');
+    
     return {
       totalMatters: litigationData.length,
       totalCWP: litigationData.filter(m => m.cwpCwn === 'CWP').length,
-      totalCWN: litigationData.filter(m => m.cwpCwn === 'CWN').length,
-      totalReserves: litigationData.reduce((sum, m) => sum + m.netAmount, 0),
+      totalCWN: openMatters.length,
+      totalReserves: openMatters.reduce((sum, m) => sum + Math.abs(m.netAmount), 0),
       totalIndemnityPaid: litigationData.reduce((sum, m) => sum + m.indemnitiesAmount, 0),
 
       monthToDate: {
