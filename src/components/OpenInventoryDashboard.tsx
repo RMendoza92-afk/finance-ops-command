@@ -1797,19 +1797,21 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   }
 
   return (
-    <div className="space-y-6">
-      {/* Professional Header Banner */}
-      <div className="bg-[#0c2340] rounded-xl p-5 shadow-lg">
+    <div className="space-y-8">
+      {/* Executive Header Banner - Board-Ready Design */}
+      <div className="bg-gradient-to-r from-secondary via-secondary/80 to-muted rounded-xl p-6 border border-border shadow-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <FileStack className="h-8 w-8 text-white" />
-            <div className="border-l-2 border-[#b41e1e] pl-4">
-              <h2 className="text-lg font-bold text-white tracking-wide">OPEN INVENTORY COMMAND</h2>
-              <p className="text-xs text-gray-300">Claims & Financial Overview</p>
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-primary/20 rounded-xl border border-primary/30">
+              <FileStack className="h-7 w-7 text-primary" />
+            </div>
+            <div className="border-l-2 border-primary pl-5">
+              <h2 className="text-xl font-bold text-foreground tracking-wide">OPEN INVENTORY COMMAND</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button
+            <Button
               onClick={async () => {
                 await generateExecutivePackage(
                   {
@@ -1843,207 +1845,210 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 );
                 toast.success('Executive Package downloaded! (PDF + Excel)');
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 py-2.5 shadow-md"
             >
-              <FileSpreadsheet className="h-4 w-4" />
-              Full Export
-            </button>
-            <div className="flex items-center gap-2 text-xs text-gray-300">
-              <Download className="h-3.5 w-3.5" />
-              <span>Double-click sections</span>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export Executive Package
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+              <Download className="h-4 w-4" />
+              <span>Double-click to export sections</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
-      <div id="executive-command-center" className="print-section bg-card rounded-xl p-6 border border-border shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-warning/20 rounded-lg">
+      <div id="executive-command-center" className="print-section bg-card rounded-xl border border-border shadow-xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
+        {/* Section Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-warning/20 rounded-lg border border-warning/30">
               <Activity className="h-5 w-5 text-warning" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-foreground tracking-wide">EXECUTIVE COMMAND CENTER</h3>
-              <p className="text-xs text-muted-foreground">Real-time portfolio health • Updated {timestamp}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Real-time portfolio health dashboard</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-success/20 rounded-full">
-              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-success">LIVE DATA</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-4 py-2 bg-success/10 border border-success/30 rounded-lg">
+              <div className="w-2.5 h-2.5 bg-success rounded-full animate-pulse"></div>
+              <span className="text-sm font-semibold text-success">LIVE</span>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setExecutiveExpanded(!executiveExpanded)}
               className="text-muted-foreground hover:text-foreground print:hidden"
             >
               {executiveExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <span className="ml-2">{executiveExpanded ? 'Collapse' : 'Expand'}</span>
             </Button>
           </div>
         </div>
 
         {executiveExpanded && (
-        <div className="mt-6">
+        <div className="p-5 space-y-6">
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        {/* Primary KPI Row - 4 Cards */}
+        <div className="grid grid-cols-4 gap-5">
           {/* Total Open Reserves with Trend */}
-          <div className="bg-secondary/50 rounded-xl p-4 border border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase">Open Reserves</span>
-              <div className={`flex items-center gap-1 text-xs font-bold ${EXECUTIVE_METRICS.trends.reservesMoM > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+          <div className="bg-secondary/50 rounded-xl p-5 border border-border hover:border-primary/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Open Reserves</span>
+              <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${EXECUTIVE_METRICS.trends.reservesMoM > 0 ? 'text-destructive bg-destructive/10' : 'text-success bg-success/10'}`}>
                 {EXECUTIVE_METRICS.trends.reservesMoM > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                 {Math.abs(EXECUTIVE_METRICS.trends.reservesMoM)}% MoM
               </div>
             </div>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <span className={`text-xs ${EXECUTIVE_METRICS.trends.reservesYoY < 0 ? 'text-success' : 'text-destructive'}`}>
+            <p className="text-3xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50">
+              <span className={`text-sm font-medium ${EXECUTIVE_METRICS.trends.reservesYoY < 0 ? 'text-success' : 'text-destructive'}`}>
                 {EXECUTIVE_METRICS.trends.reservesYoY > 0 ? '+' : ''}{EXECUTIVE_METRICS.trends.reservesYoY}% YoY
               </span>
             </div>
           </div>
 
           {/* Pending Evaluation ALERT */}
-          <div className="bg-gradient-to-br from-warning/20 to-warning/10 rounded-xl p-4 border-2 border-warning/50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-warning/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-warning/5 rounded-xl p-5 border-2 border-warning/40 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-warning/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-warning uppercase tracking-wide">⚠️ PENDING EVAL</span>
-              <AlertTriangle className="h-4 w-4 text-warning animate-pulse" />
+              <AlertTriangle className="h-5 w-5 text-warning animate-pulse" />
             </div>
-            <p className="text-2xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalAmount || 0)}</p>
-            <p className="text-xs text-warning/80 mt-1">63% of reserves without evaluation</p>
-            <div className="mt-2 bg-warning/10 rounded px-2 py-1">
-              <span className="text-xs text-warning font-medium">Action Required</span>
+            <p className="text-3xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalAmount || 0)}</p>
+            <p className="text-sm text-warning/80 mt-2">63% of reserves without evaluation</p>
+            <div className="mt-3 pt-3 border-t border-warning/20">
+              <span className="text-xs text-warning font-bold uppercase">Action Required</span>
             </div>
           </div>
 
           {/* Closure Velocity */}
-          <div className="bg-secondary/50 rounded-xl p-4 border border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase">Closures This Month</span>
-              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400">
+          <div className="bg-secondary/50 rounded-xl p-5 border border-border hover:border-success/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Closures This Month</span>
+              <div className="flex items-center gap-1 text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-md">
                 <TrendingUp className="h-3 w-3" />
                 +{((EXECUTIVE_METRICS.closures.closedThisMonth / EXECUTIVE_METRICS.closures.closedLastMonth - 1) * 100).toFixed(0)}%
               </div>
             </div>
-            <p className="text-2xl font-bold text-foreground">{formatNumber(EXECUTIVE_METRICS.closures.closedThisMonth)}</p>
-            <div className="flex items-center gap-3 mt-2 text-xs">
-              <span className="text-muted-foreground">Avg: {EXECUTIVE_METRICS.closures.avgDaysToClose} days</span>
-              <span className="text-success">↓{Math.abs(EXECUTIVE_METRICS.closures.avgDaysToCloseTrend)}d faster</span>
+            <p className="text-3xl font-bold text-foreground">{formatNumber(EXECUTIVE_METRICS.closures.closedThisMonth)}</p>
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50 text-sm">
+              <span className="text-muted-foreground">Avg: <span className="font-medium text-foreground">{EXECUTIVE_METRICS.closures.avgDaysToClose} days</span></span>
+              <span className="text-success font-medium">↓{Math.abs(EXECUTIVE_METRICS.closures.avgDaysToCloseTrend)}d</span>
             </div>
           </div>
 
           {/* Aging Alert */}
-          <div className="bg-gradient-to-br from-destructive/20 to-destructive/10 rounded-xl p-4 border-2 border-destructive/50">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-destructive/5 rounded-xl p-5 border-2 border-destructive/40">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-destructive uppercase tracking-wide">🚨 AGED 365+ DAYS</span>
-              <Clock className="h-4 w-4 text-destructive" />
+              <Clock className="h-5 w-5 text-destructive" />
             </div>
-            <p className="text-2xl font-bold text-destructive">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
-            <p className="text-xs text-destructive/80 mt-1">{EXECUTIVE_METRICS.aging.over365Pct}% of inventory • {formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
-            <div className="mt-2 h-1.5 bg-destructive/20 rounded-full overflow-hidden">
-              <div className="h-full bg-destructive rounded-full" style={{ width: `${EXECUTIVE_METRICS.aging.over365Pct}%` }}></div>
+            <p className="text-3xl font-bold text-destructive">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
+            <p className="text-sm text-destructive/80 mt-2">{EXECUTIVE_METRICS.aging.over365Pct}% • {formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
+            <div className="mt-3 pt-3 border-t border-destructive/20">
+              <div className="h-2 bg-destructive/20 rounded-full overflow-hidden">
+                <div className="h-full bg-destructive rounded-full transition-all" style={{ width: `${EXECUTIVE_METRICS.aging.over365Pct}%` }}></div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* CEO Metrics Row - Budget & Settlement Performance */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+        {/* CEO Metrics Row - Budget, Decisions, CP1 */}
+        <div className="grid grid-cols-3 gap-5 p-5 bg-muted/20 rounded-xl border border-border/50">
+          {/* Budget Burn Rate */}
           <div 
-            className="flex items-center gap-4 cursor-pointer hover:bg-primary/10 rounded-lg p-2 -m-2 transition-colors"
+            className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg"
             onClick={() => setShowBudgetDrawer(true)}
-            title="Click to view budget details"
           >
-            <div className="p-2 bg-primary/20 rounded-lg">
-              <Wallet className="h-5 w-5 text-primary" />
+            <div className="p-3 bg-primary/20 rounded-lg border border-primary/30">
+              <Wallet className="h-6 w-6 text-primary" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase">Budget Burn Rate</p>
-              <p className="text-xl font-bold text-foreground">{budgetMetrics.burnRate}%<span className="text-sm font-normal text-muted-foreground ml-1">YTD</span></p>
-              <p className={`text-xs ${budgetMetrics.onTrack ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrencyK(budgetMetrics.remaining)} remaining of {formatCurrency(budgetMetrics.annualBudget)}
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">Budget Burn Rate</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{budgetMetrics.burnRate}%<span className="text-sm font-normal text-muted-foreground ml-2">YTD</span></p>
+              <p className={`text-sm mt-1 font-medium ${budgetMetrics.onTrack ? 'text-success' : 'text-destructive'}`}>
+                {formatCurrencyK(budgetMetrics.remaining)} remaining
               </p>
             </div>
-            <ArrowUpRight className="h-4 w-4 text-primary ml-auto" />
+            <ArrowUpRight className="h-5 w-5 text-primary" />
           </div>
+
+          {/* Pending Decisions */}
           <div 
-            className="flex items-center gap-4 cursor-pointer hover:bg-warning/10 rounded-lg p-2 -m-2 transition-colors"
+            className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-warning/50 transition-all hover:shadow-lg"
             onClick={() => setShowDecisionsDrawer(true)}
-            title="Click to view pending decisions"
           >
-            <div className="p-2 bg-warning/20 rounded-lg">
-              <Flag className="h-5 w-5 text-warning" />
+            <div className="p-3 bg-warning/20 rounded-lg border border-warning/30">
+              <Flag className="h-6 w-6 text-warning" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase">Decisions Pending</p>
-              <p className="text-xl font-bold text-warning">{pendingDecisionsStats.total}<span className="text-sm font-normal text-muted-foreground ml-1">this week</span></p>
-              <p className="text-xs text-destructive">{pendingDecisionsStats.statuteDeadlines} statute deadlines &lt;30d</p>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">Decisions Pending</p>
+              <p className="text-2xl font-bold text-warning mt-1">{pendingDecisionsStats.total}<span className="text-sm font-normal text-muted-foreground ml-2">this week</span></p>
+              <p className="text-sm text-destructive font-medium mt-1">{pendingDecisionsStats.statuteDeadlines} statute deadlines</p>
             </div>
-            <ArrowUpRight className="h-4 w-4 text-warning ml-auto" />
+            <ArrowUpRight className="h-5 w-5 text-warning" />
           </div>
           
           {/* CP1 - Limits Tendered Claims */}
           <div 
-            className="flex items-center gap-4 bg-success/10 rounded-lg p-2 -m-2 border border-success/30 cursor-pointer hover:bg-success/20 transition-colors"
+            className="flex items-center gap-4 p-4 bg-success/5 rounded-xl border border-success/30 cursor-pointer hover:border-success/50 transition-all hover:shadow-lg"
             onClick={() => setShowCP1Drawer(true)}
-            title="Click to view CP1 details"
           >
-            <div className="p-2 bg-success/20 rounded-lg">
-              <CheckCircle2 className="h-5 w-5 text-success" />
+            <div className="p-3 bg-success/20 rounded-lg border border-success/30">
+              <CheckCircle2 className="h-6 w-6 text-success" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground uppercase">CP1 - Limits Tendered</p>
-              <p className="text-xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-1">claims ({CP1_DATA.cp1Rate}%)</span></p>
-              <p className="text-xs text-muted-foreground">
-                BI: <span className="text-success font-medium">{CP1_DATA.byCoverage[0].yes.toLocaleString()}</span> •{' '}
-                PD: <span className="font-medium">{CP1_DATA.byCoverage[1].yes.toLocaleString()}</span> •{' '}
-                UM: <span className="font-medium">{CP1_DATA.byCoverage[2].yes.toLocaleString()}</span>
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1 Limits Tendered</p>
+              <p className="text-2xl font-bold text-success mt-1">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-2">({CP1_DATA.cp1Rate}%)</span></p>
+              <p className="text-sm text-muted-foreground mt-1">
+                BI: <span className="text-success font-semibold">{CP1_DATA.byCoverage[0].yes.toLocaleString()}</span> • PD: <span className="font-medium">{CP1_DATA.byCoverage[1].yes.toLocaleString()}</span>
               </p>
             </div>
-            <ArrowUpRight className="h-4 w-4 text-success ml-auto" />
+            <ArrowUpRight className="h-5 w-5 text-success" />
           </div>
         </div>
         </div>
         )}
       </div>
 
-      {/* Summary Banner with Financials */}
+      {/* Summary Banner with Financials - Cleaner Layout */}
       <div 
-        className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-border rounded-xl p-6 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportSummary}
         title="Double-click to export"
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h2 className="text-2xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
+            <p className="text-sm text-muted-foreground mt-2">
               As of January 2, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
             </p>
           </div>
-          <div className="flex gap-8 items-center">
-            <div className="text-center border-r border-border pr-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Open Reserves</p>
+          <div className="flex gap-6 items-center">
+            <div className="text-center px-5 border-r border-border">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Open Reserves</p>
               <p className="text-2xl font-bold text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</p>
             </div>
-            <div className="text-center border-r border-border pr-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Low Eval</p>
-              <p className="text-2xl font-bold text-accent-foreground">{formatCurrency(metrics.financials.totals.totalLowEval)}</p>
+            <div className="text-center px-5 border-r border-border">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Low Eval</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(metrics.financials.totals.totalLowEval)}</p>
             </div>
-            <div className="text-center border-r border-border pr-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">High Eval</p>
+            <div className="text-center px-5 border-r border-border">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">High Eval</p>
               <p className="text-2xl font-bold text-warning">{formatCurrency(metrics.financials.totals.totalHighEval)}</p>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">No Evaluation</p>
+            <div className="text-center px-5">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">No Evaluation</p>
               <p className="text-2xl font-bold text-muted-foreground">{formatNumber(metrics.financials.totals.noEvalCount)}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Financial KPI Cards with Reserve Adequacy */}
+      {/* Financial KPI Cards with Reserve Adequacy - Improved Layout */}
       {(() => {
         const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
         const reserves = metrics.financials.totals.totalOpenReserves;
@@ -2052,100 +2057,98 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         const isOverReserved = variance > 0;
         
         return (
-          <>
-            <div className="grid grid-cols-5 gap-4">
-              <KPICard
-                title="Total Open Reserves"
-                value={formatCurrency(reserves)}
-                subtitle="Outstanding liability"
-                icon={Wallet}
-                variant="default"
-              />
-              <KPICard
-                title="Low Evaluation"
-                value={formatCurrency(metrics.financials.totals.totalLowEval)}
-                subtitle="Minimum exposure estimate"
-                icon={DollarSign}
-                variant="default"
-              />
-              <KPICard
-                title="Median Evaluation"
-                value={formatCurrency(medianEval)}
-                subtitle="(Low + High) / 2"
-                icon={Target}
-                variant="default"
-              />
-              <KPICard
-                title="High Evaluation"
-                value={formatCurrency(metrics.financials.totals.totalHighEval)}
-                subtitle="Maximum exposure estimate"
-                icon={DollarSign}
-                variant="warning"
-              />
-              <div className={`rounded-xl p-4 border-2 ${isOverReserved ? 'bg-success/10 border-success/40' : 'bg-destructive/10 border-destructive/40'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  {isOverReserved ? (
-                    <TrendingUp className="h-4 w-4 text-success" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                  )}
-                  <span className="text-xs font-medium text-muted-foreground uppercase">Reserve Adequacy</span>
-                </div>
-                <p className={`text-2xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
-                  {isOverReserved ? '+' : ''}{variancePct}%
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isOverReserved ? 'Over-reserved' : 'Under-reserved'} by {formatCurrency(Math.abs(variance))}
-                </p>
+          <div className="grid grid-cols-5 gap-5">
+            <KPICard
+              title="Total Open Reserves"
+              value={formatCurrency(reserves)}
+              subtitle="Outstanding liability"
+              icon={Wallet}
+              variant="default"
+            />
+            <KPICard
+              title="Low Evaluation"
+              value={formatCurrency(metrics.financials.totals.totalLowEval)}
+              subtitle="Minimum exposure"
+              icon={DollarSign}
+              variant="default"
+            />
+            <KPICard
+              title="Median Evaluation"
+              value={formatCurrency(medianEval)}
+              subtitle="(Low + High) / 2"
+              icon={Target}
+              variant="default"
+            />
+            <KPICard
+              title="High Evaluation"
+              value={formatCurrency(metrics.financials.totals.totalHighEval)}
+              subtitle="Maximum exposure"
+              icon={DollarSign}
+              variant="warning"
+            />
+            <div className={`rounded-xl p-5 border-2 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                {isOverReserved ? (
+                  <TrendingUp className="h-5 w-5 text-success" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                )}
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reserve Adequacy</span>
               </div>
+              <p className={`text-3xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
+                {isOverReserved ? '+' : ''}{variancePct}%
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {isOverReserved ? 'Over-reserved' : 'Under-reserved'} by {formatCurrency(Math.abs(variance))}
+              </p>
             </div>
-
-            {/* Reserve Adequacy by Queue */}
-            <div 
-              className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
-              onDoubleClick={handleExportByQueue}
-              title="Double-click to export"
-            >
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">Reserve Adequacy by Queue</h3>
-              <div className="grid grid-cols-4 gap-4">
-                {metrics.financials.byQueue.map((queue) => {
-                  const qMedian = (queue.lowEval + queue.highEval) / 2;
-                  const qVariance = queue.openReserves - qMedian;
-                  const qVariancePct = ((qVariance / qMedian) * 100).toFixed(1);
-                  const qIsOver = qVariance > 0;
-                  
-                  return (
-                    <div key={queue.queue} className={`rounded-lg p-4 border ${qIsOver ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-foreground">{queue.queue}</span>
-                        <span className={`text-sm font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
-                          {qIsOver ? '+' : ''}{qVariancePct}%
-                        </span>
-                      </div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Reserves</span>
-                          <span className="font-medium">{formatCurrency(queue.openReserves)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Median Eval</span>
-                          <span className="font-medium">{formatCurrency(qMedian)}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-border pt-1 mt-1">
-                          <span className="text-muted-foreground">{qIsOver ? 'Over' : 'Under'}</span>
-                          <span className={`font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
-                            {qIsOver ? '+' : '-'}{formatCurrency(Math.abs(qVariance))}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
+          </div>
         );
       })()}
+
+      {/* Reserve Adequacy by Queue */}
+      <div 
+        className="bg-card border border-border rounded-xl p-6 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportByQueue}
+        title="Double-click to export"
+      >
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-5">Reserve Adequacy by Queue</h3>
+        <div className="grid grid-cols-4 gap-5">
+          {metrics.financials.byQueue.map((queue) => {
+            const qMedian = (queue.lowEval + queue.highEval) / 2;
+            const qVariance = queue.openReserves - qMedian;
+            const qVariancePct = ((qVariance / qMedian) * 100).toFixed(1);
+            const qIsOver = qVariance > 0;
+            
+            return (
+              <div key={queue.queue} className={`rounded-xl p-5 border ${qIsOver ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-bold text-foreground">{queue.queue}</span>
+                  <span className={`text-sm font-bold px-2 py-1 rounded ${qIsOver ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'}`}>
+                    {qIsOver ? '+' : ''}{qVariancePct}%
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reserves</span>
+                    <span className="font-medium">{formatCurrency(queue.openReserves)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Median Eval</span>
+                    <span className="font-medium">{formatCurrency(qMedian)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-2 mt-2">
+                    <span className="text-muted-foreground">{qIsOver ? 'Over' : 'Under'}</span>
+                    <span className={`font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
+                      {qIsOver ? '+' : '-'}{formatCurrency(Math.abs(qVariance))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-2 gap-6">

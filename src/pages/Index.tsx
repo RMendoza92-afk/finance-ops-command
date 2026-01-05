@@ -219,64 +219,70 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="command-header px-4 sm:px-6 py-4 border-b border-border">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-8 sm:h-10 w-auto" />
-            <div className="h-6 sm:h-8 w-px bg-border hidden sm:block" />
+      {/* Executive Header - Clean, Board-Ready */}
+      <header className="command-header px-6 py-5 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-12 w-auto" />
+            <div className="h-10 w-px bg-border" />
             <div>
-              <h1 className="text-sm sm:text-lg font-bold tracking-tight">Litigation Command Center</h1>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {filters.inventoryStatus === 'open' ? 'Open Inventory' : '2025 Portfolio'}
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Litigation Command Center</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {filters.inventoryStatus === 'open' ? 'Open Inventory Dashboard' : '2025 Portfolio Analysis'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">{filteredData.length.toLocaleString()} of {litigationData.length.toLocaleString()} records</span>
-              <span className="sm:hidden">{filteredData.length}</span>
-              <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-muted">
-                {dataSource === 'database' ? '📊 DB' : '📄 CSV'}
-              </span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="font-medium text-foreground">{filteredData.length.toLocaleString()}</span>
+                <span>of {litigationData.length.toLocaleString()} records</span>
+              </div>
+              <div className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                {dataSource === 'database' ? 'DATABASE' : 'CSV'}
+              </div>
             </div>
-            <span className="hidden lg:inline">CWP: {stats.cwpCount.toLocaleString()} | CWN: {stats.cwnCount.toLocaleString()}</span>
+            <div className="hidden lg:flex items-center gap-4 text-sm text-muted-foreground">
+              <span>CWP: <span className="font-semibold text-foreground">{stats.cwpCount.toLocaleString()}</span></span>
+              <span className="w-px h-4 bg-border"></span>
+              <span>CWN: <span className="font-semibold text-foreground">{stats.cwnCount.toLocaleString()}</span></span>
+            </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mt-3 sm:mt-4 overflow-x-auto">
+        {/* Tab Navigation - Only show when not in Open Inventory mode */}
+        {filters.inventoryStatus !== 'open' && (
+        <div className="flex items-center gap-2 mt-5">
           <button
             onClick={() => setActiveTab('executive')}
-            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
               activeTab === 'executive'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Executive Dashboard</span>
-            <span className="sm:hidden">Executive</span>
+            <LayoutDashboard className="h-4 w-4" />
+            Executive Dashboard
           </button>
           <button
             onClick={() => setActiveTab('management')}
-            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
               activeTab === 'management'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
           >
-            <Table2 className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Management Data</span>
-            <span className="sm:hidden">Data</span>
-            <span className="px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs bg-background/20">{filteredData.length}</span>
+            <Table2 className="h-4 w-4" />
+            Management Data
+            <span className="px-2 py-0.5 rounded text-xs bg-background/20">{filteredData.length}</span>
           </button>
         </div>
+        )}
       </header>
       
-      <main className="px-4 sm:px-6 py-4 sm:py-6">
-        {/* Global Filters - Shared across tabs */}
+      <main className="px-6 py-6">
+        {/* Global Filters - Clean, Condensed */}
         <GlobalFilterPanel 
           filters={filters}
           onFilterChange={handleFilterChange}
@@ -301,11 +307,11 @@ const Index = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border px-4 sm:px-6 py-3 sm:py-4 mt-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-xs text-muted-foreground">
+      {/* Footer - Minimal */}
+      <footer className="border-t border-border px-6 py-4 mt-12">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <p>© 2025 Fred Loya Insurance — Litigation Command Center</p>
-          <p className="hidden sm:block">All calculations dynamically computed</p>
+          <p>All calculations dynamically computed • Data as of current session</p>
         </div>
       </footer>
 
