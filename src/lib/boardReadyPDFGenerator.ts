@@ -108,6 +108,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   
   let currentPage = 1;
   const margins = { left: 12, right: 12, top: 15, bottom: 20 };
+  const totalPagesPlanned = config.quarterlyExpertData && config.quarterlyExpertData.length > 0 ? 5 : 4;
+  let colX = 0;
   
   // Track section page numbers
   const sectionPages: Record<string, number> = {};
@@ -120,192 +122,83 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
-  drawPageHeader(doc, pageWidth, 'LITIGATION DISCIPLINE REPORT', 'Weekly Status', ctx);
+  drawPageHeader(doc, pageWidth, 'CEO CONTROL PANEL', 'This Week: Status / Breaks / Enforcement', ctx);
   let y = 44;
-  
-  // CRITICAL BANNER: Financial Impact Statement
-  const totalExposure = config.decisionsData.totalExposure + config.budgetData.ytdPaid;
-  const criticalCount = config.decisionsData.critical;
-  const budgetStatus = config.budgetData.onTrack ? 'ON TRACK' : 'OVER';
-  
-  // Impact banner - dark red for critical, dark green for ok
-  doc.setFillColor(criticalCount > 0 ? 60 : 15, criticalCount > 0 ? 20 : 35, criticalCount > 0 ? 20 : 25);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 28, 3, 3, 'F');
-  // Red or green accent border
-  doc.setDrawColor(criticalCount > 0 ? 220 : 34, criticalCount > 0 ? 38 : 197, criticalCount > 0 ? 38 : 94);
-  doc.setLineWidth(1);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 28, 3, 3, 'S');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('POSITION', margins.left + 8, y + 8);
-  
-  doc.setFontSize(14);
-  doc.text(
-    `${formatCurrency(totalExposure, true)} EXPOSED | ${criticalCount} CRITICAL | BUDGET ${budgetStatus}`,
-    margins.left + 8, y + 20
-  );
-  y += 34;
-  
-  // 3-Column Executive KPIs
-  const kpiWidth = (pageWidth - margins.left - margins.right - 16) / 3;
-  const kpis = [
-    {
-      label: 'PAID YTD',
-      value: formatCurrency(config.budgetData.ytdPaid, true),
-      sub: `${config.budgetData.burnRate}% burn`,
-      status: config.budgetData.onTrack ? 'positive' : 'negative'
-    },
-    {
-      label: 'PENDING',
-      value: config.decisionsData.total.toString(),
-      sub: `${config.decisionsData.critical} critical`,
-      status: config.decisionsData.critical > 0 ? 'negative' : 'neutral'
-    },
-    {
-      label: 'LIMITS HIT',
-      value: config.cp1Data.cp1Rate,
-      sub: `${config.cp1Data.cp1Count.toLocaleString()} claims`,
-      status: parseFloat(config.cp1Data.cp1Rate) > 30 ? 'negative' : 'neutral'
-    }
-  ];
-  
-  kpis.forEach((kpi, idx) => {
-    const x = margins.left + idx * (kpiWidth + 8);
-    drawExecutiveKPI(doc, x, y, kpiWidth, 36, kpi);
-  });
-  y += 44;
-  
-  // EXECUTIVE DECISION MATRIX
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('EXECUTIVE DECISION MATRIX', margins.left, y);
-  y += 6;
-  
-  // Decision matrix table
-  const decisions = [
-    {
-      domain: 'BUDGET',
-      status: config.budgetData.onTrack ? '✓ OK' : '⚠ OVER',
-      impact: formatCurrency(config.budgetData.projectedVariance, true),
-      action: config.budgetData.onTrack ? 'Hold' : 'Cut BI'
-    },
-    {
-      domain: 'QUEUE',
-      status: config.decisionsData.critical > 0 ? `⚠ ${config.decisionsData.critical}` : '✓ CLEAR',
-      impact: formatCurrency(config.decisionsData.totalExposure, true),
-      action: config.decisionsData.critical > 0 ? 'Today' : 'None'
-    },
-    {
-      domain: 'LIMITS',
-      status: parseFloat(config.cp1Data.cp1Rate) > 28 ? '⚠ HIGH' : '✓ OK',
-      impact: `${config.cp1Data.cp1Count.toLocaleString()}`,
-      action: parseFloat(config.cp1Data.cp1Rate) > 28 ? 'Audit aged BI' : 'None'
-    }
-  ];
-  
-  // Table header - dark red accent
-  doc.setFillColor(...EXECUTIVE_COLORS.azure);
-  doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  const colWidths = [35, 45, 50, 56];
-  let colX = margins.left + 4;
-  ['AREA', 'STATUS', 'EXPOSURE', 'ACTION'].forEach((h, i) => {
-    doc.text(h, colX, y + 6);
-    colX += colWidths[i];
-  });
-  y += 10;
-  
-  // Table rows
-  decisions.forEach((row, idx) => {
-    if (idx % 2 === 0) {
-      doc.setFillColor(25, 25, 25);
-      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
-    } else {
-      doc.setFillColor(18, 18, 18);
-      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
-    }
-    
-    colX = margins.left + 4;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.text(row.domain, colX, y + 5);
-    colX += colWidths[0];
-    
-    const statusColor = row.status.includes('✓') ? EXECUTIVE_COLORS.success : EXECUTIVE_COLORS.danger;
-    doc.setTextColor(...statusColor);
-    doc.text(row.status, colX, y + 5);
-    colX += colWidths[1];
-    
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    doc.setFont('helvetica', 'normal');
-    doc.text(row.impact, colX, y + 5);
-    colX += colWidths[2];
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text(row.action, colX, y + 5);
-    
-    y += 10;
-  });
-  y += 8;
-  
-  // BOTTOM LINE - The CFO's 10-second read (dark theme with red accent)
+
+  const ceo = buildCEOControlPanel(config);
+
+  // STATUS BLOCK (binary judgment)
   doc.setFillColor(25, 25, 25);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'F');
-  doc.setDrawColor(...EXECUTIVE_COLORS.azure);
+  doc.setDrawColor(...(ceo.disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : ceo.disciplineBand === 'degrading' ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success));
   doc.setLineWidth(1);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'S');
-  
-  doc.setFontSize(8);
+
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text(`STATUS: ${ceo.statusLine}`, margins.left + 6, y + 9);
+
+  doc.setFontSize(8);
+  doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+  doc.text(`DISCIPLINE: ${ceo.disciplineLabel}  |  OWNER: ${ceo.primaryOwner}`, margins.left + 6, y + 17);
+  y += 30;
+
+  // THE 3 QUESTIONS (no scanning)
+  const boxW = pageWidth - margins.left - margins.right;
+  const boxH = 26;
+
+  const drawCEOBox = (title: string, body: string, accent: number[]) => {
+    doc.setFillColor(18, 18, 18);
+    doc.roundedRect(margins.left, y, boxW, boxH, 3, 3, 'F');
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(margins.left, y + 4, 4, boxH - 8, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(accent[0], accent[1], accent[2]);
+    doc.text(title, margins.left + 10, y + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    const lines = doc.splitTextToSize(body, boxW - 16);
+    doc.text(lines.slice(0, 2), margins.left + 10, y + 20);
+
+    y += boxH + 8;
+  };
+
+  drawCEOBox('1) AHEAD OR BEHIND PLAN', ceo.planAnswer, ceo.planAccent);
+  drawCEOBox('2) WHAT IS BREAKING DISCIPLINE', ceo.breakAnswer, ceo.breakAccent);
+  drawCEOBox('3) REQUIRED THIS WEEK', ceo.enforcementAnswer, ceo.enforcementAccent);
+
+  // CONSEQUENCE (hard framing)
+  doc.setFillColor(25, 25, 25);
+  doc.roundedRect(margins.left, y, boxW, 20, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
   doc.setTextColor(...EXECUTIVE_COLORS.azure);
-  doc.text('BOTTOM LINE:', margins.left + 5, y + 8);
-  
-  // Generate bottom line based on data - plain English, no jargon
-  const bottomLine = generateCFOBottomLine(config);
+  doc.text('CONSEQUENCE IF UNCHANGED (30 DAYS):', margins.left + 6, y + 8);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text(ceo.consequence30d, margins.left + 6, y + 16);
+  y += 26;
+
+  // CONFIRMATION (explicit)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.text('CONFIRMATION REQUIRED:', margins.left, y);
+  y += 6;
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  const bottomLines = doc.splitTextToSize(bottomLine, pageWidth - margins.left - margins.right - 40);
-  doc.text(bottomLines.slice(0, 2), margins.left + 45, y + 8);
-  y += 28;
-  
-  // TABLE OF CONTENTS
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text('DETAILED ANALYSIS', margins.left, y);
-  y += 6;
-  
-  doc.setFillColor(18, 18, 18);
-  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 35, 2, 2, 'F');
-  
-  const tocItems = [
-    { section: '1. BUDGET ANALYSIS', desc: 'Claims spend, coverage breakdown, YoY comparison', page: 2 },
-    { section: '2. DECISION QUEUE', desc: 'Pending executive decisions, aging, exposure', page: 3 },
-    { section: '3. CP1 LIMITS ANALYSIS', desc: 'Limits tendered by coverage and age', page: 4 },
-    { section: '4. QUARTERLY TRENDS', desc: 'Expert spend, historical patterns', page: 5 }
-  ];
-  
-  let tocY = y + 8;
-  tocItems.forEach(item => {
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.azure);
-    doc.text(item.section, margins.left + 5, tocY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-    doc.text(item.desc, margins.left + 60, tocY);
-    doc.text(`Page ${item.page}`, pageWidth - margins.right - 20, tocY);
-    tocY += 8;
-  });
-  
+  doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+  doc.text(ceo.confirmationLine, margins.left, y);
+
   // Page footer
-  drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
+  drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
   // PAGE 2: BUDGET ANALYSIS
@@ -322,9 +215,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   y = 44;
   
   // Budget key takeaway
+  const budgetBand = config.budgetData.onTrack ? 'holding' : 'failure';
   const budgetTakeaway = config.budgetData.onTrack
-    ? `${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(config.budgetData.projectedVariance, true)} under.`
-    : `${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over.`;
+    ? `✅ Discipline Holding. ${formatCurrency(config.budgetData.ytdPaid, true)} spent YTD. Tracking ${formatCurrency(config.budgetData.projectedVariance, true)} under. Owner: Claims. Consequence 30d: No exec action.`
+    : `❌ Discipline Failure. Tracking ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over. Primary driver: BI severity + litigation velocity. Owner: Claims. Enforcement: tighten BI payment gate + litigation spend review. 30d run-rate: ${formatCurrency(Math.abs(config.budgetData.projectedVariance) / 12, true)} over.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, budgetTakeaway, config.budgetData.onTrack ? 'positive' : 'negative');
   y += 26;
@@ -440,7 +334,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.text(`BI = ${biPct}% of increase. ${biClaimDiff.toLocaleString()} more BI claims YoY.`, margins.left + 28, y + 8);
   doc.text('ACTION: Review BI severity and lit spend.', margins.left + 4, y + 16);
   
-  drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
+  drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
   // PAGE 3: DECISION QUEUE
@@ -456,10 +350,14 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'DECISION QUEUE', `${config.decisionsData.critical} Critical`, ctx);
   y = 44;
   
+  const criticalExposure = config.decisionsData.decisions
+    .filter(d => d.severity === 'critical')
+    .reduce((s, d) => s + (d.amount || 0), 0);
+
   // Decision takeaway
   const decisionTakeaway = config.decisionsData.critical > 0
-    ? `${config.decisionsData.total} pending. ${formatCurrency(config.decisionsData.totalExposure, true)} exposed. ${config.decisionsData.critical} critical. ${config.decisionsData.thisWeek} due this week.`
-    : `${config.decisionsData.total} pending. ${formatCurrency(config.decisionsData.totalExposure, true)} exposed. None critical.`;
+    ? `❌ Discipline Failure. ${config.decisionsData.critical} critical pending (${formatCurrency(criticalExposure, true)}). Owner: Litigation. Enforcement this week: clear critical items same-day; tighten authority gates on new filings. Consequence 30d: ${formatCurrency(criticalExposure / 12, true)} exposure at risk.`
+    : `✅ Discipline Holding. ${config.decisionsData.total} pending (${formatCurrency(config.decisionsData.totalExposure, true)}). Owner: Litigation. No exec intervention required this week.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'neutral');
   y += 26;
@@ -538,7 +436,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     doc.text(`+ ${config.decisionsData.decisions.length - 15} additional decisions (see appendix)`, margins.left, y);
   }
   
-  drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
+  drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
   // PAGE 4: CP1 LIMITS ANALYSIS
@@ -553,9 +451,16 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   
   drawPageHeader(doc, pageWidth, 'LIMITS EXPOSURE', 'CP1 by Coverage and Age', ctx);
   y = 44;
-  
+
+  const agedBucket = config.cp1Data.biByAge.find(a => a.age === '365+ Days');
+  const agedShare = agedBucket && config.cp1Data.biTotal.total > 0 ? (agedBucket.total / config.cp1Data.biTotal.total) : 0;
+  const agedSharePct = (agedShare * 100);
+  const agedEscalation = agedSharePct >= 40;
+
   // CP1 takeaway
-  const cp1Takeaway = `${config.cp1Data.cp1Count.toLocaleString()} at limits (${config.cp1Data.cp1Rate}). BI drives at ${config.cp1Data.biCP1Rate}. Aged claims = highest risk.`;
+  const cp1Takeaway = agedEscalation
+    ? `❌ Discipline Failure. CP1 ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI ${agedSharePct.toFixed(1)}% (>=40% escalation). Owner: Claims + Litigation. Enforcement: aged BI escalation + settlement authority review. Consequence 30d: ${formatCurrency(config.decisionsData.totalExposure / 12, true)} exposure at risk.`
+    : `⚠️ Discipline Degrading. CP1 ${config.cp1Data.cp1Rate} (BI ${config.cp1Data.biCP1Rate}). Aged BI ${agedSharePct.toFixed(1)}%. Owner: Claims. Enforcement: monitor; escalate if aged BI > 40%.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, parseFloat(config.cp1Data.cp1Rate) > 28 ? 'negative' : 'neutral');
   y += 26;
@@ -722,7 +627,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   colX += biAgeCols[3];
   doc.text(config.cp1Data.biCP1Rate, colX, y + 5);
   
-  drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
+  drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   
   // ====================================================================
   // PAGE 5: QUARTERLY TRENDS
@@ -820,7 +725,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     colX += qCols[3] + qCols[4];
     doc.text(`${totalPaid - totalApproved >= 0 ? '+' : ''}${formatCurrency(totalPaid - totalApproved, true)}`, colX, y + 5);
     
-    drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
+    drawPageFooter(doc, pageWidth, pageHeight, currentPage, totalPagesPlanned, ctx);
   }
   
   // Save the document
@@ -959,31 +864,97 @@ function drawCompactKPI(doc: any, x: number, y: number, width: number, height: n
 }
 
 function generateCFOBottomLine(config: ExecutivePackageConfig): string {
-  const issues: string[] = [];
-  const positives: string[] = [];
-  
-  // Budget assessment
-  if (!config.budgetData.onTrack) {
-    issues.push(`${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget`);
-  } else {
-    positives.push(`${formatCurrency(config.budgetData.projectedVariance, true)} under budget`);
-  }
-  
-  // Decisions assessment
-  if (config.decisionsData.critical > 0) {
-    issues.push(`${config.decisionsData.critical} critical pending`);
-  }
-  
-  // CP1 assessment
-  if (parseFloat(config.cp1Data.cp1Rate) > 28) {
-    issues.push(`CP1 at ${config.cp1Data.cp1Rate}`);
-  }
-  
-  if (issues.length === 0) {
-    return `Clean. ${positives.join('. ')}. No action required.`;
-  } else if (issues.length === 1) {
-    return `${issues[0]}. ${positives.length > 0 ? positives.join('. ') + '.' : ''}`;
-  } else {
-    return `${issues.join('. ')}.`;
-  }
+  const ceo = buildCEOControlPanel(config);
+  return `${ceo.statusLine}. ${ceo.enforcementAnswer}`;
+}
+
+type DisciplineBand = 'holding' | 'degrading' | 'failure';
+
+function buildCEOControlPanel(config: ExecutivePackageConfig): {
+  disciplineBand: DisciplineBand;
+  disciplineLabel: string;
+  statusLine: string;
+  planAnswer: string;
+  planAccent: number[];
+  breakAnswer: string;
+  breakAccent: number[];
+  enforcementAnswer: string;
+  enforcementAccent: number[];
+  primaryOwner: string;
+  consequence30d: string;
+  confirmationLine: string;
+} {
+  const overBudget = !config.budgetData.onTrack;
+  const critical = config.decisionsData.critical > 0;
+  const cp1High = parseFloat(config.cp1Data.cp1Rate) > 28;
+
+  const biChange = config.budgetData.coverageBreakdown?.bi?.change ?? 0;
+  const biDriver = biChange > 0;
+
+  const agedBucket = config.cp1Data.biByAge.find(a => a.age === '365+ Days');
+  const agedShare = agedBucket && config.cp1Data.biTotal.total > 0 ? (agedBucket.total / config.cp1Data.biTotal.total) : 0;
+  const agedEscalation = agedShare >= 0.40;
+
+  const disciplineBand: DisciplineBand = overBudget || critical || agedEscalation ? 'failure' : (cp1High || biDriver ? 'degrading' : 'holding');
+  const disciplineLabel = disciplineBand === 'failure' ? '❌ DISCIPLINE FAILURE' : disciplineBand === 'degrading' ? '⚠️ DISCIPLINE DEGRADING' : '✅ DISCIPLINE HOLDING';
+
+  const statusLine = overBudget
+    ? `OVER BUDGET — DISCIPLINE FAILURE (${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over)`
+    : `AHEAD OF PLAN — DISCIPLINE HOLDING (${formatCurrency(config.budgetData.projectedVariance, true)} under)`;
+
+  const planAnswer = overBudget
+    ? `Behind plan by ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} (annual).`
+    : `Ahead of plan by ${formatCurrency(config.budgetData.projectedVariance, true)} (annual).`;
+
+  const breakAnswer = (() => {
+    if (overBudget) return `Primary cause: BI severity + litigation velocity.`;
+    if (critical) return `Decision queue is blocking discipline.`;
+    if (agedEscalation) return `Aged BI exceeded 40% — automatic escalation.`;
+    if (cp1High) return `Limits rate elevated; aged BI trending up.`;
+    return `No breaks detected. Discipline holding.`;
+  })();
+
+  const enforcementAnswer = (() => {
+    const actions: string[] = [];
+    if (overBudget) actions.push('Tighten BI payment gate; litigation spend review');
+    if (critical) actions.push('Clear critical decisions today');
+    if (agedEscalation) actions.push('Escalate aged BI; settlement authority review');
+    if (!overBudget && !critical && !agedEscalation) return 'No executive intervention required this week. Discipline holding.';
+    return actions.join(' / ');
+  })();
+
+  const primaryOwner = overBudget ? 'Claims (BI) + Litigation' : critical ? 'Litigation' : agedEscalation ? 'Claims + Litigation' : 'Claims';
+
+  // Use only defensible arithmetic derived from existing totals (pro‑rata 30d).
+  const monthlyOverPlan = overBudget ? Math.abs(config.budgetData.projectedVariance) / 12 : 0;
+  const criticalExposure = config.decisionsData.decisions
+    .filter(d => d.severity === 'critical')
+    .reduce((s, d) => s + (d.amount || 0), 0);
+  const monthlyCritical = criticalExposure > 0 ? (criticalExposure / 12) : 0;
+  const consequence30d = overBudget
+    ? `Run-rate over plan: ${formatCurrency(monthlyOverPlan, true)} (30d pro‑rata).`
+    : critical
+      ? `Exposure held up: ${formatCurrency(monthlyCritical, true)} (30d pro‑rata).`
+      : agedEscalation
+        ? `Escalation active (aged BI ≥ 40%).`
+        : `No executive consequence expected in next 30 days.`;
+
+  const confirmationLine = disciplineBand === 'holding'
+    ? 'Confirm: no intervention required; hold gates and cadence.'
+    : 'Confirm: enforcement assigned and executed this week.';
+
+  return {
+    disciplineBand,
+    disciplineLabel,
+    statusLine,
+    planAnswer,
+    planAccent: overBudget ? EXECUTIVE_COLORS.danger : EXECUTIVE_COLORS.success,
+    breakAnswer,
+    breakAccent: disciplineBand === 'failure' ? EXECUTIVE_COLORS.danger : disciplineBand === 'degrading' ? EXECUTIVE_COLORS.warning : EXECUTIVE_COLORS.success,
+    enforcementAnswer,
+    enforcementAccent: disciplineBand === 'holding' ? EXECUTIVE_COLORS.success : EXECUTIVE_COLORS.danger,
+    primaryOwner,
+    consequence30d,
+    confirmationLine,
+  };
 }
