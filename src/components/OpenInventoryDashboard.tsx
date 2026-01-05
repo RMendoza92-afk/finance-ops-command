@@ -642,23 +642,42 @@ export function OpenInventoryDashboard() {
                 setSelectedClaimFilter(val);
                 setAiSummary(''); // Reset summary when filter changes
               }}
-              className="space-y-2"
+              className="space-y-1"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="all-claims" />
-                <Label htmlFor="all-claims" className="text-sm cursor-pointer">All 47 claims</Label>
+              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
+                <RadioGroupItem value="all" id="all-claims" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="all-claims" className="text-sm cursor-pointer font-medium">All Claims ({TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()})</Label>
+                  <p className="text-xs text-muted-foreground">All 9 areas: 101-110</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="aged-365" id="aged-365" />
-                <Label htmlFor="aged-365" className="text-sm cursor-pointer">365+ day aged only (18)</Label>
+              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
+                <RadioGroupItem value="aged-365" id="aged-365" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="aged-365" className="text-sm cursor-pointer font-medium text-destructive">365+ Days Aged ({TEXAS_REAR_END_DATA.byAge[0].claims.toLocaleString()})</Label>
+                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[0].reserves / 1000000).toFixed(1)}M reserves • Highest priority</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="high-reserve" id="high-reserve" />
-                <Label htmlFor="high-reserve" className="text-sm cursor-pointer">High reserve &gt; $50K (12)</Label>
+              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
+                <RadioGroupItem value="aged-181-365" id="aged-181-365" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="aged-181-365" className="text-sm cursor-pointer font-medium text-warning">181-365 Days ({TEXAS_REAR_END_DATA.byAge[1].claims.toLocaleString()})</Label>
+                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[1].reserves / 1000000).toFixed(1)}M reserves • High priority</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no-eval" id="no-eval" />
-                <Label htmlFor="no-eval" className="text-sm cursor-pointer">No evaluation set (5)</Label>
+              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
+                <RadioGroupItem value="top-3-areas" id="top-3-areas" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="top-3-areas" className="text-sm cursor-pointer font-medium">Top 3 Areas by Volume ({(TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims).toLocaleString()})</Label>
+                  <p className="text-xs text-muted-foreground">101 El Paso, 105 San Antonio, 102 Rio Grande</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50">
+                <RadioGroupItem value="under-60" id="under-60" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="under-60" className="text-sm cursor-pointer font-medium text-success">Under 60 Days ({TEXAS_REAR_END_DATA.byAge[3].claims.toLocaleString()})</Label>
+                  <p className="text-xs text-muted-foreground">${(TEXAS_REAR_END_DATA.byAge[3].reserves / 1000000).toFixed(1)}M reserves • Early intervention</p>
+                </div>
               </div>
             </RadioGroup>
 
@@ -714,13 +733,23 @@ export function OpenInventoryDashboard() {
               disabled={!selectedClaimFilter || !selectedReviewer || generatingSummary}
               onClick={async () => {
                 setGeneratingSummary(true);
-                const claimCount = selectedClaimFilter === 'all' ? 47 : 
-                  selectedClaimFilter === 'aged-365' ? 18 :
-                  selectedClaimFilter === 'high-reserve' ? 12 : 5;
-                
-                const reserves = selectedClaimFilter === 'aged-365' ? 13600000 :
-                  selectedClaimFilter === 'high-reserve' ? 8500000 :
-                  selectedClaimFilter === 'no-eval' ? 2100000 : 33000000;
+                const getFilterData = () => {
+                  switch (selectedClaimFilter) {
+                    case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, reserves: TEXAS_REAR_END_DATA.summary.totalReserves, desc: 'All claims' };
+                    case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, reserves: TEXAS_REAR_END_DATA.byAge[0].reserves, desc: '365+ day aged claims' };
+                    case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, reserves: TEXAS_REAR_END_DATA.byAge[1].reserves, desc: '181-365 day aged claims' };
+                    case 'top-3-areas': return { 
+                      count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
+                      reserves: TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves,
+                      desc: 'Top 3 areas (El Paso, San Antonio, Rio Grande)'
+                    };
+                    case 'under-60': return { count: TEXAS_REAR_END_DATA.byAge[3].claims, reserves: TEXAS_REAR_END_DATA.byAge[3].reserves, desc: 'Under 60 day claims' };
+                    default: return { count: 0, reserves: 0, desc: '' };
+                  }
+                };
+                const filterData = getFilterData();
+                const claimCount = filterData.count;
+                const reserves = filterData.reserves;
                 
                 try {
                   const { data, error } = await supabase.functions.invoke('generate-directive-summary', {
@@ -781,28 +810,42 @@ export function OpenInventoryDashboard() {
               disabled={!selectedClaimFilter || !selectedReviewer || !aiSummary || deploying}
               onClick={async () => {
                 setDeploying(true);
-                const claimCount = selectedClaimFilter === 'all' ? 47 : 
-                  selectedClaimFilter === 'aged-365' ? 18 :
-                  selectedClaimFilter === 'high-reserve' ? 12 : 5;
                 
-                // Create sample claims for the database
+                // Get filter-specific data
+                const getFilterData = () => {
+                  switch (selectedClaimFilter) {
+                    case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, ageBucket: 'Mixed', areas: TEXAS_REAR_END_DATA.byArea };
+                    case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, ageBucket: '365+ Days', areas: TEXAS_REAR_END_DATA.byArea };
+                    case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, ageBucket: '181-365 Days', areas: TEXAS_REAR_END_DATA.byArea };
+                    case 'top-3-areas': return { 
+                      count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
+                      ageBucket: 'Mixed',
+                      areas: [TEXAS_REAR_END_DATA.byArea[0], TEXAS_REAR_END_DATA.byArea[4], TEXAS_REAR_END_DATA.byArea[1]] // El Paso, San Antonio, Rio Grande
+                    };
+                    case 'under-60': return { count: TEXAS_REAR_END_DATA.byAge[3].claims, ageBucket: 'Under 60 Days', areas: TEXAS_REAR_END_DATA.byArea };
+                    default: return { count: 0, ageBucket: '', areas: [] };
+                  }
+                };
+                const filterData = getFilterData();
+                
+                // Create sample claims for the database (limited to 15 for demo)
                 const claimsToInsert = [];
-                const areas = TEXAS_REAR_END_DATA.byArea;
+                const areas = filterData.areas;
+                const sampleSize = Math.min(filterData.count, 15);
                 
-                for (let i = 0; i < Math.min(claimCount, 10); i++) {
+                for (let i = 0; i < sampleSize; i++) {
                   const area = areas[i % areas.length];
-                  const ageBucket = selectedClaimFilter === 'aged-365' ? '365+ Days' :
-                    selectedClaimFilter === 'high-reserve' ? '181-365 Days' :
-                    selectedClaimFilter === 'no-eval' ? 'Under 60 Days' :
-                    ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'][i % 4];
+                  const ageBucket = filterData.ageBucket === 'Mixed' 
+                    ? ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'][i % 4]
+                    : filterData.ageBucket;
                   
                   claimsToInsert.push({
                     claim_id: `CLM-${area.area.split(' ')[0]}-${1000 + i}`,
                     area: area.area,
                     loss_description: TEXAS_REAR_END_DATA.lossDescription,
                     reserves: Math.round(area.reserves / area.claims),
-                    low_eval: selectedClaimFilter === 'no-eval' ? null : Math.round((area.lowEval || 0) / area.claims),
-                    high_eval: selectedClaimFilter === 'no-eval' ? null : Math.round((area.highEval || 0) / area.claims),
+                    low_eval: Math.round((area.lowEval || 0) / area.claims),
+                    high_eval: Math.round((area.highEval || 0) / area.claims),
                     age_bucket: ageBucket,
                     status: 'assigned' as const,
                     assigned_to: selectedReviewer,
