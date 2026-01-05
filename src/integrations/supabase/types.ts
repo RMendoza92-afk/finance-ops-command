@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      claim_reviews: {
+        Row: {
+          age_bucket: string
+          area: string
+          assigned_at: string | null
+          assigned_to: string | null
+          claim_id: string
+          completed_at: string | null
+          created_at: string
+          high_eval: number | null
+          id: string
+          loss_description: string
+          low_eval: number | null
+          notes: string | null
+          reserves: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          age_bucket: string
+          area: string
+          assigned_at?: string | null
+          assigned_to?: string | null
+          claim_id: string
+          completed_at?: string | null
+          created_at?: string
+          high_eval?: number | null
+          id?: string
+          loss_description: string
+          low_eval?: number | null
+          notes?: string | null
+          reserves?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          age_bucket?: string
+          area?: string
+          assigned_at?: string | null
+          assigned_to?: string | null
+          claim_id?: string
+          completed_at?: string | null
+          created_at?: string
+          high_eval?: number | null
+          id?: string
+          loss_description?: string
+          low_eval?: number | null
+          notes?: string | null
+          reserves?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
