@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
-import { useExportData, ExportableData, ManagerTracking, RawClaimData } from "@/hooks/useExportData";
+import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1050,6 +1050,42 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     // Use the full list with amounts directly
     const allHighEvalTracking: ManagerTracking[] = ALL_HIGH_EVAL_ADJUSTERS;
     
+    // Dashboard visuals - high-level KPIs with trend indicators
+    const dashboardVisuals: DashboardVisual[] = [
+      { 
+        label: 'Open Reserves', 
+        value: formatCurrency(metrics.financials.totals.totalOpenReserves), 
+        trend: '+2.3% MoM',
+        trendDirection: 'up' 
+      },
+      { 
+        label: 'Total Claims', 
+        value: formatNumber(metrics.totalOpenClaims),
+        trend: 'Steady',
+        trendDirection: 'neutral'
+      },
+      { 
+        label: 'Pending Eval', 
+        value: formatNumber(metrics.financials.totals.noEvalCount),
+        trend: 'Action Required',
+        trendDirection: 'down'
+      },
+      { 
+        label: 'Aged 365+', 
+        value: `${((FINANCIAL_DATA.byAge[0].claims / metrics.totalOpenClaims) * 100).toFixed(0)}%`,
+        trend: 'High Priority',
+        trendDirection: 'down'
+      },
+    ];
+
+    // Key bullet insights summarizing dashboard state
+    const bulletInsights = [
+      `${formatNumber(metrics.financials.totals.noEvalCount)} claims awaiting evaluation — all assigned to ${manager}`,
+      `Aged inventory (365+ days) represents ${formatCurrency(FINANCIAL_DATA.byAge[0].openReserves)} in reserves`,
+      `Low-to-High evaluation spread: ${formatCurrency(metrics.financials.totals.totalLowEval)} – ${formatCurrency(metrics.financials.totals.totalHighEval)}`,
+      `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
+    ];
+
     const exportData: ExportableData = {
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
@@ -1057,6 +1093,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       affectsManager: manager,
       directive: 'Complete all evaluations within 5 business days. No exceptions. High eval claims require manager review and approval. All claims without evaluation are assigned to Richie Mendoza for immediate action.',
       managerTracking: [...allHighEvalTracking, ...noEvalTracking],
+      dashboardVisuals,
+      bulletInsights,
       summary: {
         'Total Open Claims': formatNumber(metrics.totalOpenClaims),
         'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
@@ -1184,20 +1222,56 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       ]),
       sheetName: 'By Age',
     };
+    // Dashboard visuals for Texas Rear End
+    const texasDashboardVisuals: DashboardVisual[] = [
+      { 
+        label: 'Total Claims', 
+        value: TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString(),
+        trend: 'IV R/E CV',
+        trendDirection: 'neutral'
+      },
+      { 
+        label: 'Open Reserves', 
+        value: formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves),
+        trendDirection: 'neutral'
+      },
+      { 
+        label: 'Aged 365+', 
+        value: TEXAS_REAR_END_DATA.byAge[0].claims.toLocaleString(),
+        trend: `${formatCurrency(TEXAS_REAR_END_DATA.byAge[0].reserves)} at risk`,
+        trendDirection: 'down'
+      },
+      { 
+        label: 'Early Settlement', 
+        value: TEXAS_REAR_END_DATA.byAge[3].claims.toLocaleString(),
+        trend: 'Under 60 days',
+        trendDirection: 'up'
+      },
+    ];
+
+    const texasBulletInsights = [
+      `${TEXAS_REAR_END_DATA.byAge[0].claims} claims aged 365+ days — priority settlement focus`,
+      `El Paso (101) leads with ${TEXAS_REAR_END_DATA.byArea[0].claims} claims and ${formatCurrency(TEXAS_REAR_END_DATA.byArea[0].reserves)} in reserves`,
+      `Early settlements (Under 60 days): ${TEXAS_REAR_END_DATA.byAge[3].claims} claims, ${formatCurrency(TEXAS_REAR_END_DATA.byAge[3].reserves)} exposure`,
+      `Evaluation gap: ${formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)} low vs ${formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)} high`,
+    ];
+
     const exportData: ExportableData = {
       title: 'Texas Rear End Claims (101-110)',
       subtitle: `Loss Description: ${TEXAS_REAR_END_DATA.lossDescription}`,
       timestamp,
       affectsManager: manager,
+      dashboardVisuals: texasDashboardVisuals,
+      bulletInsights: texasBulletInsights,
       summary: {
         'Total Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
         'Total Reserves': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.totalReserves),
         'Low Eval': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.lowEval),
         'High Eval': formatCurrencyFullValue(TEXAS_REAR_END_DATA.summary.highEval),
       },
-      columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
-      rows: TEXAS_REAR_END_DATA.byArea.map(a => [
-        a.area,
+      columns: ['Age Bucket', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+      rows: TEXAS_REAR_END_DATA.byAge.map(a => [
+        a.age,
         a.claims,
         formatCurrencyFullValue(a.reserves),
         formatCurrencyFullValue(a.lowEval),

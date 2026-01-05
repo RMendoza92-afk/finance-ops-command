@@ -15,6 +15,13 @@ export interface RawClaimData {
   sheetName?: string;
 }
 
+export interface DashboardVisual {
+  label: string;
+  value: string | number;
+  trend?: string;
+  trendDirection?: 'up' | 'down' | 'neutral';
+}
+
 export interface ExportableData {
   title: string;
   subtitle?: string;
@@ -23,6 +30,9 @@ export interface ExportableData {
   directive?: string;
   managerTracking?: ManagerTracking[];
   summary?: Record<string, string | number>;
+  // NEW: Dashboard-style visuals with bullet insights
+  dashboardVisuals?: DashboardVisual[];
+  bulletInsights?: string[];
   columns: string[];
   rows: (string | number)[][];
   // Raw underlying claim data for Excel export
@@ -137,6 +147,84 @@ export function useExportData() {
       const directiveLines = doc.splitTextToSize(data.directive, pageWidth - 50);
       doc.text(directiveLines.slice(0, 2), 22, yPos + 14);
       yPos += 26;
+    }
+
+    // ====== DASHBOARD VISUALS (High-Level KPI Cards) ======
+    if (data.dashboardVisuals && data.dashboardVisuals.length > 0) {
+      const visuals = data.dashboardVisuals;
+      const maxCols = Math.min(visuals.length, 4);
+      const cardWidth = (pageWidth - 28 - (maxCols - 1) * 8) / maxCols;
+      const cardHeight = 32;
+      
+      visuals.forEach((visual, index) => {
+        const col = index % maxCols;
+        const row = Math.floor(index / maxCols);
+        const xPos = 14 + col * (cardWidth + 8);
+        const cardY = yPos + row * (cardHeight + 6);
+
+        // Card background
+        doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
+        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 3, 3, 'S');
+
+        // Trend indicator bar (left edge)
+        const trendColor = visual.trendDirection === 'up' ? accentGreen : 
+                          visual.trendDirection === 'down' ? accentRed : textMuted;
+        doc.setFillColor(trendColor.r, trendColor.g, trendColor.b);
+        doc.rect(xPos, cardY, 3, cardHeight, 'F');
+
+        // Label
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+        doc.text(visual.label.toUpperCase(), xPos + 8, cardY + 10);
+
+        // Value
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+        doc.text(String(visual.value), xPos + 8, cardY + 22);
+
+        // Trend text
+        if (visual.trend) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(trendColor.r, trendColor.g, trendColor.b);
+          doc.text(visual.trend, xPos + 8, cardY + 29);
+        }
+      });
+
+      yPos += Math.ceil(visuals.length / maxCols) * (cardHeight + 6) + 8;
+    }
+
+    // ====== BULLET INSIGHTS ======
+    if (data.bulletInsights && data.bulletInsights.length > 0) {
+      doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
+      const bulletBoxHeight = 8 + data.bulletInsights.length * 7;
+      doc.roundedRect(14, yPos, pageWidth - 28, bulletBoxHeight, 3, 3, 'F');
+      
+      // Yellow accent bar
+      doc.setFillColor(245, 158, 11); // Amber-500
+      doc.rect(14, yPos, 4, bulletBoxHeight, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(245, 158, 11);
+      doc.text('KEY INSIGHTS', 24, yPos + 8);
+      
+      yPos += 14;
+      
+      data.bulletInsights.forEach((insight) => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+        doc.text(`• ${insight}`, 24, yPos);
+        yPos += 7;
+      });
+      
+      yPos += 8;
     }
 
     // ====== MANAGER TRACKING ======
