@@ -2525,19 +2525,19 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               icon={DollarSign}
               variant="warning"
             />
-            <div className={`rounded-xl p-5 border-2 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
-              <div className="flex items-center gap-2 mb-2">
+            <div className={`rounded-xl p-3 sm:p-5 border-2 col-span-2 sm:col-span-1 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
+              <div className="flex items-center gap-2 mb-1 sm:mb-2">
                 {isOverReserved ? (
-                  <TrendingUp className="h-5 w-5 text-success" />
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                 ) : (
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
                 )}
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reserve Adequacy</span>
+                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reserve Adequacy</span>
               </div>
-              <p className={`text-3xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
+              <p className={`text-xl sm:text-3xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
                 {isOverReserved ? '+' : ''}{variancePct}%
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
                 {isOverReserved ? 'Over-reserved' : 'Under-reserved'} by {formatCurrency(Math.abs(variance))}
               </p>
             </div>
@@ -2590,28 +2590,28 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       </div>
 
       {/* Charts Row - Financials by Age */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Reserves vs Eval by Age Bucket */}
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
           onDoubleClick={handleExportByAge}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Age</h3>
-          <p className="text-xs text-muted-foreground mb-4">Open reserves compared to low/high evaluation by claim age</p>
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Age</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Open reserves compared to low/high evaluation by claim age</p>
           
-          <div className="h-72">
+          <div className="h-56 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 30, left: 90, bottom: 5 }}>
+              <BarChart data={metrics.ageDistribution} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
-                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={11} width={85} />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                <YAxis type="category" dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={9} width={55} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
                   formatter={(value: number, name: string) => [formatCurrencyFull(value), name]}
                 />
@@ -2622,43 +2622,43 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </ResponsiveContainer>
           </div>
 
-          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary"></div>
-              <span className="text-xs text-muted-foreground">Open Reserves</span>
+          <div className="flex flex-wrap gap-3 sm:gap-6 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-primary"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Reserves</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
-              <span className="text-xs text-muted-foreground">Low Eval</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Low Eval</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-warning"></div>
-              <span className="text-xs text-muted-foreground">High Eval</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-warning"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">High Eval</span>
             </div>
           </div>
         </div>
 
         {/* Reserves by Queue */}
         <div 
-          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
           onDoubleClick={handleExportByQueue}
           title="Double-click to export"
         >
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Queue</h3>
-          <p className="text-xs text-muted-foreground mb-4">Open reserves & evaluation by handling unit</p>
+          <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Queue</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Open reserves & evaluation by handling unit</p>
           
-          <div className="h-72">
+          <div className="h-56 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.financials.byQueue} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={metrics.financials.byQueue} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="queue" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                <XAxis dataKey="queue" stroke="hsl(var(--muted-foreground))" fontSize={9} interval={0} angle={-25} textAnchor="end" height={40} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '11px'
                   }}
                   formatter={(value: number | null, name: string) => [
                     value !== null ? formatCurrencyFull(value) : 'No Evaluation', 
@@ -2672,18 +2672,18 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </ResponsiveContainer>
           </div>
           
-          <div className="flex gap-6 mt-4 pt-4 border-t border-border justify-center">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary"></div>
-              <span className="text-xs text-muted-foreground">Open Reserves</span>
+          <div className="flex flex-wrap gap-3 sm:gap-6 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border justify-center">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-primary"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Reserves</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
-              <span className="text-xs text-muted-foreground">Low Eval</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Low Eval</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-warning"></div>
-              <span className="text-xs text-muted-foreground">High Eval</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-warning"></div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">High Eval</span>
             </div>
           </div>
         </div>
