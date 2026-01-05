@@ -573,7 +573,7 @@ export function useExportData() {
     return filename;
   };
 
-  // Generate Executive Command Center PDF
+  // Generate Executive Command Center PDF - Matching Dashboard Layout
   const generateExecutivePDF = async (metrics: {
     totalOpenReserves: number;
     pendingEval: number;
@@ -589,22 +589,29 @@ export function useExportData() {
     lowEval: number;
     medianEval: number;
     highEval: number;
+  }, granularData?: {
+    byAge: { age: string; claims: number; openReserves: number; lowEval: number; highEval: number }[];
+    byQueue: { queue: string; openReserves: number; lowEval: number; highEval: number; noEvalCount: number }[];
+    byTypeGroup: { typeGroup: string; reserves: number }[];
+    highEvalAdjusters: { name: string; value: string }[];
+    quarterlyData?: { quarter: string; paid: number; paidMonthly: number; approved: number; approvedMonthly: number; variance: number }[];
   }) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
     
-    // EXECUTIVE THEME - Black, Light Grey, White, Red, Green (matches generatePDF)
-    const darkBg = { r: 0, g: 0, b: 0 };           // Pure Black
-    const cardBg = { r: 18, g: 18, b: 18 };        // Near Black
-    const darkBorder = { r: 38, g: 38, b: 38 };    // Dark Grey
-    const textWhite = { r: 255, g: 255, b: 255 };  // Pure White
-    const textMuted = { r: 163, g: 163, b: 163 };  // Light Grey (Neutral 400)
-    const textLight = { r: 212, g: 212, b: 212 };  // Lighter Grey (Neutral 300)
-    const accentRed = { r: 220, g: 38, b: 38 };    // Red 600
-    const accentGreen = { r: 34, g: 197, b: 94 };  // Green 500
-    const accentAmber = { r: 251, g: 191, b: 36 }; // Amber 400
+    // EXECUTIVE THEME - Matches dashboard exactly
+    const darkBg = { r: 9, g: 9, b: 11 };             // Zinc-950
+    const cardBg = { r: 24, g: 24, b: 27 };           // Zinc-900
+    const darkBorder = { r: 39, g: 39, b: 42 };       // Zinc-800
+    const textWhite = { r: 250, g: 250, b: 250 };     // Zinc-50
+    const textMuted = { r: 161, g: 161, b: 170 };     // Zinc-400
+    const textLight = { r: 212, g: 212, b: 216 };     // Zinc-300
+    const accentRed = { r: 239, g: 68, b: 68 };       // Red-500
+    const accentGreen = { r: 34, g: 197, b: 94 };     // Green-500
+    const accentAmber = { r: 245, g: 158, b: 11 };    // Amber-500
+    const accentYellow = { r: 250, g: 204, b: 21 };   // Yellow-400
     
     const formatCurrency = (val: number) => {
       if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
@@ -612,209 +619,217 @@ export function useExportData() {
       return `$${val.toFixed(0)}`;
     };
 
-    // Background - pure black
+    // === PAGE 1: Executive Summary ===
     doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
     // Header with logo
-    let yPos = 20;
+    let yPos = 12;
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', 14, 8, 50, 14);
+      doc.addImage(logoBase64, 'JPEG', 14, 8, 45, 13);
     } catch {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-      doc.text('FRED LOYA INSURANCE', 14, 18);
+      doc.text('FRED LOYA INSURANCE', 14, 16);
     }
 
-    // Accent line - red
-    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.setLineWidth(2);
-    doc.line(14, 24, pageWidth - 14, 24);
-
-    // Title
-    yPos = 34;
+    // Title section - matching dashboard header
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
+    doc.setFontSize(11);
     doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-    doc.text('EXECUTIVE COMMAND CENTER', 14, yPos);
-    
+    doc.text('Litigation Command Center', 65, 14);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(textLight.r, textLight.g, textLight.b);
-    doc.text(`Real-time portfolio health • ${timestamp}`, 14, yPos + 7);
-
-    // Live badge - green
-    doc.setFillColor(accentGreen.r, accentGreen.g, accentGreen.b);
-    doc.roundedRect(pageWidth - 55, yPos - 8, 40, 12, 2, 2, 'F');
     doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('2025 Portfolio', 65, 20);
+
+    // Live badge
+    doc.setFillColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.roundedRect(pageWidth - 45, 10, 32, 10, 2, 2, 'F');
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text('● LIVE DATA', pageWidth - 52, yPos - 1);
+    doc.text('● LIVE', pageWidth - 40, 16);
 
-    yPos = 52;
+    yPos = 30;
 
-    // === MAIN METRICS CARDS (4 columns) ===
-    const cardWidth = (pageWidth - 70) / 4;
-    const cardHeight = 50;
-    const cardY = yPos;
-
-    // Card 1: Open Reserves
+    // === EXECUTIVE COMMAND CENTER HEADER ===
     doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
-    doc.roundedRect(14, cardY, cardWidth, cardHeight, 4, 4, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('OPEN RESERVES', 20, cardY + 12);
-    
-    // MoM indicator
-    const momColor = metrics.reservesMoM > 0 ? accentRed : accentGreen;
-    doc.setTextColor(momColor.r, momColor.g, momColor.b);
-    doc.setFontSize(7);
-    doc.text(`${metrics.reservesMoM > 0 ? '↑' : '↓'}${Math.abs(metrics.reservesMoM)}% MoM`, 14 + cardWidth - 30, cardY + 12);
-    
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-    doc.text(formatCurrency(metrics.totalOpenReserves), 20, cardY + 30);
-    
-    const yoyColor = metrics.reservesYoY < 0 ? accentGreen : accentRed;
-    doc.setFontSize(9);
-    doc.setTextColor(yoyColor.r, yoyColor.g, yoyColor.b);
-    doc.text(`${metrics.reservesYoY > 0 ? '+' : ''}${metrics.reservesYoY}% YoY`, 20, cardY + 42);
-
-    // Card 2: Pending Eval (Alert Style)
-    const card2X = 14 + cardWidth + 14;
-    doc.setFillColor(120, 53, 15);  // amber-900
-    doc.roundedRect(card2X, cardY, cardWidth, cardHeight, 4, 4, 'F');
-    doc.setDrawColor(accentAmber.r, accentAmber.g, accentAmber.b);
-    doc.setLineWidth(1.5);
-    doc.roundedRect(card2X, cardY, cardWidth, cardHeight, 4, 4, 'S');
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
-    doc.text('⚠ PENDING EVAL', card2X + 6, cardY + 12);
-    
-    doc.setFontSize(22);
-    doc.text(formatCurrency(metrics.pendingEval), card2X + 6, cardY + 30);
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${metrics.pendingEvalPct.toFixed(0)}% of reserves without evaluation`, card2X + 6, cardY + 40);
-
-    // Card 3: Closures This Month
-    const card3X = card2X + cardWidth + 14;
-    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
-    doc.roundedRect(card3X, cardY, cardWidth, cardHeight, 4, 4, 'F');
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('CLOSURES THIS MONTH', card3X + 6, cardY + 12);
-    
-    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
-    doc.setFontSize(7);
-    doc.text(`↑ +${metrics.closureTrend}%`, card3X + cardWidth - 25, cardY + 12);
-    
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-    doc.text(metrics.closuresThisMonth.toLocaleString(), card3X + 6, cardY + 30);
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text(`Avg: ${metrics.avgDaysToClose} days`, card3X + 6, cardY + 40);
-    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
-    doc.text('↓8d faster', card3X + 45, cardY + 40);
-
-    // Card 4: Aged 365+ (Alert Style)
-    const card4X = card3X + cardWidth + 14;
-    doc.setFillColor(127, 29, 29);  // red-900
-    doc.roundedRect(card4X, cardY, cardWidth, cardHeight, 4, 4, 'F');
-    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.setLineWidth(1.5);
-    doc.roundedRect(card4X, cardY, cardWidth, cardHeight, 4, 4, 'S');
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.text('🚨 AGED 365+ DAYS', card4X + 6, cardY + 12);
-    
-    doc.setFontSize(22);
-    doc.text(metrics.aged365Count.toLocaleString(), card4X + 6, cardY + 30);
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${metrics.aged365Pct}% of inventory • ${formatCurrency(metrics.aged365Reserves)}`, card4X + 6, cardY + 40);
-    
-    // Progress bar for aged
-    doc.setFillColor(50, 20, 20);
-    doc.roundedRect(card4X + 6, cardY + 44, cardWidth - 12, 3, 1, 1, 'F');
-    doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.roundedRect(card4X + 6, cardY + 44, (cardWidth - 12) * (metrics.aged365Pct / 100), 3, 1, 1, 'F');
-
-    // === EVALUATION SUMMARY ROW ===
-    yPos = cardY + cardHeight + 16;
-    const evalRowWidth = pageWidth - 28;
-    const evalCardWidth = evalRowWidth / 3;
-    
-    // Dark card background
-    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
-    doc.roundedRect(14, yPos, evalRowWidth, 40, 4, 4, 'F');
+    doc.roundedRect(14, yPos, pageWidth - 28, 22, 3, 3, 'F');
     doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
     doc.setLineWidth(0.5);
-    doc.roundedRect(14, yPos, evalRowWidth, 40, 4, 4, 'S');
-
-    // Low Eval - use green
-    doc.setFillColor(34, 197, 94);
-    doc.circle(34, yPos + 20, 10, 'F');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text('$', 31, yPos + 24);
+    doc.roundedRect(14, yPos, pageWidth - 28, 22, 3, 3, 'S');
     
+    // Yellow accent bar
+    doc.setFillColor(accentYellow.r, accentYellow.g, accentYellow.b);
+    doc.rect(14, yPos, 4, 22, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text('EXECUTIVE COMMAND CENTER', 24, yPos + 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('Litigation Intelligence Dashboard', 24, yPos + 18);
+    doc.text(timestamp, pageWidth - 80, yPos + 14);
+
+    yPos += 28;
+
+    // === EXPENSE BREAKDOWN BAR ===
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.roundedRect(14, yPos, pageWidth - 28, 45, 3, 3, 'F');
+    
+    // Title row
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text('2025 YTD BI Spend: $395M Total', 20, yPos + 10);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('LOW EVAL', 50, yPos + 16);
-    doc.setFontSize(18);
+    doc.text('Litigation Expenses: $19M • Through November 2025', 20, yPos + 18);
+    
+    // Right side breakdown
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('$19M EXPENSE BREAKDOWN', pageWidth - 70, yPos + 8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
-    doc.text(formatCurrency(metrics.lowEval), 50, yPos + 28);
-
-    // Median Eval - white
-    const medX = 14 + evalCardWidth;
-    doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
-    doc.circle(medX + 20, yPos + 20, 10, 'F');
-    doc.setFontSize(12);
-    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-    doc.text('◎', medX + 16, yPos + 23);
-    
-    doc.setFontSize(8);
+    doc.text('$5.68M Expert', pageWidth - 70, yPos + 16);
     doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('MEDIAN EVAL', medX + 36, yPos + 16);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-    doc.text(formatCurrency(metrics.medianEval), medX + 36, yPos + 28);
-
-    // High Eval - red
-    const highX = 14 + evalCardWidth * 2;
-    doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.circle(highX + 20, yPos + 20, 10, 'F');
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text('↗', highX + 16, yPos + 23);
-    
-    doc.setFontSize(8);
-    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('HIGH EVAL', highX + 36, yPos + 16);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
+    doc.text('vs', pageWidth - 45, yPos + 16);
     doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
-    doc.text(formatCurrency(metrics.highEval), highX + 36, yPos + 28);
+    doc.text('$13.32M Waste', pageWidth - 38, yPos + 16);
+    
+    // Progress bar
+    const barY = yPos + 26;
+    const barWidth = pageWidth - 48;
+    const expertPct = 30;
+    
+    doc.setFillColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.roundedRect(20, barY, barWidth * (expertPct / 100), 8, 2, 2, 'F');
+    doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.roundedRect(20 + barWidth * (expertPct / 100), barY, barWidth * ((100 - expertPct) / 100), 8, 2, 2, 'F');
+    
+    doc.setFontSize(7);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text('$5.68M', 20 + (barWidth * expertPct / 200), barY + 5.5);
+    doc.text('$13.32M', 20 + barWidth * (expertPct / 100) + (barWidth * (100 - expertPct) / 200) - 8, barY + 5.5);
+    
+    // Labels
+    doc.setFontSize(7);
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.text('30% Strategic', 20, barY + 16);
+    doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.text('70% Reactive', pageWidth - 48, barY + 16);
 
-    // Footer with dark bar and red accent line
+    yPos += 50;
+
+    // === KPI CARDS ROW ===
+    const kpiWidth = (pageWidth - 70) / 5;
+    const kpiHeight = 38;
+    
+    const kpis = [
+      { label: 'TOTAL BI SPEND', value: '$395M', sub: 'All Bodily Injury YTD', color: textWhite },
+      { label: 'LIT EXPENSES', value: '$19M', sub: 'Litigation portion', color: accentGreen },
+      { label: 'EXPERT SPEND', value: '$5.68M', sub: '$516K avg/month', color: accentGreen },
+      { label: 'REACTIVE WASTE', value: '$13.32M', sub: 'Pre-lit ATR + Lit fees', color: accentRed },
+      { label: 'WASTE RATIO', value: '2.3x', sub: '$1 expert = $2.34 waste', color: accentYellow },
+    ];
+    
+    kpis.forEach((kpi, i) => {
+      const x = 14 + i * (kpiWidth + 14);
+      doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+      doc.roundedRect(x, yPos, kpiWidth, kpiHeight, 3, 3, 'F');
+      
+      doc.setFontSize(7);
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(kpi.label, x + 6, yPos + 10);
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(kpi.color.r, kpi.color.g, kpi.color.b);
+      doc.text(kpi.value, x + 6, yPos + 24);
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(kpi.sub, x + 6, yPos + 32);
+    });
+
+    yPos += kpiHeight + 10;
+
+    // === QUARTERLY TABLE ===
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.roundedRect(14, yPos, pageWidth - 28, 58, 3, 3, 'F');
+    
+    // Yellow accent bar
+    doc.setFillColor(accentYellow.r, accentYellow.g, accentYellow.b);
+    doc.rect(14, yPos, 4, 58, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(accentYellow.r, accentYellow.g, accentYellow.b);
+    doc.text('2025 LITIGATION EXPERT SPEND BY QUARTER', 24, yPos + 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('YTD through November — Paid vs Approved', 24, yPos + 17);
+    
+    // Table header
+    const tableY = yPos + 22;
+    const cols = ['Quarter', 'Paid', 'Paid Monthly Avg', 'Approved', 'Approved Monthly Avg', 'Variance'];
+    const colWidths = [40, 50, 50, 50, 50, 40];
+    let colX = 24;
+    
+    doc.setFontSize(7);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    cols.forEach((col, i) => {
+      doc.text(col, colX, tableY);
+      colX += colWidths[i];
+    });
+    
+    // Table data
+    const quarterlyData = granularData?.quarterlyData || [
+      { quarter: 'Q1 2025', paid: 1553080, paidMonthly: 517693, approved: 2141536, approvedMonthly: 713845, variance: -588456 },
+      { quarter: 'Q2 2025', paid: 1727599, paidMonthly: 575866, approved: 1680352, approvedMonthly: 560117, variance: 47247 },
+      { quarter: 'Q3 2025', paid: 1383717, paidMonthly: 461239, approved: 1449627, approvedMonthly: 483209, variance: -65910 },
+      { quarter: 'Q4 2025', paid: 1016756, paidMonthly: 508378, approved: 909651, approvedMonthly: 454826, variance: 107105 },
+    ];
+    
+    quarterlyData.forEach((row, i) => {
+      const rowY = tableY + 8 + i * 8;
+      colX = 24;
+      
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text(row.quarter, colX, rowY);
+      colX += colWidths[0];
+      
+      doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+      doc.text(`$${(row.paid / 1000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`, colX, rowY);
+      colX += colWidths[1];
+      
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(`$${row.paidMonthly.toLocaleString()}`, colX, rowY);
+      colX += colWidths[2];
+      
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text(`$${row.approved.toLocaleString()}`, colX, rowY);
+      colX += colWidths[3];
+      
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(`$${row.approvedMonthly.toLocaleString()}`, colX, rowY);
+      colX += colWidths[4];
+      
+      const varColor = row.variance >= 0 ? accentGreen : accentRed;
+      doc.setTextColor(varColor.r, varColor.g, varColor.b);
+      doc.text(`${row.variance >= 0 ? '+' : ''}$${Math.abs(row.variance).toLocaleString()}`, colX, rowY);
+    });
+
+    // Footer
     const footerY = pageHeight - 8;
     doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
     doc.rect(0, footerY - 6, pageWidth, 14, 'F');
@@ -822,14 +837,207 @@ export function useExportData() {
     doc.setLineWidth(0.5);
     doc.line(14, footerY - 6, pageWidth - 14, footerY - 6);
     
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
     doc.text('Fred Loya Insurance • Litigation Command Center • Confidential', 14, footerY);
     doc.setTextColor(textLight.r, textLight.g, textLight.b);
-    doc.text(`Generated: ${timestamp}`, pageWidth - 70, footerY);
+    doc.text('Page 1 of 2', pageWidth - 30, footerY);
 
-    // Download
+    // === PAGE 2: Reserves & Evaluation Detail ===
+    doc.addPage();
+    doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    yPos = 14;
+    
+    // Header continuation
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+    doc.text('RESERVES & EVALUATION DETAIL', 14, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text(timestamp, pageWidth - 80, yPos);
+
+    yPos = 26;
+
+    // === RESERVES SUMMARY CARDS ===
+    const resCardWidth = (pageWidth - 56) / 4;
+    const resCardHeight = 36;
+    
+    const resCards = [
+      { label: 'OPEN RESERVES', value: formatCurrency(metrics.totalOpenReserves), trend: `${metrics.reservesMoM > 0 ? '+' : ''}${metrics.reservesMoM}% MoM`, trendColor: metrics.reservesMoM > 0 ? accentRed : accentGreen },
+      { label: 'PENDING EVAL', value: formatCurrency(metrics.pendingEval), trend: `${metrics.pendingEvalPct.toFixed(0)}% uneval`, trendColor: accentAmber },
+      { label: 'AGED 365+ DAYS', value: metrics.aged365Count.toLocaleString(), trend: `${metrics.aged365Pct}% of inventory`, trendColor: accentRed },
+      { label: 'CLOSURES/MONTH', value: metrics.closuresThisMonth.toLocaleString(), trend: `+${metrics.closureTrend}% trend`, trendColor: accentGreen },
+    ];
+    
+    resCards.forEach((card, i) => {
+      const x = 14 + i * (resCardWidth + 14);
+      doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+      doc.roundedRect(x, yPos, resCardWidth, resCardHeight, 3, 3, 'F');
+      
+      doc.setFontSize(7);
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(card.label, x + 6, yPos + 10);
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text(card.value, x + 6, yPos + 22);
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(card.trendColor.r, card.trendColor.g, card.trendColor.b);
+      doc.text(card.trend, x + 6, yPos + 30);
+    });
+
+    yPos += resCardHeight + 10;
+
+    // === EVALUATION BREAKDOWN ===
+    const evalWidth = (pageWidth - 42) / 3;
+    
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.roundedRect(14, yPos, pageWidth - 28, 32, 3, 3, 'F');
+    
+    const evalItems = [
+      { label: 'LOW EVAL', value: formatCurrency(metrics.lowEval), color: accentGreen },
+      { label: 'MEDIAN EVAL', value: formatCurrency(metrics.medianEval), color: textWhite },
+      { label: 'HIGH EVAL', value: formatCurrency(metrics.highEval), color: accentRed },
+    ];
+    
+    evalItems.forEach((item, i) => {
+      const x = 24 + i * evalWidth;
+      doc.setFillColor(item.color.r, item.color.g, item.color.b);
+      doc.circle(x + 8, yPos + 16, 6, 'F');
+      
+      doc.setFontSize(8);
+      doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+      doc.text(item.label, x + 20, yPos + 12);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(item.color.r, item.color.g, item.color.b);
+      doc.text(item.value, x + 20, yPos + 24);
+    });
+
+    yPos += 40;
+
+    // === BY AGE TABLE ===
+    if (granularData?.byAge) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text('RESERVES BY AGE', 14, yPos);
+      yPos += 8;
+      
+      // Table header
+      doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
+      doc.rect(14, yPos, pageWidth - 28, 8, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(textLight.r, textLight.g, textLight.b);
+      const ageColWidths = [50, 30, 50, 40, 40, 40];
+      let ageX = 18;
+      ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval', 'Gap'].forEach((h, i) => {
+        doc.text(h, ageX, yPos + 5.5);
+        ageX += ageColWidths[i];
+      });
+      yPos += 10;
+      
+      granularData.byAge.forEach((row, i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(24, 24, 27);
+          doc.rect(14, yPos - 1, pageWidth - 28, 7, 'F');
+        }
+        
+        ageX = 18;
+        doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+        doc.text(row.age, ageX, yPos + 4);
+        ageX += ageColWidths[0];
+        doc.text(row.claims.toLocaleString(), ageX, yPos + 4);
+        ageX += ageColWidths[1];
+        doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+        doc.text(formatCurrency(row.openReserves), ageX, yPos + 4);
+        ageX += ageColWidths[2];
+        doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+        doc.text(formatCurrency(row.lowEval), ageX, yPos + 4);
+        ageX += ageColWidths[3];
+        doc.text(formatCurrency(row.highEval), ageX, yPos + 4);
+        ageX += ageColWidths[4];
+        const gap = row.openReserves - row.highEval;
+        doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+        doc.text(formatCurrency(gap), ageX, yPos + 4);
+        yPos += 7;
+      });
+    }
+
+    yPos += 8;
+
+    // === BY QUEUE TABLE ===
+    if (granularData?.byQueue && yPos < pageHeight - 50) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+      doc.text('RESERVES BY QUEUE', 14, yPos);
+      yPos += 8;
+      
+      doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
+      doc.rect(14, yPos, pageWidth - 28, 8, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(textLight.r, textLight.g, textLight.b);
+      const qColWidths = [40, 50, 40, 40, 35, 35];
+      let qX = 18;
+      ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval #', '% Total'].forEach((h, i) => {
+        doc.text(h, qX, yPos + 5.5);
+        qX += qColWidths[i];
+      });
+      yPos += 10;
+      
+      const totalRes = granularData.byQueue.reduce((s, q) => s + q.openReserves, 0);
+      granularData.byQueue.slice(0, 6).forEach((row, i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(24, 24, 27);
+          doc.rect(14, yPos - 1, pageWidth - 28, 7, 'F');
+        }
+        
+        qX = 18;
+        doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+        doc.text(row.queue, qX, yPos + 4);
+        qX += qColWidths[0];
+        doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+        doc.text(formatCurrency(row.openReserves), qX, yPos + 4);
+        qX += qColWidths[1];
+        doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+        doc.text(formatCurrency(row.lowEval), qX, yPos + 4);
+        qX += qColWidths[2];
+        doc.text(formatCurrency(row.highEval), qX, yPos + 4);
+        qX += qColWidths[3];
+        doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+        doc.text(row.noEvalCount.toString(), qX, yPos + 4);
+        qX += qColWidths[4];
+        const pct = ((row.openReserves / totalRes) * 100).toFixed(1);
+        doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+        doc.text(`${pct}%`, qX, yPos + 4);
+        yPos += 7;
+      });
+    }
+
+    // Footer page 2
+    const footer2Y = pageHeight - 8;
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.rect(0, footer2Y - 6, pageWidth, 14, 'F');
+    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.setLineWidth(0.5);
+    doc.line(14, footer2Y - 6, pageWidth - 14, footer2Y - 6);
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text('Fred Loya Insurance • Litigation Command Center • Confidential', 14, footer2Y);
+    doc.setTextColor(textLight.r, textLight.g, textLight.b);
+    doc.text('Page 2 of 2', pageWidth - 30, footer2Y);
+
     const filename = `Executive_Command_Center_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
     doc.save(filename);
     return filename;
@@ -856,6 +1064,7 @@ export function useExportData() {
     byQueue: { queue: string; openReserves: number; lowEval: number; highEval: number; noEvalCount: number }[];
     byTypeGroup: { typeGroup: string; reserves: number }[];
     highEvalAdjusters: { name: string; value: string }[];
+    quarterlyData?: { quarter: string; paid: number; paidMonthly: number; approved: number; approvedMonthly: number; variance: number }[];
   }) => {
     const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
     const dateStamp = format(new Date(), 'yyyyMMdd_HHmm');
@@ -969,8 +1178,8 @@ export function useExportData() {
     const excelFilename = `Executive_Command_Center_Data_${dateStamp}.xlsx`;
     XLSX.writeFile(wb, excelFilename);
     
-    // Generate PDF
-    await generateExecutivePDF(metrics);
+    // Generate PDF with granular data
+    await generateExecutivePDF(metrics, granularData);
     
     return { pdf: `Executive_Command_Center_${dateStamp}.pdf`, excel: excelFilename };
   };
