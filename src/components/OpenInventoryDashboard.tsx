@@ -178,8 +178,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     ],
     totals: {
       totalOpenReserves: 300841051,   // $300.84M - ACTUAL
-      totalLowEval: 101412928,        // $101.4M - Manager HIGH with money
-      totalHighEval: 114000000,       // $114M estimated
+      totalLowEval: 199428123,        // $199.4M - No money assigned
+      totalHighEval: 101412928,       // $101.4M - Manager HIGH with money
       noEvalCount: 2278,
     }
   };
