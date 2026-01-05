@@ -913,36 +913,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={handleFullExport}
-              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Full Export
-            </button>
-            <div className="flex items-center gap-2 text-xs text-gray-300">
-              <Download className="h-3.5 w-3.5" />
-              <span>Double-click sections</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
-      <div id="executive-command-center" className="print-section bg-card rounded-xl p-6 border border-border shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-warning/20 rounded-lg">
-              <Activity className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-foreground tracking-wide">EXECUTIVE COMMAND CENTER</h3>
-              <p className="text-xs text-muted-foreground">Real-time portfolio health • Updated {timestamp}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
               onClick={async () => {
                 await generateExecutivePackage(
                   {
@@ -974,13 +944,34 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     ],
                   }
                 );
-                toast.success('Executive Package downloaded! (PDF + Excel with granular data)');
+                toast.success('Executive Package downloaded! (PDF + Excel)');
               }}
-              className="bg-secondary border-border text-foreground hover:bg-secondary/80 print:hidden"
+              className="flex items-center gap-2 px-4 py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Export Package
-            </Button>
+              <FileSpreadsheet className="h-4 w-4" />
+              Full Export
+            </button>
+            <div className="flex items-center gap-2 text-xs text-gray-300">
+              <Download className="h-3.5 w-3.5" />
+              <span>Double-click sections</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
+      <div id="executive-command-center" className="print-section bg-card rounded-xl p-6 border border-border shadow-2xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-warning/20 rounded-lg">
+              <Activity className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground tracking-wide">EXECUTIVE COMMAND CENTER</h3>
+              <p className="text-xs text-muted-foreground">Real-time portfolio health • Updated {timestamp}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-success/20 rounded-full">
               <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
               <span className="text-xs font-medium text-success">LIVE DATA</span>
