@@ -173,6 +173,13 @@ export function LitigationChat() {
       offWhite: [240, 240, 240] as [number, number, number],
       muted: [140, 140, 140] as [number, number, number],
       gold: [212, 175, 55] as [number, number, number],
+      green: [16, 185, 129] as [number, number, number],
+    };
+
+    const formatCurrency = (val: number): string => {
+      if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+      if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+      return '$' + val.toLocaleString();
     };
 
     // Sanitize text for PDF
@@ -213,7 +220,37 @@ export function LitigationChat() {
     doc.setTextColor(...C.muted);
     doc.text(new Date().toLocaleDateString(), pw - m.r, 13, { align: 'right' });
 
-    let y = 32;
+    let y = 28;
+
+    // KPI Summary Box
+    const kpiBoxH = 22;
+    doc.setFillColor(...C.rowDark);
+    doc.roundedRect(m.l, y, cw, kpiBoxH, 1, 1, 'F');
+    doc.setFillColor(...C.gold);
+    doc.rect(m.l, y, cw, 0.5, 'F');
+
+    // KPI metrics - 4 columns
+    const kpiColW = cw / 4;
+    const kpis = [
+      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '0' },
+      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '0' },
+      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0) },
+      { label: 'INDEMNITY PAID', value: formatCurrency(dataContext?.totalIndemnityPaid || 0) },
+    ];
+
+    kpis.forEach((kpi, i) => {
+      const xPos = m.l + (i * kpiColW) + (kpiColW / 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5);
+      doc.setTextColor(...C.muted);
+      doc.text(kpi.label, xPos, y + 8, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...C.gold);
+      doc.text(kpi.value, xPos, y + 16, { align: 'center' });
+    });
+
+    y += kpiBoxH + 4;
 
     // Query Section
     doc.setFillColor(...C.rowDark);
