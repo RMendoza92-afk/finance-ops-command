@@ -234,12 +234,12 @@ export function useExportData() {
           const badgeWidth = Math.min(trendText.length * 2.5 + 8, cardWidth - 20);
           doc.roundedRect(xPos + 12, cardY + 31, badgeWidth, 7, 2, 2, 'F');
           
-          // Arrow indicator
-          const arrow = visual.trendDirection === 'up' ? '↑' : visual.trendDirection === 'down' ? '↓' : '→';
+          // Direction indicator text (no emoji)
+          const directionLabel = visual.trendDirection === 'up' ? 'UP' : visual.trendDirection === 'down' ? 'DOWN' : '';
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(6);
           doc.setTextColor(colorSet.light.r, colorSet.light.g, colorSet.light.b);
-          doc.text(`${arrow} ${trendText}`, xPos + 14, cardY + 36);
+          doc.text(`${directionLabel}${directionLabel ? ' ' : ''}${trendText}`, xPos + 14, cardY + 36);
         }
       });
 
@@ -447,15 +447,23 @@ export function useExportData() {
               doc.roundedRect(dataArea.x + labelWidth, barY, Math.max(barWidth, 4), barHeight, 2, 2, 'F');
             }
 
-            // Value with percentage
+            // Value with percentage - smart formatting (currency vs count)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
             doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-            const valueStr = item.value >= 1000000 
-              ? `$${(item.value / 1000000).toFixed(1)}M` 
-              : item.value >= 1000 
-                ? `$${Math.round(item.value / 1000)}K` 
-                : `$${item.value.toLocaleString()}`;
+            // Determine if this is currency or count based on value and chart title
+            const isCurrencyChart = chart.title.toLowerCase().includes('reserve') || 
+                                    chart.title.toLowerCase().includes('budget') ||
+                                    chart.title.toLowerCase().includes('cost') ||
+                                    chart.title.toLowerCase().includes('paid') ||
+                                    chart.title.toLowerCase().includes('expense');
+            const valueStr = isCurrencyChart
+              ? (item.value >= 1000000 
+                  ? `$${(item.value / 1000000).toFixed(1)}M` 
+                  : item.value >= 1000 
+                    ? `$${Math.round(item.value / 1000)}K` 
+                    : `$${item.value.toLocaleString()}`)
+              : item.value.toLocaleString();
             doc.text(valueStr, dataArea.x + dataArea.w - 2, barY + barHeight - 2, { align: 'right' });
             
             // Percentage badge
@@ -557,11 +565,16 @@ export function useExportData() {
             doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
             doc.circle(centerX, centerY, innerRadius, 'F');
             
-            // Center text - total
+            // Center text - total (smart formatting)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(8);
             doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
-            const totalStr = total >= 1000000 ? `$${(total / 1000000).toFixed(0)}M` : `$${Math.round(total / 1000)}K`;
+            const isCurrencyDonut = chart.title.toLowerCase().includes('reserve') || 
+                                    chart.title.toLowerCase().includes('budget') ||
+                                    chart.title.toLowerCase().includes('cost');
+            const totalStr = isCurrencyDonut
+              ? (total >= 1000000 ? `$${(total / 1000000).toFixed(0)}M` : `$${Math.round(total / 1000)}K`)
+              : total.toLocaleString();
             doc.text(totalStr, centerX, centerY + 2, { align: 'center' });
             
             doc.setFont('helvetica', 'normal');
@@ -579,11 +592,16 @@ export function useExportData() {
             const colorKey = item.color || defaultColors[i % defaultColors.length];
             const colors = chartColors[colorKey];
             const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
-            const valueStr = item.value >= 1000000 
-              ? `$${(item.value / 1000000).toFixed(1)}M` 
-              : item.value >= 1000 
-                ? `$${Math.round(item.value / 1000)}K` 
-                : `$${item.value.toLocaleString()}`;
+            const isCurrencyLegend = chart.title.toLowerCase().includes('reserve') || 
+                                     chart.title.toLowerCase().includes('budget') ||
+                                     chart.title.toLowerCase().includes('cost');
+            const valueStr = isCurrencyLegend
+              ? (item.value >= 1000000 
+                  ? `$${(item.value / 1000000).toFixed(1)}M` 
+                  : item.value >= 1000 
+                    ? `$${Math.round(item.value / 1000)}K` 
+                    : `$${item.value.toLocaleString()}`)
+              : item.value.toLocaleString();
 
             // Color indicator with gradient
             doc.setFillColor(colors.dark.r, colors.dark.g, colors.dark.b);

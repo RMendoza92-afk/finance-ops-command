@@ -469,7 +469,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       doc.text(`Remaining: ${formatCurrencyFullValue(budgetMetrics.remaining)}`, pageWidth / 2, y);
       y += 8;
       doc.text(`Months Remaining: ${budgetMetrics.monthsRemaining}`, 20, y);
-      doc.text(`Status: ${budgetMetrics.onTrack ? 'ON TRACK ✓' : 'OVER BUDGET ⚠️'}`, pageWidth / 2, y);
+      doc.text(`Status: ${budgetMetrics.onTrack ? 'ON TRACK' : 'OVER BUDGET'}`, pageWidth / 2, y);
       y += 20;
       
       // Monthly breakdown table header
