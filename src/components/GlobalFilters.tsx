@@ -8,6 +8,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+export interface PainLevelRow {
+  oldStartPain: string;
+  oldEndPain: string;
+  startPain: string;
+  endPain: string;
+}
+
 export interface GlobalFilters {
   inventoryStatus: 'closed' | 'open';
   department: string;
@@ -18,6 +25,7 @@ export interface GlobalFilters {
   expertType: string;
   executiveReview: string;
   searchText: string;
+  painLevelData: PainLevelRow[];
 }
 
 export const defaultGlobalFilters: GlobalFilters = {
@@ -29,7 +37,8 @@ export const defaultGlobalFilters: GlobalFilters = {
   painBand: 'all',
   expertType: 'all',
   executiveReview: 'all',
-  searchText: ''
+  searchText: '',
+  painLevelData: []
 };
 
 interface FilterOptions {

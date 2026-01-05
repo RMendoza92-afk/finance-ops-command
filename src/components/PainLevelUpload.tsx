@@ -20,6 +20,7 @@ interface PainLevelRow {
 
 interface PainLevelUploadProps {
   onDataUploaded?: (data: PainLevelRow[]) => void;
+  isActive?: boolean;
 }
 
 // Parse pain value - handles both numeric (0-10) and banded (0-3, 4-6, 7-9) formats
@@ -94,11 +95,9 @@ const PAIN_LEVEL_DATA: PainLevelRow[] = [
   { oldStartPain: '8', oldEndPain: '3', startPain: '8', endPain: '3' },
 ];
 
-export function PainLevelUpload({ onDataUploaded }: PainLevelUploadProps) {
+export function PainLevelUpload({ onDataUploaded, isActive }: PainLevelUploadProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isApplied, setIsApplied] = useState(() => {
-    return localStorage.getItem('painLevelOverrides') !== null;
-  });
+  const isApplied = isActive || localStorage.getItem('painLevelOverrides') !== null;
 
   // Calculate stats from pre-loaded data
   const parseStats = {
@@ -112,17 +111,16 @@ export function PainLevelUpload({ onDataUploaded }: PainLevelUploadProps) {
 
   const handleApplyData = useCallback(() => {
     localStorage.setItem('painLevelOverrides', JSON.stringify(PAIN_LEVEL_DATA));
-    setIsApplied(true);
     onDataUploaded?.(PAIN_LEVEL_DATA);
-    toast.success(`Applied ${PAIN_LEVEL_DATA.length} pain level updates`);
+    toast.success(`Applied ${PAIN_LEVEL_DATA.length} pain level records - filtering active`);
     setIsOpen(false);
   }, [onDataUploaded]);
 
   const handleClearData = useCallback(() => {
     localStorage.removeItem('painLevelOverrides');
-    setIsApplied(false);
-    toast.info('Pain level overrides cleared');
-  }, []);
+    onDataUploaded?.([]);
+    toast.info('Pain level filter cleared');
+  }, [onDataUploaded]);
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -212,10 +210,9 @@ export function PainLevelUpload({ onDataUploaded }: PainLevelUploadProps) {
             )}
             <Button 
               onClick={handleApplyData}
-              disabled={isApplied}
               className="bg-amber-500 hover:bg-amber-600 text-black"
             >
-              {isApplied ? 'Applied' : `Apply ${PAIN_LEVEL_DATA.length} Records`}
+              {isApplied ? 'Re-apply Filter' : `Apply ${PAIN_LEVEL_DATA.length} Records`}
             </Button>
           </div>
         </div>
