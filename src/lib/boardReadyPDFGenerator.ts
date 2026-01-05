@@ -148,16 +148,37 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // ============ BUILD DATA ============
   const data = buildControlData(config);
 
+  // ============ CEO STATEMENT ============
+  const ceoStatement = buildCEOStatement(data, config);
+  doc.setFillColor(...C.rowDark);
+  doc.roundedRect(m.l, y, cw, 28, 1, 1, 'F');
+  doc.setFillColor(...C.gold);
+  doc.rect(m.l, y, 2, 28, 'F');
+  
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(...C.offWhite);
+  
+  const statementLines = doc.splitTextToSize(ceoStatement, cw - 12);
+  doc.text(statementLines.slice(0, 3), m.l + 6, y + 8);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...C.gold);
+  doc.text('— Fred Loya Jr., CEO', pw - m.r - 4, y + 24, { align: 'right' });
+  
+  y += 32;
+
   // ============ STATUS BANNER ============
   const bannerColor = data.status === 'FAIL' ? C.red : data.status === 'WARN' ? C.amber : C.green;
   doc.setFillColor(...bannerColor);
-  doc.roundedRect(m.l, y, cw, 14, 1, 1, 'F');
+  doc.roundedRect(m.l, y, cw, 12, 1, 1, 'F');
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(...C.white);
-  doc.text(data.statusLabel, pw / 2, y + 9, { align: 'center' });
-  y += 18;
+  doc.text(data.statusLabel, pw / 2, y + 8, { align: 'center' });
+  y += 16;
 
   // ============ CONTROL QUESTIONS TABLE ============
   const colW = [48, cw - 48];
@@ -500,4 +521,30 @@ function buildControlData(config: ExecutivePackageConfig) {
     orders,
     consequences,
   };
+}
+
+// ==================== CEO STATEMENT BUILDER ====================
+
+function buildCEOStatement(
+  data: ReturnType<typeof buildControlData>,
+  config: ExecutivePackageConfig
+): string {
+  if (data.status === 'FAIL') {
+    if (data.breaking.includes('BUDGET')) {
+      return `We are not in control this week. BI spend is driving us over budget. I am ordering a tightened gate on Friday. No exceptions until we correct course.`;
+    }
+    if (data.breaking.includes('DECISIONS')) {
+      return `We have ${config.decisionsData.critical} critical decisions pending. This is unacceptable. I expect the queue cleared by end of day. Exposure compounds every week we delay.`;
+    }
+    if (data.breaking.includes('AGED')) {
+      return `Our aged BI inventory is out of control. ${data.agedValue} of claims are 365+ days. Execute escalation protocol immediately. I will not tolerate authority erosion.`;
+    }
+    return `We are not in control. Multiple areas require immediate intervention. Review the orders below and execute without delay.`;
+  }
+  
+  if (data.status === 'WARN') {
+    return `We are in control but I am watching CP1 closely. Current rate of ${config.cp1Data.cp1Rate} is elevated. No action required this week but I want a report in 7 days.`;
+  }
+  
+  return `We are in control. All metrics are within acceptable range. Maintain current cadence. I expect the same discipline next week.`;
 }
