@@ -680,218 +680,304 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     lastYear: { cp1Rate: 23.4, totalClaims: 24150, cp1Claims: 5651 },
   }), []);
 
-  // Generate Board-Ready Executive PDF for CP1 Analysis
+  // Generate Board-Ready Executive PDF for CP1 Analysis - Dark Theme with Logo
   const generateCP1PDF = useCallback(async () => {
     setGeneratingCP1PDF(true);
     try {
-      const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
-      const wowDelta = currentCP1Rate - historicalMetrics.lastWeek.cp1Rate;
-      const yoyDelta = currentCP1Rate - historicalMetrics.lastYear.cp1Rate;
+      const { jsPDF } = await import('jspdf');
+      const { default: loyaLogo } = await import('@/assets/fli_logo.jpg');
+      const { getReportContext, formatCurrency } = await import('@/lib/executivePDFFramework');
+      
+      const doc = new jsPDF({ orientation: 'portrait' });
+      const pw = doc.internal.pageSize.getWidth();
+      const ph = doc.internal.pageSize.getHeight();
       const ctx = getReportContext();
+      const m = { l: 10, r: 10, t: 10 };
+      const cw = pw - m.l - m.r;
       
-      // FINANCIAL IMPACT CALCULATIONS - What CFO/CEO cares about
-      const avgClaimCost = 37500; // Average cost per CP1 claim
-      const cp1FinancialExposure = CP1_DATA.totals.yes * avgClaimCost;
-      const agedCP1Exposure = CP1_DATA.biByAge[0].yes * avgClaimCost * 1.4; // 40% severity premium for aged
-      const yoyFinancialChange = Math.round(cp1FinancialExposure * (yoyDelta / 100));
-      
-      // Determine overall status for executives
-      const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
-      const statusColor = status === 'CRITICAL' ? 'danger' : status === 'ELEVATED' ? 'warning' : 'success';
-      
-      // Build executive report configuration with quality gates
-      const reportConfig: ExecutiveReportConfig = {
-        title: 'CP1 EXPOSURE BRIEFING',
-        subtitle: 'Policy Limits Risk Assessment',
-        reportType: status === 'CRITICAL' ? 'ALERT' : status === 'ELEVATED' ? 'DECISION' : 'STATUS',
-        classification: 'CONFIDENTIAL',
-        
-        executiveSummary: {
-          // THE ONE THING: Financial impact in first sentence
-          keyTakeaway: `$${(cp1FinancialExposure / 1000000).toFixed(0)}M in claims have reached or exceeded policy limits (${CP1_DATA.cp1Rate}% of inventory). YoY exposure ${yoyDelta >= 0 ? 'increased' : 'decreased'} $${Math.abs(yoyFinancialChange / 1000000).toFixed(1)}M. Aged BI claims (365+ days) represent $${(agedCP1Exposure / 1000000).toFixed(0)}M concentrated risk requiring action.`,
-          
-          // 4 METRICS THAT MATTER - CFO wants dollars, CEO wants trends
-          metrics: [
-            {
-              label: 'CP1 Exposure',
-              value: `$${(cp1FinancialExposure / 1000000).toFixed(0)}M`,
-              delta: yoyDelta,
-              deltaLabel: 'YoY',
-              deltaDirection: getDeltaDirection(yoyDelta * -1) // Negative = good for exposure
-            },
-            {
-              label: 'Claims at Limits',
-              value: CP1_DATA.totals.yes.toLocaleString(),
-              context: `${CP1_DATA.cp1Rate}% of inventory`
-            },
-            {
-              label: 'Aged BI Risk',
-              value: `$${(agedCP1Exposure / 1000000).toFixed(0)}M`,
-              context: `${((CP1_DATA.biByAge[0].yes / CP1_DATA.totals.yes) * 100).toFixed(0)}% of CP1`
-            },
-            {
-              label: 'Trend',
-              value: `${yoyDelta >= 0 ? '+' : ''}${yoyDelta.toFixed(1)}%`,
-              deltaDirection: getDeltaDirection(yoyDelta * -1),
-              context: 'vs Prior Year'
-            }
-          ],
-          
-          // ACTIONS - What do we do about it?
-          insights: [
-            {
-              priority: 'critical',
-              headline: `$${(agedCP1Exposure / 1000000).toFixed(0)}M concentrated in 365+ day BI claims`,
-              action: 'IMMEDIATE: Prioritize resolution of top 100 aged claims to reduce exposure 15%'
-            },
-            {
-              priority: 'high',
-              headline: `CP1 rate increased ${Math.abs(yoyDelta).toFixed(1)}% year-over-year`,
-              action: 'STRATEGIC: Implement early limits evaluation at 60-day mark'
-            },
-            {
-              priority: 'medium',
-              headline: 'BI drives 88% of CP1 exposure at 34.2% rate',
-              action: 'PROCESS: Review BI settlement authority and escalation thresholds'
-            }
-          ],
-          
-          // CFO BOTTOM LINE - One sentence decision driver
-          bottomLine: `NET: ${yoyDelta >= 0 ? 'Unfavorable' : 'Favorable'} trend with $${(cp1FinancialExposure / 1000000).toFixed(0)}M at policy limits. ${status === 'CRITICAL' ? 'Intervention required.' : status === 'ELEVATED' ? 'Close monitoring needed.' : 'Maintain current protocols.'} Priority: Resolve $${(agedCP1Exposure / 1000000).toFixed(0)}M in aged BI to reduce concentration risk.`
-        },
-        
-        // SIMPLE TABLE - Coverage by dollars at risk
-        tables: [
-          {
-            title: 'CP1 Exposure by Line of Business',
-            headers: ['Coverage', 'Claims at Limits', '$ Exposure', 'Rate', 'Status'],
-            rows: [
-              ...CP1_DATA.byCoverage.map(row => {
-                const exposure = row.yes * avgClaimCost;
-                return {
-                  cells: [
-                    row.coverage,
-                    row.yes.toLocaleString(),
-                    `$${(exposure / 1000000).toFixed(1)}M`,
-                    `${row.cp1Rate}%`,
-                    row.cp1Rate > 40 ? '🔴 CRITICAL' : row.cp1Rate > 30 ? '🟡 ELEVATED' : '🟢 STABLE'
-                  ],
-                  highlight: row.cp1Rate > 40 ? 'risk' as const : 
-                            row.cp1Rate > 30 ? 'warning' as const : undefined
-                };
-              }),
-              {
-                cells: ['TOTAL', CP1_DATA.totals.yes.toLocaleString(), `$${(cp1FinancialExposure / 1000000).toFixed(0)}M`, `${CP1_DATA.cp1Rate}%`, status === 'CRITICAL' ? '🔴' : status === 'ELEVATED' ? '🟡' : '🟢'],
-                highlight: 'total' as const
-              }
-            ],
-            footnote: 'CP1 = Claims at or exceeding policy limits | $ Exposure based on $37.5K avg claim cost'
-          },
-          {
-            title: 'Aged Claim Concentration (365+ Days = Highest Risk)',
-            headers: ['Claim Age', '$ at Risk', 'Claims', 'Rate', 'Priority'],
-            rows: [
-              ...CP1_DATA.biByAge.map((row, idx) => {
-                const multiplier = idx === 0 ? 1.4 : idx === 1 ? 1.2 : idx === 2 ? 1.0 : 0.8;
-                const exposure = row.yes * avgClaimCost * multiplier;
-                return {
-                  cells: [
-                    row.age,
-                    `$${(exposure / 1000000).toFixed(1)}M`,
-                    row.yes.toLocaleString(),
-                    `${((row.yes / row.total) * 100).toFixed(0)}%`,
-                    idx === 0 ? '🔴 URGENT' : idx === 1 ? '🟡 HIGH' : '🟢 NORMAL'
-                  ],
-                  highlight: row.age === '365+ Days' ? 'risk' as const : 
-                            row.age === '181-365 Days' ? 'warning' as const : undefined
-                };
-              })
-            ],
-            footnote: 'Aged claims carry severity premium: 365+ = 1.4x, 181-365 = 1.2x'
-          }
-        ],
-        
-        charts: [
-          {
-            type: 'horizontalBar',
-            title: '$ Exposure by Coverage (Millions)',
-            data: CP1_DATA.byCoverage.map(row => ({
-              label: row.coverage,
-              value: Math.round((row.yes * avgClaimCost) / 1000000)
-            }))
-          }
-        ],
-        
-        // 12-MONTH TREND for board visibility
-        quarterlyData: CP1_DATA.monthlyTrend.filter((_, i) => i % 2 === 0).map(m => ({
-          quarter: m.month,
-          paid: m.cp1Count,
-          paidMonthly: Math.round(m.cp1Count / 3),
-          approved: m.totalClaims,
-          approvedMonthly: Math.round(m.totalClaims / 3),
-          variance: m.cp1Rate
-        })),
-        
-        // APPENDIX - Detail for follow-up questions
-        appendix: [
-          {
-            title: 'Executive Summary',
-            content: `This report identifies $${(cp1FinancialExposure / 1000000).toFixed(0)}M in claims that have reached or exceeded policy limits. Key driver: Bodily Injury claims represent 88% of CP1 exposure, with aged claims (365+ days) creating $${(agedCP1Exposure / 1000000).toFixed(0)}M in concentrated risk. RECOMMENDATION: Focused resolution initiative targeting top 100 aged BI claims could reduce exposure by $30-40M within 90 days.`
-          },
-          {
-            title: 'BI Aging Risk Analysis',
-            content: `365+ day claims show 45.7% CP1 rate vs 13.5% for under-60-day claims. Each month of delay on aged claims increases severity by ~3%. Immediate action on the oldest 500 claims could prevent $15M in additional exposure.`,
-            table: {
-              title: 'BI CP1 by Claim Age - Financial Impact',
-              headers: ['Age', 'Claims', '$ Exposure', 'Severity Factor', '90-Day Target'],
-              rows: CP1_DATA.biByAge.map((row, idx) => {
-                const multiplier = idx === 0 ? 1.4 : idx === 1 ? 1.2 : idx === 2 ? 1.0 : 0.8;
-                const exposure = row.yes * avgClaimCost * multiplier;
-                const target = Math.round(row.yes * 0.15); // 15% reduction target
-                return {
-                  cells: [
-                    row.age,
-                    row.yes.toLocaleString(),
-                    `$${(exposure / 1000000).toFixed(1)}M`,
-                    `${multiplier}x`,
-                    `-${target} claims`
-                  ],
-                  highlight: row.age === '365+ Days' ? 'risk' as const : undefined
-                };
-              })
-            }
-          },
-          {
-            title: 'Year-Over-Year Comparison',
-            content: `CP1 rate: ${historicalMetrics.lastYear.cp1Rate}% → ${CP1_DATA.cp1Rate}% (+${yoyDelta.toFixed(1)}%). Claims at limits: ${historicalMetrics.lastYear.cp1Claims.toLocaleString()} → ${CP1_DATA.totals.yes.toLocaleString()} (+${((CP1_DATA.totals.yes - historicalMetrics.lastYear.cp1Claims) / historicalMetrics.lastYear.cp1Claims * 100).toFixed(0)}%). This trajectory, if unchanged, projects to 28.5% CP1 rate and $290M exposure by year-end.`
-          }
-        ],
-        
-        includeAllContent: true
+      // COLORS - EXECUTIVE DARK THEME
+      const C = {
+        bg: [12, 12, 12] as [number, number, number],
+        headerBg: [22, 22, 22] as [number, number, number],
+        rowDark: [18, 18, 18] as [number, number, number],
+        rowLight: [24, 24, 24] as [number, number, number],
+        border: [45, 45, 45] as [number, number, number],
+        white: [255, 255, 255] as [number, number, number],
+        offWhite: [240, 240, 240] as [number, number, number],
+        muted: [140, 140, 140] as [number, number, number],
+        green: [16, 185, 129] as [number, number, number],
+        red: [220, 38, 38] as [number, number, number],
+        amber: [245, 158, 11] as [number, number, number],
+        gold: [212, 175, 55] as [number, number, number],
       };
+
+      // CALCULATIONS
+      const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
+      const yoyDelta = currentCP1Rate - historicalMetrics.lastYear.cp1Rate;
+      const avgClaimCost = 37500;
+      const cp1FinancialExposure = CP1_DATA.totals.yes * avgClaimCost;
+      const agedCP1Exposure = CP1_DATA.biByAge[0].yes * avgClaimCost * 1.4;
+      const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
+
+      // BACKGROUND
+      doc.setFillColor(...C.bg);
+      doc.rect(0, 0, pw, ph, 'F');
+      let y = m.t;
+
+      // HEADER WITH LOGO
+      doc.setFillColor(...C.headerBg);
+      doc.rect(0, 0, pw, 24, 'F');
+      doc.setFillColor(...C.gold);
+      doc.rect(0, 24, pw, 0.5, 'F');
+
+      try {
+        doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
+      } catch (e) { /* Logo failed */ }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...C.white);
+      doc.text('CP1 ANALYSIS', m.l + 20, 10);
       
-      // === QUALITY GATE CHECK ===
-      const qualityScore = auditReportQuality(reportConfig);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...C.muted);
+      doc.text('Policy Limits Risk Assessment', m.l + 20, 16);
+
+      doc.setFontSize(7);
+      doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 13, { align: 'right' });
+      y = 28;
+
+      // STATUS BANNER
+      const bannerColor = status === 'CRITICAL' ? C.red : status === 'ELEVATED' ? C.amber : C.green;
+      doc.setFillColor(...bannerColor);
+      doc.roundedRect(m.l, y, cw, 10, 1, 1, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...C.white);
+      doc.text(`STATUS: ${status}  |  $${(cp1FinancialExposure / 1000000).toFixed(0)}M AT POLICY LIMITS  |  ${CP1_DATA.cp1Rate}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
+      y += 14;
+
+      // KEY METRICS ROW
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.gold);
+      doc.text('KEY METRICS', m.l, y + 3);
+      y += 6;
+
+      const metricBoxW = cw / 4 - 2;
+      const metrics = [
+        { label: 'EXPOSURE', value: `$${(cp1FinancialExposure / 1000000).toFixed(0)}M`, sub: 'At Policy Limits' },
+        { label: 'CP1 RATE', value: CP1_DATA.cp1Rate + '%', sub: `${yoyDelta >= 0 ? '+' : ''}${yoyDelta.toFixed(1)}% YoY` },
+        { label: 'AGED BI RISK', value: `$${(agedCP1Exposure / 1000000).toFixed(0)}M`, sub: '365+ Days' },
+        { label: 'CLAIMS', value: CP1_DATA.totals.yes.toLocaleString(), sub: 'At Limits' },
+      ];
+
+      metrics.forEach((met, i) => {
+        const x = m.l + i * (metricBoxW + 2);
+        doc.setFillColor(...C.rowDark);
+        doc.roundedRect(x, y, metricBoxW, 18, 1, 1, 'F');
+        doc.setFontSize(6);
+        doc.setTextColor(...C.muted);
+        doc.text(met.label, x + 3, y + 5);
+        doc.setFontSize(11);
+        doc.setTextColor(...C.white);
+        doc.setFont('helvetica', 'bold');
+        doc.text(met.value, x + 3, y + 12);
+        doc.setFontSize(5);
+        doc.setTextColor(...C.muted);
+        doc.setFont('helvetica', 'normal');
+        doc.text(met.sub, x + 3, y + 16);
+      });
+      y += 22;
+
+      // EXECUTIVE SUMMARY BOX
+      doc.setFillColor(...C.rowDark);
+      doc.roundedRect(m.l, y, cw, 22, 1, 1, 'F');
+      doc.setFillColor(...C.gold);
+      doc.rect(m.l, y, 1.5, 22, 'F');
       
-      if (!qualityScore.passed) {
-        console.warn('Quality Gate Warning:', qualityScore.issues);
-        console.log('Quality Scores:', {
-          executiveClarity: qualityScore.executiveClarity,
-          financialCredibility: qualityScore.financialCredibility,
-          visualProfessionalism: qualityScore.visualProfessionalism,
-          decisionUsefulness: qualityScore.decisionUsefulness,
-          overall: qualityScore.overall
-        });
-      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.gold);
+      doc.text('CFO BOTTOM LINE', m.l + 5, y + 5);
       
-      // Generate the report
-      const result = await generateExecutiveReport(reportConfig);
-      
-      if (result.success) {
-        toast.success(`Board-ready CP1 report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
-      } else {
-        throw new Error('Report generation failed');
-      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(...C.offWhite);
+      const bottomLine = `$${(cp1FinancialExposure / 1000000).toFixed(0)}M in claims at policy limits (${CP1_DATA.cp1Rate}% of inventory). Aged BI (365+ days) = $${(agedCP1Exposure / 1000000).toFixed(0)}M concentrated risk. ${status === 'CRITICAL' ? 'INTERVENTION REQUIRED.' : status === 'ELEVATED' ? 'CLOSE MONITORING NEEDED.' : 'MAINTAIN CURRENT PROTOCOLS.'}`;
+      const lines = doc.splitTextToSize(bottomLine, cw - 12);
+      doc.text(lines, m.l + 5, y + 11);
+      y += 26;
+
+      // CP1 BY COVERAGE TABLE
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.gold);
+      doc.text('CP1 BY LINE OF BUSINESS', m.l, y + 3);
+      y += 6;
+
+      const covColW = [38, 30, 30, 25, cw - 123];
+      const rowH = 8;
+
+      // Header
+      doc.setFillColor(...C.headerBg);
+      doc.rect(m.l, y, cw, rowH, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      const covHeaders = ['COVERAGE', '$ EXPOSURE', 'CLAIMS', 'RATE', 'STATUS'];
+      let xPos = m.l + 3;
+      covHeaders.forEach((h, i) => {
+        doc.text(h, xPos, y + 5.5);
+        xPos += covColW[i];
+      });
+      y += rowH;
+
+      // Data rows
+      doc.setFontSize(6.5);
+      CP1_DATA.byCoverage.forEach((row, i) => {
+        const exposure = row.yes * avgClaimCost;
+        const rowStatus = row.cp1Rate > 40 ? 'CRITICAL' : row.cp1Rate > 30 ? 'ELEVATED' : 'STABLE';
+        const statusColor = rowStatus === 'CRITICAL' ? C.red : rowStatus === 'ELEVATED' ? C.amber : C.green;
+        
+        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
+        doc.rect(m.l, y, cw, rowH, 'F');
+        
+        xPos = m.l + 3;
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'bold');
+        doc.text(row.coverage, xPos, y + 5.5);
+        xPos += covColW[0];
+        
+        doc.setFont('helvetica', 'normal');
+        doc.text(`$${(exposure / 1000000).toFixed(1)}M`, xPos, y + 5.5);
+        xPos += covColW[1];
+        doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
+        xPos += covColW[2];
+        doc.text(`${row.cp1Rate}%`, xPos, y + 5.5);
+        xPos += covColW[3];
+        doc.setTextColor(...statusColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(rowStatus, xPos, y + 5.5);
+        
+        y += rowH;
+      });
+
+      // Total row
+      doc.setFillColor(...C.headerBg);
+      doc.rect(m.l, y, cw, rowH, 'F');
+      xPos = m.l + 3;
+      doc.setTextColor(...C.gold);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL', xPos, y + 5.5);
+      xPos += covColW[0];
+      doc.setTextColor(...C.white);
+      doc.text(`$${(cp1FinancialExposure / 1000000).toFixed(0)}M`, xPos, y + 5.5);
+      xPos += covColW[1];
+      doc.text(CP1_DATA.totals.yes.toLocaleString(), xPos, y + 5.5);
+      xPos += covColW[2];
+      doc.text(CP1_DATA.cp1Rate + '%', xPos, y + 5.5);
+      y += rowH + 6;
+
+      // BI AGING TABLE
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.gold);
+      doc.text('BI AGING RISK (365+ DAYS = HIGHEST PRIORITY)', m.l, y + 3);
+      y += 6;
+
+      // Header
+      doc.setFillColor(...C.headerBg);
+      doc.rect(m.l, y, cw, rowH, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      const ageHeaders = ['AGE BUCKET', '$ AT RISK', 'CLAIMS', 'CP1 RATE', 'PRIORITY'];
+      xPos = m.l + 3;
+      ageHeaders.forEach((h, i) => {
+        doc.text(h, xPos, y + 5.5);
+        xPos += covColW[i];
+      });
+      y += rowH;
+
+      // Age rows
+      doc.setFontSize(6.5);
+      CP1_DATA.biByAge.forEach((row, i) => {
+        const multiplier = i === 0 ? 1.4 : i === 1 ? 1.2 : i === 2 ? 1.0 : 0.8;
+        const exposure = row.yes * avgClaimCost * multiplier;
+        const rate = ((row.yes / row.total) * 100).toFixed(0);
+        const priority = i === 0 ? 'URGENT' : i === 1 ? 'HIGH' : 'NORMAL';
+        const priorityColor = i === 0 ? C.red : i === 1 ? C.amber : C.green;
+        
+        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
+        doc.rect(m.l, y, cw, rowH, 'F');
+        
+        xPos = m.l + 3;
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'bold');
+        doc.text(row.age, xPos, y + 5.5);
+        xPos += covColW[0];
+        
+        doc.setFont('helvetica', 'normal');
+        doc.text(`$${(exposure / 1000000).toFixed(1)}M`, xPos, y + 5.5);
+        xPos += covColW[1];
+        doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
+        xPos += covColW[2];
+        doc.text(`${rate}%`, xPos, y + 5.5);
+        xPos += covColW[3];
+        doc.setTextColor(...priorityColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(priority, xPos, y + 5.5);
+        
+        y += rowH;
+      });
+      y += 6;
+
+      // ACTION ITEMS
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.gold);
+      doc.text('EXECUTIVE ACTIONS', m.l, y + 3);
+      y += 6;
+
+      const actions = [
+        { priority: 'IMMEDIATE', action: `Resolve top 100 aged BI claims to reduce $${(agedCP1Exposure * 0.15 / 1000000).toFixed(0)}M exposure` },
+        { priority: 'STRATEGIC', action: 'Implement early limits evaluation at 60-day mark' },
+        { priority: 'PROCESS', action: 'Review BI settlement authority and escalation thresholds' },
+      ];
+
+      actions.forEach((a, i) => {
+        const priorityColor = i === 0 ? C.red : i === 1 ? C.amber : C.muted;
+        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
+        doc.rect(m.l, y, cw, 8, 'F');
+        doc.setFillColor(...priorityColor);
+        doc.rect(m.l, y, 2, 8, 'F');
+        
+        doc.setFontSize(6);
+        doc.setTextColor(...priorityColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(a.priority, m.l + 5, y + 5.5);
+        
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'normal');
+        doc.text(a.action, m.l + 28, y + 5.5);
+        y += 8;
+      });
+
+      // FOOTER
+      doc.setFillColor(...C.headerBg);
+      doc.rect(0, ph - 10, pw, 10, 'F');
+      doc.setFillColor(...C.gold);
+      doc.rect(0, ph - 10, pw, 0.3, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      doc.text('CONFIDENTIAL', m.l, ph - 3);
+      doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
+      doc.text('Page 1 of 1', pw - m.r, ph - 3, { align: 'right' });
+
+      // SAVE
+      const filename = `CP1_Analysis_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      doc.save(filename);
+      toast.success('CP1 Analysis report generated');
     } catch (err) {
       console.error('Error generating PDF:', err);
       toast.error('Failed to generate PDF');
