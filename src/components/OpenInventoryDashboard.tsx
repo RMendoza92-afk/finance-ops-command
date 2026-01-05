@@ -405,7 +405,7 @@ export function OpenInventoryDashboard() {
   ];
 
   // Export handlers for double-click
-  const handleExportSummary = useCallback(() => {
+  const handleExportSummary = useCallback(async () => {
     if (!metrics) return;
     const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
     const manager = selectedReviewer || 'Richie Mendoza';
@@ -444,11 +444,11 @@ export function OpenInventoryDashboard() {
         ['Flagged Claims', formatNumber(metrics.flagged)],
       ],
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Open Inventory Summary');
   }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
-  const handleExportByAge = useCallback(() => {
+  const handleExportByAge = useCallback(async () => {
     if (!metrics) return;
     const manager = selectedReviewer || 'Richie Mendoza';
     const exportData: ExportableData = {
@@ -466,11 +466,11 @@ export function OpenInventoryDashboard() {
         formatCurrencyFullValue((item.lowEval + item.highEval) / 2),
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Reserves by Age');
   }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
-  const handleExportByQueue = useCallback(() => {
+  const handleExportByQueue = useCallback(async () => {
     if (!metrics) return;
     const manager = selectedReviewer || 'Richie Mendoza';
     const exportData: ExportableData = {
@@ -495,7 +495,7 @@ export function OpenInventoryDashboard() {
         ];
       }),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Reserve Adequacy by Queue');
   }, [exportBoth, timestamp, metrics, selectedReviewer]);
 

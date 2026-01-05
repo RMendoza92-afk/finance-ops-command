@@ -78,7 +78,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
   };
 
   // Export handlers
-  const handleExportKPIs = useCallback(() => {
+  const handleExportKPIs = useCallback(async () => {
     const exportData: ExportableData = {
       title: 'Expert Matching Summary',
       subtitle: 'Manager Dashboard - Actionable Items',
@@ -98,11 +98,11 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
         ['Terminate Ready', terminateReady],
       ],
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     sonnerToast.success('PDF + Excel exported: Expert Matching Summary');
   }, [exportBoth, timestamp, totalActionable, decisionOverhang, selectedTotalCost, terminateReady]);
 
-  const handleExportQueue = useCallback(() => {
+  const handleExportQueue = useCallback(async () => {
     const exportData: ExportableData = {
       title: 'Expert Matching Action Queue',
       subtitle: 'Full queue with cost analysis',
@@ -126,11 +126,11 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
         formatCurrencyFull(row.totalCost),
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     sonnerToast.success('PDF + Excel exported: Action Queue');
   }, [exportBoth, timestamp, actionableItems, decisionOverhang, terminateReady]);
 
-  const handleExportItem = useCallback((item: ActionableItem) => {
+  const handleExportItem = useCallback(async (item: ActionableItem) => {
     const exportData: ExportableData = {
       title: `Action Item: ${item.venue}`,
       subtitle: `Expert Matching - ${item.status}`,
@@ -159,7 +159,7 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
         ['Total Cost', formatCurrencyFull(item.totalCost)],
       ],
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     sonnerToast.success(`PDF + Excel exported: ${item.venue}`);
   }, [exportBoth, timestamp]);
 

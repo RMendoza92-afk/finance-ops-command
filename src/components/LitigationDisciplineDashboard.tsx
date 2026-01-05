@@ -97,7 +97,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
   }, {} as Record<string, { count: number; totalPaid: number; avgPain: number; painSum: number }>);
 
   // Export handlers
-  const handleExportKPIs = useCallback(() => {
+  const handleExportKPIs = useCallback(async () => {
     const exportData: ExportableData = {
       title: '2025 Litigation Discipline Summary',
       subtitle: 'Key Financial Metrics',
@@ -119,11 +119,11 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
         ['CWN Count', stats.cwnCount],
       ],
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Litigation Discipline Summary');
   }, [exportBoth, timestamp, stats, totalExpense, totalIndemnities, totalNet]);
 
-  const handleExportPostureROI = useCallback(() => {
+  const handleExportPostureROI = useCallback(async () => {
     const exportData: ExportableData = {
       title: 'Posture ROI Analysis',
       subtitle: 'Did Posture Spend Change Outcomes?',
@@ -137,11 +137,11 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
         row.observation,
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Posture ROI');
   }, [exportBoth, timestamp]);
 
-  const handleExportPainVsPaid = useCallback(() => {
+  const handleExportPainVsPaid = useCallback(async () => {
     const entries = Object.entries(painVsPaidData);
     const exportData: ExportableData = {
       title: 'Pain vs Paid Analysis',
@@ -157,7 +157,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
         formatCurrencyFull(s.count > 0 ? s.totalPaid / s.count : 0),
       ]),
     };
-    exportBoth(exportData);
+    await exportBoth(exportData);
     toast.success('PDF + Excel exported: Pain vs Paid Analysis');
   }, [exportBoth, timestamp, painVsPaidData]);
 
