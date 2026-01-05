@@ -35,25 +35,25 @@ export function KPICard({ title, value, subtitle, icon: Icon, trend, variant = '
   };
 
   return (
-    <div className={`rounded-xl border p-4 ${variantStyles[variant]}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
-          <p className={`text-2xl font-bold mt-1 ${valueStyles[variant]}`}>
+    <div className={`rounded-xl border p-3 sm:p-4 ${variantStyles[variant]}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">{title}</p>
+          <p className={`text-lg sm:text-2xl font-bold mt-0.5 sm:mt-1 ${valueStyles[variant]}`}>
             {typeof value === 'number' ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">{subtitle}</p>
           )}
         </div>
         {Icon && (
-          <div className={`p-2 rounded-lg ${iconStyles[variant]}`}>
-            <Icon className="h-5 w-5" />
+          <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${iconStyles[variant]}`}>
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
         )}
       </div>
       {trend && (
-        <div className={`flex items-center gap-1 mt-2 text-xs ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
+        <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-xs ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
           <span>{trend.isPositive ? '↑' : '↓'}</span>
           <span>{Math.abs(trend.value)}%</span>
         </div>
