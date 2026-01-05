@@ -2082,52 +2082,97 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
       </div>
 
-      {/* Texas Rear End Quick Action */}
+      {/* Texas Rear End — Age-Based Tracker */}
       <div 
         className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportTexasRearEnd}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Claims — Areas 101-110</h3>
-        <p className="text-xs text-muted-foreground mb-4">IV R/E CV loss description • {TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()} open claims • {formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)} reserves</p>
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Settlement Tracker</h3>
+        <p className="text-xs text-muted-foreground mb-4">Early settlement focus by age • Real-time impact tracking</p>
 
-        <div className="grid grid-cols-3 gap-4">
+        {/* Age Buckets - Horizontal Bar Breakdown */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          {TEXAS_REAR_END_DATA.byAge.map((bucket, idx) => {
+            const pctOfTotal = ((bucket.claims / TEXAS_REAR_END_DATA.summary.totalClaims) * 100).toFixed(0);
+            const isAged = bucket.age.includes('365+') || bucket.age.includes('181-365');
+            return (
+              <div 
+                key={bucket.age} 
+                className={`p-3 rounded-lg border ${
+                  idx === 0 ? 'border-destructive/30 bg-destructive/5' : 
+                  idx === 1 ? 'border-warning/30 bg-warning/5' : 
+                  'border-border bg-muted/20'
+                }`}
+              >
+                <p className={`text-xs font-medium ${idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : 'text-muted-foreground'}`}>
+                  {bucket.age}
+                </p>
+                <p className="text-lg font-bold text-foreground">{bucket.claims.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrencyK(bucket.reserves)} • {pctOfTotal}%</p>
+              </div>
+            );
+          })}
+        </div>
 
+        {/* Settlement Impact Tracker - Placeholder for real-time data */}
+        <div className="bg-muted/20 rounded-lg border border-border p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase">Settlement Impact This Month</h4>
+            <span className="text-xs text-muted-foreground">Data pending</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-success">—</p>
+              <p className="text-xs text-muted-foreground">Settled</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-primary">—</p>
+              <p className="text-xs text-muted-foreground">Reserves Released</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">—</p>
+              <p className="text-xs text-muted-foreground">Avg Days to Settle</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           {/* Deploy Directive */}
           <div className="bg-muted/30 rounded-lg border border-border p-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Deploy Directive</h4>
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Deploy Review</h4>
             <RadioGroup 
               value={selectedClaimFilter} 
               onValueChange={(val) => {
                 setSelectedClaimFilter(val);
                 setAiSummary('');
               }}
-              className="grid grid-cols-2 gap-1"
+              className="space-y-1"
             >
-              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'all' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50'}`}>
-                <RadioGroupItem value="all" id="all-claims" />
-                <div>
-                  <span className="font-medium">All ({TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()})</span>
-                </div>
-              </label>
-              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'aged-365' ? 'border-destructive bg-destructive/10' : 'border-border hover:bg-muted/50'}`}>
-                <RadioGroupItem value="aged-365" id="aged-365" />
-                <div>
-                  <span className="font-medium text-destructive">365+ Days ({TEXAS_REAR_END_DATA.byAge[0].claims})</span>
-                </div>
-              </label>
-              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'aged-181-365' ? 'border-warning bg-warning/10' : 'border-border hover:bg-muted/50'}`}>
-                <RadioGroupItem value="aged-181-365" id="aged-181-365" />
-                <div>
-                  <span className="font-medium text-warning">181-365 Days ({TEXAS_REAR_END_DATA.byAge[1].claims})</span>
-                </div>
-              </label>
-              <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-xs ${selectedClaimFilter === 'top-3-areas' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50'}`}>
-                <RadioGroupItem value="top-3-areas" id="top-3-areas" />
-                <div>
-                  <span className="font-medium">Top 3 Areas ({(TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims).toLocaleString()})</span>
-                </div>
-              </label>
+              {TEXAS_REAR_END_DATA.byAge.map((bucket, idx) => {
+                const filterKey = idx === 0 ? 'aged-365' : idx === 1 ? 'aged-181-365' : idx === 2 ? 'aged-61-180' : 'under-60';
+                const isSelected = selectedClaimFilter === filterKey;
+                return (
+                  <label 
+                    key={bucket.age}
+                    className={`flex items-center justify-between p-2 rounded border cursor-pointer text-xs ${
+                      isSelected 
+                        ? idx === 0 ? 'border-destructive bg-destructive/10' 
+                        : idx === 1 ? 'border-warning bg-warning/10' 
+                        : 'border-primary bg-primary/10'
+                        : 'border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value={filterKey} />
+                      <span className={`font-medium ${idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : ''}`}>
+                        {bucket.age}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground">{bucket.claims}</span>
+                  </label>
+                );
+              })}
             </RadioGroup>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2168,7 +2213,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 <span className="text-muted-foreground">
                   ${(selectedClaimFilter === 'aged-365' ? TEXAS_REAR_END_DATA.byAge[0].reserves / 1000000 :
                      selectedClaimFilter === 'aged-181-365' ? TEXAS_REAR_END_DATA.byAge[1].reserves / 1000000 :
-                     selectedClaimFilter === 'top-3-areas' ? (TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves) / 1000000 :
+                     selectedClaimFilter === 'aged-61-180' ? TEXAS_REAR_END_DATA.byAge[2].reserves / 1000000 :
+                     selectedClaimFilter === 'under-60' ? TEXAS_REAR_END_DATA.byAge[3].reserves / 1000000 :
                      TEXAS_REAR_END_DATA.summary.totalReserves / 1000000).toFixed(1)}M at risk
                 </span>
               )}
@@ -2185,13 +2231,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                   setGeneratingSummary(true);
                   const getFilterData = () => {
                     switch (selectedClaimFilter) {
-                      case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, reserves: TEXAS_REAR_END_DATA.summary.totalReserves };
                       case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, reserves: TEXAS_REAR_END_DATA.byAge[0].reserves };
                       case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, reserves: TEXAS_REAR_END_DATA.byAge[1].reserves };
-                      case 'top-3-areas': return { 
-                        count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
-                        reserves: TEXAS_REAR_END_DATA.byArea[0].reserves + TEXAS_REAR_END_DATA.byArea[4].reserves + TEXAS_REAR_END_DATA.byArea[1].reserves,
-                      };
+                      case 'aged-61-180': return { count: TEXAS_REAR_END_DATA.byAge[2].claims, reserves: TEXAS_REAR_END_DATA.byAge[2].reserves };
+                      case 'under-60': return { count: TEXAS_REAR_END_DATA.byAge[3].claims, reserves: TEXAS_REAR_END_DATA.byAge[3].reserves };
                       default: return { count: 0, reserves: 0 };
                     }
                   };
@@ -2241,14 +2284,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 // Get filter-specific data
                 const getFilterData = () => {
                   switch (selectedClaimFilter) {
-                    case 'all': return { count: TEXAS_REAR_END_DATA.summary.totalClaims, ageBucket: 'Mixed', areas: TEXAS_REAR_END_DATA.byArea };
                     case 'aged-365': return { count: TEXAS_REAR_END_DATA.byAge[0].claims, ageBucket: '365+ Days', areas: TEXAS_REAR_END_DATA.byArea };
                     case 'aged-181-365': return { count: TEXAS_REAR_END_DATA.byAge[1].claims, ageBucket: '181-365 Days', areas: TEXAS_REAR_END_DATA.byArea };
-                    case 'top-3-areas': return { 
-                      count: TEXAS_REAR_END_DATA.byArea[0].claims + TEXAS_REAR_END_DATA.byArea[4].claims + TEXAS_REAR_END_DATA.byArea[1].claims,
-                      ageBucket: 'Mixed',
-                      areas: [TEXAS_REAR_END_DATA.byArea[0], TEXAS_REAR_END_DATA.byArea[4], TEXAS_REAR_END_DATA.byArea[1]] // El Paso, San Antonio, Rio Grande
-                    };
+                    case 'aged-61-180': return { count: TEXAS_REAR_END_DATA.byAge[2].claims, ageBucket: '61-180 Days', areas: TEXAS_REAR_END_DATA.byArea };
                     case 'under-60': return { count: TEXAS_REAR_END_DATA.byAge[3].claims, ageBucket: 'Under 60 Days', areas: TEXAS_REAR_END_DATA.byArea };
                     default: return { count: 0, ageBucket: '', areas: [] };
                   }
@@ -2264,9 +2302,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 const prefixes = ['39', '78', '72', '65', '62', '89', '63', '66', '68', '80', '73', '67', '40'];
                 for (let i = 0; i < sampleSize; i++) {
                   const area = areas[i % areas.length];
-                  const ageBucket = filterData.ageBucket === 'Mixed' 
-                    ? ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'][i % 4]
-                    : filterData.ageBucket;
+                  const ageBucket = filterData.ageBucket;
                   
                   // Use format matching actual claim numbers: Prefix-ClaimNumber
                   const prefix = prefixes[i % prefixes.length];
@@ -2332,6 +2368,35 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <p className="text-xs text-muted-foreground mt-2 text-center">
               {!aiSummary ? "Generate summary first to deploy" : "Track progress in real-time below"}
             </p>
+          </div>
+
+          {/* Review Queue by Age */}
+          <div className="bg-muted/30 rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Review Queue</h4>
+            {reviews.length > 0 ? (
+              <div className="space-y-2">
+                {['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'].map(age => {
+                  const ageReviews = reviews.filter(r => r.age_bucket === age);
+                  const pending = ageReviews.filter(r => r.status === 'assigned' || r.status === 'in_review').length;
+                  const completed = ageReviews.filter(r => r.status === 'completed').length;
+                  if (ageReviews.length === 0) return null;
+                  return (
+                    <div key={age} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                      <span className={`text-xs font-medium ${
+                        age === '365+ Days' ? 'text-destructive' : 
+                        age === '181-365 Days' ? 'text-warning' : ''
+                      }`}>{age}</span>
+                      <div className="flex gap-2 text-xs">
+                        <span className="text-muted-foreground">{pending} pending</span>
+                        <span className="text-success">{completed} done</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-4">No active reviews</p>
+            )}
           </div>
         </div>
 
