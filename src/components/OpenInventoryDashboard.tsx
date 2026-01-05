@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart,
   Bar,
@@ -592,19 +593,38 @@ export function OpenInventoryDashboard() {
               className="w-full mt-4" 
               variant="default"
               disabled={selectedClaims.length === 0 || sendingText}
-              onClick={() => {
+              onClick={async () => {
                 setSendingText(true);
-                // Simulate SMS send to 9154875798
-                setTimeout(() => {
+                const claimCount = selectedClaims[0] === 'all' ? 2458 : 
+                  selectedClaims[0] === 'aged-365' ? 983 :
+                  selectedClaims[0] === 'high-reserve' ? 245 : 127;
+                
+                try {
+                  const { data, error } = await supabase.functions.invoke('send-review-sms', {
+                    body: {
+                      to: '9154875798',
+                      claimType: 'Rear Ends',
+                      claimCount,
+                      region: 'Texas 101-110',
+                      lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                    }
+                  });
+                  
+                  if (error) throw error;
+                  
                   toast.success("Text sent to (915) 487-5798", {
-                    description: `Review request for ${selectedClaims[0] === 'all' ? '47 claims' : 
-                      selectedClaims[0] === 'aged-365' ? '18 aged claims' :
-                      selectedClaims[0] === 'high-reserve' ? '12 high reserve claims' : '5 no-eval claims'} sent.`,
+                    description: `Review request for ${claimCount} claims sent.`,
                     icon: <CheckCircle2 className="h-4 w-4" />
                   });
-                  setSendingText(false);
                   setSelectedClaims([]);
-                }, 1500);
+                } catch (err: any) {
+                  console.error('SMS error:', err);
+                  toast.error("Failed to send text", {
+                    description: err.message || "Please check Twilio configuration"
+                  });
+                } finally {
+                  setSendingText(false);
+                }
               }}
             >
               {sendingText ? (
