@@ -59,16 +59,15 @@ export function useExportData() {
     const pageHeight = doc.internal.pageSize.getHeight();
     let yPos = 28;
 
-    // VIVID DARK THEME color palette - Executive Grade
-    const darkBg = { r: 15, g: 23, b: 42 };        // Slate 900
-    const darkCard = { r: 30, g: 41, b: 59 };      // Slate 800
-    const darkBorder = { r: 51, g: 65, b: 85 };    // Slate 700
-    const accentCyan = { r: 34, g: 211, b: 238 };  // Cyan 400
-    const accentGold = { r: 251, g: 191, b: 36 };  // Amber 400
-    const accentRed = { r: 248, g: 113, b: 113 };  // Red 400
-    const accentGreen = { r: 74, g: 222, b: 128 }; // Green 400
-    const textWhite = { r: 248, g: 250, b: 252 };  // Slate 50
-    const textMuted = { r: 148, g: 163, b: 184 };  // Slate 400
+    // EXECUTIVE THEME - Black, Light Grey, White, Red, Green
+    const darkBg = { r: 0, g: 0, b: 0 };           // Pure Black
+    const darkCard = { r: 18, g: 18, b: 18 };      // Near Black
+    const darkBorder = { r: 38, g: 38, b: 38 };    // Dark Grey
+    const accentRed = { r: 220, g: 38, b: 38 };    // Red 600
+    const accentGreen = { r: 34, g: 197, b: 94 };  // Green 500
+    const textWhite = { r: 255, g: 255, b: 255 };  // Pure White
+    const textMuted = { r: 163, g: 163, b: 163 };  // Light Grey (Neutral 400)
+    const textLight = { r: 212, g: 212, b: 212 };  // Lighter Grey (Neutral 300)
 
     // Fill entire page with dark background
     doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
@@ -85,8 +84,8 @@ export function useExportData() {
       doc.text('FRED LOYA INSURANCE', 14, 18);
     }
     
-    // Gradient-like accent line with cyan
-    doc.setDrawColor(accentCyan.r, accentCyan.g, accentCyan.b);
+    // Accent line - red
+    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
     doc.setLineWidth(2);
     doc.line(14, 24, pageWidth - 14, 24);
 
@@ -102,7 +101,7 @@ export function useExportData() {
     if (data.subtitle) {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      doc.setTextColor(textLight.r, textLight.g, textLight.b);
       doc.text(data.subtitle, 14, yPos);
       yPos += 6;
     }
@@ -113,7 +112,7 @@ export function useExportData() {
     
     if (data.affectsManager) {
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(accentGold.r, accentGold.g, accentGold.b);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
       doc.text(`Prepared for: ${data.affectsManager}`, pageWidth - 14, yPos, { align: 'right' });
     }
     yPos += 12;
@@ -123,13 +122,13 @@ export function useExportData() {
       doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
       doc.rect(14, yPos, pageWidth - 28, 20, 'F');
       
-      // Left accent bar - vivid cyan
-      doc.setFillColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      // Left accent bar - red
+      doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
       doc.rect(14, yPos, 4, 20, 'F');
       
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
       doc.text('DIRECTIVE', 22, yPos + 7);
       
       doc.setFont('helvetica', 'normal');
@@ -148,15 +147,15 @@ export function useExportData() {
       if (highEvalManagers.length > 0) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
-        doc.setTextColor(accentGold.r, accentGold.g, accentGold.b);
+        doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
         doc.text('HIGH EVALUATION — TOP 10', 14, yPos);
         yPos += 8;
 
-        // Table header with gradient effect
+        // Table header
         doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
         doc.rect(14, yPos, pageWidth - 28, 8, 'F');
         doc.setFontSize(8);
-        doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+        doc.setTextColor(textLight.r, textLight.g, textLight.b);
         doc.text('RANK', 20, yPos + 5.5);
         doc.text('ADJUSTER NAME', 45, yPos + 5.5);
         doc.text('HIGH EVAL TOTAL', pageWidth - 20, yPos + 5.5, { align: 'right' });
@@ -208,11 +207,11 @@ export function useExportData() {
       }
     }
 
-    // Summary section with vivid metric cards
+    // Summary section with metric cards
     if (data.summary && Object.keys(data.summary).length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.setTextColor(accentGold.r, accentGold.g, accentGold.b);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
       doc.text('KEY METRICS', 14, yPos);
       yPos += 10;
 
@@ -233,10 +232,10 @@ export function useExportData() {
         doc.setLineWidth(0.5);
         doc.rect(xPos, cardY, cardWidth, 26, 'S');
 
-        // Vivid value
+        // Value in green for money
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+        doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
         doc.text(String(value), xPos + cardWidth / 2, cardY + 12, { align: 'center' });
 
         // Label
@@ -254,7 +253,7 @@ export function useExportData() {
     if (data.columns.length > 0 && data.rows.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.setTextColor(accentGold.r, accentGold.g, accentGold.b);
+      doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
       doc.text('DETAILED DATA', 14, yPos);
       yPos += 10;
 
@@ -275,13 +274,13 @@ export function useExportData() {
       const adjustedWidths = calculatedWidths.map(w => Math.max(w, minColWidth));
       const rowHeight = 10;
 
-      // Table header - vivid styling
+      // Table header
       doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
       doc.rect(14, yPos, tableWidth, rowHeight, 'F');
       
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      doc.setTextColor(textLight.r, textLight.g, textLight.b);
       
       let xOffset = 14;
       data.columns.forEach((col, i) => {
@@ -311,7 +310,7 @@ export function useExportData() {
           doc.rect(14, yPos, tableWidth, rowHeight, 'F');
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
-          doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+          doc.setTextColor(textLight.r, textLight.g, textLight.b);
           
           let xOff = 14;
           data.columns.forEach((col, i) => {
@@ -369,14 +368,14 @@ export function useExportData() {
       doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
       doc.rect(0, footerY - 6, pageWidth, 14, 'F');
       
-      doc.setDrawColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
       doc.setLineWidth(0.5);
       doc.line(14, footerY - 6, pageWidth - 14, footerY - 6);
       
       doc.setFontSize(8);
       doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
       doc.text('Fred Loya Insurance • Litigation Command Center • Confidential', 14, footerY);
-      doc.setTextColor(accentCyan.r, accentCyan.g, accentCyan.b);
+      doc.setTextColor(textLight.r, textLight.g, textLight.b);
       doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, footerY, { align: 'right' });
     }
 
