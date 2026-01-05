@@ -283,9 +283,6 @@ const Index = () => {
           <ExecutiveDashboard 
             data={filteredData} 
             onDrilldown={handleDrilldown} 
-            onPainLevelDataApplied={handlePainLevelDataApplied}
-            painLevelDataActive={filters.painLevelData.length > 0}
-            onDataUploaded={refetch}
           />
         ) : (
           <OverextensionTable data={filteredData} />

@@ -2,8 +2,6 @@ import { useMemo, useCallback, useState } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { PainLevelUpload } from "@/components/PainLevelUpload";
-import { DataUploadPanel } from "@/components/DataUploadPanel";
 import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,9 +37,6 @@ interface PainLevelRow {
 interface ExecutiveDashboardProps {
   data: LitigationMatter[];
   onDrilldown: (claimId: string) => void;
-  onPainLevelDataApplied?: (data: PainLevelRow[]) => void;
-  painLevelDataActive?: boolean;
-  onDataUploaded?: () => void;
 }
 
 // Determine litigation stage based on pain level
@@ -64,7 +59,7 @@ function getExpertType(expCategory: string): string {
   return 'Other';
 }
 
-export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, painLevelDataActive, onDataUploaded }: ExecutiveDashboardProps) {
+export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProps) {
   const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   const [showAllBombs, setShowAllBombs] = useState(false);
@@ -658,8 +653,6 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             <p className="text-[10px] sm:text-xs text-gray-300">Litigation Intelligence Dashboard</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <DataUploadPanel onDataUploaded={onDataUploaded} />
-            <PainLevelUpload onDataUploaded={onPainLevelDataApplied} isActive={painLevelDataActive} />
             <button
               onClick={handleFullExport}
               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-[#b41e1e] hover:bg-[#8f1818] text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-md"
