@@ -31,7 +31,13 @@ type ClaimReview = Tables<"claim_reviews">;
 
 const REVIEWERS = ['Richie Mendoza'];
 
-export function OpenInventoryDashboard() {
+import { GlobalFilters } from "@/components/GlobalFilters";
+
+interface OpenInventoryDashboardProps {
+  filters: GlobalFilters;
+}
+
+export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps) {
   const { data, loading, error } = useOpenExposureData();
   const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
