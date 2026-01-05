@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 
 export interface GlobalFilters {
+  inventoryStatus: 'closed' | 'open';
   department: string;
   team: string;
   adjuster: string;
@@ -20,6 +21,7 @@ export interface GlobalFilters {
 }
 
 export const defaultGlobalFilters: GlobalFilters = {
+  inventoryStatus: 'closed',
   department: 'all',
   team: 'all',
   adjuster: 'all',
@@ -57,6 +59,32 @@ export function GlobalFilterPanel({
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
+          {/* Inventory Status Toggle */}
+          <div className="flex rounded-lg overflow-hidden border border-border">
+            <button
+              onClick={() => onFilterChange('inventoryStatus', 'closed')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                filters.inventoryStatus === 'closed'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Closed Inventory
+            </button>
+            <button
+              onClick={() => onFilterChange('inventoryStatus', 'open')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                filters.inventoryStatus === 'open'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Open Inventory
+            </button>
+          </div>
+          
+          <div className="h-6 w-px bg-border" />
+          
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Filters</h3>
           {activeFilterCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
