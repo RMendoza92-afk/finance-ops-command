@@ -116,6 +116,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // PAGE 1: EXECUTIVE SUMMARY - THE ONLY PAGE MOST EXECUTIVES WILL READ
   // ====================================================================
   
+  // Dark background for page 1
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+  
   drawPageHeader(doc, pageWidth, 'EXECUTIVE COMMAND PACKAGE', 'Board-Level Summary', ctx);
   let y = 44;
   
@@ -124,9 +128,13 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const criticalCount = config.decisionsData.critical;
   const budgetStatus = config.budgetData.onTrack ? 'ON TRACK' : 'REQUIRES ATTENTION';
   
-  // Impact banner
-  doc.setFillColor(criticalCount > 0 ? 153 : 12, criticalCount > 0 ? 27 : 35, criticalCount > 0 ? 27 : 64);
+  // Impact banner - dark red for critical, dark green for ok
+  doc.setFillColor(criticalCount > 0 ? 60 : 15, criticalCount > 0 ? 20 : 35, criticalCount > 0 ? 20 : 25);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 28, 3, 3, 'F');
+  // Red or green accent border
+  doc.setDrawColor(criticalCount > 0 ? 220 : 34, criticalCount > 0 ? 38 : 197, criticalCount > 0 ? 38 : 94);
+  doc.setLineWidth(1);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 28, 3, 3, 'S');
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
@@ -172,7 +180,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // EXECUTIVE DECISION MATRIX
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('EXECUTIVE DECISION MATRIX', margins.left, y);
   y += 6;
   
@@ -198,8 +206,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     }
   ];
   
-  // Table header
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Table header - dark red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7);
@@ -214,7 +222,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // Table rows
   decisions.forEach((row, idx) => {
     if (idx % 2 === 0) {
-      doc.setFillColor(248, 250, 252);
+      doc.setFillColor(25, 25, 25);
+      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
+    } else {
+      doc.setFillColor(18, 18, 18);
       doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
     }
     
@@ -242,16 +253,16 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   });
   y += 8;
   
-  // BOTTOM LINE - The CFO's 10-second read
-  doc.setFillColor(240, 249, 255);
+  // BOTTOM LINE - The CFO's 10-second read (dark theme with red accent)
+  doc.setFillColor(25, 25, 25);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'F');
   doc.setDrawColor(...EXECUTIVE_COLORS.azure);
-  doc.setLineWidth(0.5);
+  doc.setLineWidth(1);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 22, 3, 3, 'S');
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.azure);
   doc.text('CFO BOTTOM LINE:', margins.left + 5, y + 8);
   
   // Generate bottom line based on data
@@ -266,11 +277,11 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // TABLE OF CONTENTS
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('DETAILED ANALYSIS', margins.left, y);
   y += 6;
   
-  doc.setFillColor(250, 250, 252);
+  doc.setFillColor(18, 18, 18);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 35, 2, 2, 'F');
   
   const tocItems = [
@@ -284,7 +295,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   tocItems.forEach(item => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.navy);
+    doc.setTextColor(...EXECUTIVE_COLORS.azure);
     doc.text(item.section, margins.left + 5, tocY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
@@ -302,6 +313,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.addPage();
   currentPage++;
   sectionPages['budget'] = currentPage;
+  
+  // Dark background
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
   drawPageHeader(doc, pageWidth, 'BUDGET BURN RATE ANALYSIS', `FY${ctx.fiscalYear} Claims Payment Tracking`, ctx);
   y = 44;
@@ -331,12 +346,12 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // Coverage breakdown table
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('COVERAGE BREAKDOWN - YoY COMPARISON', margins.left, y);
   y += 6;
   
-  // Header
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Header - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7);
@@ -357,7 +372,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   
   coverages.forEach((cov, idx) => {
     if (idx % 2 === 0) {
-      doc.setFillColor(248, 250, 252);
+      doc.setFillColor(25, 25, 25);
+      doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
+    } else {
+      doc.setFillColor(18, 18, 18);
       doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
     }
     
@@ -390,7 +408,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const totalYtd2025 = coverages.reduce((s, c) => s + c.ytd2025, 0);
   const totalChange = totalYtd2025 - totalYtd2024;
   
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Total row - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 10, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -404,9 +423,12 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.text(`${totalChange >= 0 ? '+' : ''}${formatCurrency(totalChange, true)}`, colX, y + 5);
   y += 16;
   
-  // Budget insight
-  doc.setFillColor(255, 251, 235);
+  // Budget insight (dark theme with amber accent border)
+  doc.setFillColor(30, 27, 18);
   doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 20, 2, 2, 'F');
+  doc.setDrawColor(...EXECUTIVE_COLORS.warning);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, 20, 2, 2, 'S');
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
@@ -425,6 +447,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.addPage();
   currentPage++;
   sectionPages['decisions'] = currentPage;
+  
+  // Dark background
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
   
   drawPageHeader(doc, pageWidth, 'PENDING EXECUTIVE DECISIONS', `${config.decisionsData.critical} Critical Items Require Immediate Action`, ctx);
   y = 44;
@@ -453,12 +479,12 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // Critical decisions table (top 15)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('DECISION QUEUE - BY PRIORITY', margins.left, y);
   y += 6;
   
-  // Header
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Header - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(6);
@@ -473,9 +499,9 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // Decision rows (top 15)
   const topDecisions = config.decisionsData.decisions.slice(0, 15);
   topDecisions.forEach((dec, idx) => {
-    const rowColor = dec.severity === 'critical' ? [254, 242, 242] :
-                     dec.severity === 'high' ? [255, 251, 235] :
-                     idx % 2 === 0 ? [248, 250, 252] : [255, 255, 255];
+    const rowColor = dec.severity === 'critical' ? [50, 20, 20] :
+                     dec.severity === 'high' ? [45, 35, 15] :
+                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
     doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
     doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 8, 'F');
     
@@ -520,6 +546,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   currentPage++;
   sectionPages['cp1'] = currentPage;
   
+  // Dark background
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+  
   drawPageHeader(doc, pageWidth, 'CP1 LIMITS TENDERED ANALYSIS', 'Policy Limits Exposure by Coverage and Age', ctx);
   y = 44;
   
@@ -545,12 +575,12 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // CP1 by Coverage table
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('CP1 RATE BY COVERAGE TYPE', margins.left, y);
   y += 6;
   
-  // Header
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Header - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7);
@@ -564,9 +594,9 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   
   // Coverage rows
   config.cp1Data.byCoverage.forEach((cov, idx) => {
-    const rowColor = cov.cp1Rate > 40 ? [254, 242, 242] :
-                     cov.cp1Rate > 30 ? [255, 251, 235] :
-                     idx % 2 === 0 ? [248, 250, 252] : [255, 255, 255];
+    const rowColor = cov.cp1Rate > 40 ? [50, 20, 20] :
+                     cov.cp1Rate > 30 ? [45, 35, 15] :
+                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
     doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
     doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
     
@@ -601,8 +631,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     y += 9;
   });
   
-  // Total row
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Total row - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -624,12 +654,12 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // BI by Age section
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text('BODILY INJURY CP1 BY CLAIM AGE', margins.left, y);
   y += 6;
   
-  // BI Age header
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // BI Age header - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7);
@@ -644,8 +674,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   // BI Age rows
   config.cp1Data.biByAge.forEach((age, idx) => {
     const cp1Rate = (age.yes / age.total) * 100;
-    const rowColor = age.age === '365+ Days' ? [254, 242, 242] :
-                     idx % 2 === 0 ? [248, 250, 252] : [255, 255, 255];
+    const rowColor = age.age === '365+ Days' ? [50, 20, 20] :
+                     idx % 2 === 0 ? [25, 25, 25] : [18, 18, 18];
     doc.setFillColor(rowColor[0], rowColor[1], rowColor[2]);
     doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
     
@@ -674,8 +704,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     y += 9;
   });
   
-  // BI Total
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // BI Total - red accent
+  doc.setFillColor(...EXECUTIVE_COLORS.azure);
   doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -701,18 +731,22 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     currentPage++;
     sectionPages['quarterly'] = currentPage;
     
+    // Dark background
+    doc.setFillColor(0, 0, 0);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    
     drawPageHeader(doc, pageWidth, 'QUARTERLY TREND ANALYSIS', 'Expert Spend & Historical Patterns', ctx);
     y = 44;
     
     // Quarterly data table
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.navy);
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
     doc.text('EXPERT SPEND - 7 QUARTER TREND', margins.left, y);
     y += 6;
     
-    // Header
-    doc.setFillColor(...EXECUTIVE_COLORS.navy);
+    // Header - red accent
+    doc.setFillColor(...EXECUTIVE_COLORS.azure);
     doc.rect(margins.left, y, pageWidth - margins.left - margins.right, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(7);
@@ -732,7 +766,10 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
       totalApproved += q.approved;
       
       if (idx % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
+        doc.setFillColor(25, 25, 25);
+        doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
+      } else {
+        doc.setFillColor(18, 18, 18);
         doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
       }
       
@@ -767,8 +804,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
       y += 9;
     });
     
-    // Total row
-    doc.setFillColor(...EXECUTIVE_COLORS.navy);
+    // Total row - red accent
+    doc.setFillColor(...EXECUTIVE_COLORS.azure);
     doc.rect(margins.left, y - 2, pageWidth - margins.left - margins.right, 9, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -799,8 +836,8 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
 // ==================== HELPER FUNCTIONS ====================
 
 function drawPageHeader(doc: any, pageWidth: number, title: string, subtitle: string, ctx: any) {
-  // Header bar
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Header bar - black background
+  doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageWidth, 30, 'F');
   
   // Accent line
@@ -832,7 +869,8 @@ function drawPageHeader(doc: any, pageWidth: number, title: string, subtitle: st
 }
 
 function drawPageFooter(doc: any, pageWidth: number, pageHeight: number, pageNum: number, totalPages: number, ctx: any) {
-  doc.setFillColor(243, 244, 246);
+  // Dark footer
+  doc.setFillColor(12, 12, 12);
   doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
   
   doc.setFontSize(6);
@@ -843,9 +881,10 @@ function drawPageFooter(doc: any, pageWidth: number, pageHeight: number, pageNum
 }
 
 function drawKeyTakeaway(doc: any, x: number, y: number, width: number, text: string, status: 'positive' | 'negative' | 'neutral') {
-  const bgColor = status === 'positive' ? [240, 253, 244] :
-                  status === 'negative' ? [254, 242, 242] :
-                  [248, 250, 252];
+  // Dark themed backgrounds with subtle color tints
+  const bgColor = status === 'positive' ? [15, 35, 25] :      // Dark green tint
+                  status === 'negative' ? [40, 18, 18] :       // Dark red tint
+                  [25, 25, 25];                                 // Neutral dark
   const accentColor = status === 'positive' ? EXECUTIVE_COLORS.success :
                       status === 'negative' ? EXECUTIVE_COLORS.danger :
                       EXECUTIVE_COLORS.azure;
@@ -857,7 +896,7 @@ function drawKeyTakeaway(doc: any, x: number, y: number, width: number, text: st
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...accentColor);
   doc.text('KEY TAKEAWAY:', x + 8, y + 8);
   
   doc.setFont('helvetica', 'normal');
@@ -867,15 +906,11 @@ function drawKeyTakeaway(doc: any, x: number, y: number, width: number, text: st
 }
 
 function drawExecutiveKPI(doc: any, x: number, y: number, width: number, height: number, data: { label: string; value: string; sub: string; status: string }) {
-  // Shadow
-  doc.setFillColor(230, 230, 230);
-  doc.roundedRect(x + 1, y + 1, width, height, 3, 3, 'F');
-  
-  // Card
-  doc.setFillColor(255, 255, 255);
+  // Dark card with subtle border
+  doc.setFillColor(18, 18, 18);
   doc.roundedRect(x, y, width, height, 3, 3, 'F');
   
-  // Accent
+  // Accent left border
   const accentColor = data.status === 'positive' ? EXECUTIVE_COLORS.success :
                       data.status === 'negative' ? EXECUTIVE_COLORS.danger :
                       EXECUTIVE_COLORS.azure;
@@ -888,7 +923,7 @@ function drawExecutiveKPI(doc: any, x: number, y: number, width: number, height:
   doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
   doc.text(data.label, x + 8, y + 10);
   
-  // Value
+  // Value - white on dark
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
@@ -902,7 +937,8 @@ function drawExecutiveKPI(doc: any, x: number, y: number, width: number, height:
 }
 
 function drawCompactKPI(doc: any, x: number, y: number, width: number, height: number, data: { label: string; value: string; sub: string }) {
-  doc.setFillColor(248, 250, 252);
+  // Dark compact card
+  doc.setFillColor(25, 25, 25);
   doc.roundedRect(x, y, width, height, 2, 2, 'F');
   
   doc.setFontSize(6);
@@ -912,7 +948,7 @@ function drawCompactKPI(doc: any, x: number, y: number, width: number, height: n
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   doc.text(data.value, x + 4, y + 18);
   
   doc.setFontSize(6);
