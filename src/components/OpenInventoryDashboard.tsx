@@ -69,6 +69,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [testMode, setTestMode] = useState(true);
   const [executiveExpanded, setExecutiveExpanded] = useState(true);
   const [showDecisionsDrawer, setShowDecisionsDrawer] = useState(false);
+  const [pendingDecisions, setPendingDecisions] = useState<PendingDecision[]>([]);
+  const [loadingDecisions, setLoadingDecisions] = useState(false);
+  const [generatingDecisionsPDF, setGeneratingDecisionsPDF] = useState(false);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -82,36 +85,249 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     deadline: string;
     recommendedAction: string;
     severity: 'critical' | 'high' | 'medium';
+    department: string;
+    type: string;
+    location: string;
   }
 
-  const PENDING_DECISIONS: PendingDecision[] = [
-    { matterId: 'LIT-2024-0847', claimant: 'Rodriguez v. FLI', amount: 1250000, daysOpen: 412, lead: 'Luis Martinez', reason: 'High severity + aged 365+', deadline: '2026-01-15', recommendedAction: 'Approve settlement authority increase to $850K', severity: 'critical' },
-    { matterId: 'LIT-2024-1102', claimant: 'Garcia Estate v. FLI', amount: 2100000, daysOpen: 287, lead: 'Chelsey Shogren-Martinez', reason: 'Wrongful death, policy limits demand', deadline: '2026-01-12', recommendedAction: 'Authorize policy limits offer ($1M)', severity: 'critical' },
-    { matterId: 'LIT-2024-0923', claimant: 'Martinez Family v. FLI', amount: 875000, daysOpen: 198, lead: 'Marc Guevara', reason: 'Multi-claimant, exceeds $500K', deadline: '2026-01-20', recommendedAction: 'Review MSA structure proposal', severity: 'high' },
-    { matterId: 'LIT-2023-2847', claimant: 'Thompson v. FLI', amount: 650000, daysOpen: 542, lead: 'Fernando Canales', reason: 'Aged 365+ days, statute approaching', deadline: '2026-01-08', recommendedAction: 'Approve mediation or trial prep budget', severity: 'critical' },
-    { matterId: 'LIT-2024-1456', claimant: 'Williams v. FLI', amount: 520000, daysOpen: 156, lead: 'Luis Vela', reason: 'Exceeds $500K threshold', deadline: '2026-01-25', recommendedAction: 'Approve $400K settlement authority', severity: 'medium' },
-    { matterId: 'LIT-2024-0234', claimant: 'Sanchez v. FLI', amount: 780000, daysOpen: 387, lead: 'Linda Davila', reason: 'High severity + aged 365+', deadline: '2026-01-18', recommendedAction: 'Escalate to excess carrier', severity: 'high' },
-    { matterId: 'LIT-2024-1789', claimant: 'Brown v. FLI', amount: 920000, daysOpen: 203, lead: 'Brittany Soria', reason: 'Bad faith allegation, $500K+', deadline: '2026-01-22', recommendedAction: 'Retain coverage counsel', severity: 'high' },
-    { matterId: 'LIT-2023-3012', claimant: 'Davis v. FLI', amount: 1450000, daysOpen: 623, lead: 'Joel Fierro', reason: 'Aged 365+, high exposure', deadline: '2026-01-10', recommendedAction: 'Authorize structured settlement', severity: 'critical' },
-    { matterId: 'LIT-2024-0567', claimant: 'Johnson v. FLI', amount: 580000, daysOpen: 245, lead: 'Chrystal Perez', reason: 'Exceeds $500K, venue risk', deadline: '2026-01-28', recommendedAction: 'Approve early resolution offer', severity: 'medium' },
-    { matterId: 'LIT-2024-1234', claimant: 'Lee v. FLI', amount: 690000, daysOpen: 189, lead: 'Salvador Gonzalez', reason: 'High severity, bad venue', deadline: '2026-01-30', recommendedAction: 'Transfer venue motion approval', severity: 'medium' },
-    { matterId: 'LIT-2023-2456', claimant: 'Miller v. FLI', amount: 1100000, daysOpen: 478, lead: 'Priscilla Vega', reason: 'Aged 365+, $1M+ exposure', deadline: '2026-01-14', recommendedAction: 'Approve policy limits tender', severity: 'critical' },
-    { matterId: 'LIT-2024-0789', claimant: 'Wilson v. FLI', amount: 540000, daysOpen: 167, lead: 'James Wallace', reason: 'Exceeds $500K threshold', deadline: '2026-02-01', recommendedAction: 'Review and approve MSJ filing', severity: 'medium' },
-  ];
+  // Fetch pending decisions from database
+  const fetchPendingDecisions = useCallback(async () => {
+    setLoadingDecisions(true);
+    try {
+      // Query matters that need executive attention:
+      // - total_amount >= 500000 OR days_open >= 180
+      // - status = 'Open'
+      const { data: matters, error: fetchError } = await supabase
+        .from('litigation_matters')
+        .select('*')
+        .eq('status', 'Open')
+        .or('total_amount.gte.500000,days_open.gte.180')
+        .order('total_amount', { ascending: false })
+        .limit(50);
+
+      if (fetchError) {
+        console.error('Error fetching pending decisions:', fetchError);
+        return;
+      }
+
+      const decisions: PendingDecision[] = (matters || []).map((m) => {
+        // Determine severity based on criteria
+        const isHighValue = (Number(m.total_amount) || 0) >= 500000;
+        const isAged = (m.days_open || 0) >= 365;
+        const isAging = (m.days_open || 0) >= 180;
+        const isCriticalSeverity = m.severity?.toLowerCase() === 'critical' || m.severity?.toLowerCase() === 'high';
+        
+        let severity: 'critical' | 'high' | 'medium' = 'medium';
+        if ((isHighValue && isAged) || (isCriticalSeverity && isAged)) {
+          severity = 'critical';
+        } else if (isHighValue || isAged || isCriticalSeverity) {
+          severity = 'high';
+        }
+
+        // Generate reason based on criteria
+        const reasons: string[] = [];
+        if (isAged) reasons.push('Aged 365+ days');
+        else if (isAging) reasons.push('Aged 180+ days');
+        if (isHighValue) reasons.push(`Exceeds $500K (${formatCurrencyFullValue(Number(m.total_amount) || 0)})`);
+        if (isCriticalSeverity) reasons.push(`${m.severity} severity`);
+        
+        // Generate recommended action based on situation
+        let recommendedAction = 'Review and determine resolution strategy';
+        if (isAged && isHighValue) {
+          recommendedAction = 'Urgent: Authorize settlement or trial preparation';
+        } else if (isAged) {
+          recommendedAction = 'Expedite resolution - consider mediation';
+        } else if (isHighValue) {
+          recommendedAction = 'Review settlement authority and excess carrier notification';
+        }
+
+        // Calculate estimated deadline (30 days from now for review, sooner if aged)
+        const daysUntilDeadline = isAged ? 7 : isAging ? 14 : 30;
+        const deadline = format(addDays(new Date(), daysUntilDeadline), 'yyyy-MM-dd');
+
+        return {
+          matterId: m.matter_id,
+          claimant: m.claimant || 'Unknown Claimant',
+          amount: Number(m.total_amount) || 0,
+          daysOpen: m.days_open || 0,
+          lead: m.matter_lead || 'Unassigned',
+          reason: reasons.join(', ') || 'Meets executive review threshold',
+          deadline,
+          recommendedAction,
+          severity,
+          department: m.department || '',
+          type: m.type || '',
+          location: m.location || '',
+        };
+      });
+
+      setPendingDecisions(decisions);
+    } catch (err) {
+      console.error('Error in fetchPendingDecisions:', err);
+    } finally {
+      setLoadingDecisions(false);
+    }
+  }, []);
+
+  // Fetch pending decisions when drawer opens
+  useEffect(() => {
+    if (showDecisionsDrawer) {
+      fetchPendingDecisions();
+    }
+  }, [showDecisionsDrawer, fetchPendingDecisions]);
+
+  // Generate PDF for pending decisions
+  const generateDecisionsPDF = useCallback(async () => {
+    setGeneratingDecisionsPDF(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Header
+      doc.setFillColor(220, 38, 38); // Red for urgent
+      doc.rect(0, 0, pageWidth, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PENDING EXECUTIVE DECISIONS', 14, 16);
+      
+      // Timestamp
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - 14, 16, { align: 'right' });
+      
+      // Summary stats
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      let y = 35;
+      
+      const stats = pendingDecisionsStats;
+      doc.setFont('helvetica', 'bold');
+      doc.text('SUMMARY', 14, y);
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Total Matters Requiring Decision: ${stats.total}`, 14, y);
+      y += 6;
+      doc.text(`Critical Priority: ${stats.critical}`, 14, y);
+      y += 6;
+      doc.text(`Due This Week: ${stats.thisWeek}`, 14, y);
+      y += 6;
+      doc.text(`Statute Risk (350+ days): ${stats.statuteDeadlines}`, 14, y);
+      y += 6;
+      doc.text(`Total Exposure: ${formatCurrencyFullValue(stats.totalExposure)}`, 14, y);
+      y += 12;
+      
+      // Line separator
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, y, pageWidth - 14, y);
+      y += 8;
+      
+      // Each decision
+      pendingDecisions.forEach((decision, index) => {
+        // Check if we need a new page
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+        
+        // Severity indicator
+        if (decision.severity === 'critical') {
+          doc.setFillColor(220, 38, 38);
+        } else if (decision.severity === 'high') {
+          doc.setFillColor(245, 158, 11);
+        } else {
+          doc.setFillColor(107, 114, 128);
+        }
+        doc.circle(18, y + 2, 3, 'F');
+        
+        // Matter ID and Severity
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${index + 1}. ${decision.matterId}`, 24, y + 3);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`[${decision.severity.toUpperCase()}]`, 80, y + 3);
+        
+        // Amount
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text(formatCurrencyFullValue(decision.amount), pageWidth - 14, y + 3, { align: 'right' });
+        
+        y += 8;
+        
+        // Claimant
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Claimant: ${decision.claimant}`, 24, y);
+        y += 5;
+        
+        // Lead and Days Open
+        doc.setFontSize(9);
+        doc.text(`Lead: ${decision.lead} | Days Open: ${decision.daysOpen} | Deadline: ${format(new Date(decision.deadline), 'MMM d, yyyy')}`, 24, y);
+        y += 5;
+        
+        // Department/Type/Location
+        if (decision.department || decision.type || decision.location) {
+          doc.text(`Dept: ${decision.department || 'N/A'} | Type: ${decision.type || 'N/A'} | Location: ${decision.location || 'N/A'}`, 24, y);
+          y += 5;
+        }
+        
+        // Reason
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Reason: ${decision.reason}`, 24, y);
+        y += 5;
+        
+        // Recommended Action (highlighted)
+        doc.setFillColor(240, 249, 255);
+        doc.rect(24, y - 3, pageWidth - 38, 10, 'F');
+        doc.setTextColor(30, 64, 175);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Action: ${decision.recommendedAction}`, 26, y + 3);
+        
+        y += 15;
+        
+        // Separator line
+        doc.setDrawColor(230, 230, 230);
+        doc.line(24, y - 3, pageWidth - 14, y - 3);
+      });
+      
+      // Footer on last page
+      const pageCount = doc.internal.pages.length - 1;
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Page ${i} of ${pageCount} | Confidential - Executive Review Only`, pageWidth / 2, 290, { align: 'center' });
+      }
+      
+      doc.save(`pending-decisions-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('PDF generated successfully');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setGeneratingDecisionsPDF(false);
+    }
+  }, [pendingDecisions]);
 
   const pendingDecisionsStats = useMemo(() => {
-    const critical = PENDING_DECISIONS.filter(d => d.severity === 'critical').length;
-    const thisWeek = PENDING_DECISIONS.filter(d => {
+    const critical = pendingDecisions.filter(d => d.severity === 'critical').length;
+    const thisWeek = pendingDecisions.filter(d => {
       const deadline = new Date(d.deadline);
       const now = new Date();
       const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       return deadline <= weekFromNow;
     }).length;
-    const statuteDeadlines = PENDING_DECISIONS.filter(d => d.daysOpen > 350).length;
-    const totalExposure = PENDING_DECISIONS.reduce((sum, d) => sum + d.amount, 0);
+    const statuteDeadlines = pendingDecisions.filter(d => d.daysOpen > 350).length;
+    const totalExposure = pendingDecisions.reduce((sum, d) => sum + d.amount, 0);
     
-    return { total: PENDING_DECISIONS.length, critical, thisWeek, statuteDeadlines, totalExposure };
-  }, []);
+    return { total: pendingDecisions.length, critical, thisWeek, statuteDeadlines, totalExposure };
+  }, [pendingDecisions]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -2093,6 +2309,23 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </SheetDescription>
           </SheetHeader>
 
+          {/* PDF Export Button */}
+          <div className="py-3 border-b border-border">
+            <Button 
+              onClick={generateDecisionsPDF} 
+              disabled={generatingDecisionsPDF || pendingDecisions.length === 0}
+              className="w-full"
+              variant="outline"
+            >
+              {generatingDecisionsPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export to PDF
+            </Button>
+          </div>
+
           {/* Summary Stats */}
           <div className="grid grid-cols-3 gap-3 py-4 border-b border-border">
             <div className="text-center p-3 bg-destructive/10 rounded-lg">
@@ -2111,78 +2344,99 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
           {/* Decisions List */}
           <div className="py-4 space-y-3">
-            {PENDING_DECISIONS.sort((a, b) => {
-              const severityOrder = { critical: 0, high: 1, medium: 2 };
-              return severityOrder[a.severity] - severityOrder[b.severity];
-            }).map((decision) => (
-              <div 
-                key={decision.matterId} 
-                className={`p-4 rounded-lg border ${
-                  decision.severity === 'critical' ? 'border-destructive/50 bg-destructive/5' :
-                  decision.severity === 'high' ? 'border-warning/50 bg-warning/5' :
-                  'border-border bg-muted/30'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-primary">{decision.matterId}</span>
-                      <Badge variant={
-                        decision.severity === 'critical' ? 'destructive' :
-                        decision.severity === 'high' ? 'default' : 'secondary'
-                      } className="text-xs">
-                        {decision.severity.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <p className="font-semibold text-foreground mt-1">{decision.claimant}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-foreground">{formatCurrencyFullValue(decision.amount)}</p>
-                    <p className="text-xs text-muted-foreground">{decision.daysOpen} days open</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Lead:</span>
-                    <span className="font-medium">{decision.lead}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Deadline:</span>
-                    <span className={`font-medium ${new Date(decision.deadline) <= new Date(Date.now() + 7*24*60*60*1000) ? 'text-destructive' : ''}`}>
-                      {format(new Date(decision.deadline), 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-3 p-2 bg-background/50 rounded border border-border/50">
-                  <p className="text-xs text-muted-foreground mb-1">Reason for Escalation</p>
-                  <p className="text-sm">{decision.reason}</p>
-                </div>
-
-                <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                  <div className="flex items-start gap-2">
-                    <Gavel className="h-4 w-4 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-xs text-primary font-medium uppercase">Recommended Action</p>
-                      <p className="text-sm font-medium text-foreground">{decision.recommendedAction}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="default" className="flex-1">
-                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    Request More Info
-                  </Button>
-                </div>
+            {loadingDecisions ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading decisions...</span>
               </div>
-            ))}
+            ) : pendingDecisions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Flag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No pending decisions found</p>
+                <p className="text-sm">Matters over $500K or aged 180+ days will appear here</p>
+              </div>
+            ) : (
+              [...pendingDecisions].sort((a, b) => {
+                const severityOrder = { critical: 0, high: 1, medium: 2 };
+                return severityOrder[a.severity] - severityOrder[b.severity];
+              }).map((decision) => (
+                <div 
+                  key={decision.matterId} 
+                  className={`p-4 rounded-lg border ${
+                    decision.severity === 'critical' ? 'border-destructive/50 bg-destructive/5' :
+                    decision.severity === 'high' ? 'border-warning/50 bg-warning/5' :
+                    'border-border bg-muted/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-primary">{decision.matterId}</span>
+                        <Badge variant={
+                          decision.severity === 'critical' ? 'destructive' :
+                          decision.severity === 'high' ? 'default' : 'secondary'
+                        } className="text-xs">
+                          {decision.severity.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <p className="font-semibold text-foreground mt-1">{decision.claimant}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-foreground">{formatCurrencyFullValue(decision.amount)}</p>
+                      <p className="text-xs text-muted-foreground">{decision.daysOpen} days open</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Lead:</span>
+                      <span className="font-medium">{decision.lead}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Deadline:</span>
+                      <span className={`font-medium ${new Date(decision.deadline) <= new Date(Date.now() + 7*24*60*60*1000) ? 'text-destructive' : ''}`}>
+                        {format(new Date(decision.deadline), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {(decision.department || decision.type || decision.location) && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {decision.department && <Badge variant="outline" className="text-xs">{decision.department}</Badge>}
+                      {decision.type && <Badge variant="outline" className="text-xs">{decision.type}</Badge>}
+                      {decision.location && <Badge variant="outline" className="text-xs">{decision.location}</Badge>}
+                    </div>
+                  )}
+
+                  <div className="mt-3 p-2 bg-background/50 rounded border border-border/50">
+                    <p className="text-xs text-muted-foreground mb-1">Reason for Escalation</p>
+                    <p className="text-sm">{decision.reason}</p>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <div className="flex items-start gap-2">
+                      <Gavel className="h-4 w-4 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-primary font-medium uppercase">Recommended Action</p>
+                        <p className="text-sm font-medium text-foreground">{decision.recommendedAction}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="default" className="flex-1">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1">
+                      Request More Info
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </SheetContent>
       </Sheet>
