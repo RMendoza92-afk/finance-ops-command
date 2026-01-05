@@ -3,7 +3,7 @@ import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet } from "lucide-react";
-import loyaLogo from "@/assets/fli_logo.jpg";
+
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -624,12 +624,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       {/* Professional Header Banner */}
       <div className="bg-[#0c2340] rounded-xl p-5 shadow-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-10 object-contain" />
-            <div className="border-l-2 border-[#b41e1e] pl-4">
-              <h2 className="text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
-              <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
-            </div>
+          <div className="border-l-2 border-[#b41e1e] pl-4">
+            <h2 className="text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
+            <p className="text-xs text-gray-300">Litigation Intelligence Dashboard</p>
           </div>
           <div className="flex items-center gap-4">
             <button
