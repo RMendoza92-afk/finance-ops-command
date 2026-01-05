@@ -595,15 +595,16 @@ export function useExportData() {
     const pageHeight = doc.internal.pageSize.getHeight();
     const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
     
-    // Colors
-    const darkBg = { r: 15, g: 23, b: 42 };        // slate-900
-    const cardBg = { r: 30, g: 41, b: 59 };        // slate-800
-    const textWhite = { r: 255, g: 255, b: 255 };
-    const textMuted = { r: 148, g: 163, b: 184 };  // slate-400
-    const accentAmber = { r: 251, g: 191, b: 36 }; // amber-400
-    const accentRed = { r: 248, g: 113, b: 113 };  // red-400
-    const accentGreen = { r: 52, g: 211, b: 153 }; // emerald-400
-    const accentBlue = { r: 96, g: 165, b: 250 };  // blue-400
+    // EXECUTIVE THEME - Black, Light Grey, White, Red, Green (matches generatePDF)
+    const darkBg = { r: 0, g: 0, b: 0 };           // Pure Black
+    const cardBg = { r: 18, g: 18, b: 18 };        // Near Black
+    const darkBorder = { r: 38, g: 38, b: 38 };    // Dark Grey
+    const textWhite = { r: 255, g: 255, b: 255 };  // Pure White
+    const textMuted = { r: 163, g: 163, b: 163 };  // Light Grey (Neutral 400)
+    const textLight = { r: 212, g: 212, b: 212 };  // Lighter Grey (Neutral 300)
+    const accentRed = { r: 220, g: 38, b: 38 };    // Red 600
+    const accentGreen = { r: 34, g: 197, b: 94 };  // Green 500
+    const accentAmber = { r: 251, g: 191, b: 36 }; // Amber 400
     
     const formatCurrency = (val: number) => {
       if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
@@ -611,42 +612,48 @@ export function useExportData() {
       return `$${val.toFixed(0)}`;
     };
 
-    // Background
+    // Background - pure black
     doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-    // Header
+    // Header with logo
     let yPos = 20;
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', 14, 10, 45, 12);
+      doc.addImage(logoBase64, 'JPEG', 14, 8, 50, 14);
     } catch {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(14);
       doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
       doc.text('FRED LOYA INSURANCE', 14, 18);
     }
 
+    // Accent line - red
+    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.setLineWidth(2);
+    doc.line(14, 24, pageWidth - 14, 24);
+
     // Title
-    yPos = 32;
+    yPos = 34;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
     doc.text('EXECUTIVE COMMAND CENTER', 14, yPos);
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text(`Real-time portfolio health • ${timestamp}`, 14, yPos + 6);
+    doc.setTextColor(textLight.r, textLight.g, textLight.b);
+    doc.text(`Real-time portfolio health • ${timestamp}`, 14, yPos + 7);
 
-    // Live badge
-    doc.setFillColor(16, 185, 129);
-    doc.roundedRect(pageWidth - 50, yPos - 10, 36, 10, 2, 2, 'F');
-    doc.setFontSize(7);
-    doc.setTextColor(255, 255, 255);
-    doc.text('● LIVE DATA', pageWidth - 48, yPos - 4);
+    // Live badge - green
+    doc.setFillColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.roundedRect(pageWidth - 55, yPos - 8, 40, 12, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('● LIVE DATA', pageWidth - 52, yPos - 1);
 
-    yPos = 50;
+    yPos = 52;
 
     // === MAIN METRICS CARDS (4 columns) ===
     const cardWidth = (pageWidth - 70) / 4;
@@ -753,14 +760,18 @@ export function useExportData() {
     const evalRowWidth = pageWidth - 28;
     const evalCardWidth = evalRowWidth / 3;
     
-    doc.setFillColor(30, 41, 59);
+    // Dark card background
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
     doc.roundedRect(14, yPos, evalRowWidth, 40, 4, 4, 'F');
+    doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(14, yPos, evalRowWidth, 40, 4, 4, 'S');
 
-    // Low Eval
-    doc.setFillColor(37, 99, 235, 0.2);
+    // Low Eval - use green
+    doc.setFillColor(34, 197, 94);
     doc.circle(34, yPos + 20, 10, 'F');
     doc.setFontSize(14);
-    doc.setTextColor(accentBlue.r, accentBlue.g, accentBlue.b);
+    doc.setTextColor(0, 0, 0);
     doc.text('$', 31, yPos + 24);
     
     doc.setFontSize(8);
@@ -768,15 +779,15 @@ export function useExportData() {
     doc.text('LOW EVAL', 50, yPos + 16);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accentBlue.r, accentBlue.g, accentBlue.b);
+    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
     doc.text(formatCurrency(metrics.lowEval), 50, yPos + 28);
 
-    // Median Eval
+    // Median Eval - white
     const medX = 14 + evalCardWidth;
-    doc.setFillColor(16, 185, 129, 0.2);
+    doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
     doc.circle(medX + 20, yPos + 20, 10, 'F');
     doc.setFontSize(12);
-    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
     doc.text('◎', medX + 16, yPos + 23);
     
     doc.setFontSize(8);
@@ -784,15 +795,15 @@ export function useExportData() {
     doc.text('MEDIAN EVAL', medX + 36, yPos + 16);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accentGreen.r, accentGreen.g, accentGreen.b);
+    doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
     doc.text(formatCurrency(metrics.medianEval), medX + 36, yPos + 28);
 
-    // High Eval
+    // High Eval - red
     const highX = 14 + evalCardWidth * 2;
-    doc.setFillColor(245, 158, 11, 0.2);
+    doc.setFillColor(accentRed.r, accentRed.g, accentRed.b);
     doc.circle(highX + 20, yPos + 20, 10, 'F');
     doc.setFontSize(12);
-    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.setTextColor(0, 0, 0);
     doc.text('↗', highX + 16, yPos + 23);
     
     doc.setFontSize(8);
@@ -800,16 +811,23 @@ export function useExportData() {
     doc.text('HIGH EVAL', highX + 36, yPos + 16);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accentAmber.r, accentAmber.g, accentAmber.b);
+    doc.setTextColor(accentRed.r, accentRed.g, accentRed.b);
     doc.text(formatCurrency(metrics.highEval), highX + 36, yPos + 28);
 
-    // Footer
-    yPos = pageHeight - 12;
+    // Footer with dark bar and red accent line
+    const footerY = pageHeight - 8;
+    doc.setFillColor(cardBg.r, cardBg.g, cardBg.b);
+    doc.rect(0, footerY - 6, pageWidth, 14, 'F');
+    doc.setDrawColor(accentRed.r, accentRed.g, accentRed.b);
+    doc.setLineWidth(0.5);
+    doc.line(14, footerY - 6, pageWidth - 14, footerY - 6);
+    
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
-    doc.text('FLI Litigation Command Center • Executive Summary', 14, yPos);
-    doc.text(`Generated: ${timestamp}`, pageWidth - 70, yPos);
+    doc.text('Fred Loya Insurance • Litigation Command Center • Confidential', 14, footerY);
+    doc.setTextColor(textLight.r, textLight.g, textLight.b);
+    doc.text(`Generated: ${timestamp}`, pageWidth - 70, footerY);
 
     // Download
     const filename = `Executive_Command_Center_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
