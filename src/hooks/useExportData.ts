@@ -722,7 +722,7 @@ export function useExportData() {
       byAge: { age: string; claims: number; openReserves: number; lowEval: number; highEval: number }[];
       byQueue: { queue: string; openReserves: number; lowEval: number; highEval: number }[];
       byTypeGroup: { typeGroup: string; reserves: number }[];
-      highEvalAdjusters: { name: string; value: string }[];
+      highEvalAdjusters: { name: string; value: string; files?: number; reserves?: string }[];
       quarterlyData: { quarter: string; paid: number; approved: number; variance: number }[];
     }
   ) => {
@@ -876,32 +876,57 @@ export function useExportData() {
 
     y += 8;
 
-    // Top 10 High Eval Adjusters
+    // ADJUSTER ACCOUNTABILITY - Files & Money
     if (breakdowns.highEvalAdjusters.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...C.gold);
-      doc.text('TOP 10 HIGH EVALUATION ADJUSTERS', m.l, y);
+      doc.text('ADJUSTER ACCOUNTABILITY - FILES & MONEY ON HAND', m.l, y);
       y += 5;
 
+      // Full width table for adjuster data
+      const adjColW = [cw * 0.05, cw * 0.30, cw * 0.20, cw * 0.22, cw * 0.23];
+      
       doc.setFillColor(...C.header);
-      doc.rect(m.l, y, cw / 2, 6, 'F');
+      doc.rect(m.l, y, cw, 6, 'F');
       doc.setFontSize(7);
       doc.setTextColor(...C.muted);
-      doc.text('ADJUSTER', m.l + 3, y + 4);
-      doc.text('HIGH EVAL AMOUNT', m.l + cw / 4, y + 4);
+      doc.text('RANK', m.l + 3, y + 4);
+      doc.text('ADJUSTER NAME', m.l + adjColW[0] + 3, y + 4);
+      doc.text('OPEN FILES', m.l + adjColW[0] + adjColW[1] + 3, y + 4);
+      doc.text('TOTAL RESERVES', m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 4);
+      doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 4);
       y += 6;
 
       doc.setFont('helvetica', 'normal');
-      breakdowns.highEvalAdjusters.slice(0, 10).forEach((adj, idx) => {
+      breakdowns.highEvalAdjusters.slice(0, 15).forEach((adj, idx) => {
         if (idx % 2 === 0) {
           doc.setFillColor(...C.card);
-          doc.rect(m.l, y, cw / 2, 5, 'F');
+          doc.rect(m.l, y, cw, 5, 'F');
         }
+        
+        // Rank
+        doc.setTextColor(...C.muted);
+        doc.text(String(idx + 1), m.l + 3, y + 3.5);
+        
+        // Adjuster name
         doc.setTextColor(...C.offWhite);
-        doc.text(sanitize(adj.name).substring(0, 30), m.l + 3, y + 3.5);
+        doc.text(sanitize(adj.name).substring(0, 28), m.l + adjColW[0] + 3, y + 3.5);
+        
+        // Open files - parse from value if available or show placeholder
+        doc.setTextColor(...C.white);
+        const fileCount = adj.files ? String(adj.files) : '-';
+        doc.text(fileCount, m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
+        
+        // Total reserves
+        doc.setTextColor(...C.amber);
+        const reserves = adj.reserves ? adj.reserves : '-';
+        doc.text(reserves, m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3.5);
+        
+        // High eval exposure (the value field)
         doc.setTextColor(...C.green);
-        doc.text(adj.value, m.l + cw / 4, y + 3.5);
+        doc.text(adj.value, m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3.5);
+        
         y += 5;
       });
     }
