@@ -216,6 +216,42 @@ export type Database = {
           },
         ]
       }
+      state_bi_limits: {
+        Row: {
+          created_at: string
+          id: string
+          limit_2022: number | null
+          limit_2023: number | null
+          limit_2025: number | null
+          notes: string | null
+          state: string
+          trigger_80_pct: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          limit_2022?: number | null
+          limit_2023?: number | null
+          limit_2025?: number | null
+          notes?: string | null
+          state: string
+          trigger_80_pct?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          limit_2022?: number | null
+          limit_2023?: number | null
+          limit_2025?: number | null
+          notes?: string | null
+          state?: string
+          trigger_80_pct?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
