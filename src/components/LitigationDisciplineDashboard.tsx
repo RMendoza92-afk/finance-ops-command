@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { LitigationMatter } from "@/hooks/useLitigationData";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Download } from "lucide-react";
 
 interface Stats {
   totalMatters: number;
@@ -52,6 +56,8 @@ const outcomeData: OutcomeRow[] = [
 
 export function LitigationDisciplineDashboard({ data, stats }: LitigationDisciplineDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('posture-roi');
+  const { exportBoth } = useExportData();
+  const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
   // Use real stats from loaded data
   const totalExpense = stats.totalExpenses;
@@ -62,6 +68,10 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
     return `$${amount.toLocaleString()}`;
+  };
+
+  const formatCurrencyFull = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
   const tabs: { id: TabType; label: string }[] = [
@@ -86,8 +96,76 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
     return acc;
   }, {} as Record<string, { count: number; totalPaid: number; avgPain: number; painSum: number }>);
 
+  // Export handlers
+  const handleExportKPIs = useCallback(() => {
+    const exportData: ExportableData = {
+      title: '2025 Litigation Discipline Summary',
+      subtitle: 'Key Financial Metrics',
+      timestamp,
+      summary: {
+        'Total Matters': stats.totalMatters,
+        'Total Expenses': formatCurrencyFull(totalExpense),
+        'Total Indemnities': formatCurrencyFull(totalIndemnities),
+        'Net Amount': formatCurrencyFull(totalNet),
+      },
+      columns: ['Metric', 'Value'],
+      rows: [
+        ['Total Litigation Expense', formatCurrencyFull(totalExpense)],
+        ['Total Indemnities Paid', formatCurrencyFull(totalIndemnities)],
+        ['Feature Inception to Current Net', formatCurrencyFull(totalNet)],
+        ['Total Matters', stats.totalMatters],
+        ['CWP Count', stats.cwpCount],
+        ['CWN Count', stats.cwnCount],
+      ],
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Litigation Discipline Summary');
+  }, [exportBoth, timestamp, stats, totalExpense, totalIndemnities, totalNet]);
+
+  const handleExportPostureROI = useCallback(() => {
+    const exportData: ExportableData = {
+      title: 'Posture ROI Analysis',
+      subtitle: 'Did Posture Spend Change Outcomes?',
+      timestamp,
+      columns: ['Outcome Band', 'Expert Spend', 'Posture Spend', 'Observation'],
+      rows: outcomeData.map(row => [
+        row.outcomeBand,
+        formatCurrencyFull(row.expertSpend),
+        formatCurrencyFull(row.postureSpend),
+        row.observation,
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Posture ROI');
+  }, [exportBoth, timestamp]);
+
+  const handleExportPainVsPaid = useCallback(() => {
+    const entries = Object.entries(painVsPaidData);
+    const exportData: ExportableData = {
+      title: 'Pain vs Paid Analysis',
+      subtitle: 'Decision Gates Dashboard',
+      timestamp,
+      columns: ['Pain Bucket', 'Count', 'Avg Pain Level', 'Total Paid', 'Avg Paid per Claim'],
+      rows: entries.map(([bucket, s]) => [
+        bucket,
+        s.count,
+        s.avgPain.toFixed(1),
+        formatCurrencyFull(s.totalPaid),
+        formatCurrencyFull(s.count > 0 ? s.totalPaid / s.count : 0),
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Pain vs Paid Analysis');
+  }, [exportBoth, timestamp, painVsPaidData]);
+
   return (
     <div className="mb-8">
+      {/* Export Hint */}
+      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground mb-4">
+        <Download className="h-3.5 w-3.5" />
+        <span>Double-click any section to export PDF + Excel</span>
+      </div>
+
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-xl font-bold text-foreground">2025 Litigation Discipline Dashboard</h3>
@@ -97,16 +175,20 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="p-4 bg-card border-border">
+      <div 
+        className="grid grid-cols-3 gap-4 mb-6 cursor-pointer"
+        onDoubleClick={handleExportKPIs}
+        title="Double-click to export"
+      >
+        <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
           <div className="text-3xl font-bold text-red-500">{formatCurrency(totalExpense)}</div>
           <div className="text-sm text-muted-foreground">Total Litigation Expense (2025)</div>
         </Card>
-        <Card className="p-4 bg-card border-border">
+        <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
           <div className="text-3xl font-bold text-red-500">{formatCurrency(totalIndemnities)}</div>
           <div className="text-sm text-muted-foreground">Total Indemnities Paid</div>
         </Card>
-        <Card className="p-4 bg-card border-border">
+        <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
           <div className="text-3xl font-bold text-red-500">{formatCurrency(totalNet)}</div>
           <div className="text-sm text-muted-foreground">Feature Inception to Current Net</div>
         </Card>
@@ -131,7 +213,11 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
 
       {/* Tab Content */}
       {activeTab === 'posture-roi' && (
-        <Card className="p-6 bg-card border-border mb-6">
+        <Card 
+          className="p-6 bg-card border-border mb-6 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportPostureROI}
+          title="Double-click to export"
+        >
           <h4 className="font-semibold text-foreground mb-4">Did Posture Spend Change Outcomes?</h4>
           
           <table className="w-full text-sm">
@@ -163,7 +249,11 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
       )}
 
       {activeTab === 'decision-gates' && (
-        <Card className="p-6 bg-card border-border mb-6">
+        <Card 
+          className="p-6 bg-card border-border mb-6 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportPainVsPaid}
+          title="Double-click to export"
+        >
           <h4 className="font-semibold text-foreground mb-4">Pain vs Paid Analysis</h4>
           
           <table className="w-full text-sm">
@@ -177,7 +267,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
               </tr>
             </thead>
             <tbody>
-              {Object.entries(painVsPaidData).map(([bucket, stats], idx) => (
+              {Object.entries(painVsPaidData).map(([bucket, s], idx) => (
                 <tr key={idx} className="border-t border-border/50">
                   <td className={`py-3 pr-4 font-medium ${
                     bucket.includes('High') ? 'text-red-500' :
@@ -185,11 +275,11 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
                   }`}>
                     {bucket}
                   </td>
-                  <td className="py-3 pr-4 text-foreground">{stats.count}</td>
-                  <td className="py-3 pr-4 text-foreground">{stats.avgPain.toFixed(1)}</td>
-                  <td className="py-3 pr-4 text-foreground">{formatCurrency(stats.totalPaid)}</td>
+                  <td className="py-3 pr-4 text-foreground">{s.count}</td>
+                  <td className="py-3 pr-4 text-foreground">{s.avgPain.toFixed(1)}</td>
+                  <td className="py-3 pr-4 text-foreground">{formatCurrency(s.totalPaid)}</td>
                   <td className="py-3 text-foreground">
-                    {formatCurrency(stats.count > 0 ? stats.totalPaid / stats.count : 0)}
+                    {formatCurrency(s.count > 0 ? s.totalPaid / s.count : 0)}
                   </td>
                 </tr>
               ))}
