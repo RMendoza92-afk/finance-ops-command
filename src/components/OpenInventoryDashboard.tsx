@@ -2297,19 +2297,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <div className="w-2.5 h-2.5 bg-success rounded-full animate-pulse"></div>
               <span className="text-sm font-semibold text-success">LIVE</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setExecutiveExpanded(!executiveExpanded)}
-              className="text-muted-foreground hover:text-foreground print:hidden"
-            >
-              {executiveExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              <span className="ml-2">{executiveExpanded ? 'Collapse' : 'Expand'}</span>
-            </Button>
           </div>
         </div>
 
-        {executiveExpanded && (
         <div className="p-5 space-y-6">
 
         {/* Primary KPI Row - 4 Cards */}
@@ -2432,7 +2422,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
         </div>
         </div>
-        )}
       </div>
 
       {/* Summary Banner with Financials - Cleaner Layout */}
