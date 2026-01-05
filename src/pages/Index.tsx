@@ -216,7 +216,7 @@ const Index = () => {
 
         {/* Tab Content */}
         {filters.inventoryStatus === 'open' ? (
-          <OpenInventoryDashboard />
+          <OpenInventoryDashboard filters={filters} />
         ) : activeTab === 'executive' ? (
           <ExecutiveDashboard data={filteredData} onDrilldown={handleDrilldown} />
         ) : (

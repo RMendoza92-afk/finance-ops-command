@@ -54,6 +54,7 @@ export function GlobalFilterPanel({
   filterOptions 
 }: GlobalFilterPanelProps) {
   const hasFilters = activeFilterCount > 0 || filters.searchText.length > 0;
+  const isOpenInventory = filters.inventoryStatus === 'open';
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 mb-6">
@@ -89,6 +90,11 @@ export function GlobalFilterPanel({
           {activeFilterCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
               {activeFilterCount} active
+            </span>
+          )}
+          {isOpenInventory && (
+            <span className="text-xs text-muted-foreground italic">
+              (Pain/Stage filters apply to Closed Inventory only)
             </span>
           )}
         </div>
@@ -163,8 +169,12 @@ export function GlobalFilterPanel({
         </Select>
 
         {/* Litigation Stage */}
-        <Select value={filters.litigationStage} onValueChange={(v) => onFilterChange('litigationStage', v)}>
-          <SelectTrigger className="bg-muted border-border text-sm">
+        <Select 
+          value={filters.litigationStage} 
+          onValueChange={(v) => onFilterChange('litigationStage', v)}
+          disabled={isOpenInventory}
+        >
+          <SelectTrigger className={`bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Stage" />
           </SelectTrigger>
           <SelectContent>
@@ -177,8 +187,12 @@ export function GlobalFilterPanel({
         </Select>
 
         {/* Pain Band */}
-        <Select value={filters.painBand} onValueChange={(v) => onFilterChange('painBand', v)}>
-          <SelectTrigger className="bg-muted border-border text-sm">
+        <Select 
+          value={filters.painBand} 
+          onValueChange={(v) => onFilterChange('painBand', v)}
+          disabled={isOpenInventory}
+        >
+          <SelectTrigger className={`bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Pain Band" />
           </SelectTrigger>
           <SelectContent>
@@ -193,8 +207,12 @@ export function GlobalFilterPanel({
 
       {/* Expert Type & Executive Review row */}
       <div className="mt-3 flex gap-3">
-        <Select value={filters.expertType} onValueChange={(v) => onFilterChange('expertType', v)}>
-          <SelectTrigger className="w-48 bg-muted border-border text-sm">
+        <Select 
+          value={filters.expertType} 
+          onValueChange={(v) => onFilterChange('expertType', v)}
+          disabled={isOpenInventory}
+        >
+          <SelectTrigger className={`w-48 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Expert Type" />
           </SelectTrigger>
           <SelectContent>
@@ -208,8 +226,12 @@ export function GlobalFilterPanel({
           </SelectContent>
         </Select>
 
-        <Select value={filters.executiveReview} onValueChange={(v) => onFilterChange('executiveReview', v)}>
-          <SelectTrigger className="w-56 bg-muted border-border text-sm">
+        <Select 
+          value={filters.executiveReview} 
+          onValueChange={(v) => onFilterChange('executiveReview', v)}
+          disabled={isOpenInventory}
+        >
+          <SelectTrigger className={`w-56 bg-muted border-border text-sm ${isOpenInventory ? 'opacity-50' : ''}`}>
             <SelectValue placeholder="Executive Review" />
           </SelectTrigger>
           <SelectContent>
