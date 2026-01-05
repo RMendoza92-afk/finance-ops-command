@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 
+// Interface matching existing LitigationMatter for backward compatibility
 export interface LitigationMatter {
   id: string;
   class: string;
@@ -62,7 +64,6 @@ interface CSVRow {
 
 function parseNumber(value: string): number {
   if (!value) return 0;
-  // Remove commas and parse
   const cleaned = value.replace(/,/g, '').replace(/[()]/g, '');
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
@@ -100,6 +101,43 @@ function transformRow(row: CSVRow, index: number): LitigationMatter {
   };
 }
 
+// Transform database row to LitigationMatter
+function transformDBRow(row: any): LitigationMatter {
+  // Parse pain level - could be "5", "0-3", etc.
+  const painLevel = row.pain_levels?.pain_level || '0';
+  const painNum = parseFloat(painLevel.split('-')[0]) || 0;
+  
+  return {
+    id: row.id,
+    class: row.class || '',
+    prefix: '',
+    claim: row.matter_id || '',
+    claimant: row.claimant || '',
+    coverage: '',
+    uniqueRecord: row.matter_id || '',
+    expCategory: row.type || '',
+    dept: row.department || '',
+    team: row.team || '',
+    adjusterUsername: '',
+    adjusterName: row.matter_lead || '',
+    creditedTeam: row.team || '',
+    creditedAdj: row.matter_lead || '',
+    paymentDate: '',
+    indemnitiesAmount: Number(row.indemnities_amount) || 0,
+    indemnitiesCheckCount: 0,
+    expensesCheckCount: 0,
+    totalAmount: Number(row.total_amount) || 0,
+    netAmount: Number(row.total_amount) || 0,
+    cwpCwn: row.status === 'Closed' ? 'CWP' : 'CWN',
+    startPainLvl: painNum,
+    endPainLvl: painNum,
+    transferDate: '',
+    previousDept: undefined,
+    previousTeam: undefined,
+    previousAdjuster: undefined,
+  };
+}
+
 export function useLitigationData() {
   const [data, setData] = useState<LitigationMatter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,71 +150,109 @@ export function useLitigationData() {
     cwpCount: 0,
     cwnCount: 0,
   });
+  const [dataSource, setDataSource] = useState<'database' | 'csv'>('database');
 
-  useEffect(() => {
-    async function loadData() {
+  const calculateStats = (allData: LitigationMatter[]) => {
+    const totalIndemnities = allData.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
+    const totalExpenses = allData.reduce((sum, d) => sum + d.totalAmount, 0);
+    const totalNet = allData.reduce((sum, d) => sum + d.netAmount, 0);
+    const cwpCount = allData.filter(d => d.cwpCwn === 'CWP').length;
+    const cwnCount = allData.filter(d => d.cwpCwn === 'CWN').length;
+    
+    return {
+      totalMatters: allData.length,
+      totalIndemnities,
+      totalExpenses,
+      totalNet,
+      cwpCount,
+      cwnCount,
+    };
+  };
+
+  const loadFromDatabase = async (): Promise<LitigationMatter[]> => {
+    console.log('Fetching litigation data from database...');
+    
+    const { data: matters, error: fetchError } = await supabase
+      .from('litigation_matters')
+      .select(`
+        *,
+        pain_levels (pain_level)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (fetchError) throw fetchError;
+    
+    return (matters || []).map(transformDBRow);
+  };
+
+  const loadFromCSV = async (): Promise<LitigationMatter[]> => {
+    console.log('Fetching CSV data as fallback...');
+    const response = await fetch('/data/litigation-data.csv');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
+    const csvText = await response.text();
+    
+    return new Promise((resolve, reject) => {
+      Papa.parse<CSVRow>(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const allData = results.data.map((row, idx) => transformRow(row, idx));
+          resolve(allData);
+        },
+        error: (err) => reject(err)
+      });
+    });
+  };
+
+  const refetch = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Try database first
+      const dbData = await loadFromDatabase();
+      
+      if (dbData.length > 0) {
+        console.log('Loaded', dbData.length, 'matters from database');
+        setData(dbData);
+        setStats(calculateStats(dbData));
+        setDataSource('database');
+      } else {
+        // Fall back to CSV if database is empty
+        console.log('Database empty, falling back to CSV');
+        const csvData = await loadFromCSV();
+        console.log('Loaded', csvData.length, 'matters from CSV');
+        setData(csvData);
+        setStats(calculateStats(csvData));
+        setDataSource('csv');
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Database error, trying CSV fallback:', err);
+      
+      // Try CSV as fallback
       try {
-        console.log('Fetching CSV data...');
-        const response = await fetch('/data/litigation-data.csv');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        const csvText = await response.text();
-        console.log('CSV loaded, size:', csvText.length, 'bytes');
-        
-        Papa.parse<CSVRow>(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            console.log('Parsed rows:', results.data.length);
-            
-            // Include all records (both CWP and CWN)
-            const allData = results.data.map((row, idx) => transformRow(row, idx));
-            
-            setData(allData);
-            
-            // Calculate stats
-            const totalIndemnities = allData.reduce((sum, d) => sum + d.indemnitiesAmount, 0);
-            const totalExpenses = allData.reduce((sum, d) => sum + d.totalAmount, 0);
-            const totalNet = allData.reduce((sum, d) => sum + d.netAmount, 0);
-            const cwpCount = allData.filter(d => d.cwpCwn === 'CWP').length;
-            const cwnCount = allData.filter(d => d.cwpCwn === 'CWN').length;
-            
-            console.log('Stats:', { 
-              total: allData.length, 
-              cwp: cwpCount, 
-              cwn: cwnCount,
-              indemnities: totalIndemnities,
-              expenses: totalExpenses,
-              net: totalNet
-            });
-            
-            setStats({
-              totalMatters: allData.length,
-              totalIndemnities,
-              totalExpenses,
-              totalNet,
-              cwpCount,
-              cwnCount,
-            });
-            
-            setLoading(false);
-          },
-          error: (err) => {
-            setError(err.message);
-            setLoading(false);
-          }
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        const csvData = await loadFromCSV();
+        console.log('Loaded', csvData.length, 'matters from CSV (fallback)');
+        setData(csvData);
+        setStats(calculateStats(csvData));
+        setDataSource('csv');
+        setLoading(false);
+      } catch (csvErr) {
+        setError(csvErr instanceof Error ? csvErr.message : 'Failed to load data');
         setLoading(false);
       }
     }
+  };
 
-    loadData();
+  useEffect(() => {
+    refetch();
   }, []);
 
-  return { data, loading, error, stats };
+  return { data, loading, error, stats, refetch, dataSource };
 }
 
 // Get unique values for filters
