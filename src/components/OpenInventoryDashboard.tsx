@@ -2547,12 +2547,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
 
       {/* Reserve Adequacy by Queue */}
       <div 
-        className="bg-card border border-border rounded-xl p-6 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-border rounded-xl p-4 sm:p-6 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportByQueue}
         title="Double-click to export"
       >
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-5">Reserve Adequacy by Queue</h3>
-        <div className="grid grid-cols-4 gap-5">
+        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4 sm:mb-5">Reserve Adequacy by Queue</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
           {metrics.financials.byQueue.map((queue) => {
             const qMedian = (queue.lowEval + queue.highEval) / 2;
             const qVariance = queue.openReserves - qMedian;
@@ -2560,23 +2560,23 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             const qIsOver = qVariance > 0;
             
             return (
-              <div key={queue.queue} className={`rounded-xl p-5 border ${qIsOver ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-bold text-foreground">{queue.queue}</span>
-                  <span className={`text-sm font-bold px-2 py-1 rounded ${qIsOver ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'}`}>
+              <div key={queue.queue} className={`rounded-xl p-3 sm:p-5 border ${qIsOver ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+                  <span className="font-bold text-foreground text-xs sm:text-base truncate">{queue.queue}</span>
+                  <span className={`text-xs sm:text-sm font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap ${qIsOver ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10'}`}>
                     {qIsOver ? '+' : ''}{qVariancePct}%
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                  <div className="flex justify-between gap-1">
                     <span className="text-muted-foreground">Reserves</span>
                     <span className="font-medium">{formatCurrency(queue.openReserves)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-1">
                     <span className="text-muted-foreground">Median Eval</span>
                     <span className="font-medium">{formatCurrency(qMedian)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-border pt-2 mt-2">
+                  <div className="flex justify-between border-t border-border pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 gap-1">
                     <span className="text-muted-foreground">{qIsOver ? 'Over' : 'Under'}</span>
                     <span className={`font-bold ${qIsOver ? 'text-success' : 'text-destructive'}`}>
                       {qIsOver ? '+' : '-'}{formatCurrency(Math.abs(qVariance))}
