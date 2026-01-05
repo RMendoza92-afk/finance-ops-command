@@ -41,6 +41,19 @@ import {
   Legend,
 } from "recharts";
 import { format, addDays } from "date-fns";
+import { 
+  generateExecutiveReport, 
+  auditReportQuality, 
+  getReportContext,
+  ExecutiveReportConfig,
+  ExecutiveMetric,
+  ExecutiveInsight,
+  ExecutiveTable,
+  EXECUTIVE_COLORS,
+  formatCurrency as formatExecCurrency,
+  formatPercent,
+  getDeltaDirection
+} from "@/lib/executivePDFFramework";
 
 type ClaimReview = Tables<"claim_reviews">;
 
@@ -181,137 +194,107 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     }
   }, [showDecisionsDrawer, fetchPendingDecisions]);
 
-  // Generate PDF for pending decisions
+  // Generate Board-Ready Executive PDF for Pending Decisions
   const generateDecisionsPDF = useCallback(async () => {
     setGeneratingDecisionsPDF(true);
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
+      const stats = {
+        total: pendingDecisions.length,
+        critical: pendingDecisions.filter(d => d.severity === 'critical').length,
+        thisWeek: pendingDecisions.filter(d => {
+          const deadline = new Date(d.deadline);
+          const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          return deadline <= weekFromNow;
+        }).length,
+        statuteDeadlines: pendingDecisions.filter(d => d.daysOpen > 350).length,
+        totalExposure: pendingDecisions.reduce((sum, d) => sum + d.amount, 0)
+      };
       
-      // Header
-      doc.setFillColor(220, 38, 38); // Red for urgent
-      doc.rect(0, 0, pageWidth, 25, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PENDING EXECUTIVE DECISIONS', 14, 16);
+      const ctx = getReportContext();
       
-      // Timestamp
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - 14, 16, { align: 'right' });
+      // Build executive report configuration with quality gates
+      const reportConfig: ExecutiveReportConfig = {
+        title: 'Pending Executive Decisions',
+        subtitle: `${stats.critical} Critical Items Require Immediate Action`,
+        reportType: 'DECISION',
+        classification: 'RESTRICTED',
+        
+        executiveSummary: {
+          keyTakeaway: `${stats.total} matters require executive decision totaling ${formatExecCurrency(stats.totalExposure, true)} exposure. ${stats.critical} are CRITICAL priority. ${stats.thisWeek} due within 7 days. ${stats.statuteDeadlines} approaching statute deadlines (350+ days open).`,
+          
+          metrics: [
+            {
+              label: 'Total Decisions Required',
+              value: stats.total,
+              context: 'Pending Executive Action'
+            },
+            {
+              label: 'Critical Priority',
+              value: stats.critical,
+              context: stats.critical > 0 ? 'IMMEDIATE ACTION' : 'None pending',
+              deltaDirection: stats.critical > 0 ? 'negative' : 'neutral'
+            },
+            {
+              label: 'Due This Week',
+              value: stats.thisWeek,
+              context: 'Next 7 days',
+              deltaDirection: stats.thisWeek > 3 ? 'negative' : 'neutral'
+            },
+            {
+              label: 'Total Exposure',
+              value: formatExecCurrency(stats.totalExposure, true),
+              context: 'Combined reserves at risk'
+            }
+          ],
+          
+          insights: pendingDecisions.slice(0, 4).map(d => ({
+            priority: d.severity === 'critical' ? 'critical' as const : 
+                     d.severity === 'high' ? 'high' as const : 'medium' as const,
+            headline: `${d.matterId}: ${d.claimant} - ${formatExecCurrency(d.amount, true)}`,
+            action: d.recommendedAction
+          })),
+          
+          bottomLine: stats.critical > 0 
+            ? `${stats.critical} critical decisions require immediate C-suite attention. Combined exposure of ${formatExecCurrency(stats.totalExposure, true)} at risk. ${stats.statuteDeadlines} matters approaching statute limits require priority resolution.`
+            : `All ${stats.total} pending decisions are within normal priority range. Total exposure: ${formatExecCurrency(stats.totalExposure, true)}. No immediate escalation required.`
+        },
+        
+        tables: [
+          {
+            title: 'Pending Decision Queue by Priority',
+            headers: ['Matter ID', 'Claimant', 'Lead', 'Days Open', 'Exposure', 'Priority'],
+            rows: pendingDecisions.slice(0, 15).map(d => ({
+              cells: [
+                d.matterId,
+                d.claimant.substring(0, 20) + (d.claimant.length > 20 ? '...' : ''),
+                d.lead,
+                d.daysOpen,
+                formatExecCurrency(d.amount, true),
+                d.severity.toUpperCase()
+              ],
+              highlight: d.severity === 'critical' ? 'risk' as const : 
+                        d.severity === 'high' ? 'warning' as const : undefined
+            })),
+            footnote: pendingDecisions.length > 15 ? `Showing 15 of ${pendingDecisions.length} pending decisions` : undefined
+          }
+        ]
+      };
       
-      // Summary stats
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      let y = 35;
+      // === QUALITY GATE CHECK ===
+      const qualityScore = auditReportQuality(reportConfig);
       
-      const stats = pendingDecisionsStats;
-      doc.setFont('helvetica', 'bold');
-      doc.text('SUMMARY', 14, y);
-      y += 8;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(`Total Matters Requiring Decision: ${stats.total}`, 14, y);
-      y += 6;
-      doc.text(`Critical Priority: ${stats.critical}`, 14, y);
-      y += 6;
-      doc.text(`Due This Week: ${stats.thisWeek}`, 14, y);
-      y += 6;
-      doc.text(`Statute Risk (350+ days): ${stats.statuteDeadlines}`, 14, y);
-      y += 6;
-      doc.text(`Total Exposure: ${formatCurrencyFullValue(stats.totalExposure)}`, 14, y);
-      y += 12;
-      
-      // Line separator
-      doc.setDrawColor(200, 200, 200);
-      doc.line(14, y, pageWidth - 14, y);
-      y += 8;
-      
-      // Each decision
-      pendingDecisions.forEach((decision, index) => {
-        // Check if we need a new page
-        if (y > 250) {
-          doc.addPage();
-          y = 20;
-        }
-        
-        // Severity indicator
-        if (decision.severity === 'critical') {
-          doc.setFillColor(220, 38, 38);
-        } else if (decision.severity === 'high') {
-          doc.setFillColor(245, 158, 11);
-        } else {
-          doc.setFillColor(107, 114, 128);
-        }
-        doc.circle(18, y + 2, 3, 'F');
-        
-        // Matter ID and Severity
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`${index + 1}. ${decision.matterId}`, 24, y + 3);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`[${decision.severity.toUpperCase()}]`, 80, y + 3);
-        
-        // Amount
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text(formatCurrencyFullValue(decision.amount), pageWidth - 14, y + 3, { align: 'right' });
-        
-        y += 8;
-        
-        // Claimant
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`Claimant: ${decision.claimant}`, 24, y);
-        y += 5;
-        
-        // Lead and Days Open
-        doc.setFontSize(9);
-        doc.text(`Lead: ${decision.lead} | Days Open: ${decision.daysOpen} | Deadline: ${format(new Date(decision.deadline), 'MMM d, yyyy')}`, 24, y);
-        y += 5;
-        
-        // Department/Type/Location
-        if (decision.department || decision.type || decision.location) {
-          doc.text(`Dept: ${decision.department || 'N/A'} | Type: ${decision.type || 'N/A'} | Location: ${decision.location || 'N/A'}`, 24, y);
-          y += 5;
-        }
-        
-        // Reason
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Reason: ${decision.reason}`, 24, y);
-        y += 5;
-        
-        // Recommended Action (highlighted)
-        doc.setFillColor(240, 249, 255);
-        doc.rect(24, y - 3, pageWidth - 38, 10, 'F');
-        doc.setTextColor(30, 64, 175);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Action: ${decision.recommendedAction}`, 26, y + 3);
-        
-        y += 15;
-        
-        // Separator line
-        doc.setDrawColor(230, 230, 230);
-        doc.line(24, y - 3, pageWidth - 14, y - 3);
-      });
-      
-      // Footer on last page
-      const pageCount = doc.internal.pages.length - 1;
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Page ${i} of ${pageCount} | Confidential - Executive Review Only`, pageWidth / 2, 290, { align: 'center' });
+      if (!qualityScore.passed) {
+        console.warn('Quality Gate Warning:', qualityScore.issues);
       }
       
-      doc.save(`pending-decisions-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast.success('PDF generated successfully');
+      // Generate the report
+      const result = await generateExecutiveReport(reportConfig);
+      
+      if (result.success) {
+        toast.success(`Board-ready Decisions report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
+      } else {
+        throw new Error('Report generation failed');
+      }
     } catch (err) {
       console.error('Error generating PDF:', err);
       toast.error('Failed to generate PDF');
@@ -428,198 +411,138 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   }, []);
 
 
-  // Generate PDF for Budget Burn Rate
+  // Generate Board-Ready Executive PDF for Budget Burn Rate
   const generateBudgetPDF = useCallback(async () => {
     setGeneratingBudgetPDF(true);
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
+      const ctx = getReportContext();
+      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2024;
+      const yoyChangePercent = (yoyChange / budgetMetrics.total2024) * 100;
       
-      // Header
-      doc.setFillColor(12, 35, 64); // Navy
-      doc.rect(0, 0, pageWidth, 25, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('BUDGET BURN RATE ANALYSIS', 14, 16);
-      
-      // Timestamp
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - 14, 16, { align: 'right' });
-      
-      // Summary stats
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(14);
-      let y = 35;
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('EXECUTIVE SUMMARY', 14, y);
-      y += 10;
-      
-      // Key metrics box
-      doc.setFillColor(240, 245, 250);
-      doc.roundedRect(14, y, pageWidth - 28, 45, 3, 3, 'F');
-      y += 10;
-      
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Annual Budget: ${formatCurrencyFullValue(budgetMetrics.annualBudget)}`, 20, y);
-      doc.text(`YTD Payments: ${formatCurrencyFullValue(budgetMetrics.ytdPaid)}`, pageWidth / 2, y);
-      y += 8;
-      doc.text(`Burn Rate: ${budgetMetrics.burnRate}%`, 20, y);
-      doc.text(`Remaining: ${formatCurrencyFullValue(budgetMetrics.remaining)}`, pageWidth / 2, y);
-      y += 8;
-      doc.text(`Months Remaining: ${budgetMetrics.monthsRemaining}`, 20, y);
-      doc.text(`Status: ${budgetMetrics.onTrack ? 'ON TRACK' : 'OVER BUDGET'}`, pageWidth / 2, y);
-      y += 20;
-      
-      // Monthly breakdown table header
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('MONTHLY BREAKDOWN', 14, y);
-      y += 8;
-      
-      // Table header
-      doc.setFillColor(12, 35, 64);
-      doc.rect(14, y, pageWidth - 28, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.text('Month', 18, y + 6);
-      doc.text('Budget', 50, y + 6);
-      doc.text('Actual', 90, y + 6);
-      doc.text('Variance', 130, y + 6);
-      doc.text('Status', 170, y + 6);
-      y += 10;
-      
-      // Table rows
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      budgetMetrics.monthlyData.forEach((month, idx) => {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
+      // Build executive report configuration with quality gates
+      const reportConfig: ExecutiveReportConfig = {
+        title: 'Budget Burn Rate Analysis',
+        subtitle: `FY${ctx.fiscalYear} Claims Payment Tracking`,
+        reportType: 'FORECAST',
+        classification: 'CONFIDENTIAL',
         
-        // Alternating row colors
-        if (idx % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-        }
+        executiveSummary: {
+          keyTakeaway: `YTD claims spend of ${formatExecCurrency(budgetMetrics.ytdPaid, true)} represents ${budgetMetrics.burnRate}% of annual budget. ${budgetMetrics.onTrack ? 'ON TRACK' : 'OVER BUDGET'} with ${formatExecCurrency(budgetMetrics.remaining, true)} remaining. BI exposure up ${formatExecCurrency(budgetMetrics.coverageBreakdown.bi.change, true)} YoY driving majority of variance.`,
+          
+          metrics: [
+            {
+              label: 'Annual Budget',
+              value: formatExecCurrency(budgetMetrics.annualBudget, true),
+              context: `FY${ctx.fiscalYear} Approved`
+            },
+            {
+              label: 'YTD Payments',
+              value: formatExecCurrency(budgetMetrics.ytdPaid, true),
+              delta: yoyChangePercent,
+              deltaLabel: 'YoY',
+              deltaDirection: yoyChangePercent > 5 ? 'negative' : yoyChangePercent < -5 ? 'positive' : 'neutral'
+            },
+            {
+              label: 'Burn Rate',
+              value: `${budgetMetrics.burnRate}%`,
+              context: `${budgetMetrics.monthsRemaining} months remaining`,
+              deltaDirection: budgetMetrics.burnRate > 91 ? 'negative' : 'neutral'
+            },
+            {
+              label: 'Budget Status',
+              value: budgetMetrics.onTrack ? 'ON TRACK' : 'OVER',
+              context: formatExecCurrency(budgetMetrics.remaining, true) + ' remaining',
+              deltaDirection: budgetMetrics.onTrack ? 'positive' : 'negative'
+            }
+          ],
+          
+          insights: [
+            {
+              priority: budgetMetrics.coverageBreakdown.bi.change > 30000000 ? 'critical' : 'high',
+              headline: `BI claims up ${formatExecCurrency(budgetMetrics.coverageBreakdown.bi.change, true)} YoY (+${((budgetMetrics.coverageBreakdown.bi.change / budgetMetrics.coverageBreakdown.bi.ytd2024) * 100).toFixed(0)}%)`,
+              action: 'Review BI severity trends and litigation exposure'
+            },
+            {
+              priority: 'medium',
+              headline: `Collision claims down ${formatExecCurrency(Math.abs(budgetMetrics.coverageBreakdown.cl.change), true)} YoY`,
+              action: 'Maintain current claims handling efficiency'
+            },
+            {
+              priority: 'info',
+              headline: `Projected year-end: ${formatExecCurrency(budgetMetrics.projectedBurn, true)}`,
+              action: budgetMetrics.projectedVariance >= 0 
+                ? `${formatExecCurrency(budgetMetrics.projectedVariance, true)} under budget expected`
+                : `${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} over budget - escalate`
+            },
+            {
+              priority: 'info',
+              headline: `Average cost per claim: $${Math.round(budgetMetrics.ytdPaid / 47149).toLocaleString()}`,
+              action: 'Monitor severity trends for leading indicators'
+            }
+          ],
+          
+          bottomLine: budgetMetrics.onTrack 
+            ? `Claims payments are tracking within budget parameters. Projected year-end spend of ${formatExecCurrency(budgetMetrics.projectedBurn, true)} leaves ${formatExecCurrency(budgetMetrics.projectedVariance, true)} buffer. BI exposure requires continued monitoring given ${((budgetMetrics.coverageBreakdown.bi.change / budgetMetrics.coverageBreakdown.bi.ytd2024) * 100).toFixed(0)}% YoY increase.`
+            : `ALERT: Claims payments exceeding budget trajectory. Projected overage of ${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} requires immediate CFO review. BI claims driving ${((budgetMetrics.coverageBreakdown.bi.change / yoyChange) * 100).toFixed(0)}% of variance.`
+        },
         
-        doc.text(month.month, 18, y);
-        doc.text(formatCurrencyFullValue(month.budget), 50, y);
-        doc.text(month.actual > 0 ? formatCurrencyFullValue(month.actual) : '-', 90, y);
-        
-        if (month.actual > 0) {
-          doc.setTextColor(month.variance >= 0 ? 34 : 220, month.variance >= 0 ? 139 : 38, month.variance >= 0 ? 34 : 38);
-          doc.text(formatCurrencyFullValue(Math.abs(month.variance)), 130, y);
-          doc.text(month.variance >= 0 ? 'Under' : 'Over', 170, y);
-          doc.setTextColor(0, 0, 0);
-        } else {
-          doc.text('-', 130, y);
-          doc.text('Pending', 170, y);
-        }
-        
-        y += 8;
-      });
+        tables: [
+          {
+            title: 'Coverage Breakdown - YoY Comparison',
+            headers: ['Coverage', '2024 YTD', '2025 YTD', 'Change', 'Claims', 'Avg/Claim'],
+            rows: [
+              ...Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
+                cells: [
+                  cov.name,
+                  formatExecCurrency(cov.ytd2024, true),
+                  formatExecCurrency(cov.ytd2025, true),
+                  `${cov.change >= 0 ? '+' : ''}${formatExecCurrency(cov.change, true)}`,
+                  cov.claimCount2025.toLocaleString(),
+                  `$${cov.avgPerClaim2025.toLocaleString()}`
+                ],
+                highlight: cov.change > 20000000 ? 'risk' as const : 
+                          cov.change < -5000000 ? 'success' as const : undefined
+              })),
+              {
+                cells: ['TOTAL', formatExecCurrency(budgetMetrics.total2024, true), formatExecCurrency(budgetMetrics.ytdPaid, true), 
+                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '47,149', '$8,796'],
+                highlight: 'total' as const
+              }
+            ],
+            footnote: 'Source: Loya Insurance Group - Comparison of Claim Payments YTD Dec 2024 vs YTD Nov 2025'
+          },
+          {
+            title: 'Monthly Budget Tracking',
+            headers: ['Month', 'Budget', 'Actual', 'Variance', 'Status'],
+            rows: budgetMetrics.monthlyData.slice(0, 11).map(month => ({
+              cells: [
+                month.month,
+                formatExecCurrency(month.budget, true),
+                month.actual > 0 ? formatExecCurrency(month.actual, true) : '-',
+                month.actual > 0 ? formatExecCurrency(Math.abs(month.variance), true) : '-',
+                month.actual > 0 ? (month.variance >= 0 ? 'Under' : 'Over') : 'Pending'
+              ],
+              highlight: month.actual > 0 && month.variance < 0 ? 'warning' as const : undefined
+            }))
+          }
+        ]
+      };
       
-      y += 10;
+      // === QUALITY GATE CHECK ===
+      const qualityScore = auditReportQuality(reportConfig);
       
-      // Coverage Breakdown Section
-      if (y > 200) {
-        doc.addPage();
-        y = 20;
+      if (!qualityScore.passed) {
+        console.warn('Quality Gate Warning:', qualityScore.issues);
       }
       
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('COVERAGE BREAKDOWN - YoY COMPARISON', 14, y);
-      y += 8;
+      // Generate the report
+      const result = await generateExecutiveReport(reportConfig);
       
-      // Coverage table header
-      doc.setFillColor(12, 35, 64);
-      doc.rect(14, y, pageWidth - 28, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.text('Coverage', 18, y + 6);
-      doc.text('2024 YTD', 55, y + 6);
-      doc.text('2025 YTD', 90, y + 6);
-      doc.text('Change', 125, y + 6);
-      doc.text('Claims', 155, y + 6);
-      doc.text('Avg/Claim', 180, y + 6);
-      y += 10;
-      
-      // Coverage rows
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      const coverages = Object.values(budgetMetrics.coverageBreakdown);
-      coverages.forEach((cov, idx) => {
-        if (idx % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-        }
-        
-        doc.text(cov.name, 18, y);
-        doc.text(formatCurrencyFullValue(cov.ytd2024), 55, y);
-        doc.text(formatCurrencyFullValue(cov.ytd2025), 90, y);
-        
-        doc.setTextColor(cov.change >= 0 ? 220 : 34, cov.change >= 0 ? 38 : 139, cov.change >= 0 ? 38 : 34);
-        doc.text(`${cov.change >= 0 ? '+' : '-'}${formatCurrencyFullValue(Math.abs(cov.change))}`, 125, y);
-        doc.setTextColor(0, 0, 0);
-        
-        doc.text(cov.claimCount2025.toLocaleString(), 155, y);
-        doc.text(`$${cov.avgPerClaim2025.toLocaleString()}`, 180, y);
-        y += 8;
-      });
-      
-      // Total row
-      doc.setFillColor(220, 220, 220);
-      doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL', 18, y);
-      doc.text(formatCurrencyFullValue(budgetMetrics.total2024), 55, y);
-      doc.text(formatCurrencyFullValue(budgetMetrics.ytdPaid), 90, y);
-      const totalChange = budgetMetrics.ytdPaid - budgetMetrics.total2024;
-      doc.setTextColor(totalChange >= 0 ? 220 : 34, totalChange >= 0 ? 38 : 139, totalChange >= 0 ? 38 : 34);
-      doc.text(`${totalChange >= 0 ? '+' : '-'}${formatCurrencyFullValue(Math.abs(totalChange))}`, 125, y);
-      doc.setTextColor(0, 0, 0);
-      doc.text('47,149', 155, y);
-      doc.text('$8,796', 180, y);
-      y += 15;
-      
-      // Source note
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Source: Loya Insurance Group - Comparison of Claim Payments YTD Dec 2024 vs YTD Nov 2025', 14, y);
-      y += 12;
-      
-      // Projections
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('YEAR-END PROJECTION', 14, y);
-      y += 8;
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(`Projected Annual Spend: ${formatCurrencyFullValue(budgetMetrics.projectedBurn)}`, 14, y);
-      y += 6;
-      doc.text(`Projected Variance: ${formatCurrencyFullValue(Math.abs(budgetMetrics.projectedVariance))} ${budgetMetrics.projectedVariance >= 0 ? 'under budget' : 'over budget'}`, 14, y);
-      
-      // Footer
-      const pageCount = doc.internal.pages.length - 1;
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Page ${i} of ${pageCount} | Confidential - Financial Report`, pageWidth / 2, 290, { align: 'center' });
+      if (result.success) {
+        toast.success(`Board-ready Budget report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
+      } else {
+        throw new Error('Report generation failed');
       }
-      
-      doc.save(`budget-burn-rate-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast.success('Budget PDF generated successfully');
     } catch (err) {
       console.error('Error generating PDF:', err);
       toast.error('Failed to generate PDF');
@@ -628,426 +551,174 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     }
   }, [budgetMetrics]);
 
-  // Smart date-aware comparison helper
-  const getReportingContext = useCallback(() => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const dayOfMonth = now.getDate();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    
-    // Determine report period context
-    const isMonday = dayOfWeek === 1;
-    const isFirstWeekOfMonth = dayOfMonth <= 7;
-    const isFirstMonthOfYear = month === 0;
-    const isEndOfQuarter = [2, 5, 8, 11].includes(month) && dayOfMonth >= 25;
-    
-    // Calculate comparison periods
-    const lastWeekStart = new Date(now);
-    lastWeekStart.setDate(now.getDate() - 7);
-    
-    const lastMonthStart = new Date(now);
-    lastMonthStart.setMonth(now.getMonth() - 1);
-    
-    const lastYearStart = new Date(now);
-    lastYearStart.setFullYear(now.getFullYear() - 1);
-    
-    const quarterStartMonth = Math.floor(month / 3) * 3;
-    const quarterStart = new Date(year, quarterStartMonth, 1);
-    
-    return {
-      runDate: now,
-      reportPeriod: format(now, 'MMMM d, yyyy'),
-      reportTime: format(now, 'h:mm a'),
-      weekNumber: Math.ceil((now.getDate() + new Date(year, month, 1).getDay()) / 7),
-      quarter: Math.floor(month / 3) + 1,
-      fiscalYear: month >= 6 ? year + 1 : year, // July fiscal year start
-      isMonday,
-      isFirstWeekOfMonth,
-      isFirstMonthOfYear,
-      isEndOfQuarter,
-      comparisons: {
-        wow: { // Week over Week
-          label: 'vs Last Week',
-          periodStart: format(lastWeekStart, 'MMM d'),
-          periodEnd: format(new Date(lastWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000), 'MMM d'),
-        },
-        mom: { // Month over Month
-          label: 'vs Last Month',
-          period: format(lastMonthStart, 'MMMM yyyy'),
-        },
-        yoy: { // Year over Year
-          label: 'vs Same Period Last Year',
-          period: format(lastYearStart, 'MMMM yyyy'),
-        },
-        qtd: { // Quarter to Date
-          label: 'Quarter to Date',
-          period: `Q${Math.floor(month / 3) + 1} ${year}`,
-        },
-      },
-      // Simulated historical data for comparisons (would come from DB in production)
-      historicalMetrics: {
-        lastWeek: {
-          cp1Rate: 25.8,
-          totalClaims: 26542,
-          cp1Claims: 6848,
-        },
-        lastMonth: {
-          cp1Rate: 25.2,
-          totalClaims: 25890,
-          cp1Claims: 6524,
-        },
-        lastYear: {
-          cp1Rate: 23.4,
-          totalClaims: 24150,
-          cp1Claims: 5651,
-        },
-      },
-    };
-  }, []);
+  // Historical metrics for comparisons (would come from DB in production)
+  const historicalMetrics = useMemo(() => ({
+    lastWeek: { cp1Rate: 25.8, totalClaims: 26542, cp1Claims: 6848 },
+    lastMonth: { cp1Rate: 25.2, totalClaims: 25890, cp1Claims: 6524 },
+    lastYear: { cp1Rate: 23.4, totalClaims: 24150, cp1Claims: 5651 },
+  }), []);
 
-  // Generate Power BI-style PDF for CP1 Analysis
+  // Generate Board-Ready Executive PDF for CP1 Analysis
   const generateCP1PDF = useCallback(async () => {
     setGeneratingCP1PDF(true);
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      const ctx = getReportingContext();
-      
-      // Power BI Color Palette
-      const colors = {
-        primary: [12, 35, 64] as [number, number, number],
-        secondary: [0, 120, 212] as [number, number, number],
-        accent: [0, 163, 191] as [number, number, number],
-        success: [16, 124, 16] as [number, number, number],
-        warning: [202, 128, 0] as [number, number, number],
-        danger: [196, 49, 75] as [number, number, number],
-        lightBg: [243, 244, 246] as [number, number, number],
-        cardBg: [255, 255, 255] as [number, number, number],
-        textPrimary: [32, 33, 36] as [number, number, number],
-        textSecondary: [95, 99, 104] as [number, number, number],
-      };
-
-      // Helper to draw Power BI style KPI card
-      const drawKPICard = (x: number, y: number, width: number, height: number, title: string, value: string, subtitle?: string, trend?: { value: number; label: string }) => {
-        // Card shadow effect
-        doc.setFillColor(220, 220, 220);
-        doc.roundedRect(x + 1, y + 1, width, height, 3, 3, 'F');
-        
-        // Card background
-        doc.setFillColor(...colors.cardBg);
-        doc.roundedRect(x, y, width, height, 3, 3, 'F');
-        
-        // Left accent bar
-        doc.setFillColor(...colors.secondary);
-        doc.rect(x, y + 3, 3, height - 6, 'F');
-        
-        // Title
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.textSecondary);
-        doc.text(title.toUpperCase(), x + 8, y + 10);
-        
-        // Value
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.textPrimary);
-        doc.text(value, x + 8, y + 24);
-        
-        // Subtitle/Trend
-        if (trend) {
-          const trendColor = trend.value >= 0 ? colors.success : colors.danger;
-          const arrow = trend.value >= 0 ? '▲' : '▼';
-          doc.setFontSize(8);
-          doc.setTextColor(...trendColor);
-          doc.text(`${arrow} ${Math.abs(trend.value).toFixed(1)}% ${trend.label}`, x + 8, y + 32);
-        } else if (subtitle) {
-          doc.setFontSize(8);
-          doc.setTextColor(...colors.textSecondary);
-          doc.text(subtitle, x + 8, y + 32);
-        }
-      };
-
-      // Helper to draw horizontal bar chart
-      const drawHorizontalBar = (x: number, y: number, width: number, height: number, value: number, maxValue: number, color: [number, number, number]) => {
-        // Background bar
-        doc.setFillColor(...colors.lightBg);
-        doc.roundedRect(x, y, width, height, 2, 2, 'F');
-        
-        // Value bar
-        const barWidth = (value / maxValue) * width;
-        if (barWidth > 0) {
-          doc.setFillColor(...color);
-          doc.roundedRect(x, y, Math.max(barWidth, 4), height, 2, 2, 'F');
-        }
-      };
-
-      // === PAGE 1: EXECUTIVE DASHBOARD ===
-      
-      // Header with gradient effect
-      doc.setFillColor(...colors.primary);
-      doc.rect(0, 0, pageWidth, 35, 'F');
-      
-      // Secondary accent line
-      doc.setFillColor(...colors.secondary);
-      doc.rect(0, 35, pageWidth, 2, 'F');
-      
-      // Logo area
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(10, 5, 25, 25, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(...colors.primary);
-      doc.setFont('helvetica', 'bold');
-      doc.text('FLI', 18, 18);
-      doc.setFontSize(6);
-      doc.text('LITIGATION', 13, 24);
-      
-      // Title
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('CP1 LIMITS TENDERED ANALYSIS', 42, 16);
-      
-      // Subtitle with report context
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      const contextLabel = ctx.isMonday ? 'Weekly Status Report' : 
-                          ctx.isEndOfQuarter ? 'Quarter-End Analysis' : 
-                          ctx.isFirstWeekOfMonth ? 'Monthly Status Report' : 'Status Report';
-      doc.text(`${contextLabel} | ${ctx.reportPeriod}`, 42, 24);
-      
-      // Report timestamp
-      doc.setFontSize(8);
-      doc.text(`Generated: ${ctx.reportTime} | Week ${ctx.weekNumber} | Q${ctx.quarter} FY${ctx.fiscalYear}`, 42, 30);
-      
-      let y = 45;
-      
-      // === KPI CARDS ROW ===
-      const cardWidth = 42;
-      const cardHeight = 38;
-      const cardSpacing = 5;
-      const startX = 10;
-      
-      // Calculate trend values
       const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
-      const wowTrend = currentCP1Rate - ctx.historicalMetrics.lastWeek.cp1Rate;
-      const yoyTrend = currentCP1Rate - ctx.historicalMetrics.lastYear.cp1Rate;
+      const wowDelta = currentCP1Rate - historicalMetrics.lastWeek.cp1Rate;
+      const yoyDelta = currentCP1Rate - historicalMetrics.lastYear.cp1Rate;
+      const ctx = getReportContext();
       
-      drawKPICard(startX, y, cardWidth, cardHeight, 'Total Claims', 
-        CP1_DATA.totals.grandTotal.toLocaleString(), 'Active Inventory');
-      
-      drawKPICard(startX + cardWidth + cardSpacing, y, cardWidth, cardHeight, 'CP1 Tendered', 
-        CP1_DATA.totals.yes.toLocaleString(), undefined, 
-        { value: wowTrend, label: 'WoW' });
-      
-      drawKPICard(startX + (cardWidth + cardSpacing) * 2, y, cardWidth, cardHeight, 'CP1 Rate', 
-        `${CP1_DATA.cp1Rate}%`, undefined,
-        { value: yoyTrend, label: 'YoY' });
-      
-      drawKPICard(startX + (cardWidth + cardSpacing) * 3, y, cardWidth, cardHeight, 'BI CP1 Rate', 
-        '34.2%', 'Highest Exposure');
-      
-      y += cardHeight + 12;
-      
-      // === COMPARISON INSIGHT BOX ===
-      doc.setFillColor(...colors.lightBg);
-      doc.roundedRect(10, y, pageWidth - 20, 25, 3, 3, 'F');
-      
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...colors.primary);
-      doc.text('PERIOD COMPARISON ANALYSIS', 15, y + 8);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(...colors.textPrimary);
-      
-      const comparisonText = [
-        `Week-over-Week: CP1 rate ${wowTrend >= 0 ? 'increased' : 'decreased'} by ${Math.abs(wowTrend).toFixed(1)}% (${ctx.comparisons.wow.periodStart} - ${ctx.comparisons.wow.periodEnd})`,
-        `Year-over-Year: ${Math.abs(yoyTrend).toFixed(1)}% ${yoyTrend >= 0 ? 'higher' : 'lower'} than ${ctx.comparisons.yoy.period} (${ctx.historicalMetrics.lastYear.cp1Rate}% → ${CP1_DATA.cp1Rate}%)`,
-      ];
-      doc.text(comparisonText[0], 15, y + 16);
-      doc.text(comparisonText[1], 15, y + 22);
-      
-      y += 32;
-      
-      // === COVERAGE BREAKDOWN WITH BAR CHART ===
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...colors.primary);
-      doc.text('CP1 RATE BY COVERAGE TYPE', 10, y);
-      y += 8;
-      
-      // Table header
-      doc.setFillColor(...colors.primary);
-      doc.rect(10, y, pageWidth - 20, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Coverage', 15, y + 6);
-      doc.text('Claims', 50, y + 6);
-      doc.text('CP1', 75, y + 6);
-      doc.text('Rate', 100, y + 6);
-      doc.text('Distribution', 125, y + 6);
-      y += 10;
-      
-      // Sort by CP1 rate for Power BI style
-      const sortedCoverage = [...CP1_DATA.byCoverage].sort((a, b) => b.cp1Rate - a.cp1Rate);
-      const maxRate = Math.max(...sortedCoverage.map(c => c.cp1Rate));
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...colors.textPrimary);
-      
-      sortedCoverage.forEach((row, idx) => {
-        const rowY = y + (idx * 10);
+      // Build executive report configuration with quality gates
+      const reportConfig: ExecutiveReportConfig = {
+        title: 'CP1 Limits Tendered Analysis',
+        subtitle: ctx.isMonday ? 'Weekly Status Report' : 
+                  ctx.isQuarterEnd ? 'Quarter-End Analysis' : 
+                  ctx.isMonthEnd ? 'Month-End Report' : 'Status Report',
+        reportType: 'ANALYSIS',
+        classification: 'CONFIDENTIAL',
         
-        // Alternating row background
-        if (idx % 2 === 0) {
-          doc.setFillColor(250, 250, 252);
-          doc.rect(10, rowY - 2, pageWidth - 20, 10, 'F');
-        }
+        executiveSummary: {
+          keyTakeaway: `CP1 tendered rate is ${CP1_DATA.cp1Rate}% (${CP1_DATA.totals.yes.toLocaleString()} of ${CP1_DATA.totals.grandTotal.toLocaleString()} claims). ${wowDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(wowDelta).toFixed(1)}% WoW. BI exposure at 34.2% CP1 rate drives 88% of limits tendered volume. 365+ day claims represent highest risk concentration.`,
+          
+          metrics: [
+            {
+              label: 'Total Active Claims',
+              value: CP1_DATA.totals.grandTotal.toLocaleString(),
+              context: 'Current Inventory'
+            },
+            {
+              label: 'CP1 Tendered',
+              value: CP1_DATA.totals.yes.toLocaleString(),
+              delta: wowDelta,
+              deltaLabel: 'WoW',
+              deltaDirection: getDeltaDirection(wowDelta)
+            },
+            {
+              label: 'CP1 Rate',
+              value: `${CP1_DATA.cp1Rate}%`,
+              delta: yoyDelta,
+              deltaLabel: 'YoY',
+              deltaDirection: getDeltaDirection(yoyDelta)
+            },
+            {
+              label: 'BI CP1 Rate',
+              value: '34.2%',
+              context: 'Highest Exposure Line'
+            }
+          ],
+          
+          insights: [
+            {
+              priority: 'critical',
+              headline: `365+ day BI claims: ${((CP1_DATA.biByAge[0].yes / CP1_DATA.biTotal.yes) * 100).toFixed(0)}% of total CP1 exposure`,
+              action: 'Prioritize aged claim resolution to reduce limits tendered concentration'
+            },
+            {
+              priority: 'high',
+              headline: 'UI coverage CP1 rate (51.9%) exceeds all other lines',
+              action: 'Review UI underwriting and claims handling protocols'
+            },
+            {
+              priority: 'medium',
+              headline: 'Under 60 day claims at 13.5% CP1 rate',
+              action: 'Early intervention opportunity - implement proactive case management'
+            },
+            {
+              priority: 'info',
+              headline: `WoW trend: ${wowDelta >= 0 ? '+' : ''}${wowDelta.toFixed(1)}% indicates ${wowDelta >= 0 ? 'rising' : 'declining'} limits tendered activity`,
+              action: wowDelta >= 0 ? 'Monitor closely for continued upward pressure' : 'Maintain current resolution velocity'
+            }
+          ],
+          
+          bottomLine: `Limits tendered exposure increased ${Math.abs(yoyDelta).toFixed(1)}% year-over-year. Aged BI claims (365+ days) represent the largest concentration risk at ${((CP1_DATA.biByAge[0].yes / CP1_DATA.totals.yes) * 100).toFixed(0)}% of total CP1 inventory. Recommend focused resolution initiative for claims exceeding policy limits.`
+        },
         
-        doc.setFontSize(8);
-        doc.text(row.coverage, 15, rowY + 5);
-        doc.text(row.total.toLocaleString(), 50, rowY + 5);
-        doc.text(row.yes.toLocaleString(), 75, rowY + 5);
-        doc.text(`${row.cp1Rate}%`, 100, rowY + 5);
+        tables: [
+          {
+            title: 'CP1 Rate by Coverage Type',
+            headers: ['Coverage', 'Total Claims', 'CP1 Tendered', 'CP1 Rate', 'Share of CP1'],
+            rows: [
+              ...CP1_DATA.byCoverage.map(row => ({
+                cells: [
+                  row.coverage,
+                  row.total.toLocaleString(),
+                  row.yes.toLocaleString(),
+                  `${row.cp1Rate}%`,
+                  `${((row.yes / CP1_DATA.totals.yes) * 100).toFixed(1)}%`
+                ],
+                highlight: row.cp1Rate > 40 ? 'risk' as const : 
+                          row.cp1Rate > 30 ? 'warning' as const : undefined
+              })),
+              {
+                cells: ['TOTAL', CP1_DATA.totals.grandTotal.toLocaleString(), CP1_DATA.totals.yes.toLocaleString(), `${CP1_DATA.cp1Rate}%`, '100%'],
+                highlight: 'total' as const
+              }
+            ],
+            footnote: 'CP1 = Claims with limits tendered or policy exposure reached'
+          },
+          {
+            title: 'Bodily Injury CP1 by Claim Age',
+            headers: ['Age Bucket', 'No CP', 'CP1 Yes', 'Total', 'CP1 Rate'],
+            rows: [
+              ...CP1_DATA.biByAge.map(row => ({
+                cells: [
+                  row.age,
+                  row.noCP.toLocaleString(),
+                  row.yes.toLocaleString(),
+                  row.total.toLocaleString(),
+                  `${((row.yes / row.total) * 100).toFixed(1)}%`
+                ],
+                highlight: row.age === '365+ Days' ? 'risk' as const : undefined
+              })),
+              {
+                cells: ['BI TOTAL', CP1_DATA.biTotal.noCP.toLocaleString(), CP1_DATA.biTotal.yes.toLocaleString(), CP1_DATA.biTotal.total.toLocaleString(), '34.2%'],
+                highlight: 'total' as const
+              }
+            ],
+            footnote: 'BI claims represent 88% of total CP1 exposure'
+          }
+        ],
         
-        // Bar chart
-        const barColor: [number, number, number] = row.cp1Rate > 40 ? colors.danger : 
-                        row.cp1Rate > 30 ? colors.warning : colors.success;
-        drawHorizontalBar(120, rowY + 1, 70, 6, row.cp1Rate, maxRate, barColor);
-      });
+        charts: [
+          {
+            type: 'horizontalBar',
+            title: 'CP1 Rate Distribution by Coverage',
+            data: CP1_DATA.byCoverage.map(row => ({
+              label: row.coverage,
+              value: row.cp1Rate
+            }))
+          }
+        ]
+      };
       
-      y += sortedCoverage.length * 10 + 5;
+      // === QUALITY GATE CHECK ===
+      const qualityScore = auditReportQuality(reportConfig);
       
-      // Grand Total row
-      doc.setFillColor(...colors.primary);
-      doc.rect(10, y, pageWidth - 20, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL', 15, y + 7);
-      doc.text(CP1_DATA.totals.grandTotal.toLocaleString(), 50, y + 7);
-      doc.text(CP1_DATA.totals.yes.toLocaleString(), 75, y + 7);
-      doc.text(`${CP1_DATA.cp1Rate}%`, 100, y + 7);
+      if (!qualityScore.passed) {
+        console.warn('Quality Gate Warning:', qualityScore.issues);
+        console.log('Quality Scores:', {
+          executiveClarity: qualityScore.executiveClarity,
+          financialCredibility: qualityScore.financialCredibility,
+          visualProfessionalism: qualityScore.visualProfessionalism,
+          decisionUsefulness: qualityScore.decisionUsefulness,
+          overall: qualityScore.overall
+        });
+      }
       
-      y += 18;
+      // Generate the report
+      const result = await generateExecutiveReport(reportConfig);
       
-      // === BI AGE BREAKDOWN ===
-      doc.setTextColor(...colors.primary);
-      doc.setFontSize(11);
-      doc.text('BODILY INJURY - CP1 BY CLAIM AGE', 10, y);
-      y += 8;
-      
-      // Table header
-      doc.setFillColor(...colors.secondary);
-      doc.rect(10, y, pageWidth - 20, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Age Bucket', 15, y + 6);
-      doc.text('No CP', 60, y + 6);
-      doc.text('CP1 Yes', 90, y + 6);
-      doc.text('Total', 120, y + 6);
-      doc.text('CP1 Rate', 150, y + 6);
-      doc.text('Trend', 175, y + 6);
-      y += 10;
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...colors.textPrimary);
-      
-      // Simulated WoW trend for each age bucket
-      const ageTrends = [2.1, 0.8, -0.5, -1.2];
-      
-      CP1_DATA.biByAge.forEach((row, idx) => {
-        const rowY = y + (idx * 10);
-        
-        if (idx % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(10, rowY - 2, pageWidth - 20, 10, 'F');
-        }
-        
-        const cp1Rate = ((row.yes / row.total) * 100).toFixed(1);
-        doc.setFontSize(8);
-        doc.text(row.age, 15, rowY + 5);
-        doc.text(row.noCP.toLocaleString(), 60, rowY + 5);
-        doc.text(row.yes.toLocaleString(), 90, rowY + 5);
-        doc.text(row.total.toLocaleString(), 120, rowY + 5);
-        doc.text(`${cp1Rate}%`, 150, rowY + 5);
-        
-        // Trend indicator
-        const trend = ageTrends[idx];
-        const trendColor = trend >= 0 ? colors.danger : colors.success;
-        const arrow = trend >= 0 ? '▲' : '▼';
-        doc.setTextColor(...trendColor);
-        doc.text(`${arrow}${Math.abs(trend).toFixed(1)}%`, 175, rowY + 5);
-        doc.setTextColor(...colors.textPrimary);
-      });
-      
-      y += CP1_DATA.biByAge.length * 10 + 2;
-      
-      // BI Total
-      doc.setFillColor(...colors.secondary);
-      doc.rect(10, y, pageWidth - 20, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.text('BI TOTAL', 15, y + 7);
-      doc.text(CP1_DATA.biTotal.noCP.toLocaleString(), 60, y + 7);
-      doc.text(CP1_DATA.biTotal.yes.toLocaleString(), 90, y + 7);
-      doc.text(CP1_DATA.biTotal.total.toLocaleString(), 120, y + 7);
-      doc.text('34.2%', 150, y + 7);
-      
-      y += 18;
-      
-      // === KEY INSIGHTS BOX ===
-      doc.setFillColor(255, 248, 230);
-      doc.roundedRect(10, y, pageWidth - 20, 35, 3, 3, 'F');
-      doc.setDrawColor(...colors.warning);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(10, y, pageWidth - 20, 35, 3, 3, 'S');
-      
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...colors.warning);
-      doc.text('⚡ KEY INSIGHTS & RECOMMENDATIONS', 15, y + 8);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(...colors.textPrimary);
-      
-      const insights = [
-        `• 365+ day claims: ${((CP1_DATA.biByAge[0].yes / CP1_DATA.biTotal.yes) * 100).toFixed(0)}% of BI CP1 exposure - prioritize resolution`,
-        `• UI coverage CP1 rate (51.9%) requires immediate attention despite smaller volume`,
-        `• Under 60 day claims (13.5% CP1) represent early intervention opportunity`,
-        `• WoW trend: +${wowTrend.toFixed(1)}% indicates rising limits tendered activity`,
-      ];
-      
-      insights.forEach((insight, idx) => {
-        doc.text(insight, 15, y + 15 + (idx * 5));
-      });
-      
-      // === FOOTER ===
-      doc.setFillColor(...colors.lightBg);
-      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      
-      doc.setFontSize(7);
-      doc.setTextColor(...colors.textSecondary);
-      doc.text('CONFIDENTIAL - FOR INTERNAL USE ONLY', 10, pageHeight - 6);
-      doc.text(`Report ID: CP1-${format(new Date(), 'yyyyMMdd-HHmm')} | ${ctx.comparisons.wow.label} | ${ctx.comparisons.yoy.label}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
-      doc.text('Page 1 of 1', pageWidth - 10, pageHeight - 6, { align: 'right' });
-      
-      doc.save(`CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast.success('Power BI-style CP1 report generated');
+      if (result.success) {
+        toast.success(`Board-ready CP1 report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
+      } else {
+        throw new Error('Report generation failed');
+      }
     } catch (err) {
       console.error('Error generating PDF:', err);
       toast.error('Failed to generate PDF');
     } finally {
       setGeneratingCP1PDF(false);
     }
-  }, [getReportingContext]);
+  }, [historicalMetrics]);
 
   // Generate Excel for CP1 Analysis
   const generateCP1Excel = useCallback(async () => {
