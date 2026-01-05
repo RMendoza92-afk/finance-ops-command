@@ -161,37 +161,41 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(9);
   doc.text(ceo.statusLine, pageWidth / 2, y + 22, { align: 'center' });
   y += 36;
-
   // THE 3 QUESTIONS — NO SCANNING REQUIRED
   const boxW = pageWidth - margins.left - margins.right;
-  const boxH = 30;
+  const boxH = 36;
 
   const drawCEOBox = (number: string, question: string, answer: string, owner: string, impact: string, consequence: string, accent: number[]) => {
     doc.setFillColor(18, 18, 18);
     doc.roundedRect(margins.left, y, boxW, boxH, 3, 3, 'F');
     doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(margins.left, y + 4, 5, boxH - 8, 'F');
+    doc.rect(margins.left, y + 5, 5, boxH - 10, 'F');
 
     // Question label
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
     doc.setTextColor(accent[0], accent[1], accent[2]);
-    doc.text(`${number} ${question}`, margins.left + 10, y + 8);
+    doc.text(`${number} ${question}`, margins.left + 10, y + 9);
 
-    // Answer (large, bold)
+    // Answer (single line, no overlap)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-    const lines = doc.splitTextToSize(answer, boxW - 20);
-    doc.text(lines[0], margins.left + 10, y + 18);
+    const maxAnswerW = boxW - 20;
+    let answerLine = (doc.splitTextToSize(answer, maxAnswerW) as string[])[0] || '';
+    // Add ellipsis if the answer would wrap
+    if ((doc.splitTextToSize(answer, maxAnswerW) as string[]).length > 1) answerLine = `${answerLine}…`;
+    doc.text(answerLine, margins.left + 10, y + 20);
 
-    // Owner | Impact | Consequence (single line)
+    // Owner | Impact | Consequence
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6);
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-    doc.text(`OWNER: ${owner}  |  IMPACT: ${impact}  |  IF UNCHANGED: ${consequence}`, margins.left + 10, y + 26);
+    const meta = `OWNER: ${owner}  |  IMPACT: ${impact}  |  IF UNCHANGED: ${consequence}`;
+    const metaLine = (doc.splitTextToSize(meta, boxW - 20) as string[])[0] || '';
+    doc.text(metaLine, margins.left + 10, y + 30);
 
-    y += boxH + 4;
+    y += boxH + 6;
   };
 
   drawCEOBox('1)', 'ARE WE IN CONTROL?', ceo.planAnswer, ceo.planOwner, ceo.planImpact, ceo.planConsequence, ceo.planAccent);
@@ -787,17 +791,18 @@ function drawPageHeader(doc: any, pageWidth: number, title: string, subtitle: st
   doc.text('EXECUTIVE', 32.5, 13, { align: 'center' });
   
   // Title
-  doc.setFontSize(12);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text(title, 60, 14);
   
   // Subtitle
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
   doc.text(subtitle, 60, 22);
   
   // Right side
-  doc.setFontSize(7);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
   doc.text(`${ctx.reportPeriod} | ${ctx.reportTime}`, pageWidth - 10, 12, { align: 'right' });
   doc.text(`Q${ctx.quarter} FY${ctx.fiscalYear} | Week ${ctx.weekNumber}`, pageWidth - 10, 20, { align: 'right' });
 }
@@ -818,25 +823,33 @@ function drawKeyTakeaway(doc: any, x: number, y: number, width: number, text: st
   // Dark themed backgrounds with subtle color tints
   const bgColor = status === 'positive' ? [15, 35, 25] :      // Dark green tint
                   status === 'negative' ? [40, 18, 18] :       // Dark red tint
-                  [25, 25, 25];                                 // Neutral dark
+                  [25, 25, 25];                                // Neutral dark
   const accentColor = status === 'positive' ? EXECUTIVE_COLORS.success :
                       status === 'negative' ? EXECUTIVE_COLORS.danger :
                       EXECUTIVE_COLORS.azure;
-  
+
+  const height = 24; // prevent text collisions
   doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
-  doc.roundedRect(x, y, width, 20, 3, 3, 'F');
+  doc.roundedRect(x, y, width, height, 3, 3, 'F');
   doc.setFillColor(...accentColor);
-  doc.rect(x, y + 3, 4, 14, 'F');
-  
+  doc.rect(x, y + 4, 4, height - 8, 'F');
+
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...accentColor);
-  doc.text('STATUS:', x + 8, y + 8);
-  
-  doc.setFont('helvetica', 'normal');
+  doc.text('STATE:', x + 8, y + 10);
+
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  const lines = doc.splitTextToSize(text, width - 50);
-  doc.text(lines.slice(0, 2), x + 45, y + 8);
+  const lines = doc.splitTextToSize(text, width - 46) as string[];
+  const l1 = lines[0] || '';
+  const l2 = lines[1] ? `${lines[1]}…` : '';
+  doc.text(l1, x + 40, y + 10);
+  if (l2) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+    doc.text(l2, x + 40, y + 18);
+  }
 }
 
 function drawExecutiveKPI(doc: any, x: number, y: number, width: number, height: number, data: { label: string; value: string; sub: string; status: string }) {
