@@ -56,6 +56,7 @@ import {
   QuarterlyData,
   AppendixSection
 } from "@/lib/executivePDFFramework";
+import { generateBoardReadyPackage, ExecutivePackageConfig } from "@/lib/boardReadyPDFGenerator";
 
 // 6 Quarters of Expert Spend Data (Q2 2024 - Q4 2025)
 const EXPERT_QUARTERLY_DATA: QuarterlyData[] = [
@@ -103,6 +104,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [showCP1Drawer, setShowCP1Drawer] = useState(false);
   const [generatingCP1PDF, setGeneratingCP1PDF] = useState(false);
   const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
+  const [generatingBoardPackage, setGeneratingBoardPackage] = useState(false);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -993,6 +995,104 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       setGeneratingCP1Excel(false);
     }
   }, []);
+
+  // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1)
+  const generateCombinedBoardPackage = useCallback(async () => {
+    setGeneratingBoardPackage(true);
+    try {
+      // Ensure we have pending decisions loaded
+      if (pendingDecisions.length === 0) {
+        await fetchPendingDecisions();
+      }
+      
+      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2024;
+      const yoyChangePercent = (yoyChange / budgetMetrics.total2024) * 100;
+      
+      const packageConfig: ExecutivePackageConfig = {
+        sections: [
+          {
+            id: 'budget',
+            title: 'BUDGET BURN RATE',
+            financialImpact: formatExecCurrency(budgetMetrics.ytdPaid, true),
+            riskLevel: budgetMetrics.onTrack ? 'stable' : 'elevated',
+            keyMetric: { label: 'Burn Rate', value: `${budgetMetrics.burnRate}%` },
+            actionRequired: budgetMetrics.onTrack ? 'Monitor' : 'Review BI spend'
+          },
+          {
+            id: 'decisions',
+            title: 'PENDING DECISIONS',
+            financialImpact: formatExecCurrency(pendingDecisionsStats.totalExposure, true),
+            riskLevel: pendingDecisionsStats.critical > 0 ? 'critical' : 'stable',
+            keyMetric: { label: 'Critical', value: pendingDecisionsStats.critical.toString() },
+            actionRequired: pendingDecisionsStats.critical > 0 ? 'Immediate review' : 'Standard process'
+          },
+          {
+            id: 'cp1',
+            title: 'CP1 LIMITS',
+            financialImpact: `${CP1_DATA.totals.yes.toLocaleString()} claims`,
+            riskLevel: parseFloat(CP1_DATA.cp1Rate) > 28 ? 'elevated' : 'stable',
+            keyMetric: { label: 'CP1 Rate', value: `${CP1_DATA.cp1Rate}%` },
+            actionRequired: 'Review aged BI'
+          }
+        ],
+        budgetData: {
+          annualBudget: budgetMetrics.annualBudget,
+          ytdPaid: budgetMetrics.ytdPaid,
+          burnRate: budgetMetrics.burnRate,
+          remaining: budgetMetrics.remaining,
+          projectedBurn: budgetMetrics.projectedBurn,
+          projectedVariance: budgetMetrics.projectedVariance,
+          onTrack: budgetMetrics.onTrack,
+          yoyChange,
+          yoyChangePercent,
+          coverageBreakdown: budgetMetrics.coverageBreakdown,
+          monthlyData: budgetMetrics.monthlyData
+        },
+        decisionsData: {
+          total: pendingDecisionsStats.total,
+          critical: pendingDecisionsStats.critical,
+          thisWeek: pendingDecisionsStats.thisWeek,
+          statuteDeadlines: pendingDecisionsStats.statuteDeadlines,
+          totalExposure: pendingDecisionsStats.totalExposure,
+          decisions: pendingDecisions.map(d => ({
+            matterId: d.matterId,
+            claimant: d.claimant,
+            amount: d.amount,
+            daysOpen: d.daysOpen,
+            lead: d.lead,
+            severity: d.severity,
+            recommendedAction: d.recommendedAction,
+            department: d.department,
+            type: d.type
+          }))
+        },
+        cp1Data: {
+          totalClaims: CP1_DATA.totals.grandTotal,
+          cp1Count: CP1_DATA.totals.yes,
+          cp1Rate: `${CP1_DATA.cp1Rate}%`,
+          biCP1Rate: '34.2%',
+          byCoverage: CP1_DATA.byCoverage,
+          biByAge: CP1_DATA.biByAge,
+          biTotal: CP1_DATA.biTotal,
+          totals: CP1_DATA.totals
+        },
+        quarterlyExpertData: EXPERT_QUARTERLY_DATA
+      };
+      
+      const result = await generateBoardReadyPackage(packageConfig);
+      
+      if (result.success) {
+        toast.success(`Board Package generated: ${result.pageCount} pages`);
+      } else {
+        throw new Error('Package generation failed');
+      }
+    } catch (err) {
+      console.error('Error generating board package:', err);
+      toast.error('Failed to generate board package');
+    } finally {
+      setGeneratingBoardPackage(false);
+    }
+  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -2005,8 +2105,58 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <p className="text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* COMBINED BOARD PACKAGE - Primary CTA */}
             <Button
+              onClick={generateCombinedBoardPackage}
+              disabled={generatingBoardPackage}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2.5 shadow-lg"
+            >
+              {generatingBoardPackage ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileStack className="h-4 w-4 mr-2" />
+              )}
+              {generatingBoardPackage ? 'Generating...' : 'Board Package (Combined)'}
+            </Button>
+            
+            {/* Individual Reports Dropdown */}
+            <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg border border-border">
+              <span className="text-xs font-medium text-muted-foreground">Individual:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={generateBudgetPDF}
+                disabled={generatingBudgetPDF}
+                className="h-7 px-2 text-xs hover:bg-primary/10"
+              >
+                {generatingBudgetPDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Budget'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDecisionsDrawer(true);
+                }}
+                className="h-7 px-2 text-xs hover:bg-primary/10"
+              >
+                Decisions
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={generateCP1PDF}
+                disabled={generatingCP1PDF}
+                className="h-7 px-2 text-xs hover:bg-primary/10"
+              >
+                {generatingCP1PDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'CP1'}
+              </Button>
+            </div>
+            
+            {/* Inventory Export */}
+            <Button
+              variant="outline"
+              size="sm"
               onClick={async () => {
                 await generateExecutivePackage(
                   {
@@ -2030,25 +2180,16 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     byQueue: FINANCIAL_DATA.byQueue,
                     byTypeGroup: FINANCIAL_DATA.byTypeGroup,
                     highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ name: a.name, value: String(a.value) })),
-                    quarterlyData: [
-                      { quarter: 'Q1 2025', paid: 1553080, paidMonthly: 517693, approved: 2141536, approvedMonthly: 713845, variance: -588456 },
-                      { quarter: 'Q2 2025', paid: 1727599, paidMonthly: 575866, approved: 1680352, approvedMonthly: 560117, variance: 47247 },
-                      { quarter: 'Q3 2025', paid: 1383717, paidMonthly: 461239, approved: 1449627, approvedMonthly: 483209, variance: -65910 },
-                      { quarter: 'Q4 2025', paid: 1016756, paidMonthly: 508378, approved: 909651, approvedMonthly: 454826, variance: 107105 },
-                    ],
+                    quarterlyData: EXPERT_QUARTERLY_DATA,
                   }
                 );
-                toast.success('Executive Package downloaded! (PDF + Excel)');
+                toast.success('Inventory Package downloaded!');
               }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 py-2.5 shadow-md"
+              className="h-9 text-xs"
             >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Export Executive Package
+              <FileSpreadsheet className="h-3 w-3 mr-1" />
+              Inventory
             </Button>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-              <Download className="h-4 w-4" />
-              <span>Double-click to export sections</span>
-            </div>
           </div>
         </div>
       </div>
