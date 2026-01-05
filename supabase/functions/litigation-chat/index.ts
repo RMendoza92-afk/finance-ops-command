@@ -45,17 +45,72 @@ serve(async (req) => {
     const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
     const year = now.getFullYear();
 
-    const systemPrompt = `You are an AI for Fred Loya Insurance Litigation Command Center. Answer with real data.
+    // Build detailed breakdowns for the AI
+    const teamBreakdown = Object.entries(ctx.byTeam || {})
+      .map(([team, data]: [string, any]) => `${team}: ${data.count} matters, ${data.closed} closed, $${(data.totalPaid || 0).toLocaleString()} paid`)
+      .join('\n');
 
-DATA (${now.toLocaleDateString()}):
-- Total Matters: ${ctx.totalMatters?.toLocaleString() || 0}
-- CWP: ${ctx.totalCWP?.toLocaleString() || 0}, CWN: ${ctx.totalCWN?.toLocaleString() || 0}
-- Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(1)}M
-- Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(1)}M
-- MTD Closures (${monthName}): ${ctx.monthToDate?.closures || 0}, Paid: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
+    const categoryBreakdown = Object.entries(ctx.byExpenseCategory || {})
+      .map(([cat, data]: [string, any]) => `${cat}: ${data.count} matters, ${data.withEval} with eval, ${data.withoutEval} without eval, $${(data.totalPaid || 0).toLocaleString()} paid`)
+      .join('\n');
+
+    const coverageBreakdown = Object.entries(ctx.byCoverage || {})
+      .map(([cov, data]: [string, any]) => `${cov}: ${data.count} matters, ${data.withEval} with eval, ${data.withoutEval} without eval`)
+      .join('\n');
+
+    // Sample of recent closed matters
+    const recentClosures = (ctx.monthToDate?.closedMatters || []).slice(0, 10)
+      .map((m: any) => `Claim ${m.claim}: ${m.claimant}, $${(m.amountPaid || 0).toLocaleString()}, Team: ${m.team}`)
+      .join('\n');
+
+    // Matters needing evaluation
+    const noEvalSample = (ctx.mattersWithoutEvaluation || []).slice(0, 10)
+      .map((m: any) => `Claim ${m.claim}: ${m.claimant}, ${m.category}, ${m.team}, Reserves: $${(m.reserves || 0).toLocaleString()}`)
+      .join('\n');
+
+    const systemPrompt = `You are a senior litigation analyst at Fred Loya Insurance. Your role is to provide accurate, data-driven answers about the litigation portfolio. ALWAYS use the exact numbers provided below. Never make up or estimate data.
+
+## CURRENT PORTFOLIO DATA (As of ${now.toLocaleDateString()}):
+
+### Summary Metrics:
+- Total Open Matters: ${ctx.totalMatters?.toLocaleString() || 0}
+- Closed With Payment (CWP): ${ctx.totalCWP?.toLocaleString() || 0}
+- Closed Without Payment (CWN): ${ctx.totalCWN?.toLocaleString() || 0}
+- Total Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(2)}M
+- Total Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(2)}M
+
+### Month-to-Date Performance (${monthName} ${year}):
+- MTD Closures: ${ctx.monthToDate?.closures || 0}
+- MTD Total Paid: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
+- MTD Average Payment: $${(ctx.monthToDate?.avgPayment || 0).toLocaleString()}
+
+### Evaluation Status:
+- With Evaluation: ${ctx.evaluationStatus?.withEvaluation || 0}
 - Without Evaluation: ${ctx.evaluationStatus?.withoutEvaluation || 0} (${ctx.evaluationStatus?.percentWithoutEval || 0}%)
 
-Be concise, cite numbers, format currency with $ and commas.`;
+### Team Breakdown:
+${teamBreakdown || 'No team data available'}
+
+### Category Breakdown:
+${categoryBreakdown || 'No category data available'}
+
+### Coverage Breakdown:
+${coverageBreakdown || 'No coverage data available'}
+
+### Recent MTD Closures (Sample):
+${recentClosures || 'No recent closures'}
+
+### Matters Without Evaluation (Sample):
+${noEvalSample || 'None'}
+
+## INSTRUCTIONS:
+1. Answer questions using ONLY the data above - never estimate or fabricate numbers
+2. When asked about closures, payments, or MTD data, use the exact figures provided
+3. Format currency with $ and commas (e.g., $1,234,567)
+4. Format large numbers in millions when appropriate (e.g., $2.5M)
+5. Be specific and cite the exact data points when answering
+6. If asked about data not provided, say "That specific breakdown is not available in the current dataset"
+7. Keep responses concise but complete`;
 
     console.log("Sending request to Lovable AI...");
 

@@ -491,15 +491,10 @@ export function LitigationChat() {
         }
       }
       
-      // Auto-generate PDF with the response
+      // Generate PDF but keep the actual response visible in chat
       if (assistantContent.trim()) {
         generateResponsePDF(userMessage.content, assistantContent);
-        // Update the message to show it was exported
-        setMessages(prev => 
-          prev.map((m, i) => i === prev.length - 1 && m.role === 'assistant' 
-            ? { ...m, content: 'PDF report generated and downloaded.' } 
-            : m)
-        );
+        toast.info("PDF report downloaded automatically");
       }
       
     } catch (error) {
