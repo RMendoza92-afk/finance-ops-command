@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.send-daily-inventory-report]
 verify_jwt = false
+
+[functions.send-executive-digest]
+verify_jwt = false
+
+[functions.litigation-chat]
+verify_jwt = false

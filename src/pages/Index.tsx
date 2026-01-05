@@ -4,6 +4,7 @@ import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
+import { LitigationChat } from "@/components/LitigationChat";
 import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
@@ -307,6 +308,9 @@ const Index = () => {
           <p className="hidden sm:block">All calculations dynamically computed</p>
         </div>
       </footer>
+
+      {/* AI Chat Assistant */}
+      <LitigationChat />
     </div>
   );
 };
