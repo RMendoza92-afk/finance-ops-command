@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,21 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   BarChart,
   Bar,
@@ -53,6 +68,50 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [testMode, setTestMode] = useState(true);
   const [executiveExpanded, setExecutiveExpanded] = useState(true);
+  const [showDecisionsDrawer, setShowDecisionsDrawer] = useState(false);
+  
+  // Pending Decisions - matters requiring executive attention
+  // Criteria: High severity + $500K+ OR aging 180+ days
+  interface PendingDecision {
+    matterId: string;
+    claimant: string;
+    amount: number;
+    daysOpen: number;
+    lead: string;
+    reason: string;
+    deadline: string;
+    recommendedAction: string;
+    severity: 'critical' | 'high' | 'medium';
+  }
+
+  const PENDING_DECISIONS: PendingDecision[] = [
+    { matterId: 'LIT-2024-0847', claimant: 'Rodriguez v. FLI', amount: 1250000, daysOpen: 412, lead: 'Luis Martinez', reason: 'High severity + aged 365+', deadline: '2026-01-15', recommendedAction: 'Approve settlement authority increase to $850K', severity: 'critical' },
+    { matterId: 'LIT-2024-1102', claimant: 'Garcia Estate v. FLI', amount: 2100000, daysOpen: 287, lead: 'Chelsey Shogren-Martinez', reason: 'Wrongful death, policy limits demand', deadline: '2026-01-12', recommendedAction: 'Authorize policy limits offer ($1M)', severity: 'critical' },
+    { matterId: 'LIT-2024-0923', claimant: 'Martinez Family v. FLI', amount: 875000, daysOpen: 198, lead: 'Marc Guevara', reason: 'Multi-claimant, exceeds $500K', deadline: '2026-01-20', recommendedAction: 'Review MSA structure proposal', severity: 'high' },
+    { matterId: 'LIT-2023-2847', claimant: 'Thompson v. FLI', amount: 650000, daysOpen: 542, lead: 'Fernando Canales', reason: 'Aged 365+ days, statute approaching', deadline: '2026-01-08', recommendedAction: 'Approve mediation or trial prep budget', severity: 'critical' },
+    { matterId: 'LIT-2024-1456', claimant: 'Williams v. FLI', amount: 520000, daysOpen: 156, lead: 'Luis Vela', reason: 'Exceeds $500K threshold', deadline: '2026-01-25', recommendedAction: 'Approve $400K settlement authority', severity: 'medium' },
+    { matterId: 'LIT-2024-0234', claimant: 'Sanchez v. FLI', amount: 780000, daysOpen: 387, lead: 'Linda Davila', reason: 'High severity + aged 365+', deadline: '2026-01-18', recommendedAction: 'Escalate to excess carrier', severity: 'high' },
+    { matterId: 'LIT-2024-1789', claimant: 'Brown v. FLI', amount: 920000, daysOpen: 203, lead: 'Brittany Soria', reason: 'Bad faith allegation, $500K+', deadline: '2026-01-22', recommendedAction: 'Retain coverage counsel', severity: 'high' },
+    { matterId: 'LIT-2023-3012', claimant: 'Davis v. FLI', amount: 1450000, daysOpen: 623, lead: 'Joel Fierro', reason: 'Aged 365+, high exposure', deadline: '2026-01-10', recommendedAction: 'Authorize structured settlement', severity: 'critical' },
+    { matterId: 'LIT-2024-0567', claimant: 'Johnson v. FLI', amount: 580000, daysOpen: 245, lead: 'Chrystal Perez', reason: 'Exceeds $500K, venue risk', deadline: '2026-01-28', recommendedAction: 'Approve early resolution offer', severity: 'medium' },
+    { matterId: 'LIT-2024-1234', claimant: 'Lee v. FLI', amount: 690000, daysOpen: 189, lead: 'Salvador Gonzalez', reason: 'High severity, bad venue', deadline: '2026-01-30', recommendedAction: 'Transfer venue motion approval', severity: 'medium' },
+    { matterId: 'LIT-2023-2456', claimant: 'Miller v. FLI', amount: 1100000, daysOpen: 478, lead: 'Priscilla Vega', reason: 'Aged 365+, $1M+ exposure', deadline: '2026-01-14', recommendedAction: 'Approve policy limits tender', severity: 'critical' },
+    { matterId: 'LIT-2024-0789', claimant: 'Wilson v. FLI', amount: 540000, daysOpen: 167, lead: 'James Wallace', reason: 'Exceeds $500K threshold', deadline: '2026-02-01', recommendedAction: 'Review and approve MSJ filing', severity: 'medium' },
+  ];
+
+  const pendingDecisionsStats = useMemo(() => {
+    const critical = PENDING_DECISIONS.filter(d => d.severity === 'critical').length;
+    const thisWeek = PENDING_DECISIONS.filter(d => {
+      const deadline = new Date(d.deadline);
+      const now = new Date();
+      const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return deadline <= weekFromNow;
+    }).length;
+    const statuteDeadlines = PENDING_DECISIONS.filter(d => d.daysOpen > 350).length;
+    const totalExposure = PENDING_DECISIONS.reduce((sum, d) => sum + d.amount, 0);
+    
+    return { total: PENDING_DECISIONS.length, critical, thisWeek, statuteDeadlines, totalExposure };
+  }, []);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
@@ -1074,15 +1133,20 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <p className="text-xs text-muted-foreground">Avg 62¢ on demand dollar</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div 
+            className="flex items-center gap-4 cursor-pointer hover:bg-warning/10 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => setShowDecisionsDrawer(true)}
+            title="Click to view pending decisions"
+          >
             <div className="p-2 bg-warning/20 rounded-lg">
               <Flag className="h-5 w-5 text-warning" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase">Decisions Pending</p>
-              <p className="text-xl font-bold text-warning">12<span className="text-sm font-normal text-muted-foreground ml-1">this week</span></p>
-              <p className="text-xs text-destructive">3 statute deadlines &lt;30d</p>
+              <p className="text-xl font-bold text-warning">{pendingDecisionsStats.total}<span className="text-sm font-normal text-muted-foreground ml-1">this week</span></p>
+              <p className="text-xs text-destructive">{pendingDecisionsStats.statuteDeadlines} statute deadlines &lt;30d</p>
             </div>
+            <ArrowUpRight className="h-4 w-4 text-warning ml-auto" />
           </div>
         </div>
         </div>
@@ -2015,6 +2079,113 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             ))}
         </div>
       </div>
+
+      {/* Pending Decisions Drilldown Sheet */}
+      <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
+        <SheetContent className="sm:max-w-2xl overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-warning" />
+              Pending Executive Decisions
+            </SheetTitle>
+            <SheetDescription>
+              {pendingDecisionsStats.total} matters requiring executive attention • Total Exposure: {formatCurrency(pendingDecisionsStats.totalExposure)}
+            </SheetDescription>
+          </SheetHeader>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-3 py-4 border-b border-border">
+            <div className="text-center p-3 bg-destructive/10 rounded-lg">
+              <p className="text-2xl font-bold text-destructive">{pendingDecisionsStats.critical}</p>
+              <p className="text-xs text-muted-foreground">Critical</p>
+            </div>
+            <div className="text-center p-3 bg-warning/10 rounded-lg">
+              <p className="text-2xl font-bold text-warning">{pendingDecisionsStats.thisWeek}</p>
+              <p className="text-xs text-muted-foreground">Due This Week</p>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-foreground">{pendingDecisionsStats.statuteDeadlines}</p>
+              <p className="text-xs text-muted-foreground">Statute Risk</p>
+            </div>
+          </div>
+
+          {/* Decisions List */}
+          <div className="py-4 space-y-3">
+            {PENDING_DECISIONS.sort((a, b) => {
+              const severityOrder = { critical: 0, high: 1, medium: 2 };
+              return severityOrder[a.severity] - severityOrder[b.severity];
+            }).map((decision) => (
+              <div 
+                key={decision.matterId} 
+                className={`p-4 rounded-lg border ${
+                  decision.severity === 'critical' ? 'border-destructive/50 bg-destructive/5' :
+                  decision.severity === 'high' ? 'border-warning/50 bg-warning/5' :
+                  'border-border bg-muted/30'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm text-primary">{decision.matterId}</span>
+                      <Badge variant={
+                        decision.severity === 'critical' ? 'destructive' :
+                        decision.severity === 'high' ? 'default' : 'secondary'
+                      } className="text-xs">
+                        {decision.severity.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <p className="font-semibold text-foreground mt-1">{decision.claimant}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-foreground">{formatCurrencyFullValue(decision.amount)}</p>
+                    <p className="text-xs text-muted-foreground">{decision.daysOpen} days open</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Lead:</span>
+                    <span className="font-medium">{decision.lead}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Deadline:</span>
+                    <span className={`font-medium ${new Date(decision.deadline) <= new Date(Date.now() + 7*24*60*60*1000) ? 'text-destructive' : ''}`}>
+                      {format(new Date(decision.deadline), 'MMM d, yyyy')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-2 bg-background/50 rounded border border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">Reason for Escalation</p>
+                  <p className="text-sm">{decision.reason}</p>
+                </div>
+
+                <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-start gap-2">
+                    <Gavel className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-xs text-primary font-medium uppercase">Recommended Action</p>
+                      <p className="text-sm font-medium text-foreground">{decision.recommendedAction}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <Button size="sm" variant="default" className="flex-1">
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    Request More Info
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
