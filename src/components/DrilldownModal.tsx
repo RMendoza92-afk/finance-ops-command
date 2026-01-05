@@ -1,6 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, FileText, FileSpreadsheet } from "lucide-react";
+import { SMSDialog } from "./SMSDialog";
 
 interface AggregatedMatter {
   id: string;
@@ -80,6 +84,8 @@ function RiskIndicator({ level }: { level: 'GREEN' | 'ORANGE' | 'RED' }) {
 }
 
 export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  
   if (!matter) return null;
 
   const formatCurrency = (amount: number) => {
@@ -237,7 +243,30 @@ export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
             </div>
           </section>
         </div>
+
+        <DialogFooter className="flex-shrink-0 border-t border-border pt-4 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setSmsDialogOpen(true)}
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Send SMS Alert
+          </Button>
+        </DialogFooter>
       </DialogContent>
+      
+      <SMSDialog
+        open={smsDialogOpen}
+        onClose={() => setSmsDialogOpen(false)}
+        context={{
+          matterId: matter.uniqueRecord,
+          claimType: matter.coverage,
+          region: matter.team,
+          exposure: matter.totalPaid,
+          description: `${matter.claimant} - ${matter.litigationStage} stage, ${matter.riskFlag} risk`
+        }}
+      />
     </Dialog>
   );
 }

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronUp, ChevronDown, ExternalLink, MessageSquare } from "lucide-react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { cn } from "@/lib/utils";
+import { SMSDialog } from "./SMSDialog";
 
 interface DataTableProps {
   data: LitigationMatter[];
@@ -56,7 +57,8 @@ function PainBadge({ level }: { level: number }) {
 export function DataTable({ data, view }: DataTableProps) {
   const [sortField, setSortField] = useState<SortField>('paymentDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [selectedMatter, setSelectedMatter] = useState<LitigationMatter | null>(null);
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -182,9 +184,21 @@ export function DataTable({ data, view }: DataTableProps) {
                 )}
                 <td className="text-sm text-muted-foreground">{matter.paymentDate}</td>
                 <td className="text-right pr-4">
-                  <button className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-primary">
-                    <ExternalLink className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button 
+                      onClick={() => {
+                        setSelectedMatter(matter);
+                        setSmsDialogOpen(true);
+                      }}
+                      className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
+                      title="Send SMS Alert"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </button>
+                    <button className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-primary">
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -202,6 +216,23 @@ export function DataTable({ data, view }: DataTableProps) {
         <div className="py-3 text-center text-sm text-muted-foreground border-t border-border">
           Showing first 100 of {sortedData.length} records
         </div>
+      )}
+      
+      {selectedMatter && (
+        <SMSDialog
+          open={smsDialogOpen}
+          onClose={() => {
+            setSmsDialogOpen(false);
+            setSelectedMatter(null);
+          }}
+          context={{
+            matterId: selectedMatter.uniqueRecord,
+            claimType: selectedMatter.class,
+            region: selectedMatter.team,
+            exposure: selectedMatter.netAmount,
+            description: `${selectedMatter.claim} - Pain Level: ${selectedMatter.endPainLvl}`
+          }}
+        />
       )}
     </div>
   );
