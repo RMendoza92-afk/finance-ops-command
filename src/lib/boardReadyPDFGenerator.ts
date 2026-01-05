@@ -188,21 +188,21 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   const decisions = [
     {
       domain: 'BUDGET',
-      status: config.budgetData.onTrack ? '✓ On Track' : '⚠ Over',
+      status: config.budgetData.onTrack ? '✓ Good' : '⚠ Over',
       impact: formatCurrency(config.budgetData.projectedVariance, true),
-      action: config.budgetData.onTrack ? 'Monitor' : 'Review BI spend'
+      action: config.budgetData.onTrack ? 'Stay the course' : 'Review BI spend'
     },
     {
       domain: 'DECISIONS',
-      status: config.decisionsData.critical > 0 ? `⚠ ${config.decisionsData.critical} Critical` : '✓ Normal',
+      status: config.decisionsData.critical > 0 ? `⚠ ${config.decisionsData.critical} Urgent` : '✓ Clear',
       impact: formatCurrency(config.decisionsData.totalExposure, true),
-      action: config.decisionsData.critical > 0 ? 'Immediate review' : 'Standard process'
+      action: config.decisionsData.critical > 0 ? 'Review today' : 'Routine'
     },
     {
       domain: 'LIMITS',
-      status: parseFloat(config.cp1Data.cp1Rate) > 28 ? '⚠ Elevated' : '✓ Normal',
+      status: parseFloat(config.cp1Data.cp1Rate) > 28 ? '⚠ High' : '✓ Normal',
       impact: `${config.cp1Data.cp1Count.toLocaleString()} claims`,
-      action: parseFloat(config.cp1Data.cp1Rate) > 28 ? 'Review aged BI' : 'Monitor'
+      action: parseFloat(config.cp1Data.cp1Rate) > 28 ? 'Check aged BI' : 'Monitor'
     }
   ];
   
@@ -265,7 +265,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setTextColor(...EXECUTIVE_COLORS.azure);
   doc.text('CFO BOTTOM LINE:', margins.left + 5, y + 8);
   
-  // Generate bottom line based on data
+  // Generate bottom line based on data - plain English, no jargon
   const bottomLine = generateCFOBottomLine(config);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -321,20 +321,20 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'BUDGET BURN RATE ANALYSIS', `FY${ctx.fiscalYear} Claims Payment Tracking`, ctx);
   y = 44;
   
-  // Budget key takeaway
+  // Budget key takeaway - plain executive language
   const budgetTakeaway = config.budgetData.onTrack
-    ? `YTD spend of ${formatCurrency(config.budgetData.ytdPaid, true)} is WITHIN BUDGET. Projected year-end: ${formatCurrency(config.budgetData.projectedBurn, true)} (${formatCurrency(config.budgetData.projectedVariance, true)} under).`
-    : `ALERT: YTD spend of ${formatCurrency(config.budgetData.ytdPaid, true)} exceeds trajectory. Projected overage: ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)}.`;
+    ? `We've spent ${formatCurrency(config.budgetData.ytdPaid, true)} year-to-date. We're on track to finish ${formatCurrency(config.budgetData.projectedVariance, true)} under budget.`
+    : `We've spent ${formatCurrency(config.budgetData.ytdPaid, true)} year-to-date. At this pace, we'll be ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget by year-end.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, budgetTakeaway, config.budgetData.onTrack ? 'positive' : 'negative');
   y += 26;
   
-  // Budget metrics row
+  // Budget metrics row - plain labels
   const budgetMetrics = [
     { label: 'ANNUAL BUDGET', value: formatCurrency(config.budgetData.annualBudget, true), sub: `FY${ctx.fiscalYear}` },
-    { label: 'YTD PAYMENTS', value: formatCurrency(config.budgetData.ytdPaid, true), sub: `${config.budgetData.yoyChangePercent >= 0 ? '+' : ''}${config.budgetData.yoyChangePercent.toFixed(1)}% YoY` },
-    { label: 'BURN RATE', value: `${config.budgetData.burnRate}%`, sub: 'of annual budget' },
-    { label: 'REMAINING', value: formatCurrency(config.budgetData.remaining, true), sub: config.budgetData.onTrack ? 'On track' : 'At risk' }
+    { label: 'SPENT SO FAR', value: formatCurrency(config.budgetData.ytdPaid, true), sub: `${config.budgetData.yoyChangePercent >= 0 ? '+' : ''}${config.budgetData.yoyChangePercent.toFixed(1)}% vs last year` },
+    { label: 'BURN RATE', value: `${config.budgetData.burnRate}%`, sub: 'of annual' },
+    { label: 'LEFT TO SPEND', value: formatCurrency(config.budgetData.remaining, true), sub: config.budgetData.onTrack ? 'On track' : 'Tight' }
   ];
   
   const bkWidth = (pageWidth - margins.left - margins.right - 24) / 4;
@@ -397,7 +397,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     doc.text(`${cov.change >= 0 ? '+' : ''}${formatCurrency(cov.change, true)}`, colX, y + 5);
     colX += covCols[3];
     
-    const impact = cov.change > 20000000 ? 'CRITICAL' : cov.change > 0 ? 'MONITOR' : 'FAVORABLE';
+    const impact = cov.change > 20000000 ? 'FIX NOW' : cov.change > 0 ? 'WATCH' : 'GOOD';
     doc.text(impact, colX, y + 5);
     
     y += 10;
@@ -432,12 +432,13 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
-  doc.text('⚡ KEY DRIVER:', margins.left + 4, y + 8);
+  doc.text('WHY:', margins.left + 4, y + 8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
   const biPct = ((config.budgetData.coverageBreakdown.bi.change / totalChange) * 100).toFixed(0);
-  doc.text(`Bodily Injury claims account for ${biPct}% of YoY variance. BI claim count up ${(config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024).toLocaleString()} YoY.`, margins.left + 38, y + 8);
-  doc.text('ACTION: Review BI severity trends and litigation exposure for root cause analysis.', margins.left + 4, y + 16);
+  const biClaimDiff = config.budgetData.coverageBreakdown.bi.claimCount2025 - config.budgetData.coverageBreakdown.bi.claimCount2024;
+  doc.text(`BI is ${biPct}% of the increase. We're seeing ${biClaimDiff.toLocaleString()} more BI claims than last year.`, margins.left + 22, y + 8);
+  doc.text('Next step: Dig into BI severity and litigation to find what changed.', margins.left + 4, y + 16);
   
   drawPageFooter(doc, pageWidth, pageHeight, currentPage, 5, ctx);
   
@@ -455,20 +456,20 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'PENDING EXECUTIVE DECISIONS', `${config.decisionsData.critical} Critical Items Require Immediate Action`, ctx);
   y = 44;
   
-  // Decision takeaway
+  // Decision takeaway - plain executive language
   const decisionTakeaway = config.decisionsData.critical > 0
-    ? `${config.decisionsData.total} matters totaling ${formatCurrency(config.decisionsData.totalExposure, true)} require decision. ${config.decisionsData.critical} CRITICAL. ${config.decisionsData.thisWeek} due within 7 days.`
-    : `${config.decisionsData.total} matters pending executive review. Total exposure: ${formatCurrency(config.decisionsData.totalExposure, true)}. No critical items.`;
+    ? `${config.decisionsData.total} matters need your sign-off, worth ${formatCurrency(config.decisionsData.totalExposure, true)}. ${config.decisionsData.critical} are urgent. ${config.decisionsData.thisWeek} are due this week.`
+    : `${config.decisionsData.total} matters need your sign-off, worth ${formatCurrency(config.decisionsData.totalExposure, true)}. Nothing urgent right now.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, decisionTakeaway, config.decisionsData.critical > 0 ? 'negative' : 'neutral');
   y += 26;
   
-  // Decision metrics
+  // Decision metrics - plain labels
   const decMetrics = [
-    { label: 'TOTAL PENDING', value: config.decisionsData.total.toString(), sub: 'decisions' },
-    { label: 'CRITICAL', value: config.decisionsData.critical.toString(), sub: 'immediate action' },
+    { label: 'PENDING', value: config.decisionsData.total.toString(), sub: 'total' },
+    { label: 'URGENT', value: config.decisionsData.critical.toString(), sub: 'need action now' },
     { label: 'DUE THIS WEEK', value: config.decisionsData.thisWeek.toString(), sub: 'next 7 days' },
-    { label: 'TOTAL EXPOSURE', value: formatCurrency(config.decisionsData.totalExposure, true), sub: 'at risk' }
+    { label: 'MONEY AT STAKE', value: formatCurrency(config.decisionsData.totalExposure, true), sub: 'total exposure' }
   ];
   
   decMetrics.forEach((m, i) => {
@@ -553,18 +554,18 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   drawPageHeader(doc, pageWidth, 'CP1 LIMITS TENDERED ANALYSIS', 'Policy Limits Exposure by Coverage and Age', ctx);
   y = 44;
   
-  // CP1 takeaway
-  const cp1Takeaway = `CP1 rate at ${config.cp1Data.cp1Rate} (${config.cp1Data.cp1Count.toLocaleString()} of ${config.cp1Data.totalClaims.toLocaleString()} claims). BI claims at ${config.cp1Data.biCP1Rate} CP1 rate represent 88% of limits exposure. 365+ day claims have highest concentration.`;
+  // CP1 takeaway - plain executive language
+  const cp1Takeaway = `${config.cp1Data.cp1Count.toLocaleString()} claims have hit policy limits (${config.cp1Data.cp1Rate} of our book). Bodily injury is the driver at ${config.cp1Data.biCP1Rate}. Oldest claims are the biggest problem.`;
   
   drawKeyTakeaway(doc, margins.left, y, pageWidth - margins.left - margins.right, cp1Takeaway, parseFloat(config.cp1Data.cp1Rate) > 28 ? 'negative' : 'neutral');
   y += 26;
   
-  // CP1 metrics
+  // CP1 metrics - plain labels
   const cp1Metrics = [
-    { label: 'TOTAL CLAIMS', value: config.cp1Data.totalClaims.toLocaleString(), sub: 'active inventory' },
-    { label: 'CP1 TENDERED', value: config.cp1Data.cp1Count.toLocaleString(), sub: 'limits reached' },
-    { label: 'CP1 RATE', value: config.cp1Data.cp1Rate, sub: 'of inventory' },
-    { label: 'BI CP1 RATE', value: config.cp1Data.biCP1Rate, sub: 'highest exposure' }
+    { label: 'OPEN CLAIMS', value: config.cp1Data.totalClaims.toLocaleString(), sub: 'total book' },
+    { label: 'AT LIMITS', value: config.cp1Data.cp1Count.toLocaleString(), sub: 'maxed out' },
+    { label: 'LIMITS RATE', value: config.cp1Data.cp1Rate, sub: 'of book' },
+    { label: 'BI RATE', value: config.cp1Data.biCP1Rate, sub: 'biggest driver' }
   ];
   
   cp1Metrics.forEach((m, i) => {
@@ -961,28 +962,28 @@ function generateCFOBottomLine(config: ExecutivePackageConfig): string {
   const issues: string[] = [];
   const positives: string[] = [];
   
-  // Budget assessment
+  // Budget assessment - plain language
   if (!config.budgetData.onTrack) {
-    issues.push(`budget projected ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over`);
+    issues.push(`we're heading ${formatCurrency(Math.abs(config.budgetData.projectedVariance), true)} over budget`);
   } else {
-    positives.push(`budget on track with ${formatCurrency(config.budgetData.projectedVariance, true)} buffer`);
+    positives.push(`budget looks good with ${formatCurrency(config.budgetData.projectedVariance, true)} cushion`);
   }
   
   // Decisions assessment
   if (config.decisionsData.critical > 0) {
-    issues.push(`${config.decisionsData.critical} critical decisions pending`);
+    issues.push(`${config.decisionsData.critical} items need your attention today`);
   }
   
   // CP1 assessment
   if (parseFloat(config.cp1Data.cp1Rate) > 28) {
-    issues.push(`CP1 rate elevated at ${config.cp1Data.cp1Rate}`);
+    issues.push(`too many claims hitting limits (${config.cp1Data.cp1Rate})`);
   }
   
   if (issues.length === 0) {
-    return `All key metrics within acceptable parameters. ${positives.join('. ')}. No immediate executive action required.`;
+    return `Things are running clean. ${positives.join('. ')}. Nothing needs your attention right now.`;
   } else if (issues.length === 1) {
-    return `Primary concern: ${issues[0]}. ${positives.length > 0 ? positives.join('. ') + '.' : ''} Recommend focused review.`;
+    return `One thing to watch: ${issues[0]}. ${positives.length > 0 ? positives.join('. ') + '.' : ''}`;
   } else {
-    return `Multiple items require attention: ${issues.join('; ')}. Recommend scheduling executive review session.`;
+    return `A few things need attention: ${issues.join('; ')}. Worth 15 minutes this week.`;
   }
 }
