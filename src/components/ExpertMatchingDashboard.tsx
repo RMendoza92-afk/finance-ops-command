@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
+import { format } from "date-fns";
+import { Download } from "lucide-react";
 
 interface ExpertMatchingDashboardProps {
   data: LitigationMatter[];
@@ -52,6 +56,8 @@ function generateActionableItems(data: LitigationMatter[]): ActionableItem[] {
 export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) {
   const [selectedRow, setSelectedRow] = useState<ActionableItem | null>(null);
   const [managerNotes, setManagerNotes] = useState("");
+  const { exportBoth } = useExportData();
+  const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
   const actionableItems = generateActionableItems(data);
   
@@ -67,8 +73,101 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
     return `$${amount.toLocaleString()}`;
   };
 
+  const formatCurrencyFull = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+  };
+
+  // Export handlers
+  const handleExportKPIs = useCallback(() => {
+    const exportData: ExportableData = {
+      title: 'Expert Matching Summary',
+      subtitle: 'Manager Dashboard - Actionable Items',
+      timestamp,
+      summary: {
+        'Actionable Items': totalActionable,
+        'Decision Overhang': formatCurrencyFull(decisionOverhang),
+        'Total Cost Exposure': formatCurrencyFull(selectedTotalCost),
+        'Terminate Ready': terminateReady,
+      },
+      columns: ['Metric', 'Value'],
+      rows: [
+        ['Actionable Items', totalActionable],
+        ['Decision Overhang', formatCurrencyFull(decisionOverhang)],
+        ['Total Cost Exposure', formatCurrencyFull(selectedTotalCost)],
+        ['Terminate Ready', terminateReady],
+      ],
+    };
+    exportBoth(exportData);
+    sonnerToast.success('PDF + Excel exported: Expert Matching Summary');
+  }, [exportBoth, timestamp, totalActionable, decisionOverhang, selectedTotalCost, terminateReady]);
+
+  const handleExportQueue = useCallback(() => {
+    const exportData: ExportableData = {
+      title: 'Expert Matching Action Queue',
+      subtitle: 'Full queue with cost analysis',
+      timestamp,
+      summary: {
+        'Total Items': actionableItems.length,
+        'Total Overhang': formatCurrencyFull(decisionOverhang),
+        'Terminate Ready': terminateReady,
+      },
+      columns: ['#', 'Venue', 'Pattern', 'Expert', 'Posture', 'Status', 'Paid to Date', 'Overhang', 'Total Cost'],
+      rows: actionableItems.map(row => [
+        row.id,
+        row.venue,
+        row.pattern,
+        row.expert,
+        row.posture,
+        row.status,
+        formatCurrencyFull(row.paidToDate),
+        formatCurrencyFull(row.overhang),
+        formatCurrencyFull(row.totalCost),
+      ]),
+    };
+    exportBoth(exportData);
+    sonnerToast.success('PDF + Excel exported: Action Queue');
+  }, [exportBoth, timestamp, actionableItems, decisionOverhang, terminateReady]);
+
+  const handleExportItem = useCallback((item: ActionableItem) => {
+    const exportData: ExportableData = {
+      title: `Action Item: ${item.venue}`,
+      subtitle: `Expert Matching - ${item.status}`,
+      timestamp,
+      summary: {
+        'Venue': item.venue,
+        'Pattern': item.pattern,
+        'Expert': item.expert,
+        'Posture': item.posture,
+        'Status': item.status,
+        'Paid to Date': formatCurrencyFull(item.paidToDate),
+        'Overhang': formatCurrencyFull(item.overhang),
+        'Total Cost': formatCurrencyFull(item.totalCost),
+      },
+      columns: ['Field', 'Value'],
+      rows: [
+        ['ID', item.id],
+        ['Venue', item.venue],
+        ['Pattern', item.pattern],
+        ['Expert', item.expert],
+        ['Posture', item.posture],
+        ['Status', item.status],
+        ['Paid to Date', formatCurrencyFull(item.paidToDate)],
+        ['Overhang', formatCurrencyFull(item.overhang)],
+        ['Total Cost', formatCurrencyFull(item.totalCost)],
+      ],
+    };
+    exportBoth(exportData);
+    sonnerToast.success(`PDF + Excel exported: ${item.venue}`);
+  }, [exportBoth, timestamp]);
+
   return (
     <div className="mb-8">
+      {/* Export Hint */}
+      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground mb-4">
+        <Download className="h-3.5 w-3.5" />
+        <span>Double-click any section to export PDF + Excel</span>
+      </div>
+
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-xl font-bold text-foreground">Expert Matching — Manager Dashboard</h3>
@@ -76,20 +175,24 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-card border-border">
+      <div 
+        className="grid grid-cols-4 gap-4 mb-6 cursor-pointer"
+        onDoubleClick={handleExportKPIs}
+        title="Double-click to export"
+      >
+        <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
           <div className="text-3xl font-bold text-foreground">{totalActionable}</div>
           <div className="text-sm text-muted-foreground">Actionable Items</div>
         </Card>
-        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50 transition-colors">
           <div className="text-3xl font-bold text-yellow-500">{formatCurrency(decisionOverhang)}</div>
           <div className="text-sm text-yellow-500/80">Decision overhang</div>
         </Card>
-        <Card className="p-4 bg-red-500/10 border-red-500/30">
+        <Card className="p-4 bg-red-500/10 border-red-500/30 hover:border-red-500/50 transition-colors">
           <div className="text-3xl font-bold text-red-500">{formatCurrency(selectedTotalCost)}</div>
           <div className="text-sm text-red-500/80">Total cost exposure {selectedRow ? '' : '(selected)'}</div>
         </Card>
-        <Card className="p-4 bg-card border-border">
+        <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
           <div className="text-3xl font-bold text-foreground">{terminateReady}</div>
           <div className="text-sm text-muted-foreground">Terminate-ready</div>
         </Card>
@@ -98,9 +201,13 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Submission Queue Table */}
-        <Card className="lg:col-span-2 p-4 bg-card border-border">
+        <Card 
+          className="lg:col-span-2 p-4 bg-card border-border cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportQueue}
+          title="Double-click to export"
+        >
           <div className="mb-3">
-            <h4 className="font-semibold text-foreground">Action Queue <span className="text-muted-foreground font-normal">(click any line)</span></h4>
+            <h4 className="font-semibold text-foreground">Action Queue <span className="text-muted-foreground font-normal">(click any line, double-click to export)</span></h4>
           </div>
           
           <div className="overflow-x-auto">
@@ -123,6 +230,10 @@ export function ExpertMatchingDashboard({ data }: ExpertMatchingDashboardProps) 
                   <tr 
                     key={row.id}
                     onClick={() => setSelectedRow(row)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      handleExportItem(row);
+                    }}
                     className={`border-b border-border/50 cursor-pointer transition-colors hover:bg-accent/50 ${
                       selectedRow?.id === row.id ? 'bg-accent' : ''
                     }`}

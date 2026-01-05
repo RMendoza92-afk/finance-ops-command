@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,8 @@ const REVIEWERS = ['Richie Mendoza'];
 
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
+  const { exportBoth } = useExportData();
+  const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
   const [selectedClaimFilter, setSelectedClaimFilter] = useState<string>('');
   const [selectedReviewer, setSelectedReviewer] = useState<string>('');
@@ -48,6 +51,9 @@ export function OpenInventoryDashboard() {
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
   const formatCurrencyK = (val: number) => `$${(val / 1000).toFixed(0)}K`;
   const formatCurrencyFull = (val: number) => `$${val.toLocaleString()}`;
+  const formatCurrencyFullValue = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+  };
 
   // Fetch existing reviews
   const fetchReviews = async () => {
@@ -207,6 +213,84 @@ export function OpenInventoryDashboard() {
     };
   }, [data]);
 
+  // Export handlers for double-click
+  const handleExportSummary = useCallback(() => {
+    if (!metrics) return;
+    const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
+    const exportData: ExportableData = {
+      title: 'Open Inventory Summary',
+      subtitle: 'Claims and Financial Overview',
+      timestamp,
+      summary: {
+        'Total Open Claims': formatNumber(metrics.totalOpenClaims),
+        'Total Open Exposures': formatNumber(metrics.totalOpenExposures),
+        'Open Reserves': formatCurrencyFullValue(metrics.financials.totals.totalOpenReserves),
+        'Median Evaluation': formatCurrencyFullValue(medianEval),
+        'No Evaluation': formatNumber(metrics.financials.totals.noEvalCount),
+      },
+      columns: ['Metric', 'Value'],
+      rows: [
+        ['Total Open Claims', formatNumber(metrics.totalOpenClaims)],
+        ['Total Open Exposures', formatNumber(metrics.totalOpenExposures)],
+        ['Open Reserves', formatCurrencyFullValue(metrics.financials.totals.totalOpenReserves)],
+        ['Low Evaluation', formatCurrencyFullValue(metrics.financials.totals.totalLowEval)],
+        ['High Evaluation', formatCurrencyFullValue(metrics.financials.totals.totalHighEval)],
+        ['Median Evaluation', formatCurrencyFullValue(medianEval)],
+        ['No Evaluation Count', formatNumber(metrics.financials.totals.noEvalCount)],
+        ['Flagged Claims', formatNumber(metrics.flagged)],
+      ],
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Open Inventory Summary');
+  }, [exportBoth, timestamp, metrics]);
+
+  const handleExportByAge = useCallback(() => {
+    if (!metrics) return;
+    const exportData: ExportableData = {
+      title: 'Reserves vs Evaluation by Age',
+      subtitle: 'Financial breakdown by claim age bucket',
+      timestamp,
+      columns: ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval', 'Median Eval'],
+      rows: metrics.ageDistribution.map(item => [
+        item.age,
+        item.claims,
+        formatCurrencyFullValue(item.openReserves),
+        formatCurrencyFullValue(item.lowEval),
+        formatCurrencyFullValue(item.highEval),
+        formatCurrencyFullValue((item.lowEval + item.highEval) / 2),
+      ]),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Reserves by Age');
+  }, [exportBoth, timestamp, metrics]);
+
+  const handleExportByQueue = useCallback(() => {
+    if (!metrics) return;
+    const exportData: ExportableData = {
+      title: 'Reserve Adequacy by Queue',
+      subtitle: 'Queue-level reserve analysis',
+      timestamp,
+      columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'Median Eval', 'Variance %', 'Status'],
+      rows: metrics.financials.byQueue.map(queue => {
+        const qMedian = (queue.lowEval + queue.highEval) / 2;
+        const qVariance = queue.openReserves - qMedian;
+        const qVariancePct = ((qVariance / qMedian) * 100).toFixed(1);
+        const qIsOver = qVariance > 0;
+        return [
+          queue.queue,
+          formatCurrencyFullValue(queue.openReserves),
+          formatCurrencyFullValue(queue.lowEval),
+          formatCurrencyFullValue(queue.highEval),
+          formatCurrencyFullValue(qMedian),
+          `${qIsOver ? '+' : ''}${qVariancePct}%`,
+          qIsOver ? 'Over-reserved' : 'Under-reserved',
+        ];
+      }),
+    };
+    exportBoth(exportData);
+    toast.success('PDF + Excel exported: Reserve Adequacy by Queue');
+  }, [exportBoth, timestamp, metrics]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -227,8 +311,18 @@ export function OpenInventoryDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Export Hint */}
+      <div className="bg-muted/30 border border-border/50 rounded-lg px-4 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <Download className="h-3.5 w-3.5" />
+        <span>Double-click any section to export PDF + Excel</span>
+      </div>
+
       {/* Summary Banner with Financials */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
+      <div 
+        className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        onDoubleClick={handleExportSummary}
+        title="Double-click to export"
+      >
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
@@ -315,7 +409,11 @@ export function OpenInventoryDashboard() {
             </div>
 
             {/* Reserve Adequacy by Queue */}
-            <div className="bg-card border border-border rounded-xl p-5">
+            <div 
+              className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+              onDoubleClick={handleExportByQueue}
+              title="Double-click to export"
+            >
               <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">Reserve Adequacy by Queue</h3>
               <div className="grid grid-cols-4 gap-4">
                 {metrics.financials.byQueue.map((queue) => {
@@ -360,7 +458,11 @@ export function OpenInventoryDashboard() {
       {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-2 gap-6">
         {/* Reserves vs Eval by Age Bucket */}
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div 
+          className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+          onDoubleClick={handleExportByAge}
+          title="Double-click to export"
+        >
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Reserves vs Evaluation by Age</h3>
           <p className="text-xs text-muted-foreground mb-4">Open reserves compared to low/high evaluation by claim age</p>
           
