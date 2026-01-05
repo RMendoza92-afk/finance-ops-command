@@ -424,26 +424,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     };
   }, []);
 
-  // Settlement Success calculation - based on resolved matters 
-  const settlementMetrics = useMemo(() => {
-    // These calculations would come from actual resolution data
-    // Current values are based on industry benchmarks
-    const totalResolved = 847; // EXECUTIVE_METRICS.closures.closedThisMonth
-    const favorableOutcomes = 678; // Settlements below demand, dismissals, favorable verdicts
-    const successRate = Math.round((favorableOutcomes / totalResolved) * 100);
-    const avgCentsOnDollar = 62; // Average settlement as % of initial demand
-    
-    return {
-      totalResolved,
-      favorableOutcomes,
-      successRate,
-      avgCentsOnDollar,
-      dismissals: 234,
-      settlements: 389,
-      verdicts: 55,
-      adverseVerdicts: 169,
-    };
-  }, []);
 
   // Generate PDF for Budget Burn Rate
   const generateBudgetPDF = useCallback(async () => {
@@ -1661,16 +1641,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               </p>
             </div>
             <ArrowUpRight className="h-4 w-4 text-primary ml-auto" />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-success/20 rounded-lg">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase">Settlement Success</p>
-              <p className="text-xl font-bold text-success">{settlementMetrics.successRate}%<span className="text-sm font-normal text-muted-foreground ml-1">win rate</span></p>
-              <p className="text-xs text-muted-foreground">Avg {settlementMetrics.avgCentsOnDollar}¢ on demand dollar</p>
-            </div>
           </div>
           <div 
             className="flex items-center gap-4 cursor-pointer hover:bg-warning/10 rounded-lg p-2 -m-2 transition-colors"
