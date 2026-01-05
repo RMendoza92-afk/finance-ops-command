@@ -3,6 +3,7 @@ import { useLitigationData, getFilterOptions, LitigationMatter } from "@/hooks/u
 import { OverextensionTable } from "@/components/OverextensionTable";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
 import { Loader2, AlertTriangle, TrendingUp } from "lucide-react";
+import loyaLogo from "@/assets/fli_logo.jpg";
 
 // Determine litigation stage based on pain level
 function getLitigationStage(painLvl: number): 'Early' | 'Mid' | 'Late' | 'Very Late' {
@@ -130,8 +131,10 @@ const Index = () => {
       <header className="command-header px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <img src={loyaLogo} alt="Fred Loya Insurance" className="h-10 w-auto" />
+            <div className="h-8 w-px bg-border" />
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-6 w-6 text-destructive" />
+              <AlertTriangle className="h-5 w-5 text-destructive" />
               <h1 className="text-xl font-bold tracking-tight">Overextension & Reactive Spend</h1>
             </div>
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-destructive/20 text-destructive border border-destructive/30">
