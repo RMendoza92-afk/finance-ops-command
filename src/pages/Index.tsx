@@ -5,26 +5,12 @@ import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
 import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2 } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
-
-// Determine litigation stage based on pain level
-function getLitigationStage(painLvl: number): 'Early' | 'Mid' | 'Late' | 'Very Late' {
-  if (painLvl <= 2) return 'Early';
-  if (painLvl <= 5) return 'Mid';
-  if (painLvl <= 7) return 'Late';
-  return 'Very Late';
-}
-
-// Determine expert type from expense category
-function getExpertType(expCategory: string): string {
-  if (!expCategory) return 'Other';
-  const cat = expCategory.toUpperCase();
-  if (cat.includes('MEDICAL') || cat.includes('MED')) return 'Medical';
-  if (cat.includes('LEGAL') || cat.includes('ATTORNEY')) return 'Legal';
-  if (cat.includes('EXPERT') || cat.includes('CONSULT')) return 'Consultant';
-  if (cat.includes('ENGINEER')) return 'Engineering';
-  if (cat.includes('ACCOUNT') || cat.includes('ECON')) return 'Economic';
-  return 'Other';
-}
+import { 
+  getLitigationStage, 
+  getExpertType, 
+  estimateClaimAge, 
+  calculateExecutiveReview 
+} from "@/lib/executiveReview";
 
 type TabType = 'executive' | 'management';
 
@@ -88,6 +74,34 @@ const Index = () => {
       if (filters.expertType !== 'all') {
         const expertType = getExpertType(matter.expCategory);
         if (expertType !== filters.expertType) return false;
+      }
+      
+      // Executive Review filter
+      if (filters.executiveReview !== 'all') {
+        const claimAge = estimateClaimAge(matter.prefix);
+        const stage = getLitigationStage(matter.endPainLvl);
+        const painEscalation = matter.endPainLvl - matter.startPainLvl;
+        
+        // Use totalAmount as expense proxy, approximate expert vs reactive spend (using the 29.9% ratio)
+        const expertSpend = matter.totalAmount * 0.299;
+        const reactiveSpend = matter.totalAmount * 0.701;
+        
+        const review = calculateExecutiveReview(
+          claimAge,
+          stage,
+          expertSpend,
+          reactiveSpend,
+          painEscalation,
+          matter.endPainLvl,
+          matter.expCategory
+        );
+        
+        if (filters.executiveReview === 'any') {
+          // "any" means any non-NONE review level
+          if (review.level === 'NONE') return false;
+        } else if (review.level !== filters.executiveReview) {
+          return false;
+        }
       }
       
       // Free text search

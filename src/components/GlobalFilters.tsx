@@ -15,6 +15,7 @@ export interface GlobalFilters {
   litigationStage: string;
   painBand: string;
   expertType: string;
+  executiveReview: string;
   searchText: string;
 }
 
@@ -25,6 +26,7 @@ export const defaultGlobalFilters: GlobalFilters = {
   litigationStage: 'all',
   painBand: 'all',
   expertType: 'all',
+  executiveReview: 'all',
   searchText: ''
 };
 
@@ -161,8 +163,8 @@ export function GlobalFilterPanel({
         </Select>
       </div>
 
-      {/* Expert Type row */}
-      <div className="mt-3">
+      {/* Expert Type & Executive Review row */}
+      <div className="mt-3 flex gap-3">
         <Select value={filters.expertType} onValueChange={(v) => onFilterChange('expertType', v)}>
           <SelectTrigger className="w-48 bg-muted border-border text-sm">
             <SelectValue placeholder="Expert Type" />
@@ -175,6 +177,20 @@ export function GlobalFilterPanel({
             <SelectItem value="Engineering">Engineering</SelectItem>
             <SelectItem value="Economic">Economic</SelectItem>
             <SelectItem value="Other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.executiveReview} onValueChange={(v) => onFilterChange('executiveReview', v)}>
+          <SelectTrigger className="w-56 bg-muted border-border text-sm">
+            <SelectValue placeholder="Executive Review" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Files</SelectItem>
+            <SelectItem value="any">⚠️ Any Review Required</SelectItem>
+            <SelectItem value="CRITICAL">🔴 Critical</SelectItem>
+            <SelectItem value="REQUIRED">🟠 Required</SelectItem>
+            <SelectItem value="WATCH">🟡 Watch</SelectItem>
+            <SelectItem value="NONE">✅ Normal</SelectItem>
           </SelectContent>
         </Select>
       </div>
