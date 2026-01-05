@@ -4,7 +4,7 @@ import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportDa
 import { KPICard } from "@/components/KPICard";
 import { PainLevelUpload } from "@/components/PainLevelUpload";
 import { DataUploadPanel } from "@/components/DataUploadPanel";
-import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -28,7 +28,7 @@ import {
   ExecutiveReviewLevel,
   ExecutiveReviewResult 
 } from "@/lib/executiveReview";
-
+import { SMSDialog } from "./SMSDialog";
 interface PainLevelRow {
   oldStartPain: string;
   oldEndPain: string;
@@ -68,6 +68,14 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
   const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   const [showAllBombs, setShowAllBombs] = useState(false);
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [selectedCaseForSMS, setSelectedCaseForSMS] = useState<{
+    matterId: string;
+    exposure: number;
+    stage: string;
+    adjuster: string;
+    level: string;
+  } | null>(null);
   // Aggregate data by unique record (claim)
   const aggregatedData = useMemo(() => {
     const grouped = new Map<string, {
@@ -983,16 +991,34 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto">
           {(showAllBombs ? executiveReviewCases : executiveReviewCases.slice(0, 8)).map((caseItem, idx) => (
-            <button
+            <div
               key={caseItem.uniqueRecord}
+              className="relative text-left p-3 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm cursor-pointer"
               onClick={() => onDrilldown(caseItem.uniqueRecord)}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 handleExportClaim(caseItem);
               }}
-              className="text-left p-3 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm"
               title={`Matter ID: ${caseItem.matterId} • Click for drilldown, double-click to export`}
             >
+              {/* SMS Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCaseForSMS({
+                    matterId: caseItem.matterId,
+                    exposure: caseItem.expense,
+                    stage: caseItem.stage,
+                    adjuster: caseItem.adjuster,
+                    level: caseItem.executiveReview.level,
+                  });
+                  setSmsDialogOpen(true);
+                }}
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Send SMS Alert"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+              </button>
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-[#0c2340]/60">#{idx + 1}</span>
                 <TooltipProvider>
@@ -1047,7 +1073,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
               <p className="text-[10px] text-gray-500 mt-2 pt-1 border-t border-[#0c2340]/10 truncate">
                 {caseItem.adjuster} • {caseItem.stage} • {caseItem.claimAge}yr old
               </p>
-            </button>
+            </div>
           ))}
         </div>
 
@@ -1057,6 +1083,23 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
           </div>
         )}
       </div>
+      
+      {/* SMS Dialog */}
+      {selectedCaseForSMS && (
+        <SMSDialog
+          open={smsDialogOpen}
+          onClose={() => {
+            setSmsDialogOpen(false);
+            setSelectedCaseForSMS(null);
+          }}
+          context={{
+            matterId: selectedCaseForSMS.matterId,
+            exposure: selectedCaseForSMS.exposure,
+            region: selectedCaseForSMS.stage,
+            description: `${selectedCaseForSMS.level} review - ${selectedCaseForSMS.adjuster}`
+          }}
+        />
+      )}
     </div>
   );
 }
