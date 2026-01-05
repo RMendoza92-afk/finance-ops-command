@@ -9,6 +9,12 @@ export interface ManagerTracking {
   category: string;
 }
 
+export interface RawClaimData {
+  columns: string[];
+  rows: (string | number)[][];
+  sheetName?: string;
+}
+
 export interface ExportableData {
   title: string;
   subtitle?: string;
@@ -19,6 +25,8 @@ export interface ExportableData {
   summary?: Record<string, string | number>;
   columns: string[];
   rows: (string | number)[][];
+  // Raw underlying claim data for Excel export
+  rawClaimData?: RawClaimData[];
 }
 
 // Helper to load image as base64
@@ -325,8 +333,8 @@ export function useExportData() {
   const generateExcel = (data: ExportableData) => {
     const wb = XLSX.utils.book_new();
 
-    // Main data sheet
-    const wsData: (string | number)[][] = [
+    // ====== SUMMARY SHEET ======
+    const summaryData: (string | number)[][] = [
       [data.title],
       [data.subtitle || ''],
       [`Generated: ${data.timestamp}`],
@@ -336,9 +344,9 @@ export function useExportData() {
 
     // Add directive if exists
     if (data.directive) {
-      wsData.push(['DIRECTIVE']);
-      wsData.push([data.directive]);
-      wsData.push([]);
+      summaryData.push(['DIRECTIVE']);
+      summaryData.push([data.directive]);
+      summaryData.push([]);
     }
 
     // Add manager tracking if exists
@@ -347,55 +355,83 @@ export function useExportData() {
       const noEvalTracking = data.managerTracking.filter(m => m.category === 'no_eval');
 
       if (highEvalManagers.length > 0) {
-        wsData.push(['HIGH EVALUATION TOP 10 MANAGERS']);
-        wsData.push(['Rank', 'Manager', 'High Eval Amount']);
+        summaryData.push(['HIGH EVALUATION TOP 10 MANAGERS']);
+        summaryData.push(['Rank', 'Manager', 'High Eval Amount']);
         highEvalManagers.forEach((manager, idx) => {
-          wsData.push([idx + 1, manager.name, String(manager.value)]);
+          summaryData.push([idx + 1, manager.name, String(manager.value)]);
         });
-        wsData.push([]);
+        summaryData.push([]);
       }
 
       if (noEvalTracking.length > 0) {
-        wsData.push(['NO EVALUATION TRACKING']);
-        wsData.push(['Assigned To', 'Claims Count']);
+        summaryData.push(['NO EVALUATION TRACKING']);
+        summaryData.push(['Assigned To', 'Claims Count']);
         noEvalTracking.forEach((item) => {
-          wsData.push([item.name, String(item.value)]);
+          summaryData.push([item.name, String(item.value)]);
         });
-        wsData.push([]);
+        summaryData.push([]);
       }
     }
 
     // Add summary if exists
     if (data.summary && Object.keys(data.summary).length > 0) {
-      wsData.push(['KEY METRICS']);
-      wsData.push([]);
+      summaryData.push(['KEY METRICS']);
+      summaryData.push([]);
       Object.entries(data.summary).forEach(([key, value]) => {
-        wsData.push([key, String(value)]);
+        summaryData.push([key, String(value)]);
       });
-      wsData.push([]);
+      summaryData.push([]);
     }
 
     // Add table headers and rows
-    wsData.push([]);
-    wsData.push(['DETAILED DATA']);
-    wsData.push(data.columns);
+    summaryData.push([]);
+    summaryData.push(['REPORT DATA']);
+    summaryData.push(data.columns);
     data.rows.forEach(row => {
-      wsData.push(row.map(cell => typeof cell === 'number' ? cell : String(cell)));
+      summaryData.push(row.map(cell => typeof cell === 'number' ? cell : String(cell)));
     });
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
 
-    // Set column widths
-    const colWidths = data.columns.map((col, i) => {
+    // Set column widths for summary
+    const summaryColWidths = data.columns.map((col, i) => {
       const maxLen = Math.max(
         col.length,
         ...data.rows.map(row => String(row[i] || '').length)
       );
-      return { wch: Math.min(maxLen + 2, 35) };
+      return { wch: Math.min(maxLen + 2, 40) };
     });
-    ws['!cols'] = colWidths;
+    summarySheet['!cols'] = summaryColWidths;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    // ====== RAW CLAIM DATA SHEETS ======
+    if (data.rawClaimData && data.rawClaimData.length > 0) {
+      data.rawClaimData.forEach((rawData, index) => {
+        const sheetName = rawData.sheetName || `Claim Data ${index + 1}`;
+        const rawRows: (string | number)[][] = [rawData.columns];
+        
+        rawData.rows.forEach(row => {
+          rawRows.push(row.map(cell => typeof cell === 'number' ? cell : String(cell)));
+        });
+
+        const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
+
+        // Set column widths
+        const rawColWidths = rawData.columns.map((col, i) => {
+          const maxLen = Math.max(
+            col.length,
+            ...rawData.rows.slice(0, 100).map(row => String(row[i] || '').length)
+          );
+          return { wch: Math.min(maxLen + 2, 50) };
+        });
+        rawSheet['!cols'] = rawColWidths;
+
+        // Truncate sheet name to 31 chars (Excel limit)
+        const safeSheetName = sheetName.substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, rawSheet, safeSheetName);
+      });
+    }
 
     // Download
     const filename = `${data.title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
