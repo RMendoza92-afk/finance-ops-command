@@ -7,6 +7,7 @@ import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2 } from 
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData } from "@/hooks/useLitigationData";
+import loyaLogo from "@/assets/fli_logo.jpg";
 
 interface Message {
   role: "user" | "assistant";
@@ -156,10 +157,23 @@ export function LitigationChat() {
 
   const generateResponsePDF = (question: string, responseContent: string) => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - margin * 2;
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const m = { l: 10, r: 10, t: 10 };
+    const cw = pw - m.l - m.r;
+
+    // Executive dark color palette
+    const C = {
+      bg: [12, 12, 12] as [number, number, number],
+      headerBg: [22, 22, 22] as [number, number, number],
+      rowDark: [18, 18, 18] as [number, number, number],
+      rowLight: [24, 24, 24] as [number, number, number],
+      border: [45, 45, 45] as [number, number, number],
+      white: [255, 255, 255] as [number, number, number],
+      offWhite: [240, 240, 240] as [number, number, number],
+      muted: [140, 140, 140] as [number, number, number],
+      gold: [212, 175, 55] as [number, number, number],
+    };
 
     // Sanitize text for PDF
     const sanitize = (text: string): string => {
@@ -172,87 +186,168 @@ export function LitigationChat() {
         .replace(/[^\x20-\x7E\n]/g, '');
     };
 
+    // Background
+    doc.setFillColor(...C.bg);
+    doc.rect(0, 0, pw, ph, 'F');
+
     // Header
-    doc.setFillColor(30, 41, 59);
-    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setFillColor(...C.headerBg);
+    doc.rect(0, 0, pw, 24, 'F');
+    doc.setFillColor(...C.gold);
+    doc.rect(0, 24, pw, 0.5, 'F');
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    // Logo
+    try {
+      doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
+    } catch (e) {
+      // Logo failed silently
+    }
+
     doc.setFont('helvetica', 'bold');
-    doc.text("Fred Loya Insurance", margin, 15);
-    doc.setFontSize(10);
+    doc.setFontSize(12);
+    doc.setTextColor(...C.white);
+    doc.text('LITIGATION INTELLIGENCE REPORT', m.l + 20, 13);
+
     doc.setFont('helvetica', 'normal');
-    doc.text("Litigation Command Center - Query Report", margin, 25);
-    doc.text(new Date().toLocaleDateString(), pageWidth - margin, 15, { align: 'right' });
+    doc.setFontSize(7);
+    doc.setTextColor(...C.muted);
+    doc.text(new Date().toLocaleDateString(), pw - m.r, 13, { align: 'right' });
 
-    let yPos = 50;
+    let y = 32;
 
-    // Question section
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
+    // Query Section
+    doc.setFillColor(...C.rowDark);
+    doc.roundedRect(m.l, y, cw, 18, 1, 1, 'F');
+    doc.setFillColor(...C.gold);
+    doc.rect(m.l, y, 1.5, 18, 'F');
+
     doc.setFont('helvetica', 'bold');
-    doc.text("QUERY:", margin, yPos);
+    doc.setFontSize(7);
+    doc.setTextColor(...C.gold);
+    doc.text('EXECUTIVE QUERY', m.l + 5, y + 5);
+
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    const questionLines = doc.splitTextToSize(sanitize(question), contentWidth);
-    doc.text(questionLines, margin, yPos + 6);
-    yPos += 6 + questionLines.length * 5 + 10;
+    doc.setFontSize(8);
+    doc.setTextColor(...C.offWhite);
+    const questionLines = doc.splitTextToSize(sanitize(question), cw - 12);
+    doc.text(questionLines.slice(0, 2), m.l + 5, y + 11);
 
-    // Divider
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    y += 22;
 
-    // Response section
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
+    // Response Section Header
+    doc.setFillColor(...C.headerBg);
+    doc.rect(m.l, y, cw, 8, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.text("RESPONSE:", margin, yPos);
-    yPos += 8;
+    doc.setFontSize(6);
+    doc.setTextColor(...C.muted);
+    doc.text('INTELLIGENCE RESPONSE', m.l + 3, y + 5);
+    y += 10;
 
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
+    // Response content
     const sanitizedResponse = sanitize(responseContent);
     const lines = sanitizedResponse.split('\n');
+    const lineH = 5;
 
-    lines.forEach(line => {
-      if (yPos > pageHeight - 30) {
+    doc.setFontSize(8);
+
+    lines.forEach((line, idx) => {
+      if (y > ph - 20) {
+        // New page
         doc.addPage();
-        yPos = 20;
+        doc.setFillColor(...C.bg);
+        doc.rect(0, 0, pw, ph, 'F');
+        y = m.t;
       }
 
       const trimmedLine = line.trim();
-      
+      const isEven = idx % 2 === 0;
+
+      // Row background
+      doc.setFillColor(...(isEven ? C.rowDark : C.rowLight));
+      doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
+
       // Handle bullet points
       if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         const bulletText = trimmedLine.slice(2);
-        const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
-        doc.text('•', margin, yPos);
-        doc.text(bulletLines, margin + 8, yPos);
-        yPos += bulletLines.length * 5 + 2;
-      } 
+        const bulletLines = doc.splitTextToSize(bulletText, cw - 15);
+        doc.setTextColor(...C.gold);
+        doc.text('\u2022', m.l + 3, y);
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'normal');
+        doc.text(bulletLines[0] || '', m.l + 8, y);
+        y += lineH;
+        bulletLines.slice(1).forEach((bl: string) => {
+          if (y > ph - 20) {
+            doc.addPage();
+            doc.setFillColor(...C.bg);
+            doc.rect(0, 0, pw, ph, 'F');
+            y = m.t;
+          }
+          doc.setFillColor(...C.rowLight);
+          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
+          doc.setTextColor(...C.offWhite);
+          doc.text(bl, m.l + 8, y);
+          y += lineH;
+        });
+      }
       // Handle numbered lists
       else if (/^\d+\./.test(trimmedLine)) {
-        const textLines = doc.splitTextToSize(trimmedLine, contentWidth - 5);
-        doc.text(textLines, margin + 5, yPos);
-        yPos += textLines.length * 5 + 2;
+        doc.setTextColor(...C.gold);
+        doc.setFont('helvetica', 'bold');
+        const num = trimmedLine.match(/^\d+\./)?.[0] || '';
+        doc.text(num, m.l + 3, y);
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'normal');
+        const restText = trimmedLine.slice(num.length).trim();
+        const textLines = doc.splitTextToSize(restText, cw - 15);
+        doc.text(textLines[0] || '', m.l + 12, y);
+        y += lineH;
+        textLines.slice(1).forEach((tl: string) => {
+          if (y > ph - 20) {
+            doc.addPage();
+            doc.setFillColor(...C.bg);
+            doc.rect(0, 0, pw, ph, 'F');
+            y = m.t;
+          }
+          doc.setFillColor(...C.rowLight);
+          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
+          doc.setTextColor(...C.offWhite);
+          doc.text(tl, m.l + 12, y);
+          y += lineH;
+        });
       }
       // Handle headers (lines ending with :)
       else if (trimmedLine.endsWith(':') && trimmedLine.length < 60) {
+        y += 2;
+        doc.setFillColor(...C.headerBg);
+        doc.rect(m.l, y - 3, cw, lineH + 3, 'F');
         doc.setFont('helvetica', 'bold');
-        doc.text(trimmedLine, margin, yPos);
+        doc.setTextColor(...C.gold);
+        doc.text(trimmedLine, m.l + 3, y);
         doc.setFont('helvetica', 'normal');
-        yPos += 7;
+        y += lineH + 2;
       }
       // Regular text
       else if (trimmedLine) {
-        const textLines = doc.splitTextToSize(trimmedLine, contentWidth);
-        doc.text(textLines, margin, yPos);
-        yPos += textLines.length * 5 + 2;
+        const textLines = doc.splitTextToSize(trimmedLine, cw - 6);
+        doc.setTextColor(...C.offWhite);
+        doc.text(textLines[0] || '', m.l + 3, y);
+        y += lineH;
+        textLines.slice(1).forEach((tl: string) => {
+          if (y > ph - 20) {
+            doc.addPage();
+            doc.setFillColor(...C.bg);
+            doc.rect(0, 0, pw, ph, 'F');
+            y = m.t;
+          }
+          doc.setFillColor(...C.rowLight);
+          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
+          doc.setTextColor(...C.offWhite);
+          doc.text(tl, m.l + 3, y);
+          y += lineH;
+        });
       } else {
-        yPos += 4; // Empty line
+        y += 3; // Empty line spacing
       }
     });
 
@@ -260,18 +355,21 @@ export function LitigationChat() {
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFillColor(245, 245, 245);
-      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      doc.text('CONFIDENTIAL - Fred Loya Insurance', margin, pageHeight - 5);
-      doc.text('Page ' + i + ' of ' + pageCount, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      doc.setFillColor(...C.headerBg);
+      doc.rect(0, ph - 10, pw, 10, 'F');
+      doc.setFillColor(...C.gold);
+      doc.rect(0, ph - 10, pw, 0.3, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      doc.text('CONFIDENTIAL', m.l, ph - 3);
+      doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
+      doc.text('Page ' + i + ' of ' + pageCount, pw - m.r, ph - 3, { align: 'right' });
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    const filename = 'FLI_Query_Report_' + timestamp + '.pdf';
+    const filename = 'FLI_Intelligence_Report_' + timestamp + '.pdf';
     doc.save(filename);
-    toast.success("PDF report downloaded: " + filename);
+    toast.success('Executive report downloaded: ' + filename);
   };
 
   const sendMessage = async () => {
