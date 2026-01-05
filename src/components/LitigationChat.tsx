@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send, FileText, X, Loader2, Download, Minimize2, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
+import { useLitigationData } from "@/hooks/useLitigationData";
 
 interface Message {
   role: "user" | "assistant";
@@ -35,6 +36,130 @@ export function LitigationChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingReport, setPendingReport] = useState<ReportData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const { data: litigationData } = useLitigationData();
+
+  // Build data context from the loaded litigation data
+  const dataContext = useMemo(() => {
+    if (!litigationData || litigationData.length === 0) return null;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // MTD Closures (CWP with payment in current month)
+    const mtdClosures = litigationData.filter(m => {
+      if (m.cwpCwn !== 'CWP' || !m.paymentDate) return false;
+      const payDate = new Date(m.paymentDate);
+      return payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear;
+    });
+
+    const mtdPaid = mtdClosures.reduce((sum, m) => sum + m.indemnitiesAmount, 0);
+
+    // By expense category
+    const byExpenseCategory: Record<string, { count: number; withEval: number; withoutEval: number; totalPaid: number }> = {};
+    litigationData.forEach(m => {
+      const cat = m.expCategory || 'Unknown';
+      if (!byExpenseCategory[cat]) {
+        byExpenseCategory[cat] = { count: 0, withEval: 0, withoutEval: 0, totalPaid: 0 };
+      }
+      byExpenseCategory[cat].count++;
+      if (m.indemnitiesAmount > 0) {
+        byExpenseCategory[cat].withEval++;
+        byExpenseCategory[cat].totalPaid += m.indemnitiesAmount;
+      } else {
+        byExpenseCategory[cat].withoutEval++;
+      }
+    });
+
+    // By coverage
+    const byCoverage: Record<string, { count: number; withEval: number; withoutEval: number }> = {};
+    litigationData.forEach(m => {
+      const cov = m.coverage || 'Unknown';
+      if (!byCoverage[cov]) {
+        byCoverage[cov] = { count: 0, withEval: 0, withoutEval: 0 };
+      }
+      byCoverage[cov].count++;
+      if (m.indemnitiesAmount > 0) {
+        byCoverage[cov].withEval++;
+      } else {
+        byCoverage[cov].withoutEval++;
+      }
+    });
+
+    // By team
+    const byTeam: Record<string, { count: number; closed: number; totalPaid: number }> = {};
+    litigationData.forEach(m => {
+      const team = m.team || 'Unknown';
+      if (!byTeam[team]) {
+        byTeam[team] = { count: 0, closed: 0, totalPaid: 0 };
+      }
+      byTeam[team].count++;
+      if (m.cwpCwn === 'CWP') {
+        byTeam[team].closed++;
+        byTeam[team].totalPaid += m.indemnitiesAmount;
+      }
+    });
+
+    // Matters without evaluation
+    const withoutEvaluation = litigationData.filter(m => m.indemnitiesAmount === 0);
+
+    return {
+      totalMatters: litigationData.length,
+      totalCWP: litigationData.filter(m => m.cwpCwn === 'CWP').length,
+      totalCWN: litigationData.filter(m => m.cwpCwn === 'CWN').length,
+      totalReserves: litigationData.reduce((sum, m) => sum + m.netAmount, 0),
+      totalIndemnityPaid: litigationData.reduce((sum, m) => sum + m.indemnitiesAmount, 0),
+
+      monthToDate: {
+        closures: mtdClosures.length,
+        totalPaid: mtdPaid,
+        avgPayment: mtdClosures.length > 0 ? Math.round(mtdPaid / mtdClosures.length) : 0,
+        closedMatters: mtdClosures.slice(0, 50).map(m => ({
+          claim: m.claim,
+          claimant: m.claimant,
+          paymentDate: m.paymentDate,
+          amountPaid: m.indemnitiesAmount,
+          team: m.team,
+          adjuster: m.adjusterName,
+        }))
+      },
+
+      evaluationStatus: {
+        withEvaluation: litigationData.filter(m => m.indemnitiesAmount > 0).length,
+        withoutEvaluation: withoutEvaluation.length,
+        percentWithoutEval: Math.round((withoutEvaluation.length / litigationData.length) * 100),
+      },
+
+      byExpenseCategory,
+      byCoverage,
+      byTeam,
+
+      mattersWithoutEvaluation: withoutEvaluation.slice(0, 100).map(m => ({
+        claim: m.claim,
+        claimant: m.claimant,
+        category: m.expCategory,
+        coverage: m.coverage,
+        team: m.team,
+        adjuster: m.adjusterName,
+        reserves: m.netAmount,
+      })),
+
+      sampleMatters: litigationData.slice(0, 100).map(m => ({
+        claim: m.claim,
+        claimant: m.claimant,
+        expCategory: m.expCategory,
+        coverage: m.coverage,
+        team: m.team,
+        adjuster: m.adjusterName,
+        paymentDate: m.paymentDate,
+        indemnityPaid: m.indemnitiesAmount,
+        totalAmount: m.totalAmount,
+        status: m.cwpCwn,
+        painLevel: m.endPainLvl,
+      })),
+    };
+  }, [litigationData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -146,6 +271,11 @@ export function LitigationChat() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
     
+    if (!dataContext) {
+      toast.error("Data is still loading, please wait...");
+      return;
+    }
+    
     const userMessage: Message = { role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
@@ -172,7 +302,10 @@ export function LitigationChat() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ 
+          messages: [...messages, userMessage],
+          dataContext 
+        }),
       });
       
       if (!resp.ok || !resp.body) {
@@ -217,7 +350,6 @@ export function LitigationChat() {
       const { text, reportData } = extractReportData(assistantContent);
       if (reportData) {
         setPendingReport(reportData);
-        // Update the message without the report JSON
         setMessages(prev => 
           prev.map((m, i) => i === prev.length - 1 ? { ...m, content: text } : m)
         );
@@ -260,6 +392,11 @@ export function LitigationChat() {
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <MessageCircle className="h-4 w-4" />
           Litigation Assistant
+          {dataContext && (
+            <span className="text-xs text-muted-foreground">
+              ({dataContext.totalMatters.toLocaleString()} matters)
+            </span>
+          )}
         </CardTitle>
         <div className="flex items-center gap-1">
           <Button
@@ -290,9 +427,10 @@ export function LitigationChat() {
                 <p className="font-medium mb-2">Ask me about your litigation data</p>
                 <p className="text-xs">Examples:</p>
                 <ul className="text-xs mt-2 space-y-1">
-                  <li>"How many rear end accidents without evaluations?"</li>
-                  <li>"Show me matters open over 365 days"</li>
-                  <li>"Generate a PDF report of high severity cases"</li>
+                  <li>"What was closed month to date and what was paid?"</li>
+                  <li>"How many matters without evaluations?"</li>
+                  <li>"Show me team performance breakdown"</li>
+                  <li>"Generate a PDF report of LIT category cases"</li>
                 </ul>
               </div>
             )}
@@ -317,7 +455,7 @@ export function LitigationChat() {
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing data...
+                Analyzing {dataContext?.totalMatters.toLocaleString()} matters...
               </div>
             )}
             
