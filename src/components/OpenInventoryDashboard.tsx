@@ -965,6 +965,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     byQueue: FINANCIAL_DATA.byQueue,
                     byTypeGroup: FINANCIAL_DATA.byTypeGroup,
                     highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ name: a.name, value: String(a.value) })),
+                    quarterlyData: [
+                      { quarter: 'Q1 2025', paid: 1553080, paidMonthly: 517693, approved: 2141536, approvedMonthly: 713845, variance: -588456 },
+                      { quarter: 'Q2 2025', paid: 1727599, paidMonthly: 575866, approved: 1680352, approvedMonthly: 560117, variance: 47247 },
+                      { quarter: 'Q3 2025', paid: 1383717, paidMonthly: 461239, approved: 1449627, approvedMonthly: 483209, variance: -65910 },
+                      { quarter: 'Q4 2025', paid: 1016756, paidMonthly: 508378, approved: 909651, approvedMonthly: 454826, variance: 107105 },
+                    ],
                   }
                 );
                 toast.success('Executive Package downloaded! (PDF + Excel with granular data)');
