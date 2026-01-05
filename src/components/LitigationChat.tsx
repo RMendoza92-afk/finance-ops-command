@@ -441,13 +441,28 @@ export function LitigationChat() {
                 className={`mb-4 ${msg.role === "user" ? "text-right" : "text-left"}`}
               >
                 <div
-                  className={`inline-block max-w-[85%] px-3 py-2 rounded-lg text-sm ${
+                  className={`inline-block max-w-[85%] px-4 py-3 rounded-lg text-sm ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      : "bg-muted text-foreground"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    {msg.content.split('\n').map((line, lineIdx) => (
+                      <p key={lineIdx} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
+                        {line.startsWith('- ') ? (
+                          <span className="flex gap-2">
+                            <span className="text-muted-foreground">•</span>
+                            <span>{line.slice(2)}</span>
+                          </span>
+                        ) : line.startsWith('**') && line.endsWith('**') ? (
+                          <strong>{line.slice(2, -2)}</strong>
+                        ) : (
+                          line
+                        )}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
