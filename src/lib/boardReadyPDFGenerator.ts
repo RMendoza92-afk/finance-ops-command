@@ -382,8 +382,7 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setTextColor(...C.muted);
   doc.text('CONFIDENTIAL', m.l, ph - 3);
   doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
-  const pageCount = doc.internal.pages.length - 1;
-  doc.text(`Page 1 of ${pageCount}`, pw - m.r, ph - 3, { align: 'right' });
+  doc.text('Page 1 of 1', pw - m.r, ph - 3, { align: 'right' });
 
   // Save
   const filename = `CEO_Control_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
