@@ -1,10 +1,11 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { PainLevelUpload } from "@/components/PainLevelUpload";
 import { DataUploadPanel } from "@/components/DataUploadPanel";
-import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -65,6 +66,7 @@ function getExpertType(expCategory: string): string {
 export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, painLevelDataActive, onDataUploaded }: ExecutiveDashboardProps) {
   const { exportBoth, generateFullExcel } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+  const [showAllBombs, setShowAllBombs] = useState(false);
   // Aggregate data by unique record (claim)
   const aggregatedData = useMemo(() => {
     const grouped = new Map<string, {
@@ -198,6 +200,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
     const claimMap = new Map<string, {
       uniqueRecord: string;
       claim: string;
+      matterId: string;
       stage: 'Early' | 'Mid' | 'Late' | 'Very Late';
       expense: number;
       adjuster: string;
@@ -205,6 +208,8 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
       painEscalation: number;
       maxPain: number;
       expCategory: string;
+      coverage: string;
+      team: string;
       executiveReview: ExecutiveReviewResult;
     }>();
     
@@ -224,6 +229,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
         claimMap.set(key, {
           uniqueRecord: key,
           claim: matter.claim || key,
+          matterId: matter.uniqueRecord || matter.claim || key,
           stage,
           expense: expenseAmount,
           adjuster: matter.adjusterName || 'Unknown',
@@ -231,6 +237,8 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
           painEscalation,
           maxPain: matter.endPainLvl,
           expCategory: matter.expCategory || '',
+          coverage: matter.coverage || '',
+          team: matter.team || '',
           executiveReview: { level: 'NONE', reasons: [], score: 0 } // placeholder
         });
       }
@@ -259,17 +267,17 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
       };
     });
     
-    // Filter to CRITICAL and REQUIRED only, sort by expense (highest first)
+    // Filter to CRITICAL and REQUIRED only, sort by score (highest first), then expense
     return cases
       .filter(c => c.executiveReview.level === 'CRITICAL' || c.executiveReview.level === 'REQUIRED')
       .sort((a, b) => {
-        // First sort by level (CRITICAL first), then by expense
-        if (a.executiveReview.level !== b.executiveReview.level) {
-          return a.executiveReview.level === 'CRITICAL' ? -1 : 1;
+        // First sort by score (highest first), then by expense
+        if (b.executiveReview.score !== a.executiveReview.score) {
+          return b.executiveReview.score - a.executiveReview.score;
         }
         return b.expense - a.expense;
-      })
-      .slice(0, 8);
+      });
+    // No slice - return all cases for complete visibility
   }, [data]);
 
   const formatCurrency = (value: number) => {
@@ -933,17 +941,47 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
             <div className="flex items-center gap-2 mb-1">
               <div className="w-1 h-5 bg-[#b41e1e] rounded"></div>
               <h3 className="text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Executive Review Required</h3>
+              <span className="text-xs font-bold text-[#b41e1e] bg-[#b41e1e]/10 px-2 py-0.5 rounded-full">
+                {executiveReviewCases.length} TOTAL
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground ml-3">Files requiring executive closure — double-click section header for all, or individual claim for detail</p>
+            <p className="text-xs text-muted-foreground ml-3">
+              Complete list of high-risk files • Click to correlate with open inventory • Double-click to export
+            </p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#b41e1e] animate-pulse"></span> CRITICAL</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500"></span> REQUIRED</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#b41e1e] animate-pulse"></span>
+                CRITICAL ({executiveReviewCases.filter(c => c.executiveReview.level === 'CRITICAL').length})
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                REQUIRED ({executiveReviewCases.filter(c => c.executiveReview.level === 'REQUIRED').length})
+              </span>
+            </div>
+            {executiveReviewCases.length > 8 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAllBombs(!showAllBombs);
+                }}
+                className="text-xs h-7"
+              >
+                {showAllBombs ? (
+                  <>Show Less <ChevronUp className="ml-1 h-3 w-3" /></>
+                ) : (
+                  <>Show All ({executiveReviewCases.length}) <ChevronDown className="ml-1 h-3 w-3" /></>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {executiveReviewCases.map((caseItem, idx) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto">
+          {(showAllBombs ? executiveReviewCases : executiveReviewCases.slice(0, 8)).map((caseItem, idx) => (
             <button
               key={caseItem.uniqueRecord}
               onClick={() => onDrilldown(caseItem.uniqueRecord)}
@@ -952,7 +990,7 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                 handleExportClaim(caseItem);
               }}
               className="text-left p-3 sm:p-4 rounded-lg border-2 border-[#0c2340]/10 bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all hover:border-[#0c2340]/30 group shadow-sm"
-              title="Click for drilldown, double-click to export"
+              title={`Matter ID: ${caseItem.matterId} • Click for drilldown, double-click to export`}
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-[#0c2340]/60">#{idx + 1}</span>
@@ -961,8 +999,9 @@ export function ExecutiveDashboard({ data, onDrilldown, onPainLevelDataApplied, 
                 }`}></span>
               </div>
               
-              <p className="text-sm font-medium text-[#0c2340] truncate mb-1 group-hover:text-[#b41e1e] transition-colors">
-                {caseItem.claim}
+              {/* Matter ID - Primary Identifier for correlation */}
+              <p className="text-lg font-bold text-[#0c2340] truncate mb-1 group-hover:text-[#b41e1e] transition-colors font-mono">
+                {caseItem.matterId}
               </p>
               
               <div className="space-y-1">
