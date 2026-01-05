@@ -3,9 +3,8 @@ import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
 import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
-import { CEODirectiveDashboard } from "@/components/CEODirectiveDashboard";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters } from "@/components/GlobalFilters";
-import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack, Target } from "lucide-react";
+import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -14,7 +13,7 @@ import {
   calculateExecutiveReview 
 } from "@/lib/executiveReview";
 
-type TabType = 'executive' | 'management' | 'directives';
+type TabType = 'executive' | 'management';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabType>('executive');
@@ -202,17 +201,6 @@ const Index = () => {
             Management Data
             <span className="px-1.5 py-0.5 rounded text-xs bg-background/20">{filteredData.length}</span>
           </button>
-          <button
-            onClick={() => setActiveTab('directives')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'directives'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            <Target className="h-4 w-4" />
-            CEO Directives
-          </button>
         </div>
       </header>
       
@@ -231,8 +219,6 @@ const Index = () => {
           <OpenInventoryDashboard />
         ) : activeTab === 'executive' ? (
           <ExecutiveDashboard data={filteredData} onDrilldown={handleDrilldown} />
-        ) : activeTab === 'directives' ? (
-          <CEODirectiveDashboard />
         ) : (
           <OverextensionTable data={filteredData} />
         )}

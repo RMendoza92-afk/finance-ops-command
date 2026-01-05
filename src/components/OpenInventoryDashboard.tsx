@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary } from "@/hooks/useOpenExposureData";
 import { KPICard } from "@/components/KPICard";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2 } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 import {
   BarChart,
   Bar,
@@ -21,16 +24,77 @@ import {
   Legend,
 } from "recharts";
 
+type ClaimReview = Tables<"claim_reviews">;
+
+const REVIEWERS = ['M. Rodriguez', 'J. Smith', 'A. Garcia', 'T. Johnson', 'L. Martinez'];
+
 export function OpenInventoryDashboard() {
   const { data, loading, error } = useOpenExposureData();
 
-  const [selectedClaims, setSelectedClaims] = useState<string[]>([]);
-  const [sendingText, setSendingText] = useState(false);
+  const [selectedClaimFilter, setSelectedClaimFilter] = useState<string>('');
+  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
+  const [directive, setDirective] = useState<string>('');
+  const [deploying, setDeploying] = useState(false);
+  const [reviews, setReviews] = useState<ClaimReview[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
   const formatCurrencyK = (val: number) => `$${(val / 1000).toFixed(0)}K`;
   const formatCurrencyFull = (val: number) => `$${val.toLocaleString()}`;
+
+  // Fetch existing reviews
+  const fetchReviews = async () => {
+    const { data: reviewData, error: reviewError } = await supabase
+      .from('claim_reviews')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!reviewError && reviewData) {
+      setReviews(reviewData);
+    }
+    setLoadingReviews(false);
+  };
+
+  useEffect(() => {
+    fetchReviews();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('claim_reviews_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'claim_reviews' },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          if (payload.eventType === 'INSERT') {
+            setReviews(prev => [payload.new as ClaimReview, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setReviews(prev => prev.map(r => 
+              r.id === (payload.new as ClaimReview).id ? payload.new as ClaimReview : r
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setReviews(prev => prev.filter(r => r.id !== (payload.old as ClaimReview).id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Calculate review stats
+  const reviewStats = useMemo(() => {
+    const assigned = reviews.filter(r => r.status === 'assigned').length;
+    const inReview = reviews.filter(r => r.status === 'in_review').length;
+    const completed = reviews.filter(r => r.status === 'completed').length;
+    const flagged = reviews.filter(r => r.status === 'flagged').length;
+    const totalReserves = reviews.reduce((sum, r) => sum + (Number(r.reserves) || 0), 0);
+    
+    return { total: reviews.length, assigned, inReview, completed, flagged, totalReserves };
+  }, [reviews]);
 
   // Known totals from user source (January 2, 2026)
   const KNOWN_TOTALS = {
@@ -490,12 +554,12 @@ export function OpenInventoryDashboard() {
         </div>
       </div>
 
-      {/* QUICK ACTION: Rear Ends - Texas Areas 101-110 */}
+      {/* QUICK ACTION: Rear Ends - Texas Areas 101-110 with In-Platform Directive */}
       <div className="bg-gradient-to-r from-warning/10 to-warning/5 border-2 border-warning/40 rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-warning/20">
-              <Car className="h-5 w-5 text-warning" />
+              <Target className="h-5 w-5 text-warning" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wide flex items-center gap-2">
@@ -508,39 +572,39 @@ export function OpenInventoryDashboard() {
             </div>
           </div>
           <div className="flex gap-6 items-center">
-            <div className="text-center">
+            <div className="text-center border-r border-border pr-4">
               <p className="text-xs text-muted-foreground uppercase">Open Reserves</p>
-              <p className="text-xl font-bold text-primary">{formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground uppercase">Low Eval</p>
-              <p className="text-xl font-bold text-accent-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)}</p>
+              <p className="text-lg font-semibold text-muted-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.lowEval)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground uppercase">High Eval</p>
-              <p className="text-xl font-bold text-warning">{formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)}</p>
+              <p className="text-lg font-semibold text-muted-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.highEval)}</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* By Area */}
+          {/* By Area - Reserves Emphasized */}
           <div className="bg-card rounded-lg border border-border p-4">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Area Code</h4>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {TEXAS_REAR_END_DATA.byArea.map((item) => (
                 <div key={item.area} className="flex justify-between items-center py-1 border-b border-border/50">
                   <span className="text-sm font-medium">{item.area}</span>
-                  <div className="flex gap-3 text-xs">
+                  <div className="flex gap-3 text-xs items-center">
                     <span className="text-muted-foreground">{item.claims} claims</span>
-                    <span className="text-primary font-semibold">{formatCurrencyK(item.reserves)}</span>
+                    <span className="text-primary font-bold text-sm">{formatCurrencyK(item.reserves)}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* By Age */}
+          {/* By Age - Reserves Emphasized */}
           <div className="bg-card rounded-lg border border-border p-4">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">By Age Bucket</h4>
             <div className="space-y-2">
@@ -551,9 +615,9 @@ export function OpenInventoryDashboard() {
                     item.age === '181-365 Days' ? 'text-warning' : ''
                   }`}>{item.age}</span>
                   <div className="text-right">
-                    <p className="text-sm font-semibold">{item.claims} claims</p>
+                    <p className="text-sm font-bold text-primary">{formatCurrencyK(item.reserves)} reserves</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrencyK(item.reserves)} reserves • {formatCurrencyK(item.highEval)} high
+                      {item.claims} claims • {formatCurrencyK(item.highEval)} high
                     </p>
                   </div>
                 </div>
@@ -561,14 +625,14 @@ export function OpenInventoryDashboard() {
             </div>
           </div>
 
-          {/* SMS Action */}
-          <div className="bg-card rounded-lg border border-border p-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3 flex items-center gap-2">
-              <MessageSquare className="h-3 w-3" /> Request File Review
+          {/* Deploy Directive - In-Platform */}
+          <div className="bg-card rounded-lg border border-primary/30 p-4">
+            <h4 className="text-xs font-semibold text-primary uppercase mb-3 flex items-center gap-2">
+              <Target className="h-3 w-3" /> Deploy Review Directive
             </h4>
             <RadioGroup 
-              value={selectedClaims.length > 0 ? selectedClaims[0] : ''} 
-              onValueChange={(val) => setSelectedClaims([val])}
+              value={selectedClaimFilter} 
+              onValueChange={setSelectedClaimFilter}
               className="space-y-2"
             >
               <div className="flex items-center space-x-2">
@@ -589,56 +653,195 @@ export function OpenInventoryDashboard() {
               </div>
             </RadioGroup>
 
+            <div className="mt-3">
+              <select
+                value={selectedReviewer}
+                onChange={(e) => setSelectedReviewer(e.target.value)}
+                className="w-full p-2 rounded-lg border border-border bg-background text-sm mb-2"
+              >
+                <option value="">Select reviewer...</option>
+                {REVIEWERS.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+
             <Button 
-              className="w-full mt-4" 
+              className="w-full mt-2" 
               variant="default"
-              disabled={selectedClaims.length === 0 || sendingText}
+              disabled={!selectedClaimFilter || !selectedReviewer || deploying}
               onClick={async () => {
-                setSendingText(true);
-                const claimCount = selectedClaims[0] === 'all' ? 2458 : 
-                  selectedClaims[0] === 'aged-365' ? 983 :
-                  selectedClaims[0] === 'high-reserve' ? 245 : 127;
+                setDeploying(true);
+                const claimCount = selectedClaimFilter === 'all' ? 47 : 
+                  selectedClaimFilter === 'aged-365' ? 18 :
+                  selectedClaimFilter === 'high-reserve' ? 12 : 5;
                 
-                try {
-                  const { data, error } = await supabase.functions.invoke('send-review-sms', {
-                    body: {
-                      to: '9154875798',
-                      claimType: 'Rear Ends',
-                      claimCount,
-                      region: 'Texas 101-110',
-                      lossDescription: TEXAS_REAR_END_DATA.lossDescription,
-                    }
+                // Create sample claims for the database
+                const claimsToInsert = [];
+                const areas = TEXAS_REAR_END_DATA.byArea;
+                
+                for (let i = 0; i < Math.min(claimCount, 10); i++) {
+                  const area = areas[i % areas.length];
+                  const ageBucket = selectedClaimFilter === 'aged-365' ? '365+ Days' :
+                    selectedClaimFilter === 'high-reserve' ? '181-365 Days' :
+                    selectedClaimFilter === 'no-eval' ? 'Under 60 Days' :
+                    ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'][i % 4];
+                  
+                  claimsToInsert.push({
+                    claim_id: `CLM-${area.area.split(' ')[0]}-${1000 + i}`,
+                    area: area.area,
+                    loss_description: TEXAS_REAR_END_DATA.lossDescription,
+                    reserves: Math.round(area.reserves / area.claims),
+                    low_eval: selectedClaimFilter === 'no-eval' ? null : Math.round((area.lowEval || 0) / area.claims),
+                    high_eval: selectedClaimFilter === 'no-eval' ? null : Math.round((area.highEval || 0) / area.claims),
+                    age_bucket: ageBucket,
+                    status: 'assigned' as const,
+                    assigned_to: selectedReviewer,
+                    assigned_at: new Date().toISOString(),
+                    notes: directive || `Review batch: ${selectedClaimFilter}`,
                   });
-                  
-                  if (error) throw error;
-                  
-                  toast.success("Text sent to (915) 487-5798", {
-                    description: `Review request for ${claimCount} claims sent.`,
+                }
+                
+                const { error } = await supabase
+                  .from('claim_reviews')
+                  .insert(claimsToInsert);
+                
+                if (error) {
+                  console.error('Deploy error:', error);
+                  toast.error("Failed to deploy directive");
+                } else {
+                  toast.success(`Deployed ${claimsToInsert.length} claims to ${selectedReviewer}`, {
+                    description: "Track progress in real-time below",
                     icon: <CheckCircle2 className="h-4 w-4" />
                   });
-                  setSelectedClaims([]);
-                } catch (err: any) {
-                  console.error('SMS error:', err);
-                  toast.error("Failed to send text", {
-                    description: err.message || "Please check Twilio configuration"
-                  });
-                } finally {
-                  setSendingText(false);
+                  setSelectedClaimFilter('');
+                  setSelectedReviewer('');
+                  setDirective('');
                 }
+                setDeploying(false);
               }}
             >
-              {sendingText ? (
+              {deploying ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Send Text to (915) 487-5798
+              Deploy to {selectedReviewer || 'Reviewer'}
             </Button>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Reviewer will receive claim list for immediate action
+              Track progress in real-time below
             </p>
           </div>
         </div>
+
+        {/* Real-Time Progress Tracking */}
+        {reviews.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-warning/30">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold text-foreground uppercase flex items-center gap-2">
+                <Eye className="h-3 w-3" /> Live Review Progress
+              </h4>
+              <div className="flex gap-4 text-xs">
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  Assigned: {reviewStats.assigned}
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  In Review: {reviewStats.inReview}
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  Completed: {reviewStats.completed}
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  Flagged: {reviewStats.flagged}
+                </span>
+                <span className="font-semibold text-primary">
+                  ${reviewStats.totalReserves.toLocaleString()} reserves
+                </span>
+              </div>
+            </div>
+            
+            <div className="max-h-40 overflow-y-auto bg-card rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-muted">
+                  <tr>
+                    <th className="text-left py-2 px-3">Claim</th>
+                    <th className="text-left py-2 px-3">Area</th>
+                    <th className="text-left py-2 px-3">Age</th>
+                    <th className="text-right py-2 px-3">Reserves</th>
+                    <th className="text-left py-2 px-3">Assigned</th>
+                    <th className="text-left py-2 px-3">Status</th>
+                    <th className="text-left py-2 px-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews.slice(0, 10).map(review => (
+                    <tr key={review.id} className="border-b border-border/30 hover:bg-muted/30">
+                      <td className="py-1.5 px-3 font-mono">{review.claim_id}</td>
+                      <td className="py-1.5 px-3">{review.area}</td>
+                      <td className="py-1.5 px-3">
+                        <Badge variant="outline" className="text-xs">{review.age_bucket}</Badge>
+                      </td>
+                      <td className="py-1.5 px-3 text-right text-primary font-semibold">
+                        ${Number(review.reserves).toLocaleString()}
+                      </td>
+                      <td className="py-1.5 px-3">{review.assigned_to}</td>
+                      <td className="py-1.5 px-3">
+                        {review.status === 'assigned' && <Badge className="bg-blue-500 text-xs">Assigned</Badge>}
+                        {review.status === 'in_review' && <Badge className="bg-amber-500 text-xs">In Review</Badge>}
+                        {review.status === 'completed' && <Badge className="bg-green-500 text-xs">Done</Badge>}
+                        {review.status === 'flagged' && <Badge className="bg-red-500 text-xs">Flagged</Badge>}
+                      </td>
+                      <td className="py-1.5 px-3">
+                        <div className="flex gap-1">
+                          {review.status === 'assigned' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={async () => {
+                                await supabase.from('claim_reviews').update({ status: 'in_review' }).eq('id', review.id);
+                              }}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {review.status === 'in_review' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-green-500"
+                                onClick={async () => {
+                                  await supabase.from('claim_reviews').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', review.id);
+                                }}
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-500"
+                                onClick={async () => {
+                                  await supabase.from('claim_reviews').update({ status: 'flagged' }).eq('id', review.id);
+                                }}
+                              >
+                                <Flag className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-card border border-destructive/30 rounded-xl p-5">
