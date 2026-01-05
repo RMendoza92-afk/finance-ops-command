@@ -791,7 +791,7 @@ export function useExportData() {
     ];
 
     const cardW = (cw - 24) / 4;
-    const cardH = 30;
+    const cardH = 24; // Reduced from 30
 
     kpis.forEach((kpi, idx) => {
       const x = m.l + idx * (cardW + 8);
@@ -801,19 +801,19 @@ export function useExportData() {
       doc.rect(x, y, 3, cardH, 'F');
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      doc.text(kpi.label, x + 8, y + 10);
+      doc.text(kpi.label, x + 8, y + 8);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setTextColor(...C.white);
-      doc.text(kpi.value, x + 8, y + 22);
+      doc.text(kpi.value, x + 8, y + 18);
     });
 
-    y += cardH + 10;
+    y += cardH + 6; // Reduced gap
 
-    // Secondary row
+    // Secondary row - more compact
     const row2 = [
       { label: 'Closures This Month', value: fmtNum(metrics.closuresThisMonth) },
       { label: 'Aged % of Total', value: metrics.aged365Pct + '%' },
@@ -822,112 +822,114 @@ export function useExportData() {
     ];
 
     doc.setFillColor(...C.card);
-    doc.rect(m.l, y, cw, 18, 'F');
+    doc.rect(m.l, y, cw, 14, 'F'); // Reduced from 18
 
     const secW = cw / 4;
     row2.forEach((item, idx) => {
       const x = m.l + idx * secW;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      doc.text(item.label.toUpperCase(), x + 6, y + 7);
+      doc.text(item.label.toUpperCase(), x + 6, y + 5);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor(...C.white);
-      doc.text(item.value, x + 6, y + 14);
+      doc.text(item.value, x + 6, y + 11);
     });
 
-    y += 25;
+    y += 18; // Reduced gap
 
-    // Age breakdown table
+    // Age breakdown table - compact
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(...C.gold);
     doc.text('RESERVES BY AGE BUCKET', m.l, y);
-    y += 5;
+    y += 4;
 
     const ageHeaders = ['Age Bucket', 'Claims', 'Open Reserves', 'Low Eval', 'High Eval'];
     const ageColW = cw / 5;
 
     doc.setFillColor(...C.header);
-    doc.rect(m.l, y, cw, 6, 'F');
-    doc.setFontSize(7);
+    doc.rect(m.l, y, cw, 5, 'F'); // Reduced from 6
+    doc.setFontSize(6);
     doc.setTextColor(...C.muted);
     ageHeaders.forEach((h, i) => {
-      doc.text(h.toUpperCase(), m.l + i * ageColW + 3, y + 4);
+      doc.text(h.toUpperCase(), m.l + i * ageColW + 3, y + 3.5);
     });
-    y += 6;
+    y += 5;
 
     doc.setFont('helvetica', 'normal');
-    breakdowns.byAge.slice(0, 6).forEach((row, idx) => {
+    doc.setFontSize(6);
+    breakdowns.byAge.slice(0, 5).forEach((row, idx) => { // Show only 5 age buckets
       if (idx % 2 === 0) {
         doc.setFillColor(...C.card);
-        doc.rect(m.l, y, cw, 6, 'F');
+        doc.rect(m.l, y, cw, 4.5, 'F'); // Reduced from 6
       }
       doc.setTextColor(...C.offWhite);
-      doc.text(row.age, m.l + 3, y + 4);
-      doc.text(fmtNum(row.claims), m.l + ageColW + 3, y + 4);
-      doc.text(fmtCurrency(row.openReserves, true), m.l + 2 * ageColW + 3, y + 4);
-      doc.text(fmtCurrency(row.lowEval, true), m.l + 3 * ageColW + 3, y + 4);
-      doc.text(fmtCurrency(row.highEval, true), m.l + 4 * ageColW + 3, y + 4);
-      y += 6;
+      doc.text(row.age, m.l + 3, y + 3);
+      doc.text(fmtNum(row.claims), m.l + ageColW + 3, y + 3);
+      doc.text(fmtCurrency(row.openReserves, true), m.l + 2 * ageColW + 3, y + 3);
+      doc.text(fmtCurrency(row.lowEval, true), m.l + 3 * ageColW + 3, y + 3);
+      doc.text(fmtCurrency(row.highEval, true), m.l + 4 * ageColW + 3, y + 3);
+      y += 4.5;
     });
 
-    y += 8;
+    y += 5; // Reduced gap
 
-    // ADJUSTER ACCOUNTABILITY - Files & Money
+    // ADJUSTER ACCOUNTABILITY - Files & Money - Compact rows
     if (breakdowns.highEvalAdjusters.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(...C.gold);
       doc.text('ADJUSTER ACCOUNTABILITY - FILES & MONEY ON HAND', m.l, y);
-      y += 5;
+      y += 4;
 
       // Full width table for adjuster data
       const adjColW = [cw * 0.05, cw * 0.30, cw * 0.20, cw * 0.22, cw * 0.23];
       
       doc.setFillColor(...C.header);
-      doc.rect(m.l, y, cw, 6, 'F');
-      doc.setFontSize(7);
+      doc.rect(m.l, y, cw, 5, 'F');
+      doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      doc.text('RANK', m.l + 3, y + 4);
-      doc.text('ADJUSTER NAME', m.l + adjColW[0] + 3, y + 4);
-      doc.text('OPEN FILES', m.l + adjColW[0] + adjColW[1] + 3, y + 4);
-      doc.text('TOTAL RESERVES', m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 4);
-      doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 4);
-      y += 6;
+      doc.text('RANK', m.l + 3, y + 3.5);
+      doc.text('ADJUSTER NAME', m.l + adjColW[0] + 3, y + 3.5);
+      doc.text('OPEN FILES', m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
+      doc.text('TOTAL RESERVES', m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3.5);
+      doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3.5);
+      y += 5;
 
       doc.setFont('helvetica', 'normal');
-      breakdowns.highEvalAdjusters.slice(0, 15).forEach((adj, idx) => {
+      doc.setFontSize(6);
+      breakdowns.highEvalAdjusters.slice(0, 10).forEach((adj, idx) => {
         if (idx % 2 === 0) {
           doc.setFillColor(...C.card);
-          doc.rect(m.l, y, cw, 5, 'F');
+          doc.rect(m.l, y, cw, 4, 'F');
         }
         
         // Rank
         doc.setTextColor(...C.muted);
-        doc.text(String(idx + 1), m.l + 3, y + 3.5);
+        doc.text(String(idx + 1), m.l + 3, y + 3);
         
         // Adjuster name
         doc.setTextColor(...C.offWhite);
-        doc.text(sanitize(adj.name).substring(0, 28), m.l + adjColW[0] + 3, y + 3.5);
+        doc.text(sanitize(adj.name).substring(0, 28), m.l + adjColW[0] + 3, y + 3);
         
-        // Open files - parse from value if available or show placeholder
+        // Open files
         doc.setTextColor(...C.white);
         const fileCount = adj.files ? String(adj.files) : '-';
-        doc.text(fileCount, m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
+        doc.text(fileCount, m.l + adjColW[0] + adjColW[1] + 3, y + 3);
         
         // Total reserves
         doc.setTextColor(...C.amber);
         const reserves = adj.reserves ? adj.reserves : '-';
-        doc.text(reserves, m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3.5);
+        doc.text(reserves, m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3);
         
-        // High eval exposure (the value field)
+        // High eval exposure
         doc.setTextColor(...C.green);
-        doc.text(adj.value, m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3.5);
+        doc.text(adj.value, m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3);
         
-        y += 5;
+        y += 4;
       });
     }
 
