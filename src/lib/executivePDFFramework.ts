@@ -56,6 +56,22 @@ export interface ExecutiveChart {
   data: { label: string; value: number; color?: string }[];
 }
 
+export interface QuarterlyData {
+  quarter: string;
+  paid: number;
+  paidMonthly: number;
+  approved: number;
+  approvedMonthly: number;
+  variance: number;
+}
+
+export interface AppendixSection {
+  title: string;
+  content?: string;
+  table?: ExecutiveTable;
+  chart?: ExecutiveChart;
+}
+
 export interface ExecutiveReportConfig {
   title: string;
   subtitle?: string;
@@ -74,10 +90,15 @@ export interface ExecutiveReportConfig {
   // Optional additional content
   tables?: ExecutiveTable[];
   charts?: ExecutiveChart[];
-  appendix?: {
-    title: string;
-    content: string;
-  }[];
+  
+  // Quarterly trend data (6 quarters for comprehensive view)
+  quarterlyData?: QuarterlyData[];
+  
+  // Appendix sections for detailed breakdowns
+  appendix?: AppendixSection[];
+  
+  // Force multi-page output with all content
+  includeAllContent?: boolean;
 }
 
 export interface QualityScore {
@@ -659,6 +680,148 @@ export function drawBottomLine(ctx: PDFDrawContext, x: number, y: number, width:
   return y + 25;
 }
 
+// ==================== QUARTERLY DATA TABLE ====================
+
+export function drawQuarterlyTable(
+  ctx: PDFDrawContext,
+  x: number, y: number,
+  data: QuarterlyData[]
+): number {
+  const { doc, pageWidth, margins } = ctx;
+  const tableWidth = pageWidth - margins.left - margins.right;
+  
+  // Title
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.text('QUARTERLY EXPERT SPEND ANALYSIS (6 QUARTERS)', x, y);
+  y += 6;
+  
+  // Headers
+  const headers = ['Quarter', 'Paid', 'Monthly Avg', 'Approved', 'Monthly Avg', 'Variance'];
+  const colWidths = [32, 28, 28, 28, 28, 28];
+  
+  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  doc.rect(x, y, tableWidth, 8, 'F');
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
+  doc.setFontSize(7);
+  
+  let colX = x + 2;
+  headers.forEach((header, idx) => {
+    doc.text(header, colX, y + 6);
+    colX += colWidths[idx];
+  });
+  y += 10;
+  
+  // Data rows
+  doc.setFont('helvetica', 'normal');
+  let totalPaid = 0;
+  let totalApproved = 0;
+  
+  data.forEach((row, rowIdx) => {
+    totalPaid += row.paid;
+    totalApproved += row.approved;
+    
+    // Alternating row background
+    if (rowIdx % 2 === 0) {
+      doc.setFillColor(250, 250, 252);
+      doc.rect(x, y - 2, tableWidth, 8, 'F');
+    }
+    
+    colX = x + 2;
+    doc.setFontSize(7);
+    
+    // Quarter
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.text(row.quarter, colX, y + 4);
+    colX += colWidths[0];
+    
+    // Paid
+    doc.setTextColor(...EXECUTIVE_COLORS.success);
+    doc.text(formatCurrency(row.paid, true), colX, y + 4);
+    colX += colWidths[1];
+    
+    // Paid Monthly
+    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+    doc.text(formatCurrency(row.paidMonthly, true), colX, y + 4);
+    colX += colWidths[2];
+    
+    // Approved
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.text(formatCurrency(row.approved, true), colX, y + 4);
+    colX += colWidths[3];
+    
+    // Approved Monthly
+    doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
+    doc.text(formatCurrency(row.approvedMonthly, true), colX, y + 4);
+    colX += colWidths[4];
+    
+    // Variance with color coding
+    const varColor = row.variance >= 0 ? EXECUTIVE_COLORS.success : EXECUTIVE_COLORS.danger;
+    doc.setTextColor(...varColor);
+    doc.text(`${row.variance >= 0 ? '+' : ''}${formatCurrency(row.variance, true)}`, colX, y + 4);
+    
+    y += 8;
+  });
+  
+  // Totals row
+  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  doc.rect(x, y - 2, tableWidth, 8, 'F');
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
+  doc.setFont('helvetica', 'bold');
+  
+  colX = x + 2;
+  doc.text('6Q TOTAL', colX, y + 4);
+  colX += colWidths[0];
+  doc.text(formatCurrency(totalPaid, true), colX, y + 4);
+  colX += colWidths[1] + colWidths[2];
+  doc.text(formatCurrency(totalApproved, true), colX, y + 4);
+  colX += colWidths[3] + colWidths[4];
+  const totalVariance = totalPaid - totalApproved;
+  doc.text(`${totalVariance >= 0 ? '+' : ''}${formatCurrency(totalVariance, true)}`, colX, y + 4);
+  
+  return y + 12;
+}
+
+// ==================== APPENDIX SECTION ====================
+
+export function drawAppendixSection(
+  ctx: PDFDrawContext,
+  x: number, y: number,
+  section: AppendixSection
+): number {
+  const { doc, pageWidth, margins } = ctx;
+  
+  // Section title
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.text(section.title.toUpperCase(), x, y);
+  y += 8;
+  
+  // Content text if present
+  if (section.content) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    const lines = doc.splitTextToSize(section.content, pageWidth - margins.left - margins.right);
+    doc.text(lines, x, y);
+    y += lines.length * 4 + 6;
+  }
+  
+  // Table if present
+  if (section.table) {
+    y = drawExecutiveTable(ctx, x, y, section.table);
+  }
+  
+  // Chart if present
+  if (section.chart && section.chart.type === 'horizontalBar') {
+    y = drawHorizontalBarChart(ctx, x, y, pageWidth - margins.left - margins.right, section.chart);
+  }
+  
+  return y + 5;
+}
+
 // ==================== FULL REPORT GENERATOR ====================
 
 export async function generateExecutiveReport(config: ExecutiveReportConfig): Promise<{ 
@@ -692,6 +855,19 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
     config,
   };
   
+  // Helper to add new page with header
+  const addNewPage = () => {
+    doc.addPage();
+    return drawExecutiveHeader(ctx);
+  };
+  
+  // Helper to check if we need a new page
+  const checkPageBreak = (neededSpace: number = 60) => {
+    if (ctx.y > pageHeight - neededSpace) {
+      ctx.y = addNewPage();
+    }
+  };
+  
   // === PAGE 1: EXECUTIVE SUMMARY ===
   
   // Header
@@ -699,76 +875,96 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
   
   // Key Takeaway Box
   doc.setFillColor(...EXECUTIVE_COLORS.navy);
-  doc.roundedRect(10, ctx.y, pageWidth - 20, 20, 3, 3, 'F');
+  doc.roundedRect(10, ctx.y, pageWidth - 20, 22, 3, 3, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text('KEY TAKEAWAY', 15, ctx.y + 8);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   
   // Word wrap the key takeaway
   const maxWidth = pageWidth - 40;
   const lines = doc.splitTextToSize(config.executiveSummary.keyTakeaway, maxWidth);
-  doc.text(lines, 15, ctx.y + 14);
-  ctx.y += 25;
+  doc.text(lines.slice(0, 2), 15, ctx.y + 15);
+  ctx.y += 28;
   
-  // KPI Cards
+  // KPI Cards - 2 rows if more than 4 metrics
   const cardWidth = (pageWidth - 30) / Math.min(config.executiveSummary.metrics.length, 4);
   const cardHeight = 35;
   
   config.executiveSummary.metrics.slice(0, 4).forEach((metric, idx) => {
     drawKPICard(ctx, 10 + (idx * (cardWidth + 3)), ctx.y, cardWidth - 3, cardHeight, metric);
   });
-  ctx.y += cardHeight + 10;
+  ctx.y += cardHeight + 8;
   
   // Second row of KPIs if needed
   if (config.executiveSummary.metrics.length > 4) {
     config.executiveSummary.metrics.slice(4, 8).forEach((metric, idx) => {
       drawKPICard(ctx, 10 + (idx * (cardWidth + 3)), ctx.y, cardWidth - 3, cardHeight, metric);
     });
-    ctx.y += cardHeight + 10;
+    ctx.y += cardHeight + 8;
   }
   
   // Insights
   if (config.executiveSummary.insights && config.executiveSummary.insights.length > 0) {
-    ctx.y = drawInsightBox(ctx, 10, ctx.y, pageWidth - 20, config.executiveSummary.insights.slice(0, 4));
+    ctx.y = drawInsightBox(ctx, 10, ctx.y, pageWidth - 20, config.executiveSummary.insights.slice(0, 5));
   }
   
-  // Tables
+  // === PAGE 2+: QUARTERLY DATA (if present) ===
+  if (config.quarterlyData && config.quarterlyData.length > 0) {
+    checkPageBreak(100);
+    ctx.y = drawQuarterlyTable(ctx, 10, ctx.y, config.quarterlyData);
+  }
+  
+  // === TABLES ===
   if (config.tables) {
     config.tables.forEach(table => {
-      // Check if we need a new page
-      if (ctx.y > pageHeight - 80) {
-        drawExecutiveFooter(ctx, doc.internal.pages.length - 1, doc.internal.pages.length);
-        doc.addPage();
-        ctx.y = drawExecutiveHeader(ctx);
-      }
+      checkPageBreak(60 + table.rows.length * 10);
       ctx.y = drawExecutiveTable(ctx, 10, ctx.y, table);
     });
   }
   
-  // Charts
+  // === CHARTS ===
   if (config.charts) {
     config.charts.forEach(chart => {
-      if (ctx.y > pageHeight - 80) {
-        drawExecutiveFooter(ctx, doc.internal.pages.length - 1, doc.internal.pages.length);
-        doc.addPage();
-        ctx.y = drawExecutiveHeader(ctx);
-      }
+      checkPageBreak(80);
       if (chart.type === 'horizontalBar') {
         ctx.y = drawHorizontalBarChart(ctx, 10, ctx.y, pageWidth - 20, chart);
       }
     });
   }
   
-  // Bottom Line
+  // === APPENDIX SECTIONS ===
+  if (config.appendix && config.appendix.length > 0) {
+    // Add appendix header on new page
+    ctx.y = addNewPage();
+    
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...EXECUTIVE_COLORS.navy);
+    doc.text('APPENDIX: DETAILED ANALYSIS', 10, ctx.y);
+    ctx.y += 12;
+    
+    config.appendix.forEach((section, idx) => {
+      const estimatedHeight = 40 + 
+        (section.table ? section.table.rows.length * 10 : 0) +
+        (section.chart ? section.chart.data.length * 15 : 0);
+      
+      checkPageBreak(estimatedHeight);
+      
+      // Section number
+      doc.setFontSize(9);
+      doc.setTextColor(...EXECUTIVE_COLORS.azure);
+      doc.text(`A${idx + 1}.`, 10, ctx.y);
+      
+      ctx.y = drawAppendixSection(ctx, 20, ctx.y, section);
+    });
+  }
+  
+  // Bottom Line (before footer)
   if (config.executiveSummary.bottomLine) {
-    if (ctx.y > pageHeight - 40) {
-      drawExecutiveFooter(ctx, doc.internal.pages.length - 1, doc.internal.pages.length);
-      doc.addPage();
-      ctx.y = drawExecutiveHeader(ctx);
-    }
+    checkPageBreak(30);
     ctx.y = drawBottomLine(ctx, 10, ctx.y, pageWidth - 20, config.executiveSummary.bottomLine);
   }
   
