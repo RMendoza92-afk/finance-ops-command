@@ -22,6 +22,19 @@ export interface DashboardVisual {
   trendDirection?: 'up' | 'down' | 'neutral';
 }
 
+export interface ChartData {
+  label: string;
+  value: number;
+  color?: 'red' | 'green' | 'blue' | 'amber' | 'muted';
+}
+
+export interface PDFChart {
+  type: 'bar' | 'horizontalBar' | 'pie' | 'donut';
+  title: string;
+  data: ChartData[];
+  width?: number; // percentage of page width (default 45 for side-by-side)
+}
+
 export interface ExportableData {
   title: string;
   subtitle?: string;
@@ -33,6 +46,8 @@ export interface ExportableData {
   // NEW: Dashboard-style visuals with bullet insights
   dashboardVisuals?: DashboardVisual[];
   bulletInsights?: string[];
+  // NEW: Charts for visual representation
+  charts?: PDFChart[];
   columns: string[];
   rows: (string | number)[][];
   // Raw underlying claim data for Excel export
@@ -225,6 +240,157 @@ export function useExportData() {
       });
       
       yPos += 8;
+    }
+
+    // ====== CHARTS SECTION ======
+    if (data.charts && data.charts.length > 0) {
+      const chartColors = {
+        red: { r: 220, g: 38, b: 38 },
+        green: { r: 34, g: 197, b: 94 },
+        blue: { r: 59, g: 130, b: 246 },
+        amber: { r: 245, g: 158, b: 11 },
+        muted: { r: 163, g: 163, b: 163 },
+      };
+      const defaultColors = ['red', 'green', 'blue', 'amber', 'muted'] as const;
+
+      // Arrange charts side by side if possible
+      const chartsPerRow = data.charts.length === 1 ? 1 : 2;
+      const chartWidth = chartsPerRow === 1 ? pageWidth - 28 : (pageWidth - 36) / 2;
+      const chartHeight = 60;
+
+      data.charts.forEach((chart, chartIdx) => {
+        const col = chartIdx % chartsPerRow;
+        const row = Math.floor(chartIdx / chartsPerRow);
+        const xStart = 14 + col * (chartWidth + 8);
+        const chartY = yPos + row * (chartHeight + 20);
+
+        // Check if we need a new page
+        if (chartY + chartHeight > pageHeight - 30) {
+          doc.addPage();
+          doc.setFillColor(darkBg.r, darkBg.g, darkBg.b);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+          yPos = 20;
+        }
+
+        // Chart container
+        doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
+        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 3, 3, 'F');
+        doc.setDrawColor(darkBorder.r, darkBorder.g, darkBorder.b);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(xStart, chartY, chartWidth, chartHeight, 3, 3, 'S');
+
+        // Chart title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+        doc.text(chart.title.toUpperCase(), xStart + 8, chartY + 10);
+
+        const maxValue = Math.max(...chart.data.map(d => d.value));
+        const dataArea = { x: xStart + 8, y: chartY + 16, w: chartWidth - 16, h: chartHeight - 24 };
+
+        if (chart.type === 'horizontalBar' || chart.type === 'bar') {
+          // Horizontal bar chart
+          const barHeight = Math.min(8, (dataArea.h - 4) / chart.data.length);
+          const gap = 2;
+
+          chart.data.forEach((item, i) => {
+            const barY = dataArea.y + i * (barHeight + gap);
+            const barWidth = maxValue > 0 ? (item.value / maxValue) * (dataArea.w - 60) : 0;
+            const colorKey = item.color || defaultColors[i % defaultColors.length];
+            const color = chartColors[colorKey];
+
+            // Label
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+            const label = item.label.length > 12 ? item.label.substring(0, 10) + '…' : item.label;
+            doc.text(label, dataArea.x, barY + barHeight - 1);
+
+            // Bar background
+            doc.setFillColor(darkBorder.r, darkBorder.g, darkBorder.b);
+            doc.rect(dataArea.x + 55, barY, dataArea.w - 60, barHeight, 'F');
+
+            // Bar fill
+            doc.setFillColor(color.r, color.g, color.b);
+            doc.rect(dataArea.x + 55, barY, Math.max(barWidth, 2), barHeight, 'F');
+
+            // Value
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(textWhite.r, textWhite.g, textWhite.b);
+            const valueStr = item.value >= 1000000 
+              ? `$${(item.value / 1000000).toFixed(1)}M` 
+              : item.value >= 1000 
+                ? `$${(item.value / 1000).toFixed(0)}K` 
+                : `$${item.value.toLocaleString()}`;
+            doc.text(valueStr, dataArea.x + dataArea.w, barY + barHeight - 1, { align: 'right' });
+          });
+        } else if (chart.type === 'pie' || chart.type === 'donut') {
+          // Pie/Donut chart
+          const centerX = dataArea.x + dataArea.h / 2;
+          const centerY = dataArea.y + dataArea.h / 2;
+          const radius = dataArea.h / 2 - 4;
+          const innerRadius = chart.type === 'donut' ? radius * 0.5 : 0;
+          const total = chart.data.reduce((sum, d) => sum + d.value, 0);
+
+          let startAngle = -Math.PI / 2; // Start from top
+
+          chart.data.forEach((item, i) => {
+            const sliceAngle = total > 0 ? (item.value / total) * Math.PI * 2 : 0;
+            const endAngle = startAngle + sliceAngle;
+            const colorKey = item.color || defaultColors[i % defaultColors.length];
+            const color = chartColors[colorKey];
+
+            // Draw pie slice using triangle fan
+            doc.setFillColor(color.r, color.g, color.b);
+            doc.setDrawColor(darkCard.r, darkCard.g, darkCard.b);
+            doc.setLineWidth(1);
+            
+            const steps = 20;
+            for (let s = 0; s < steps; s++) {
+              const a1 = startAngle + (sliceAngle * s) / steps;
+              const a2 = startAngle + (sliceAngle * (s + 1)) / steps;
+              
+              const x1 = centerX + Math.cos(a1) * radius;
+              const y1 = centerY + Math.sin(a1) * radius;
+              const x2 = centerX + Math.cos(a2) * radius;
+              const y2 = centerY + Math.sin(a2) * radius;
+              
+              doc.triangle(centerX, centerY, x1, y1, x2, y2, 'F');
+            }
+
+            startAngle = endAngle;
+          });
+          
+          // Draw inner circle for donut
+          if (innerRadius > 0) {
+            doc.setFillColor(darkCard.r, darkCard.g, darkCard.b);
+            doc.circle(centerX, centerY, innerRadius, 'F');
+          }
+
+          // Legend on the right
+          const legendX = dataArea.x + dataArea.h + 10;
+          chart.data.forEach((item, i) => {
+            const legendY = dataArea.y + 4 + i * 9;
+            const colorKey = item.color || defaultColors[i % defaultColors.length];
+            const color = chartColors[colorKey];
+            const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
+
+            // Color box
+            doc.setFillColor(color.r, color.g, color.b);
+            doc.rect(legendX, legendY, 6, 6, 'F');
+
+            // Label
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+            const label = item.label.length > 15 ? item.label.substring(0, 13) + '…' : item.label;
+            doc.text(`${label} (${pct}%)`, legendX + 9, legendY + 5);
+          });
+        }
+      });
+
+      yPos += Math.ceil(data.charts.length / chartsPerRow) * (chartHeight + 20) + 8;
     }
 
     // ====== MANAGER TRACKING ======
