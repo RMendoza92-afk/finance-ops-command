@@ -14,6 +14,12 @@ import {
   Bar,
   Cell,
 } from "recharts";
+import { 
+  calculateExecutiveReview, 
+  estimateClaimAge,
+  ExecutiveReviewLevel,
+  ExecutiveReviewResult 
+} from "@/lib/executiveReview";
 
 interface ExecutiveDashboardProps {
   data: LitigationMatter[];
@@ -166,28 +172,87 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     });
   }, [aggregatedData]);
 
-  // What's not working - top exposures by expense (reactive spend)
-  const topProblems = useMemo(() => {
+  // Executive Review Cases - files requiring executive attention
+  const executiveReviewCases = useMemo(() => {
     const EXPERT_SPEND_RATIO = 5681152 / 19000000;
     
-    return [...aggregatedData]
-      .filter(m => m.expense > 0)
-      .sort((a, b) => b.expense - a.expense)
-      .slice(0, 8)
-      .map(m => {
-        const expertSpend = m.expense * EXPERT_SPEND_RATIO;
-        const postureSpend = m.expense * (1 - EXPERT_SPEND_RATIO);
-        const ratio = expertSpend > 0 ? postureSpend / expertSpend : 999;
-        
-        return {
-          ...m,
-          expertSpend,
-          postureSpend,
-          ratio,
-          riskFlag: m.expense >= 100000 ? 'RED' : m.expense >= 25000 ? 'ORANGE' : 'GREEN',
-        };
-      });
-  }, [aggregatedData]);
+    // Build aggregated view with executive review calculation
+    const claimMap = new Map<string, {
+      uniqueRecord: string;
+      claim: string;
+      stage: 'Early' | 'Mid' | 'Late' | 'Very Late';
+      expense: number;
+      adjuster: string;
+      claimAge: number;
+      painEscalation: number;
+      maxPain: number;
+      expCategory: string;
+      executiveReview: ExecutiveReviewResult;
+    }>();
+    
+    data.forEach(matter => {
+      const key = matter.uniqueRecord || matter.claim;
+      const existing = claimMap.get(key);
+      const stage = getLitigationStage(matter.endPainLvl);
+      const expenseAmount = Math.max(0, (matter.totalAmount || 0) - (matter.indemnitiesAmount || 0));
+      const claimAge = estimateClaimAge(matter.prefix);
+      const painEscalation = matter.endPainLvl - matter.startPainLvl;
+      
+      if (existing) {
+        existing.expense += expenseAmount;
+        existing.maxPain = Math.max(existing.maxPain, matter.endPainLvl);
+        existing.painEscalation = Math.max(existing.painEscalation, painEscalation);
+      } else {
+        claimMap.set(key, {
+          uniqueRecord: key,
+          claim: matter.claim || key,
+          stage,
+          expense: expenseAmount,
+          adjuster: matter.adjusterName || 'Unknown',
+          claimAge,
+          painEscalation,
+          maxPain: matter.endPainLvl,
+          expCategory: matter.expCategory || '',
+          executiveReview: { level: 'NONE', reasons: [], score: 0 } // placeholder
+        });
+      }
+    });
+    
+    // Calculate executive review for each claim
+    const cases = Array.from(claimMap.values()).map(c => {
+      const expertSpend = c.expense * EXPERT_SPEND_RATIO;
+      const reactiveSpend = c.expense * (1 - EXPERT_SPEND_RATIO);
+      
+      const review = calculateExecutiveReview(
+        c.claimAge,
+        c.stage,
+        expertSpend,
+        reactiveSpend,
+        c.painEscalation,
+        c.maxPain,
+        c.expCategory
+      );
+      
+      return {
+        ...c,
+        expertSpend,
+        reactiveSpend,
+        executiveReview: review
+      };
+    });
+    
+    // Filter to CRITICAL and REQUIRED only, sort by expense (highest first)
+    return cases
+      .filter(c => c.executiveReview.level === 'CRITICAL' || c.executiveReview.level === 'REQUIRED')
+      .sort((a, b) => {
+        // First sort by level (CRITICAL first), then by expense
+        if (a.executiveReview.level !== b.executiveReview.level) {
+          return a.executiveReview.level === 'CRITICAL' ? -1 : 1;
+        }
+        return b.expense - a.expense;
+      })
+      .slice(0, 8);
+  }, [data]);
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
@@ -439,67 +504,73 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         </div>
       </div>
 
-      {/* What's Not Working */}
+      {/* Executive Review Required */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">What's Not Working</h3>
-            <p className="text-xs text-muted-foreground">Top exposures by reactive posture spend — click to inspect in Management Data</p>
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Executive Review Required</h3>
+            <p className="text-xs text-muted-foreground">Files requiring executive closure — zombie claims, duration drift, complex matters</p>
           </div>
           <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive"></span> RED ≥3x</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-warning"></span> ORANGE 1.5-3x</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success"></span> GREEN &lt;1.5x</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive animate-pulse"></span> CRITICAL</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-warning"></span> REQUIRED</span>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-3">
-          {topProblems.map((problem, idx) => (
+          {executiveReviewCases.map((caseItem, idx) => (
             <button
-              key={problem.uniqueRecord}
-              onClick={() => onDrilldown(problem.uniqueRecord)}
+              key={caseItem.uniqueRecord}
+              onClick={() => onDrilldown(caseItem.uniqueRecord)}
               className="text-left p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-all hover:border-primary/50 group"
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs font-mono text-muted-foreground">#{idx + 1}</span>
                 <span className={`w-2.5 h-2.5 rounded-full ${
-                  problem.riskFlag === 'RED' ? 'bg-destructive animate-pulse' : 
-                  problem.riskFlag === 'ORANGE' ? 'bg-warning' : 'bg-success'
+                  caseItem.executiveReview.level === 'CRITICAL' ? 'bg-destructive animate-pulse' : 'bg-warning'
                 }`}></span>
               </div>
               
               <p className="text-sm font-medium text-foreground truncate mb-1 group-hover:text-primary transition-colors">
-                {problem.claim}
+                {caseItem.claim}
               </p>
               
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Reactive</span>
-                  <span className="font-semibold text-destructive">{formatCurrency(problem.postureSpend)}</span>
+                  <span className="text-muted-foreground">Exposure</span>
+                  <span className="font-semibold text-foreground">{formatCurrency(caseItem.expense)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Expert</span>
-                  <span className="font-medium text-success">{formatCurrency(problem.expertSpend)}</span>
+                  <span className="text-muted-foreground">Age</span>
+                  <span className={`font-medium ${caseItem.claimAge >= 5 ? 'text-destructive' : 'text-warning'}`}>
+                    {caseItem.claimAge}yr
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs pt-1 border-t border-border/50">
-                  <span className="text-muted-foreground">Ratio</span>
+                  <span className="text-muted-foreground">Score</span>
                   <span className={`font-bold ${
-                    problem.riskFlag === 'RED' ? 'text-destructive' : 
-                    problem.riskFlag === 'ORANGE' ? 'text-warning' : 'text-success'
+                    caseItem.executiveReview.level === 'CRITICAL' ? 'text-destructive' : 'text-warning'
                   }`}>
-                    {problem.ratio >= 999 ? '∞' : `${problem.ratio.toFixed(1)}x`}
+                    {caseItem.executiveReview.score}
                   </span>
                 </div>
               </div>
               
-              <p className="text-xs text-muted-foreground mt-2 truncate">{problem.adjuster} • {problem.stage}</p>
+              <p className="text-xs text-muted-foreground mt-2 truncate">{caseItem.adjuster} • {caseItem.stage}</p>
+              
+              {/* Top reason */}
+              {caseItem.executiveReview.reasons.length > 0 && (
+                <p className="text-[10px] text-destructive/80 mt-1 truncate">
+                  {caseItem.executiveReview.reasons[0]}
+                </p>
+              )}
             </button>
           ))}
         </div>
 
-        {topProblems.length === 0 && (
+        {executiveReviewCases.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No exposures with reactive spend in current filter selection</p>
+            <p>No files requiring executive review in current filter selection</p>
           </div>
         )}
       </div>
