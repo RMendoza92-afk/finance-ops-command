@@ -1,15 +1,14 @@
 /**
  * IBM Plex Sans Font Embedding for jsPDF
  * 
- * This module provides functions to load and register IBM Plex Sans
- * fonts for use in PDF generation with jsPDF.
+ * This module loads IBM Plex Sans fonts from local TTF files
+ * and registers them for use in PDF generation with jsPDF.
+ * No runtime network fetch required - fonts are bundled with the app.
  */
 
-// Font URLs from Google Fonts CDN
-const FONT_URLS = {
-  regular: 'https://fonts.gstatic.com/s/ibmplexsans/v19/zYXgKVElMYYaJe8bpLHnCwDKhdHeFQ.ttf',
-  bold: 'https://fonts.gstatic.com/s/ibmplexsans/v19/zYX9KVElMYYaJe8bpLHnCwDKjWr7AIFsdA.ttf',
-};
+// Import TTF files as URLs (Vite handles this with ?url suffix)
+import IBMPlexSansRegularUrl from '@/assets/fonts/IBMPlexSans-Regular.ttf?url';
+import IBMPlexSansBoldUrl from '@/assets/fonts/IBMPlexSans-Bold.ttf?url';
 
 // Cache for loaded fonts
 let fontsLoaded = false;
@@ -29,19 +28,19 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 /**
- * Fetches a font file and converts it to base64
+ * Fetches a local font file and converts it to base64
  */
-async function fetchFontAsBase64(url: string): Promise<string> {
+async function fetchLocalFontAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch font: ${response.statusText}`);
+    throw new Error(`Failed to load font: ${response.statusText}`);
   }
   const buffer = await response.arrayBuffer();
   return arrayBufferToBase64(buffer);
 }
 
 /**
- * Loads IBM Plex Sans fonts and caches them
+ * Loads IBM Plex Sans fonts from local assets and caches them
  */
 export async function loadIBMPlexSansFonts(): Promise<{ regular: string; bold: string }> {
   if (fontsLoaded && fontCache.regular && fontCache.bold) {
@@ -50,8 +49,8 @@ export async function loadIBMPlexSansFonts(): Promise<{ regular: string; bold: s
 
   try {
     const [regular, bold] = await Promise.all([
-      fetchFontAsBase64(FONT_URLS.regular),
-      fetchFontAsBase64(FONT_URLS.bold),
+      fetchLocalFontAsBase64(IBMPlexSansRegularUrl),
+      fetchLocalFontAsBase64(IBMPlexSansBoldUrl),
     ]);
 
     fontCache = { regular, bold };
@@ -91,7 +90,7 @@ export async function registerIBMPlexSans(doc: any): Promise<void> {
  */
 export function setIBMPlexSans(doc: any, style: 'normal' | 'bold' = 'normal'): void {
   const list = typeof doc?.getFontList === 'function' ? doc.getFontList() : undefined;
-  const hasIBM = !!(list && (list as any).IBMPlexSans && (list as any).IBMPlexSans[style]);
+  const hasIBM = !!(list && (list as any).IBMPlexSans && (list as any).IBMPlexSans.includes(style));
 
   if (hasIBM) {
     doc.setFont('IBMPlexSans', style);
