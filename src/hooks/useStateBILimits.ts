@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LitigationMatter as DBLitigationMatter } from './useLitigationDataDB';
+import { LitigationMatter } from './useLitigationData';
 
 export interface StateBILimit {
   id: string;
@@ -11,6 +11,20 @@ export interface StateBILimit {
   trigger_80_pct: number;
   notes: string | null;
 }
+
+// Prefix-to-state mapping based on FLI regional codes
+const PREFIX_STATE_MAP: Record<string, string> = {
+  '39': 'Texas',
+  '65': 'California',
+  '72': 'Florida',
+  '78': 'Arizona',
+  '41': 'New York',
+  '52': 'Illinois',
+  '63': 'Pennsylvania',
+  '55': 'Ohio',
+  '48': 'Georgia',
+  '33': 'North Carolina',
+};
 
 export interface OverspendMetrics {
   totalClosures: number;
@@ -67,10 +81,17 @@ export function useStateBILimits() {
   return { limits, loading, error };
 }
 
-// Helper to normalize state names for matching
-function normalizeState(location: string): string {
+// Helper to get state from prefix or location
+function getStateFromMatter(matter: LitigationMatter): string {
+  // First try prefix mapping (for CSV data)
+  if (matter.prefix && PREFIX_STATE_MAP[matter.prefix]) {
+    return PREFIX_STATE_MAP[matter.prefix];
+  }
+
+  // Fall back to location parsing (for DB data)
+  const location = (matter as any).location;
   if (!location) return '';
-  // Extract state from location (e.g., "Dallas, TX" -> "Texas")
+  
   const stateAbbrevs: Record<string, string> = {
     'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
     'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
@@ -87,11 +108,9 @@ function normalizeState(location: string): string {
     'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
   };
 
-  // Check if location is already a full state name
   const fullStates = Object.values(stateAbbrevs);
   if (fullStates.includes(location)) return location;
 
-  // Check for abbreviation at end (e.g., "Dallas, TX")
   const parts = location.split(/[,\s]+/);
   for (const part of parts) {
     const upper = part.toUpperCase();
@@ -100,23 +119,18 @@ function normalizeState(location: string): string {
     }
   }
 
-  // Check if location contains a state name
-  for (const state of fullStates) {
-    if (location.toLowerCase().includes(state.toLowerCase())) {
-      return state;
-    }
-  }
-
   return location;
 }
 
 export function calculateOverspendMetrics(
-  matters: DBLitigationMatter[],
+  matters: LitigationMatter[],
   limits: StateBILimit[]
 ): OverspendMetrics {
-  // Only look at closed matters with indemnity payments
+  // For CSV data: CWP means closed with payment
+  // For DB data: status !== 'Open' && indemnities > 0
   const closedMatters = matters.filter(m => 
-    m.status !== 'Open' && m.indemnities_amount > 0
+    (m.cwpCwn === 'CWP' && m.indemnitiesAmount > 0) ||
+    ((m as any).status !== 'Open' && (m as any).indemnities_amount > 0)
   );
 
   const limitsMap = new Map(limits.map(l => [l.state, l]));
@@ -135,14 +149,14 @@ export function calculateOverspendMetrics(
   let totalOverAmount = 0;
 
   for (const matter of closedMatters) {
-    const state = normalizeState(matter.location);
+    const state = getStateFromMatter(matter);
     const limit = limitsMap.get(state);
     
-    if (!limit || !limit.limit_2025) continue; // Skip if no limit data (e.g., Florida)
+    if (!limit || !limit.limit_2025) continue; // Skip if no limit data
 
     const stateLimit = limit.limit_2025;
     const triggerThreshold = limit.trigger_80_pct;
-    const indemnity = matter.indemnities_amount;
+    const indemnity = matter.indemnitiesAmount || (matter as any).indemnities_amount || 0;
 
     if (!stateMetrics.has(state)) {
       stateMetrics.set(state, {

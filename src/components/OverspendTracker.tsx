@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { useLitigationDataDB, LitigationMatter } from "@/hooks/useLitigationDataDB";
-import { useStateBILimits, calculateOverspendMetrics, StateBILimit } from "@/hooks/useStateBILimits";
-import { KPICard } from "@/components/KPICard";
+import { useLitigationData } from "@/hooks/useLitigationData";
+import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBILimits";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -33,7 +32,7 @@ function formatCurrency(value: number): string {
 }
 
 export function OverspendTracker() {
-  const { data: matters, loading: mattersLoading } = useLitigationDataDB();
+  const { data: matters, loading: mattersLoading } = useLitigationData();
   const { limits, loading: limitsLoading } = useStateBILimits();
   const [showDetails, setShowDetails] = useState(false);
 
