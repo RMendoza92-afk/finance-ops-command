@@ -1,43 +1,47 @@
-import { Moon, Sun } from "lucide-react";
+import { Monitor, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+  const [isTerminal, setIsTerminal] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') as 'dark' | 'light' || 'dark';
+      return localStorage.getItem('theme') === 'terminal';
     }
-    return 'dark';
+    return false;
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    if (isTerminal) {
       root.classList.add('dark');
-      root.classList.remove('light');
     } else {
-      root.classList.add('light');
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    localStorage.setItem('theme', isTerminal ? 'terminal' : 'loya');
+  }, [isTerminal]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    setIsTerminal(prev => !prev);
   };
 
   return (
     <Button
       variant="outline"
-      size="icon"
+      size="sm"
       onClick={toggleTheme}
-      className="h-8 w-8 sm:h-9 sm:w-9"
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="h-8 gap-2 text-xs"
+      title={isTerminal ? 'Switch to Loya branding' : 'Switch to AS/400 terminal'}
     >
-      {theme === 'dark' ? (
-        <Sun className="h-4 w-4" />
+      {isTerminal ? (
+        <>
+          <Monitor className="h-4 w-4" />
+          <span className="hidden sm:inline">Loya</span>
+        </>
       ) : (
-        <Moon className="h-4 w-4" />
+        <>
+          <Terminal className="h-4 w-4" />
+          <span className="hidden sm:inline">AS/400</span>
+        </>
       )}
     </Button>
   );
