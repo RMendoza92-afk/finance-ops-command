@@ -449,21 +449,21 @@ export function LitigationChat() {
     }
   }, [messages]);
 
-  const generateResponsePDF = (question: string, responseContent: string) => {
+  const generateResponsePDF = async (question: string, responseContent: string) => {
     const doc = new jsPDF();
-    registerIBMPlexSans(doc);
+    await registerIBMPlexSans(doc);
     
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-    const m = { l: 15, r: 15, t: 15, b: 20 };
+    const m = { l: 18, r: 18, t: 22, b: 22 };
     const cw = pw - m.l - m.r;
     const ctx = getReportContext();
 
     const C = EXECUTIVE_COLORS;
 
     const formatCurrency = (val: number): string => {
-      if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
-      if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+      if (val >= 1000000) return '$' + (val / 1000000).toFixed(2) + 'M';
+      if (val >= 1000) return '$' + Math.round(val / 1000) + 'K';
       return '$' + val.toLocaleString();
     };
 
@@ -478,363 +478,371 @@ export function LitigationChat() {
     };
 
     const sanitizedResponse = sanitize(responseContent);
-    const lines = sanitizedResponse.split('\n');
+    const lines = sanitizedResponse.split('\n').filter(l => l.trim());
     
-    // === PRE-SCAN: Identify sections for TOC ===
-    const sections: { title: string; pageNum: number }[] = [];
-    let estimatedY = 120; // Start after header + KPIs + query box
-    let estimatedPage = 1;
-    const lineH = 5.5;
-    const pageContentHeight = ph - m.t - m.b - 20;
+    // === PARSE CONTENT INTO STRUCTURED SECTIONS ===
+    interface ContentSection {
+      title: string;
+      items: string[];
+      isTable?: boolean;
+      tableData?: string[][];
+    }
+    
+    const sections: ContentSection[] = [];
+    let currentSection: ContentSection | null = null;
     
     lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) {
-        estimatedY += 3;
-        return;
-      }
+      const trimmed = line.trim();
       
-      // Section headers (lines ending with colon)
-      if (trimmedLine.endsWith(':') && trimmedLine.length < 70) {
-        sections.push({ title: trimmedLine.replace(':', ''), pageNum: estimatedPage });
-        estimatedY += lineH + 8;
+      // Detect section headers (lines ending with colon, standalone headers)
+      if ((trimmed.endsWith(':') && trimmed.length < 80) || 
+          /^[A-Z][A-Z\s&]+$/.test(trimmed) ||
+          /^#{1,3}\s/.test(trimmed)) {
+        if (currentSection && currentSection.items.length > 0) {
+          sections.push(currentSection);
+        }
+        currentSection = { 
+          title: trimmed.replace(/^#+\s*/, '').replace(/:$/, ''), 
+          items: [] 
+        };
+      } else if (currentSection) {
+        currentSection.items.push(trimmed);
       } else {
-        estimatedY += lineH + 2;
-      }
-      
-      if (estimatedY > pageContentHeight) {
-        estimatedPage++;
-        estimatedY = m.t;
+        // Content before first section
+        if (!currentSection) {
+          currentSection = { title: 'Summary', items: [] };
+        }
+        currentSection.items.push(trimmed);
       }
     });
-
-    const includeTOC = sections.length >= 3;
-    const tocPageOffset = includeTOC ? 1 : 0;
-
-    // Adjust section page numbers if TOC is included
-    if (includeTOC) {
-      sections.forEach(s => { s.pageNum += tocPageOffset; });
+    
+    if (currentSection && currentSection.items.length > 0) {
+      sections.push(currentSection);
     }
 
-    // === PAGE 1: EXECUTIVE HEADER ===
+    // === PAGE 1: EXECUTIVE COVER ===
+    // Full black background
     doc.setFillColor(...C.navy);
     doc.rect(0, 0, pw, ph, 'F');
 
-    // Header bar with gradient effect
+    // Premium header band
     doc.setFillColor(...C.darkNavy);
-    doc.rect(0, 0, pw, 38, 'F');
+    doc.rect(0, 0, pw, 50, 'F');
     
-    // Red accent line
+    // Thin red accent line
     doc.setFillColor(...C.azure);
-    doc.rect(0, 38, pw, 2, 'F');
+    doc.rect(0, 50, pw, 1.5, 'F');
 
-    // Report type badge
+    // Report classification badge
     doc.setFillColor(...C.azure);
-    doc.roundedRect(m.l, 8, 45, 12, 2, 2, 'F');
+    doc.roundedRect(m.l, 12, 55, 14, 3, 3, 'F');
     setIBMPlexSans(doc, 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setTextColor(...C.white);
-    doc.text('INTELLIGENCE', m.l + 22.5, 15.5, { align: 'center' });
+    doc.text('EXECUTIVE BRIEF', m.l + 27.5, 21, { align: 'center' });
 
     // Logo
     try {
-      doc.addImage(loyaLogo, 'JPEG', pw - m.r - 24, 6, 22, 22);
+      doc.addImage(loyaLogo, 'JPEG', pw - m.r - 28, 10, 26, 26);
     } catch (e) {}
 
-    // Title
+    // Main title
     setIBMPlexSans(doc, 'bold');
-    doc.setFontSize(14);
+    doc.setFontSize(18);
     doc.setTextColor(...C.white);
-    doc.text('LITIGATION ORACLE REPORT', m.l + 50, 16);
-
-    // Subtitle
+    doc.text('LITIGATION ORACLE', m.l, 72);
+    
+    // Subtitle with context
     setIBMPlexSans(doc, 'normal');
-    doc.setFontSize(8);
+    doc.setFontSize(11);
     doc.setTextColor(...C.textSecondary);
-    doc.text(`${ctx.reportPeriod} | Week ${ctx.weekNumber} | Q${ctx.quarter}`, m.l + 50, 26);
+    doc.text('Intelligence Report', m.l, 82);
+    
+    // Report metadata line
+    doc.setFontSize(9);
+    doc.text(`${ctx.reportPeriod}  |  Week ${ctx.weekNumber}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, m.l, 92);
 
-    // Report ID
-    doc.setFontSize(6);
-    doc.text(ctx.reportId, pw - m.r - 28, 32);
+    // Report ID (right aligned)
+    doc.setFontSize(7);
+    doc.text(ctx.reportId, pw - m.r, 92, { align: 'right' });
 
-    let y = 48;
+    let y = 110;
 
-    // === KPI CARDS ===
-    const kpiCardW = (cw - 12) / 4;
-    const kpiCardH = 28;
+    // === EXECUTIVE METRICS DASHBOARD ===
+    const kpiCardW = (cw - 15) / 4;
+    const kpiCardH = 38;
     
     const kpis = [
-      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '0', color: C.azure },
-      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '0', color: C.success },
-      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0), color: C.warning },
-      { label: 'INDEMNITY PAID', value: formatCurrency(dataContext?.totalIndemnityPaid || 0), color: C.danger },
+      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '--', subtext: 'Open Inventory', accent: C.azure },
+      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '--', subtext: formatCurrency(dataContext?.monthToDate?.totalPaid || 0) + ' paid', accent: C.success },
+      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0), subtext: 'Total exposure', accent: C.warning },
+      { label: 'INDEMNITY YTD', value: formatCurrency(dataContext?.totalIndemnityPaid || 0), subtext: 'Payments made', accent: C.danger },
     ];
 
     kpis.forEach((kpi, i) => {
-      const xPos = m.l + (i * (kpiCardW + 4));
+      const xPos = m.l + (i * (kpiCardW + 5));
       
-      // Card background
+      // Card with subtle border
       doc.setFillColor(...C.darkNavy);
-      doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 2, 2, 'F');
+      doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 3, 3, 'F');
+      doc.setDrawColor(...C.steel);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 3, 3, 'S');
       
-      // Left accent bar
-      doc.setFillColor(...kpi.color);
-      doc.rect(xPos, y + 3, 2.5, kpiCardH - 6, 'F');
+      // Accent bar at top
+      doc.setFillColor(...kpi.accent);
+      doc.roundedRect(xPos, y, kpiCardW, 3, 3, 3, 'F');
+      doc.setFillColor(...C.darkNavy);
+      doc.rect(xPos, y + 1.5, kpiCardW, 3, 'F');
       
       // Label
       setIBMPlexSans(doc, 'normal');
-      doc.setFontSize(6);
+      doc.setFontSize(6.5);
       doc.setTextColor(...C.textSecondary);
-      doc.text(kpi.label, xPos + 8, y + 10);
+      doc.text(kpi.label, xPos + kpiCardW / 2, y + 12, { align: 'center' });
       
       // Value
       setIBMPlexSans(doc, 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(14);
       doc.setTextColor(...C.white);
-      doc.text(kpi.value, xPos + 8, y + 21);
+      doc.text(kpi.value, xPos + kpiCardW / 2, y + 25, { align: 'center' });
+      
+      // Subtext
+      setIBMPlexSans(doc, 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.textSecondary);
+      doc.text(kpi.subtext, xPos + kpiCardW / 2, y + 33, { align: 'center' });
     });
 
-    y += kpiCardH + 10;
+    y += kpiCardH + 15;
 
-    // === EXECUTIVE QUERY SECTION ===
+    // === QUERY CONTEXT BOX ===
     doc.setFillColor(...C.darkNavy);
-    doc.roundedRect(m.l, y, cw, 24, 2, 2, 'F');
+    doc.roundedRect(m.l, y, cw, 32, 4, 4, 'F');
     
-    // Gold accent bar
+    // Left accent
     doc.setFillColor(...C.warning);
-    doc.rect(m.l, y + 3, 2.5, 18, 'F');
+    doc.roundedRect(m.l, y, 4, 32, 4, 0, 'F');
+    doc.setFillColor(...C.darkNavy);
+    doc.rect(m.l + 2, y, 4, 32, 'F');
 
     // Query label
     setIBMPlexSans(doc, 'bold');
     doc.setFontSize(7);
     doc.setTextColor(...C.warning);
-    doc.text('EXECUTIVE QUERY', m.l + 8, y + 9);
+    doc.text('EXECUTIVE QUERY', m.l + 12, y + 10);
 
-    // Query text
+    // Query text with proper wrapping
     setIBMPlexSans(doc, 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(...C.white);
-    const questionLines = doc.splitTextToSize(sanitize(question), cw - 16);
-    doc.text(questionLines.slice(0, 2), m.l + 8, y + 17);
+    const questionLines = doc.splitTextToSize(sanitize(question), cw - 24);
+    doc.text(questionLines.slice(0, 3), m.l + 12, y + 20);
 
-    y += 30;
+    y += 40;
 
     // === TABLE OF CONTENTS (if 3+ sections) ===
+    const includeTOC = sections.length >= 3;
+    
     if (includeTOC) {
-      // TOC Header box
-      doc.setFillColor(...C.darkNavy);
-      doc.roundedRect(m.l, y, cw, 20, 2, 2, 'F');
-      doc.setFillColor(...C.azure);
-      doc.rect(m.l, y + 3, 3, 14, 'F');
+      // TOC Header
+      doc.setFillColor(...C.steel);
+      doc.roundedRect(m.l, y, cw, 16, 3, 3, 'F');
       
       setIBMPlexSans(doc, 'bold');
       doc.setFontSize(10);
       doc.setTextColor(...C.white);
-      doc.text('TABLE OF CONTENTS', m.l + 10, y + 13);
+      doc.text('REPORT CONTENTS', m.l + 8, y + 11);
       
-      doc.setFontSize(7);
+      doc.setFontSize(8);
       doc.setTextColor(...C.textSecondary);
-      doc.text(`${sections.length} sections`, pw - m.r - 5, y + 13, { align: 'right' });
+      doc.text(`${sections.length} Sections`, pw - m.r - 8, y + 11, { align: 'right' });
       
-      y += 26;
+      y += 22;
 
-      // TOC entries
-      sections.forEach((section, idx) => {
-        if (y > ph - m.b - 20) {
-          doc.addPage();
-          doc.setFillColor(...C.navy);
-          doc.rect(0, 0, pw, ph, 'F');
-          y = m.t + 10;
-        }
-
-        // Alternating row background
-        doc.setFillColor(...(idx % 2 === 0 ? C.darkNavy : C.steel));
-        doc.roundedRect(m.l, y - 2, cw, 12, 1, 1, 'F');
+      // TOC entries (compact, professional)
+      sections.slice(0, 8).forEach((section, idx) => {
+        if (y > ph - m.b - 30) return;
         
-        // Section number badge
+        // Subtle row background
+        if (idx % 2 === 0) {
+          doc.setFillColor(...C.darkNavy);
+          doc.rect(m.l, y - 2, cw, 10, 'F');
+        }
+        
+        // Section number circle
         doc.setFillColor(...C.azure);
-        doc.circle(m.l + 8, y + 4, 4, 'F');
+        doc.circle(m.l + 6, y + 3, 4, 'F');
         setIBMPlexSans(doc, 'bold');
         doc.setFontSize(7);
         doc.setTextColor(...C.white);
-        doc.text(String(idx + 1), m.l + 8, y + 5.5, { align: 'center' });
+        doc.text(String(idx + 1), m.l + 6, y + 4.5, { align: 'center' });
         
         // Section title
         setIBMPlexSans(doc, 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...C.white);
-        const truncatedTitle = section.title.length > 60 
-          ? section.title.substring(0, 57) + '...' 
-          : section.title;
-        doc.text(truncatedTitle, m.l + 18, y + 5);
+        const truncTitle = section.title.length > 55 ? section.title.substring(0, 52) + '...' : section.title;
+        doc.text(truncTitle, m.l + 16, y + 4);
         
-        // Dotted line
-        doc.setDrawColor(...C.textSecondary);
-        doc.setLineDashPattern([1, 1], 0);
-        const titleWidth = doc.getTextWidth(truncatedTitle);
-        doc.line(m.l + 20 + titleWidth, y + 4, pw - m.r - 20, y + 4);
-        doc.setLineDashPattern([], 0);
-        
-        // Page number
-        doc.setFillColor(...C.steel);
-        doc.roundedRect(pw - m.r - 18, y - 1, 16, 10, 1, 1, 'F');
-        setIBMPlexSans(doc, 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...C.white);
-        doc.text(`p.${section.pageNum + 1}`, pw - m.r - 10, y + 5, { align: 'center' });
-        
-        y += 14;
+        y += 12;
       });
       
-      // Add new page for content after TOC
+      y += 8;
+    }
+
+    // Check if we need a new page for content
+    if (y > ph - 60) {
       doc.addPage();
       doc.setFillColor(...C.navy);
       doc.rect(0, 0, pw, ph, 'F');
       y = m.t;
     }
 
-    // === RESPONSE SECTION HEADER ===
-    doc.setFillColor(...C.steel);
-    doc.rect(m.l, y, cw, 10, 'F');
+    // === RESPONSE CONTENT - CLEAN EXECUTIVE LAYOUT ===
+    const contentStartY = y;
+    
+    // Section divider
+    doc.setFillColor(...C.azure);
+    doc.rect(m.l, y, 50, 2, 'F');
     setIBMPlexSans(doc, 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(11);
     doc.setTextColor(...C.white);
-    doc.text('INTELLIGENCE RESPONSE', m.l + 4, y + 7);
-    y += 14;
+    doc.text('ANALYSIS', m.l + 55, y + 1);
+    y += 12;
 
-    // === RESPONSE CONTENT ===
-    let isEvenLine = true;
-    let currentSectionIdx = 0;
-
-    lines.forEach((line) => {
-      if (y > ph - m.b - 10) {
+    // Render each section professionally
+    sections.forEach((section, sectionIdx) => {
+      // Page break check
+      if (y > ph - m.b - 40) {
         doc.addPage();
         doc.setFillColor(...C.navy);
         doc.rect(0, 0, pw, ph, 'F');
         y = m.t;
       }
 
-      const trimmedLine = line.trim();
-      if (!trimmedLine) {
-        y += 3;
-        return;
-      }
-
-      // Alternate row backgrounds
-      doc.setFillColor(...(isEvenLine ? C.darkNavy : C.steel));
-      isEvenLine = !isEvenLine;
-
-      // Section headers (lines ending with colon)
-      if (trimmedLine.endsWith(':') && trimmedLine.length < 70) {
-        y += 3;
-        doc.setFillColor(...C.steel);
-        doc.roundedRect(m.l, y - 3.5, cw, lineH + 4, 1, 1, 'F');
-        doc.setFillColor(...C.azure);
-        doc.rect(m.l, y - 3.5, 3, lineH + 4, 'F');
-        
-        // Section number if TOC exists
-        if (includeTOC && currentSectionIdx < sections.length) {
-          doc.setFillColor(...C.azure);
-          doc.circle(m.l + 10, y + 0.5, 4, 'F');
-          setIBMPlexSans(doc, 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor(...C.white);
-          doc.text(String(currentSectionIdx + 1), m.l + 10, y + 2, { align: 'center' });
-          currentSectionIdx++;
-          
-          setIBMPlexSans(doc, 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(...C.white);
-          doc.text(trimmedLine, m.l + 18, y + 1);
-        } else {
-          setIBMPlexSans(doc, 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(...C.white);
-          doc.text(trimmedLine, m.l + 6, y + 1);
-        }
-        y += lineH + 5;
-        return;
-      }
-
-      // Bullet points
-      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-        const bulletText = trimmedLine.slice(2);
-        const bulletLines = doc.splitTextToSize(bulletText, cw - 20);
-        
-        doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
-        doc.rect(m.l, y - 3, cw, (bulletLines.length * lineH) + 2, 'F');
-        
-        doc.setFillColor(...C.azure);
-        doc.circle(m.l + 6, y - 0.5, 1.2, 'F');
-        
-        setIBMPlexSans(doc, 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(...C.white);
-        
-        bulletLines.forEach((bl: string) => {
-          if (y > ph - m.b - 10) {
-            doc.addPage();
-            doc.setFillColor(...C.navy);
-            doc.rect(0, 0, pw, ph, 'F');
-            y = m.t;
-          }
-          doc.text(bl, m.l + 12, y);
-          y += lineH;
-        });
-        return;
-      }
-
-      // Numbered lists
-      if (/^\d+\./.test(trimmedLine)) {
-        const num = trimmedLine.match(/^\d+\./)?.[0] || '';
-        const restText = trimmedLine.slice(num.length).trim();
-        const textLines = doc.splitTextToSize(restText, cw - 22);
-        
-        doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
-        doc.rect(m.l, y - 3, cw, (textLines.length * lineH) + 2, 'F');
-        
-        doc.setFillColor(...C.azure);
-        doc.circle(m.l + 6, y - 0.5, 3, 'F');
-        setIBMPlexSans(doc, 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor(...C.white);
-        doc.text(num.replace('.', ''), m.l + 6, y + 0.5, { align: 'center' });
-        
-        setIBMPlexSans(doc, 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(...C.white);
-        
-        textLines.forEach((tl: string) => {
-          if (y > ph - m.b - 10) {
-            doc.addPage();
-            doc.setFillColor(...C.navy);
-            doc.rect(0, 0, pw, ph, 'F');
-            y = m.t;
-          }
-          doc.text(tl, m.l + 14, y);
-          y += lineH;
-        });
-        return;
-      }
-
-      // Regular text
-      const textLines = doc.splitTextToSize(trimmedLine, cw - 10);
-      doc.rect(m.l, y - 3, cw, (textLines.length * lineH) + 2, 'F');
+      // Section header with number
+      doc.setFillColor(...C.steel);
+      doc.roundedRect(m.l, y, cw, 12, 2, 2, 'F');
       
-      setIBMPlexSans(doc, 'normal');
+      // Section number badge
+      doc.setFillColor(...C.azure);
+      doc.circle(m.l + 10, y + 6, 5, 'F');
+      setIBMPlexSans(doc, 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...C.white);
+      doc.text(String(sectionIdx + 1), m.l + 10, y + 7.5, { align: 'center' });
       
-      textLines.forEach((tl: string) => {
-        if (y > ph - m.b - 10) {
+      // Section title
+      setIBMPlexSans(doc, 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...C.white);
+      doc.text(section.title.toUpperCase(), m.l + 20, y + 8);
+      
+      y += 16;
+
+      // Section content with proper formatting
+      section.items.forEach((item, itemIdx) => {
+        if (y > ph - m.b - 15) {
           doc.addPage();
           doc.setFillColor(...C.navy);
           doc.rect(0, 0, pw, ph, 'F');
           y = m.t;
         }
-        doc.text(tl, m.l + 5, y);
-        y += lineH;
+
+        // Alternating row backgrounds for readability
+        if (itemIdx % 2 === 0) {
+          doc.setFillColor(...C.darkNavy);
+        } else {
+          doc.setFillColor(28, 28, 28);
+        }
+
+        // Bullet points
+        if (item.startsWith('- ') || item.startsWith('* ')) {
+          const bulletText = item.slice(2);
+          const textLines = doc.splitTextToSize(bulletText, cw - 20);
+          
+          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
+          
+          // Bullet dot
+          doc.setFillColor(...C.azure);
+          doc.circle(m.l + 5, y + 2, 1.5, 'F');
+          
+          setIBMPlexSans(doc, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          
+          textLines.forEach((tl: string, i: number) => {
+            doc.text(tl, m.l + 12, y + 3 + (i * 5.5));
+          });
+          
+          y += (textLines.length * 5.5) + 6;
+        }
+        // Numbered items
+        else if (/^\d+\./.test(item)) {
+          const num = item.match(/^\d+/)?.[0] || '';
+          const restText = item.replace(/^\d+\.\s*/, '');
+          const textLines = doc.splitTextToSize(restText, cw - 22);
+          
+          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
+          
+          // Number badge
+          doc.setFillColor(...C.steel);
+          doc.circle(m.l + 6, y + 2, 4, 'F');
+          setIBMPlexSans(doc, 'bold');
+          doc.setFontSize(7);
+          doc.setTextColor(...C.white);
+          doc.text(num, m.l + 6, y + 3.5, { align: 'center' });
+          
+          setIBMPlexSans(doc, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          
+          textLines.forEach((tl: string, i: number) => {
+            doc.text(tl, m.l + 14, y + 3 + (i * 5.5));
+          });
+          
+          y += (textLines.length * 5.5) + 6;
+        }
+        // Key-value pairs (contains colon mid-line)
+        else if (item.includes(':') && item.indexOf(':') < 40 && !item.endsWith(':')) {
+          const [key, ...valueParts] = item.split(':');
+          const value = valueParts.join(':').trim();
+          
+          doc.rect(m.l, y - 2, cw, 10, 'F');
+          
+          setIBMPlexSans(doc, 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.textSecondary);
+          doc.text(key.trim() + ':', m.l + 5, y + 4);
+          
+          setIBMPlexSans(doc, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          const keyWidth = doc.getTextWidth(key.trim() + ':  ');
+          const valueLines = doc.splitTextToSize(value, cw - keyWidth - 15);
+          doc.text(valueLines[0] || '', m.l + 5 + keyWidth, y + 4);
+          
+          y += 12;
+        }
+        // Regular paragraph
+        else {
+          const textLines = doc.splitTextToSize(item, cw - 12);
+          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
+          
+          setIBMPlexSans(doc, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          
+          textLines.forEach((tl: string, i: number) => {
+            doc.text(tl, m.l + 6, y + 3 + (i * 5.5));
+          });
+          
+          y += (textLines.length * 5.5) + 6;
+        }
       });
+      
+      y += 8; // Section spacing
     });
 
     // === FOOTER ON ALL PAGES ===
@@ -842,27 +850,31 @@ export function LitigationChat() {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       
-      // Footer background
+      // Footer band
       doc.setFillColor(...C.darkNavy);
-      doc.rect(0, ph - 14, pw, 14, 'F');
+      doc.rect(0, ph - 16, pw, 16, 'F');
       
-      // Red accent line
+      // Top accent
       doc.setFillColor(...C.azure);
-      doc.rect(0, ph - 14, pw, 0.5, 'F');
+      doc.rect(0, ph - 16, pw, 0.5, 'F');
       
-      // Footer text
+      // Footer content
       setIBMPlexSans(doc, 'normal');
       doc.setFontSize(6);
       doc.setTextColor(...C.textSecondary);
-      doc.text('CONFIDENTIAL - INTERNAL USE ONLY', m.l, ph - 5);
-      doc.text('Fred Loya Insurance - Litigation Intelligence', pw / 2, ph - 5, { align: 'center' });
-      doc.text(`Page ${i} of ${pageCount}`, pw - m.r, ph - 5, { align: 'right' });
+      doc.text('CONFIDENTIAL - EXECUTIVE USE ONLY', m.l, ph - 6);
+      
+      setIBMPlexSans(doc, 'bold');
+      doc.text('Fred Loya Insurance  |  Litigation Command Center', pw / 2, ph - 6, { align: 'center' });
+      
+      setIBMPlexSans(doc, 'normal');
+      doc.text(`Page ${i} of ${pageCount}`, pw - m.r, ph - 6, { align: 'right' });
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    const filename = `FLI_Oracle_Report_${timestamp}.pdf`;
+    const filename = `FLI_Executive_Brief_${timestamp}.pdf`;
     doc.save(filename);
-    toast.success(`Executive report downloaded: ${filename}`);
+    toast.success(`Executive brief downloaded: ${filename}`);
   };
 
   const sendMessage = async (overrideInput?: string) => {
