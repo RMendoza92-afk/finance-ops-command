@@ -4,7 +4,7 @@ import { useExportData, ExportableData, ManagerTracking, RawClaimData, Dashboard
 import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -95,11 +95,184 @@ interface OpenInventoryDashboardProps {
 }
 
 export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps) {
-  const { data, loading, error } = useOpenExposureData();
+  const { data: rawData, loading, error } = useOpenExposureData();
   const { data: solData } = useSOLBreachAnalysis();
   const { data: decisionsData } = useDecisionsPending();
   const { exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+
+  // Apply filters to raw claims and recalculate all metrics
+  const data = useMemo(() => {
+    if (!rawData) return null;
+    
+    const hasFilters = filters.team !== 'all' || filters.adjuster !== 'all' || filters.searchText.trim() !== '';
+    
+    if (!hasFilters) {
+      return rawData; // No filters, use original data
+    }
+    
+    // Filter raw claims based on filters
+    const filteredClaims = rawData.rawClaims.filter(claim => {
+      // Team filter - match against teamGroup (e.g., "TEAM 29", "TEAM 57")
+      if (filters.team !== 'all') {
+        const teamMatch = claim.teamGroup.toLowerCase().includes(filters.team.toLowerCase());
+        if (!teamMatch) return false;
+      }
+      
+      // Adjuster filter
+      if (filters.adjuster !== 'all') {
+        const adjMatch = claim.adjuster.toLowerCase().includes(filters.adjuster.toLowerCase());
+        if (!adjMatch) return false;
+      }
+      
+      // Search text - search across multiple fields
+      if (filters.searchText.trim()) {
+        const searchLower = filters.searchText.toLowerCase();
+        const searchFields = [
+          claim.claimNumber,
+          claim.claimant,
+          claim.adjuster,
+          claim.teamGroup,
+          claim.typeGroup,
+          claim.coverage,
+          claim.lossDescription,
+        ].map(f => (f || '').toLowerCase());
+        
+        if (!searchFields.some(field => field.includes(searchLower))) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Recalculate all aggregated metrics from filtered claims
+    const getAgeBucket = (days: number): 'age365Plus' | 'age181To365' | 'age61To180' | 'ageUnder60' => {
+      if (days >= 365) return 'age365Plus';
+      if (days >= 181) return 'age181To365';
+      if (days >= 61) return 'age61To180';
+      return 'ageUnder60';
+    };
+    
+    const getAgeBucketLabel = (bucket: string): string => {
+      switch (bucket) {
+        case 'age365Plus': return '365+ Days';
+        case 'age181To365': return '181-365 Days';
+        case 'age61To180': return '61-180 Days';
+        case 'ageUnder60': return 'Under 60 Days';
+        default: return bucket;
+      }
+    };
+    
+    // Initialize aggregation structures
+    const typeGroupMap = new Map<string, { 
+      age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; 
+      grandTotal: number; reserves: number; lowEval: number; highEval: number 
+    }>();
+    const typeGroupUniqueClaims = new Map<string, Set<string>>();
+    const ageFinancials = {
+      age365Plus: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+      age181To365: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+      age61To180: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+      ageUnder60: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    };
+    let grandTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
+    let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0, noEvalReserves: 0 };
+    let cp1Totals = { yes: 0, noCP: 0 };
+    
+    // Process filtered claims
+    for (const claim of filteredClaims) {
+      const ageBucket = getAgeBucket(claim.days);
+      const isCP1 = claim.cp1Flag === 'Yes';
+      
+      // Grand totals
+      grandTotals[ageBucket]++;
+      grandTotals.grandTotal++;
+      
+      // Financial totals
+      financialTotals.totalOpenReserves += claim.openReserves;
+      financialTotals.totalLowEval += claim.lowEval;
+      financialTotals.totalHighEval += claim.highEval;
+      if (claim.lowEval === 0 && claim.highEval === 0) {
+        financialTotals.noEvalCount++;
+        financialTotals.noEvalReserves += claim.openReserves;
+      }
+      
+      // Age financials
+      ageFinancials[ageBucket].claims++;
+      ageFinancials[ageBucket].reserves += claim.openReserves;
+      ageFinancials[ageBucket].lowEval += claim.lowEval;
+      ageFinancials[ageBucket].highEval += claim.highEval;
+      
+      // Type group summaries
+      if (!typeGroupMap.has(claim.typeGroup)) {
+        typeGroupMap.set(claim.typeGroup, { 
+          age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, 
+          grandTotal: 0, reserves: 0, lowEval: 0, highEval: 0 
+        });
+      }
+      const tg = typeGroupMap.get(claim.typeGroup)!;
+      tg[ageBucket]++;
+      tg.grandTotal++;
+      tg.reserves += claim.openReserves;
+      tg.lowEval += claim.lowEval;
+      tg.highEval += claim.highEval;
+      
+      // Unique claims per type group
+      if (!typeGroupUniqueClaims.has(claim.typeGroup)) {
+        typeGroupUniqueClaims.set(claim.typeGroup, new Set());
+      }
+      typeGroupUniqueClaims.get(claim.typeGroup)!.add(claim.claimNumber);
+      
+      // CP1 totals
+      if (isCP1) {
+        cp1Totals.yes++;
+      } else {
+        cp1Totals.noCP++;
+      }
+    }
+    
+    // Build type group summaries array
+    const typeGroupSummaries = Array.from(typeGroupMap.entries()).map(([typeGroup, counts]) => ({
+      typeGroup,
+      ...counts,
+      uniqueClaims: typeGroupUniqueClaims.get(typeGroup)?.size || 0,
+    })).sort((a, b) => b.uniqueClaims - a.uniqueClaims);
+    
+    // Build financials by age
+    const financialsByAge = [
+      { age: '365+ Days', claims: ageFinancials.age365Plus.claims, openReserves: ageFinancials.age365Plus.reserves, lowEval: ageFinancials.age365Plus.lowEval, highEval: ageFinancials.age365Plus.highEval },
+      { age: '181-365 Days', claims: ageFinancials.age181To365.claims, openReserves: ageFinancials.age181To365.reserves, lowEval: ageFinancials.age181To365.lowEval, highEval: ageFinancials.age181To365.highEval },
+      { age: '61-180 Days', claims: ageFinancials.age61To180.claims, openReserves: ageFinancials.age61To180.reserves, lowEval: ageFinancials.age61To180.lowEval, highEval: ageFinancials.age61To180.highEval },
+      { age: 'Under 60 Days', claims: ageFinancials.ageUnder60.claims, openReserves: ageFinancials.ageUnder60.reserves, lowEval: ageFinancials.ageUnder60.lowEval, highEval: ageFinancials.ageUnder60.highEval },
+    ];
+    
+    // Calculate CP1 rate
+    const totalClaims = cp1Totals.yes + cp1Totals.noCP;
+    const cp1Rate = totalClaims > 0 ? ((cp1Totals.yes / totalClaims) * 100).toFixed(1) : '0.0';
+    
+    // Return recalculated data structure (preserving original structure shape)
+    return {
+      ...rawData,
+      totals: grandTotals,
+      typeGroupSummaries,
+      financials: {
+        ...rawData.financials,
+        totalOpenReserves: financialTotals.totalOpenReserves,
+        totalLowEval: financialTotals.totalLowEval,
+        totalHighEval: financialTotals.totalHighEval,
+        noEvalCount: financialTotals.noEvalCount,
+        noEvalReserves: financialTotals.noEvalReserves,
+        byAge: financialsByAge,
+      },
+      cp1Data: {
+        ...rawData.cp1Data,
+        totals: { ...rawData.cp1Data.totals, yes: cp1Totals.yes, noCP: cp1Totals.noCP, grandTotal: totalClaims },
+        cp1Rate,
+      },
+      rawClaims: filteredClaims,
+    };
+  }, [rawData, filters.team, filters.adjuster, filters.searchText]);
 
   const [selectedClaimFilter, setSelectedClaimFilter] = useState<string>('');
   const [selectedReviewer, setSelectedReviewer] = useState<string>('');
@@ -2267,8 +2440,37 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     );
   }
 
+  // Check if filters are active
+  const hasActiveFilters = filters.team !== 'all' || filters.adjuster !== 'all' || filters.searchText.trim() !== '';
+  const filteredCount = data?.rawClaims.length || 0;
+  const totalCount = rawData?.rawClaims.length || 0;
+
   return (
     <div className="space-y-8">
+      {/* Active Filter Indicator */}
+      {hasActiveFilters && (
+        <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-primary/20 rounded-lg">
+              <Filter className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Filtered View: {filteredCount.toLocaleString()} of {totalCount.toLocaleString()} claims
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {filters.team !== 'all' && <span className="mr-2">Team: {filters.team}</span>}
+                {filters.adjuster !== 'all' && <span className="mr-2">Adjuster: {filters.adjuster}</span>}
+                {filters.searchText && <span>Search: "{filters.searchText}"</span>}
+              </p>
+            </div>
+          </div>
+          <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
+            {((filteredCount / totalCount) * 100).toFixed(1)}% of inventory
+          </Badge>
+        </div>
+      )}
+
       {/* Executive Header Banner - Board-Ready Design */}
       <div className="bg-gradient-to-r from-secondary via-secondary/80 to-muted rounded-xl p-4 sm:p-6 border border-border shadow-lg">
         <div className="flex flex-col gap-4">
