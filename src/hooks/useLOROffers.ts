@@ -14,6 +14,11 @@ export interface LOROfferDB {
   outcome_notes: string | null;
   created_at: string;
   updated_at: string;
+  bi_phase: string | null;
+  settlement_status: string | null;
+  high_eval: number | null;
+  low_eval: number | null;
+  reserves: number | null;
 }
 
 export interface LOROfferStats {

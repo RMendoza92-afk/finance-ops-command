@@ -201,42 +201,57 @@ export type Database = {
         Row: {
           accident_description: string | null
           area: string | null
+          bi_phase: string | null
           claim_number: string
           created_at: string
           expires_date: string
           extended_date: string
+          high_eval: number | null
           id: string
+          low_eval: number | null
           offer_amount: number
           outcome_date: string | null
           outcome_notes: string | null
+          reserves: number | null
+          settlement_status: string | null
           status: string
           updated_at: string
         }
         Insert: {
           accident_description?: string | null
           area?: string | null
+          bi_phase?: string | null
           claim_number: string
           created_at?: string
           expires_date: string
           extended_date: string
+          high_eval?: number | null
           id?: string
+          low_eval?: number | null
           offer_amount: number
           outcome_date?: string | null
           outcome_notes?: string | null
+          reserves?: number | null
+          settlement_status?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           accident_description?: string | null
           area?: string | null
+          bi_phase?: string | null
           claim_number?: string
           created_at?: string
           expires_date?: string
           extended_date?: string
+          high_eval?: number | null
           id?: string
+          low_eval?: number | null
           offer_amount?: number
           outcome_date?: string | null
           outcome_notes?: string | null
+          reserves?: number | null
+          settlement_status?: string | null
           status?: string
           updated_at?: string
         }
