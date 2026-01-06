@@ -139,17 +139,13 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     const totalPaid = aggregatedData.reduce((sum, m) => sum + m.totalPaid, 0);
     const indemnity = aggregatedData.reduce((sum, m) => sum + m.indemnity, 0);
     const expense = aggregatedData.reduce((sum, m) => sum + m.expense, 0);
+    const expertSpend = aggregatedData.reduce((sum, m) => sum + m.expertSpend, 0);
+    const postureSpend = aggregatedData.reduce((sum, m) => sum + m.postureSpend, 0);
     
-    // Known 2025 YTD figures (November)
-    const KNOWN_BI_TOTAL = 395000000;      // $395M total BI spend
-    const KNOWN_LIT_EXPENSE = 19000000;    // $19M litigation expenses
-    const KNOWN_EXPERT = 5681152;          // $5.68M actual expert spend (YTD Nov)
-    const KNOWN_REACTIVE = KNOWN_LIT_EXPENSE - KNOWN_EXPERT; // $13.32M waste
-    
-    // Calculate proportional spend based on filtered data
-    const expenseRatio = expense > 0 ? expense / KNOWN_LIT_EXPENSE : 0;
-    const expertSpend = KNOWN_EXPERT * expenseRatio;
-    const postureSpend = KNOWN_REACTIVE * expenseRatio;
+    // Calculate waste ratio (avoid divide by zero)
+    const wasteRatio = expertSpend > 0 ? postureSpend / expertSpend : 0;
+    const expertPercent = expense > 0 ? (expertSpend / expense) * 100 : 0;
+    const wastePercent = expense > 0 ? (postureSpend / expense) * 100 : 0;
     
     return { 
       totalPaid, 
@@ -157,11 +153,10 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       postureSpend, 
       indemnity,
       expense,
-      // Known figures (full dataset)
-      knownBITotal: KNOWN_BI_TOTAL,
-      knownLitExpense: KNOWN_LIT_EXPENSE,
-      knownExpert: KNOWN_EXPERT,
-      knownReactive: KNOWN_REACTIVE,
+      wasteRatio,
+      expertPercent,
+      wastePercent,
+      claimCount: aggregatedData.length,
     };
   }, [aggregatedData]);
 
@@ -173,17 +168,16 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     { quarter: 'Q4 2025', paid: 1016756, paidAvgMonthly: 508378, approved: 909651, approvedAvgMonthly: 454826 },
   ];
 
-  // Reactive cost curve by stage - using actual expert ratio
+  // Reactive cost curve by stage - using actual data
   const costCurveData = useMemo(() => {
     const stages = ['Early', 'Mid', 'Late', 'Very Late'];
-    const EXPERT_SPEND_RATIO = 5681152 / 19000000; // ~29.9%
     let cumulative = 0;
     
     return stages.map(stage => {
       const stageData = aggregatedData.filter(m => m.stage === stage);
       const stageExpense = stageData.reduce((sum, m) => sum + m.expense, 0);
-      const stageExpert = stageExpense * EXPERT_SPEND_RATIO;
-      const stagePosture = stageExpense * (1 - EXPERT_SPEND_RATIO);
+      const stageExpert = stageData.reduce((sum, m) => sum + m.expertSpend, 0);
+      const stagePosture = stageData.reduce((sum, m) => sum + m.postureSpend, 0);
       cumulative += stagePosture;
       
       return {
@@ -198,7 +192,6 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
 
   // Executive Review Cases - files requiring executive attention
   const executiveReviewCases = useMemo(() => {
-    const EXPERT_SPEND_RATIO = 5681152 / 19000000;
     
     // Build aggregated view with executive review calculation
     const claimMap = new Map<string, {
@@ -249,9 +242,13 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     });
     
     // Calculate executive review for each claim
+    // Use a reasonable approximation for expert vs reactive spend based on expense category
     const cases = Array.from(claimMap.values()).map(c => {
-      const expertSpend = c.expense * EXPERT_SPEND_RATIO;
-      const reactiveSpend = c.expense * (1 - EXPERT_SPEND_RATIO);
+      const isExpertSpend = c.expCategory?.toUpperCase().includes('EXPERT') || 
+                           c.expCategory?.toUpperCase().includes('MED') ||
+                           c.expCategory?.toUpperCase().includes('CONSULT');
+      const expertSpend = isExpertSpend ? c.expense : 0;
+      const reactiveSpend = isExpertSpend ? 0 : c.expense;
       
       const review = calculateExecutiveReview(
         c.claimAge,
@@ -339,26 +336,26 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       timestamp,
       affectsManager: 'Executive Leadership',
       summary: {
-        'Total BI Spend': '$395,000,000',
-        'Litigation Expenses': '$19,000,000',
-        'Expert Spend': '$5,681,152',
-        'Reactive Waste': '$13,318,848',
-        'Waste Ratio': '2.3x',
+        'Total Paid': formatCurrencyFull(kpis.totalPaid),
+        'Expenses': formatCurrencyFull(kpis.expense),
+        'Expert Spend': formatCurrencyFull(kpis.expertSpend),
+        'Reactive Waste': formatCurrencyFull(kpis.postureSpend),
+        'Waste Ratio': kpis.wasteRatio > 0 ? `${kpis.wasteRatio.toFixed(1)}x` : '--',
       },
       columns: ['Metric', 'Value', 'Notes'],
       rows: [
-        ['Total BI Spend', '$395,000,000', 'All Bodily Injury YTD'],
-        ['Litigation Expenses', '$19,000,000', 'Litigation portion'],
-        ['Expert Spend', '$5,681,152', '$516K avg/month'],
-        ['Reactive Waste', '$13,318,848', 'Pre-lit ATR + Lit fees'],
-        ['Expert %', '29.9%', 'Strategic spend ratio'],
-        ['Reactive %', '70.1%', 'Friction spend ratio'],
+        ['Total Paid', formatCurrencyFull(kpis.totalPaid), `${kpis.claimCount.toLocaleString()} claims`],
+        ['Indemnity', formatCurrencyFull(kpis.indemnity), 'Settlement amounts'],
+        ['Expert Spend', formatCurrencyFull(kpis.expertSpend), 'Strategic spend'],
+        ['Reactive Waste', formatCurrencyFull(kpis.postureSpend), 'Pre-lit ATR + Lit fees'],
+        ['Expert %', `${kpis.expertPercent.toFixed(1)}%`, 'Strategic spend ratio'],
+        ['Reactive %', `${kpis.wastePercent.toFixed(1)}%`, 'Friction spend ratio'],
       ],
       rawClaimData: [buildRawClaimData()],
     };
     await exportBoth(exportData);
     toast.success('PDF + Excel exported: KPI Summary');
-  }, [exportBoth, timestamp, buildRawClaimData]);
+  }, [exportBoth, timestamp, buildRawClaimData, kpis]);
 
   const handleExportQuarterly = useCallback(async () => {
     const exportData: ExportableData = {
@@ -568,20 +565,20 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           timestamp,
           affectsManager: 'Executive Leadership',
           summary: {
-            'Total BI Spend': '$395,000,000',
-            'Litigation Expenses': '$19,000,000',
-            'Expert Spend': '$5,681,152',
-            'Reactive Waste': '$13,318,848',
-            'Waste Ratio': '2.3x',
+            'Total Paid': formatCurrencyFull(kpis.totalPaid),
+            'Expenses': formatCurrencyFull(kpis.expense),
+            'Expert Spend': formatCurrencyFull(kpis.expertSpend),
+            'Reactive Waste': formatCurrencyFull(kpis.postureSpend),
+            'Waste Ratio': kpis.wasteRatio > 0 ? `${kpis.wasteRatio.toFixed(1)}x` : '--',
           },
           columns: ['Metric', 'Value', 'Notes'],
           rows: [
-            ['Total BI Spend', '$395,000,000', 'All Bodily Injury YTD'],
-            ['Litigation Expenses', '$19,000,000', 'Litigation portion'],
-            ['Expert Spend', '$5,681,152', '$516K avg/month'],
-            ['Reactive Waste', '$13,318,848', 'Pre-lit ATR + Lit fees'],
-            ['Expert %', '29.9%', 'Strategic spend ratio'],
-            ['Reactive %', '70.1%', 'Friction spend ratio'],
+            ['Total Paid', formatCurrencyFull(kpis.totalPaid), `${kpis.claimCount.toLocaleString()} claims`],
+            ['Indemnity', formatCurrencyFull(kpis.indemnity), 'Settlement amounts'],
+            ['Expert Spend', formatCurrencyFull(kpis.expertSpend), 'Strategic spend'],
+            ['Reactive Waste', formatCurrencyFull(kpis.postureSpend), 'Pre-lit ATR + Lit fees'],
+            ['Expert %', `${kpis.expertPercent.toFixed(1)}%`, 'Strategic spend ratio'],
+            ['Reactive %', `${kpis.wastePercent.toFixed(1)}%`, 'Friction spend ratio'],
           ],
           rawClaimData: [buildRawClaimData()],
         } as ExportableData,
@@ -685,7 +682,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         </div>
       </div>
 
-      {/* 2025 BI Spend Summary Banner */}
+      {/* Filtered Data Summary Banner */}
       <div 
         className="bg-gradient-to-r from-[#0c2340] to-[#1a3a5c] border-2 border-[#b41e1e]/30 rounded-xl p-3 sm:p-5 cursor-pointer hover:border-[#b41e1e] transition-colors shadow-lg"
         onDoubleClick={handleExportKPIs}
@@ -693,17 +690,17 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white">2025 BI Spend (Jan-Nov): $395M</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-white">Total Paid: {formatCurrency(kpis.totalPaid)}</h2>
             <p className="text-xs sm:text-sm text-gray-300 mt-1">
-              Lit Expenses: <span className="font-semibold text-white">$19M</span> • Jan-Nov 2025
+              Expenses: <span className="font-semibold text-white">{formatCurrency(kpis.expense)}</span> • {kpis.claimCount.toLocaleString()} claims
             </p>
           </div>
           <div className="text-left sm:text-right">
             <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide mb-1">Expense Breakdown</p>
             <div className="flex items-center gap-2 sm:gap-3 text-sm">
-              <span className="text-emerald-400 font-bold">$5.68M Expert</span>
+              <span className="text-emerald-400 font-bold">{formatCurrency(kpis.expertSpend)} Expert</span>
               <span className="text-gray-400">vs</span>
-              <span className="text-[#b41e1e] font-bold">$13.32M Waste</span>
+              <span className="text-[#b41e1e] font-bold">{formatCurrency(kpis.postureSpend)} Waste</span>
             </div>
           </div>
         </div>
@@ -713,15 +710,21 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-[10px] sm:text-xs text-gray-400 mb-1">
-                <span>Expert</span>
-                <span>Reactive Waste</span>
+                <span>Expert ({kpis.expertPercent.toFixed(0)}%)</span>
+                <span>Reactive Waste ({kpis.wastePercent.toFixed(0)}%)</span>
               </div>
               <div className="w-full h-4 sm:h-5 rounded-full bg-gray-700 overflow-hidden flex">
-                <div className="bg-emerald-500 h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" style={{ width: '29.9%' }}>
-                  30%
+                <div 
+                  className="bg-emerald-500 h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" 
+                  style={{ width: `${Math.max(kpis.expertPercent, 1)}%` }}
+                >
+                  {kpis.expertPercent >= 10 ? `${kpis.expertPercent.toFixed(0)}%` : ''}
                 </div>
-                <div className="bg-[#b41e1e] h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" style={{ width: '70.1%' }}>
-                  70%
+                <div 
+                  className="bg-[#b41e1e] h-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white" 
+                  style={{ width: `${Math.max(kpis.wastePercent, 1)}%` }}
+                >
+                  {kpis.wastePercent >= 10 ? `${kpis.wastePercent.toFixed(0)}%` : ''}
                 </div>
               </div>
             </div>
@@ -732,37 +735,37 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <KPICard
-          title="Total BI Spend"
-          value="$395M"
-          subtitle="All Bodily Injury YTD"
+          title="Total Paid"
+          value={formatCurrency(kpis.totalPaid)}
+          subtitle={`${kpis.claimCount.toLocaleString()} claims`}
           icon={DollarSign}
           variant="default"
         />
         <KPICard
-          title="Lit Expenses"
-          value="$19M"
-          subtitle="Litigation portion"
+          title="Indemnity"
+          value={formatCurrency(kpis.indemnity)}
+          subtitle="Settlement amounts"
           icon={DollarSign}
           variant="default"
         />
         <KPICard
           title="Expert Spend"
-          value="$5.68M"
-          subtitle="$516K avg/month"
+          value={formatCurrency(kpis.expertSpend)}
+          subtitle="Strategic spend"
           icon={Target}
           variant="success"
         />
         <KPICard
           title="Reactive Waste"
-          value="$13.32M"
+          value={formatCurrency(kpis.postureSpend)}
           subtitle="Pre-lit ATR + Lit fees"
           icon={AlertTriangle}
           variant="danger"
         />
         <KPICard
           title="Waste Ratio"
-          value="2.3x"
-          subtitle="$1 expert = $2.34 waste"
+          value={kpis.wasteRatio > 0 ? `${kpis.wasteRatio.toFixed(1)}x` : '--'}
+          subtitle={kpis.wasteRatio > 0 ? `$1 expert = $${kpis.wasteRatio.toFixed(2)} waste` : 'No expert spend'}
           icon={TrendingUp}
           variant="warning"
         />
