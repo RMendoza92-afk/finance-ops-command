@@ -208,15 +208,13 @@ export function useLitigationData() {
   };
 
   const calculateMultiPack = (allData: LitigationMatter[]): ClosedMultiPackSummary => {
-    // Group claims by prefix + first 6 digits after prefix
-    // Format: XX-XXXXXX-XX where prefix is 2-3 chars, base is 6 digits, rest is exposure
+    // Group claims by base claim = everything except last 2 digits (exposure number)
+    // e.g., "39-0000430132" -> base "39-00004301", exposure "32"
     const claimBaseMap = new Map<string, LitigationMatter[]>();
     
     const extractBaseClaim = (claimNum: string): string => {
-      const dashIdx = claimNum.indexOf('-');
-      if (dashIdx === -1) return claimNum.substring(0, 8);
-      // prefix + first 6 digits after dash = base claim
-      return claimNum.substring(0, dashIdx + 1 + 6);
+      if (claimNum.length < 4) return claimNum;
+      return claimNum.slice(0, -2);
     };
     
     for (const matter of allData) {
