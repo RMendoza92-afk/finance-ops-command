@@ -1286,34 +1286,41 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     cp1Rate: '0.0',
   }, [data]);
 
-  // EXECUTIVE METRICS - Trend Analysis & Closure Data
-  const EXECUTIVE_METRICS = {
-    // Month-over-month trends (simulated - would come from historical data)
-    trends: {
-      reservesMoM: 2.3,           // +2.3% vs last month
-      reservesYoY: -5.1,          // -5.1% vs last year
-      claimsMoM: -1.2,            // -1.2% vs last month
-      claimsYoY: -8.4,            // -8.4% vs last year
-      closureRateMoM: 4.5,        // +4.5% improvement
-    },
-    // Closure metrics
-    closures: {
-      closedThisMonth: 847,
-      closedLastMonth: 792,
-      avgDaysToClose: 142,
-      avgDaysToCloseTrend: -8,    // 8 days faster than last month
-      targetDays: 120,
-      closureRate: 8.4,           // % of inventory closed per month
-    },
-    // Aging alerts
-    aging: {
-      over365Days: 5630,
-      over365Reserves: 115000000,
-      over365Pct: 55.7,           // % of total claims
-      criticalAging: 1247,        // Claims over 2 years
-      avgAge: 287,                // days
-    },
-  };
+  // EXECUTIVE METRICS - Dynamic from CSV data
+  const EXECUTIVE_METRICS = useMemo(() => {
+    if (!data) return {
+      trends: { reservesMoM: 0, reservesYoY: 0, claimsMoM: 0, claimsYoY: 0, closureRateMoM: 0 },
+      aging: { over365Days: 0, over365Reserves: 0, over365Pct: 0, criticalAging: 0, avgAge: 0 },
+    };
+    
+    // Dynamic aging from actual CSV data
+    const over365Days = data.totals.age365Plus;
+    const totalClaims = data.totals.grandTotal;
+    const over365Pct = totalClaims > 0 ? ((over365Days / totalClaims) * 100) : 0;
+    
+    // Get reserves for 365+ from financials.byAge
+    const aged365Financial = data.financials.byAge.find(a => a.age === '365+ Days');
+    const over365Reserves = aged365Financial?.openReserves || 0;
+    
+    return {
+      // Month-over-month trends (static for now - would come from historical data comparison)
+      trends: {
+        reservesMoM: data.delta?.reservesChangePercent || 0,
+        reservesYoY: -5.1,          // Would need YoY data
+        claimsMoM: data.delta?.changePercent || 0,
+        claimsYoY: -8.4,            // Would need YoY data
+        closureRateMoM: 0,          // N/A for open inventory
+      },
+      // Aging alerts - DYNAMIC from CSV
+      aging: {
+        over365Days,
+        over365Reserves,
+        over365Pct: parseFloat(over365Pct.toFixed(1)),
+        criticalAging: 0,           // Would need 2yr+ bucket
+        avgAge: 287,                // Would need to calculate
+      },
+    };
+  }, [data]);
 
   // Dynamic financial data from CSV - single source of truth
   const FINANCIAL_DATA = useMemo(() => {
@@ -1322,7 +1329,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         byAge: [],
         byQueue: [],
         byTypeGroup: [],
-        totals: { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalAmount: 0, noEvalCount: 0 }
+        totals: { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalReserves: 0, noEvalCount: 0 }
       };
     }
     return {
@@ -1333,7 +1340,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         totalOpenReserves: data.financials.totalOpenReserves,
         totalLowEval: data.financials.totalLowEval,
         totalHighEval: data.financials.totalHighEval,
-        noEvalAmount: 0,
+        noEvalReserves: data.financials.noEvalReserves,
         noEvalCount: data.financials.noEvalCount,
       }
     };
@@ -2294,14 +2301,15 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               variant="outline"
               size="sm"
               onClick={async () => {
-                await generateExecutivePackage(
+              await generateExecutivePackage(
                   {
                     totalOpenReserves: FINANCIAL_DATA.totals.totalOpenReserves,
-                    pendingEval: FINANCIAL_DATA.totals.noEvalAmount || 0,
-                    pendingEvalPct: 63,
-                    closuresThisMonth: EXECUTIVE_METRICS.closures.closedThisMonth,
-                    avgDaysToClose: EXECUTIVE_METRICS.closures.avgDaysToClose,
-                    closureTrend: 7,
+                    pendingEval: FINANCIAL_DATA.totals.noEvalReserves || 0,
+                    pendingEvalPct: FINANCIAL_DATA.totals.noEvalCount > 0 && metrics?.totalOpenClaims 
+                      ? Math.round((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100) : 0,
+                    closuresThisMonth: 0, // N/A for open inventory
+                    avgDaysToClose: 0, // N/A for open inventory
+                    closureTrend: 0,
                     aged365Count: EXECUTIVE_METRICS.aging.over365Days,
                     aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
                     aged365Pct: EXECUTIVE_METRICS.aging.over365Pct,
@@ -2372,33 +2380,36 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
           </div>
 
-          {/* Pending Evaluation ALERT */}
+          {/* Pending Evaluation ALERT - Dynamic from CSV */}
           <div className="bg-warning/5 rounded-xl p-3 sm:p-5 border-2 border-warning/40 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-16 sm:w-24 h-16 sm:h-24 bg-warning/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-bold text-warning uppercase tracking-wide">⚠️ PENDING EVAL</span>
+              <span className="text-[10px] sm:text-xs font-bold text-warning uppercase tracking-wide">⚠️ NO EVAL</span>
               <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning animate-pulse" />
             </div>
-            <p className="text-xl sm:text-3xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalAmount || 0)}</p>
-            <p className="text-xs sm:text-sm text-warning/80 mt-1 sm:mt-2">63% without evaluation</p>
+            <p className="text-xl sm:text-3xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalReserves || 0)}</p>
+            <p className="text-xs sm:text-sm text-warning/80 mt-1 sm:mt-2">
+              {metrics?.totalOpenClaims && FINANCIAL_DATA.totals.noEvalCount 
+                ? Math.round((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100) 
+                : 0}% without evaluation ({formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)} claims)
+            </p>
             <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-warning/20">
               <span className="text-[10px] sm:text-xs text-warning font-bold uppercase">Action Required</span>
             </div>
           </div>
 
-          {/* Closure Velocity */}
-          <div className="bg-secondary/50 rounded-xl p-3 sm:p-5 border border-border hover:border-success/30 transition-colors">
+          {/* 181-365 Days Aging (replacing closures - not applicable for open inventory) */}
+          <div className="bg-amber-500/5 rounded-xl p-3 sm:p-5 border-2 border-amber-500/40">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wide">Closures This Month</span>
-              <div className="hidden sm:flex items-center gap-1 text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-md">
-                <TrendingUp className="h-3 w-3" />
-                +{((EXECUTIVE_METRICS.closures.closedThisMonth / EXECUTIVE_METRICS.closures.closedLastMonth - 1) * 100).toFixed(0)}%
-              </div>
+              <span className="text-[10px] sm:text-xs font-bold text-amber-600 uppercase tracking-wide">⏳ AGED 181-365</span>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
             </div>
-            <p className="text-xl sm:text-3xl font-bold text-foreground">{formatNumber(EXECUTIVE_METRICS.closures.closedThisMonth)}</p>
-            <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/50 text-xs sm:text-sm">
-              <span className="text-muted-foreground">Avg: <span className="font-medium text-foreground">{EXECUTIVE_METRICS.closures.avgDaysToClose}d</span></span>
-              <span className="text-success font-medium">↓{Math.abs(EXECUTIVE_METRICS.closures.avgDaysToCloseTrend)}d</span>
+            <p className="text-xl sm:text-3xl font-bold text-amber-600">{formatNumber(data?.totals.age181To365 || 0)}</p>
+            <p className="text-xs sm:text-sm text-amber-600/80 mt-1 sm:mt-2">
+              {data?.totals.grandTotal ? ((data.totals.age181To365 / data.totals.grandTotal) * 100).toFixed(1) : 0}% • {formatCurrency(data?.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0)}
+            </p>
+            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-amber-500/20">
+              <span className="text-[10px] sm:text-xs text-amber-600 font-bold uppercase">Monitor Closely</span>
             </div>
           </div>
 
