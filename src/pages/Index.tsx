@@ -5,6 +5,7 @@ import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
 import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Loader2 } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
@@ -222,8 +223,8 @@ const Index = () => {
               </p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
-
       </header>
       
       <main className="px-3 sm:px-6 py-3 sm:py-6">
