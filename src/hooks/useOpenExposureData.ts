@@ -464,13 +464,15 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       noEvalReserves: financialTotals.noEvalReserves,
       byAge,
       byTypeGroup,
-      byQueue: typeGroupSummaries.map(tg => ({
-        queue: tg.typeGroup,
-        openReserves: tg.reserves,
-        lowEval: tg.lowEval,
-        highEval: tg.highEval,
-        claims: tg.grandTotal,
-      })),
+      byQueue: typeGroupSummaries
+        .filter(tg => ['ATR', 'LIT', 'BI3', 'Non Rep', 'UIM'].includes(tg.typeGroup))
+        .map(tg => ({
+          queue: tg.typeGroup,
+          openReserves: tg.reserves,
+          lowEval: tg.lowEval,
+          highEval: tg.highEval,
+          claims: tg.grandTotal,
+        })),
     },
     knownTotals,
   };
