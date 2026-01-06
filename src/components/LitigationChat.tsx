@@ -477,6 +477,45 @@ export function LitigationChat() {
         .replace(/[^\x20-\x7E\n]/g, '');
     };
 
+    const sanitizedResponse = sanitize(responseContent);
+    const lines = sanitizedResponse.split('\n');
+    
+    // === PRE-SCAN: Identify sections for TOC ===
+    const sections: { title: string; pageNum: number }[] = [];
+    let estimatedY = 120; // Start after header + KPIs + query box
+    let estimatedPage = 1;
+    const lineH = 5.5;
+    const pageContentHeight = ph - m.t - m.b - 20;
+    
+    lines.forEach((line) => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) {
+        estimatedY += 3;
+        return;
+      }
+      
+      // Section headers (lines ending with colon)
+      if (trimmedLine.endsWith(':') && trimmedLine.length < 70) {
+        sections.push({ title: trimmedLine.replace(':', ''), pageNum: estimatedPage });
+        estimatedY += lineH + 8;
+      } else {
+        estimatedY += lineH + 2;
+      }
+      
+      if (estimatedY > pageContentHeight) {
+        estimatedPage++;
+        estimatedY = m.t;
+      }
+    });
+
+    const includeTOC = sections.length >= 3;
+    const tocPageOffset = includeTOC ? 1 : 0;
+
+    // Adjust section page numbers if TOC is included
+    if (includeTOC) {
+      sections.forEach(s => { s.pageNum += tocPageOffset; });
+    }
+
     // === PAGE 1: EXECUTIVE HEADER ===
     doc.setFillColor(...C.navy);
     doc.rect(0, 0, pw, ph, 'F');
@@ -580,6 +619,80 @@ export function LitigationChat() {
 
     y += 30;
 
+    // === TABLE OF CONTENTS (if 3+ sections) ===
+    if (includeTOC) {
+      // TOC Header box
+      doc.setFillColor(...C.darkNavy);
+      doc.roundedRect(m.l, y, cw, 20, 2, 2, 'F');
+      doc.setFillColor(...C.azure);
+      doc.rect(m.l, y + 3, 3, 14, 'F');
+      
+      setIBMPlexSans(doc, 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...C.white);
+      doc.text('TABLE OF CONTENTS', m.l + 10, y + 13);
+      
+      doc.setFontSize(7);
+      doc.setTextColor(...C.textSecondary);
+      doc.text(`${sections.length} sections`, pw - m.r - 5, y + 13, { align: 'right' });
+      
+      y += 26;
+
+      // TOC entries
+      sections.forEach((section, idx) => {
+        if (y > ph - m.b - 20) {
+          doc.addPage();
+          doc.setFillColor(...C.navy);
+          doc.rect(0, 0, pw, ph, 'F');
+          y = m.t + 10;
+        }
+
+        // Alternating row background
+        doc.setFillColor(...(idx % 2 === 0 ? C.darkNavy : C.steel));
+        doc.roundedRect(m.l, y - 2, cw, 12, 1, 1, 'F');
+        
+        // Section number badge
+        doc.setFillColor(...C.azure);
+        doc.circle(m.l + 8, y + 4, 4, 'F');
+        setIBMPlexSans(doc, 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(...C.white);
+        doc.text(String(idx + 1), m.l + 8, y + 5.5, { align: 'center' });
+        
+        // Section title
+        setIBMPlexSans(doc, 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...C.white);
+        const truncatedTitle = section.title.length > 60 
+          ? section.title.substring(0, 57) + '...' 
+          : section.title;
+        doc.text(truncatedTitle, m.l + 18, y + 5);
+        
+        // Dotted line
+        doc.setDrawColor(...C.textSecondary);
+        doc.setLineDashPattern([1, 1], 0);
+        const titleWidth = doc.getTextWidth(truncatedTitle);
+        doc.line(m.l + 20 + titleWidth, y + 4, pw - m.r - 20, y + 4);
+        doc.setLineDashPattern([], 0);
+        
+        // Page number
+        doc.setFillColor(...C.steel);
+        doc.roundedRect(pw - m.r - 18, y - 1, 16, 10, 1, 1, 'F');
+        setIBMPlexSans(doc, 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...C.white);
+        doc.text(`p.${section.pageNum + 1}`, pw - m.r - 10, y + 5, { align: 'center' });
+        
+        y += 14;
+      });
+      
+      // Add new page for content after TOC
+      doc.addPage();
+      doc.setFillColor(...C.navy);
+      doc.rect(0, 0, pw, ph, 'F');
+      y = m.t;
+    }
+
     // === RESPONSE SECTION HEADER ===
     doc.setFillColor(...C.steel);
     doc.rect(m.l, y, cw, 10, 'F');
@@ -590,14 +703,11 @@ export function LitigationChat() {
     y += 14;
 
     // === RESPONSE CONTENT ===
-    const sanitizedResponse = sanitize(responseContent);
-    const lines = sanitizedResponse.split('\n');
-    const lineH = 5.5;
     let isEvenLine = true;
+    let currentSectionIdx = 0;
 
     lines.forEach((line) => {
       if (y > ph - m.b - 10) {
-        // Add page
         doc.addPage();
         doc.setFillColor(...C.navy);
         doc.rect(0, 0, pw, ph, 'F');
@@ -621,10 +731,27 @@ export function LitigationChat() {
         doc.roundedRect(m.l, y - 3.5, cw, lineH + 4, 1, 1, 'F');
         doc.setFillColor(...C.azure);
         doc.rect(m.l, y - 3.5, 3, lineH + 4, 'F');
-        setIBMPlexSans(doc, 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...C.white);
-        doc.text(trimmedLine, m.l + 6, y + 1);
+        
+        // Section number if TOC exists
+        if (includeTOC && currentSectionIdx < sections.length) {
+          doc.setFillColor(...C.azure);
+          doc.circle(m.l + 10, y + 0.5, 4, 'F');
+          setIBMPlexSans(doc, 'bold');
+          doc.setFontSize(7);
+          doc.setTextColor(...C.white);
+          doc.text(String(currentSectionIdx + 1), m.l + 10, y + 2, { align: 'center' });
+          currentSectionIdx++;
+          
+          setIBMPlexSans(doc, 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          doc.text(trimmedLine, m.l + 18, y + 1);
+        } else {
+          setIBMPlexSans(doc, 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...C.white);
+          doc.text(trimmedLine, m.l + 6, y + 1);
+        }
         y += lineH + 5;
         return;
       }
@@ -637,7 +764,6 @@ export function LitigationChat() {
         doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
         doc.rect(m.l, y - 3, cw, (bulletLines.length * lineH) + 2, 'F');
         
-        // Bullet dot
         doc.setFillColor(...C.azure);
         doc.circle(m.l + 6, y - 0.5, 1.2, 'F');
         
@@ -645,7 +771,7 @@ export function LitigationChat() {
         doc.setFontSize(8);
         doc.setTextColor(...C.white);
         
-        bulletLines.forEach((bl: string, idx: number) => {
+        bulletLines.forEach((bl: string) => {
           if (y > ph - m.b - 10) {
             doc.addPage();
             doc.setFillColor(...C.navy);
@@ -667,7 +793,6 @@ export function LitigationChat() {
         doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
         doc.rect(m.l, y - 3, cw, (textLines.length * lineH) + 2, 'F');
         
-        // Number badge
         doc.setFillColor(...C.azure);
         doc.circle(m.l + 6, y - 0.5, 3, 'F');
         setIBMPlexSans(doc, 'bold');
@@ -679,7 +804,7 @@ export function LitigationChat() {
         doc.setFontSize(8);
         doc.setTextColor(...C.white);
         
-        textLines.forEach((tl: string, idx: number) => {
+        textLines.forEach((tl: string) => {
           if (y > ph - m.b - 10) {
             doc.addPage();
             doc.setFillColor(...C.navy);
