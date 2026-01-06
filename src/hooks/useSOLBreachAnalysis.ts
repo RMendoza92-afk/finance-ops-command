@@ -223,54 +223,88 @@ export function useSOLBreachAnalysis() {
     loadAndAnalyze();
   }, []);
 
-  // Export function for Excel
+  // Export function for Excel - Standardized Executive Format
   const exportToExcel = () => {
     if (!data) return;
 
-    const breachedRows = data.breachedClaims.map(c => ({
-      'Category': 'BREACHED - PAST SOL',
-      'Claim #': c.claimNumber,
-      'State': c.state,
-      'BI Status': c.biStatus,
-      'Exp. Create Date': c.expCreateDate,
-      'SOL (Years)': c.solYears,
-      'SOL Expiry Date': c.solExpiryDate.toLocaleDateString(),
-      'Days Past Due': Math.abs(c.daysUntilExpiry),
-      'Open Reserves': c.reserves,
-    }));
-
-    const approachingRows = data.approachingClaims.map(c => ({
-      'Category': 'APPROACHING - WITHIN 90 DAYS',
-      'Claim #': c.claimNumber,
-      'State': c.state,
-      'BI Status': c.biStatus,
-      'Exp. Create Date': c.expCreateDate,
-      'SOL (Years)': c.solYears,
-      'SOL Expiry Date': c.solExpiryDate.toLocaleDateString(),
-      'Days Until Expiry': c.daysUntilExpiry,
-      'Open Reserves': c.reserves,
-    }));
-
-    const allRows = [...breachedRows, ...approachingRows];
-
-    const ws = XLSX.utils.json_to_sheet(allRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'SOL Review');
 
-    // Add summary sheet
-    const summaryData = [
-      { 'Metric': 'Report Date', 'Value': '2026-01-06' },
-      { 'Metric': 'Total Breached Claims', 'Value': data.breachedCount },
-      { 'Metric': 'Breached Reserves', 'Value': data.breachedTotal },
-      { 'Metric': 'Total Approaching Claims (90 days)', 'Value': data.approachingCount },
-      { 'Metric': 'Approaching Reserves', 'Value': data.approachingTotal },
-      { 'Metric': 'Combined Total Claims', 'Value': data.totalPendingCount },
-      { 'Metric': 'Combined Total Reserves', 'Value': data.combinedTotal },
+    // === EXECUTIVE SUMMARY SHEET ===
+    const summaryRows: (string | number)[][] = [
+      ['SOL RISK REVIEW - DECISIONS PENDING'],
+      ['Fred Loya Insurance | Litigation Command Center'],
+      [''],
+      ['Report Date:', '2026-01-06'],
+      ['Classification:', 'CONFIDENTIAL - EXECUTIVE USE ONLY'],
+      [''],
+      ['KEY METRICS'],
+      ['Metric', 'Value'],
+      ['Total Breached Claims (Past SOL)', data.breachedCount],
+      ['Breached Reserves', data.breachedTotal],
+      ['Total Approaching Claims (90 days)', data.approachingCount],
+      ['Approaching Reserves', data.approachingTotal],
+      ['Combined Total Claims', data.totalPendingCount],
+      ['Combined Total Reserves', data.combinedTotal],
+      [''],
+      ['EXECUTIVE SUMMARY'],
+      [`${data.totalPendingCount} claims require immediate review. ${data.breachedCount} have exceeded SOL. ${data.approachingCount} approaching within 90 days.`],
     ];
-    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
 
-    XLSX.writeFile(wb, `SOL_Review_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+    summaryWs['!cols'] = [{ wch: 40 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Executive Summary');
+
+    // === BREACHED CLAIMS SHEET ===
+    if (data.breachedClaims.length > 0) {
+      const breachedRows: (string | number)[][] = [
+        ['BREACHED CLAIMS - PAST STATUTE OF LIMITATIONS'],
+        ['Generated: 2026-01-06'],
+        [''],
+        ['Claim #', 'State', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Past Due', 'Open Reserves'],
+      ];
+      data.breachedClaims.forEach(c => {
+        breachedRows.push([
+          c.claimNumber,
+          c.state,
+          c.biStatus,
+          c.expCreateDate,
+          c.solYears,
+          c.solExpiryDate.toLocaleDateString(),
+          Math.abs(c.daysUntilExpiry),
+          c.reserves,
+        ]);
+      });
+      const breachedWs = XLSX.utils.aoa_to_sheet(breachedRows);
+      breachedWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, breachedWs, 'Breached Claims');
+    }
+
+    // === APPROACHING CLAIMS SHEET ===
+    if (data.approachingClaims.length > 0) {
+      const approachingRows: (string | number)[][] = [
+        ['APPROACHING CLAIMS - WITHIN 90 DAYS OF SOL'],
+        ['Generated: 2026-01-06'],
+        [''],
+        ['Claim #', 'State', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Until Expiry', 'Open Reserves'],
+      ];
+      data.approachingClaims.forEach(c => {
+        approachingRows.push([
+          c.claimNumber,
+          c.state,
+          c.biStatus,
+          c.expCreateDate,
+          c.solYears,
+          c.solExpiryDate.toLocaleDateString(),
+          c.daysUntilExpiry,
+          c.reserves,
+        ]);
+      });
+      const approachingWs = XLSX.utils.aoa_to_sheet(approachingRows);
+      approachingWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, approachingWs, 'Approaching Claims');
+    }
+
+    XLSX.writeFile(wb, `SOL_Review_Report_20260106.xlsx`);
   };
 
   return { data, loading, error, exportToExcel };

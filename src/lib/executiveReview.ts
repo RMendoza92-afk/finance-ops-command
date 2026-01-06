@@ -9,7 +9,7 @@ export interface ExecutiveReviewResult {
 
 // Calculate claim age from transfer date or fallback to current year
 export function estimateClaimAge(prefix: string, transferDate?: string): number {
-  const currentYear = 2025;
+  const currentYear = 2026;
   
   // If we have a transfer date, calculate actual age
   if (transferDate) {

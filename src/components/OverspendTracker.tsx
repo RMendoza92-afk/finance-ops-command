@@ -78,24 +78,25 @@ export function OverspendTracker() {
     };
   }, [cwpMetrics]);
 
-  // Prepare export data (includes both CWP and YTD)
+  // Prepare export data - Standardized Executive Format
   const getExportData = (): ExportableData => {
     return {
-      title: 'BI Over-Limit Payments Report',
-      subtitle: 'CWP Threshold Analysis + YTD 2025 Actual Over-Limit Payments',
+      title: 'BI OVER-LIMIT PAYMENTS REPORT',
+      subtitle: 'CWP Threshold Analysis + YTD 2026 Over-Limit Payments',
       timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+      affectsManager: 'Claims + Litigation Leadership',
       summary: {
         'Total Over-Limit Claims': combinedTotals.totalCount.toLocaleString(),
         'Total Overspend': formatCurrencyFull(combinedTotals.totalOverLimit),
         'CWP Threshold Overspend': formatCurrencyFull(combinedTotals.cwpOverLimit),
-        'YTD 2025 Overspend': formatCurrencyFull(combinedTotals.ytdOverLimit),
+        'YTD 2026 Overspend': formatCurrencyFull(combinedTotals.ytdOverLimit),
       },
       bulletInsights: [
-        `Combined: ${combinedTotals.totalCount} claims totaling ${formatCurrency(combinedTotals.totalOverLimit)} above state BI limits`,
-        `CWP Threshold: ${combinedTotals.cwpCount} matters at ${formatCurrency(combinedTotals.cwpOverLimit)} overspend`,
-        `YTD 2025: ${combinedTotals.ytdCount} claims at ${formatCurrency(combinedTotals.ytdOverLimit)} overspend`,
+        `${combinedTotals.totalCount} claims totaling ${formatCurrency(combinedTotals.totalOverLimit)} above state BI limits`,
+        `CWP: ${combinedTotals.cwpCount} matters at ${formatCurrency(combinedTotals.cwpOverLimit)} overspend`,
+        `YTD 2026: ${combinedTotals.ytdCount} claims at ${formatCurrency(combinedTotals.ytdOverLimit)} overspend`,
         stateMetrics.length > 0 
-          ? `Highest YTD exposure: ${stateMetrics[0].state} with ${formatCurrency(stateMetrics[0].totalOverLimit)}`
+          ? `Highest exposure: ${stateMetrics[0].state} with ${formatCurrency(stateMetrics[0].totalOverLimit)}`
           : '',
       ].filter(Boolean),
       columns: ['State', 'Claims', 'Total Payment', 'Over Limit Amount', 'Avg Over-Limit'],
@@ -135,9 +136,9 @@ export function OverspendTracker() {
             ['Total Over Limit Amount', formatCurrencyFull(cwpMetrics?.overLimitAmount || 0)],
           ],
         },
-        // YTD 2025 claims detail
+        // YTD 2026 claims detail
         {
-          sheetName: 'YTD 2025 Over-Limit Claims',
+          sheetName: 'YTD 2026 Over-Limit Claims',
           columns: ['Date', 'Claim', 'State', 'Coverage Limit', 'Payment', 'Over Limit'],
           rows: overLimitPayments2025.map(p => [
             p.date,
@@ -150,7 +151,7 @@ export function OverspendTracker() {
         },
         // YTD by state summary
         {
-          sheetName: 'YTD 2025 By State',
+          sheetName: 'YTD 2026 By State',
           columns: ['State', 'Claims', 'Total Payment', 'Total Over Limit', 'Avg Over Limit'],
           rows: stateMetrics.map(s => [
             s.state,

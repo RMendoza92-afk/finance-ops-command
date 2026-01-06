@@ -102,6 +102,7 @@ const fmtCurrency = (n: number, compact = false): string => {
 export function useExportData() {
   // ============================================================
   // EXECUTIVE PDF GENERATOR - CEO/COO/CFO Level
+  // Standardized Dark Theme - Board Ready
   // ============================================================
   const generatePDF = async (data: ExportableData) => {
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -111,18 +112,19 @@ export function useExportData() {
     const contentW = pw - m.l - m.r;
     let y = m.t;
 
-    // Colors - Executive dark theme
+    // Colors - Executive dark theme (matches boardReadyPDFGenerator)
     const C = {
-      bg: [18, 18, 22] as [number, number, number],
-      card: [28, 28, 35] as [number, number, number],
-      header: [38, 38, 48] as [number, number, number],
-      border: [55, 55, 65] as [number, number, number],
+      bg: [12, 12, 12] as [number, number, number],
+      headerBg: [22, 22, 22] as [number, number, number],
+      rowDark: [18, 18, 18] as [number, number, number],
+      rowLight: [24, 24, 24] as [number, number, number],
+      border: [45, 45, 45] as [number, number, number],
       white: [255, 255, 255] as [number, number, number],
-      offWhite: [235, 235, 240] as [number, number, number],
-      muted: [140, 140, 155] as [number, number, number],
-      red: [220, 60, 60] as [number, number, number],
-      green: [45, 180, 90] as [number, number, number],
-      amber: [235, 170, 45] as [number, number, number],
+      offWhite: [240, 240, 240] as [number, number, number],
+      muted: [140, 140, 140] as [number, number, number],
+      red: [220, 38, 38] as [number, number, number],
+      green: [16, 185, 129] as [number, number, number],
+      amber: [245, 158, 11] as [number, number, number],
       gold: [212, 175, 55] as [number, number, number],
     };
 
@@ -131,17 +133,17 @@ export function useExportData() {
     doc.rect(0, 0, pw, ph, 'F');
 
     // === HEADER BAR ===
-    doc.setFillColor(...C.header);
+    doc.setFillColor(...C.headerBg);
     doc.rect(0, 0, pw, 22, 'F');
 
     // Gold accent line
     doc.setFillColor(...C.gold);
-    doc.rect(0, 22, pw, 1.5, 'F');
+    doc.rect(0, 22, pw, 1, 'F');
 
     // Logo
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', m.l, 4, 42, 12);
+      doc.addImage(logoBase64, 'JPEG', m.l, 4, 40, 12);
     } catch {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
@@ -158,7 +160,7 @@ export function useExportData() {
     doc.setTextColor(...C.muted);
     doc.text('CONFIDENTIAL', pw - m.r, 16, { align: 'right' });
 
-    y = 30;
+    y = 28;
 
     // === TITLE SECTION ===
     doc.setFont('helvetica', 'bold');
@@ -193,7 +195,7 @@ export function useExportData() {
         const x = m.l + idx * (cardW + 8);
 
         // Card with gold accent
-        doc.setFillColor(...C.card);
+        doc.setFillColor(...C.rowDark);
         doc.roundedRect(x, y, cardW, cardH, 2, 2, 'F');
         doc.setFillColor(...C.gold);
         doc.rect(x, y, 3, cardH, 'F');
@@ -252,7 +254,7 @@ export function useExportData() {
       const rowH = 7;
 
       // Header
-      doc.setFillColor(...C.header);
+      doc.setFillColor(...C.headerBg);
       doc.rect(m.l, y, contentW, rowH, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
@@ -281,7 +283,7 @@ export function useExportData() {
           y = m.t;
 
           // Repeat header
-          doc.setFillColor(...C.header);
+          doc.setFillColor(...C.headerBg);
           doc.rect(m.l, y, contentW, rowH, 'F');
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(7);
@@ -298,7 +300,7 @@ export function useExportData() {
 
         // Alternating rows
         if (rowIdx % 2 === 0) {
-          doc.setFillColor(...C.card);
+          doc.setFillColor(...C.rowDark);
           doc.rect(m.l, y, contentW, rowH, 'F');
         }
 
@@ -327,7 +329,7 @@ export function useExportData() {
 
         const colW = (contentW - 40) / 2;
 
-        doc.setFillColor(...C.header);
+        doc.setFillColor(...C.headerBg);
         doc.rect(m.l, y, contentW, 6, 'F');
         doc.setFontSize(7);
         doc.setTextColor(...C.muted);
@@ -339,7 +341,7 @@ export function useExportData() {
         doc.setFont('helvetica', 'normal');
         highEval.forEach((adj, idx) => {
           if (idx % 2 === 0) {
-            doc.setFillColor(...C.card);
+            doc.setFillColor(...C.rowDark);
             doc.rect(m.l, y, contentW, 6, 'F');
           }
           doc.setTextColor(...C.muted);
@@ -358,7 +360,7 @@ export function useExportData() {
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       
-      doc.setFillColor(...C.header);
+      doc.setFillColor(...C.headerBg);
       doc.rect(0, ph - 10, pw, 10, 'F');
       doc.setFillColor(...C.gold);
       doc.rect(0, ph - 10, pw, 0.5, 'F');

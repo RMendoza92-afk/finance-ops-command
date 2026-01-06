@@ -693,9 +693,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white">2025 YTD BI Spend: $395M</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-white">2025 BI Spend (Jan-Nov): $395M</h2>
             <p className="text-xs sm:text-sm text-gray-300 mt-1">
-              Lit Expenses: <span className="font-semibold text-white">$19M</span> • Nov 2025
+              Lit Expenses: <span className="font-semibold text-white">$19M</span> • Jan-Nov 2025
             </p>
           </div>
           <div className="text-left sm:text-right">
