@@ -930,6 +930,16 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         gold: [212, 175, 55] as [number, number, number],
       };
 
+      // Use the latest computed CP1 data (avoid stale closure during initial load)
+      const CP1_DATA = data?.cp1Data || {
+        biByAge: [],
+        biTotal: { noCP: 0, yes: 0, total: 0 },
+        byCoverage: [],
+        totals: { noCP: 0, yes: 0, grandTotal: 0 },
+        cp1Rate: '0.0',
+        byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
+      };
+
       // CALCULATIONS - Using actual claim counts from data
       const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
       const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
@@ -1204,7 +1214,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     } finally {
       setGeneratingCP1PDF(false);
     }
-  }, [historicalMetrics]);
+  }, [historicalMetrics, data]);
 
   // Generate Excel for CP1 Analysis
   const generateCP1Excel = useCallback(async () => {
