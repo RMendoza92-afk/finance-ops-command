@@ -19,6 +19,7 @@
  */
 
 import { format } from 'date-fns';
+import { registerIBMPlexSans, setIBMPlexSans } from './pdfFonts';
 
 // ==================== TYPES ====================
 
@@ -368,17 +369,17 @@ export function drawExecutiveHeader(ctx: PDFDrawContext): number {
   doc.roundedRect(10, 6, 50, 12, 2, 2, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.text(config.reportType, 35, 14, { align: 'center' });
   
   // Title
   doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.text(config.title.toUpperCase(), 65, 15);
   
   // Subtitle / context
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   const subtitle = config.subtitle || 
     (context.isMonday ? 'Weekly Status Report' :
      context.isQuarterEnd ? 'Quarter-End Analysis' :
@@ -424,13 +425,13 @@ export function drawKPICard(
   
   // Label
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
   doc.text(metric.label.toUpperCase(), x + 8, y + 10);
   
   // Value - white text on dark
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   const valueStr = typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value;
   doc.text(valueStr.toString(), x + 8, y + 22);
@@ -468,7 +469,7 @@ export function drawInsightBox(
   
   // Header
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
   doc.text('KEY INSIGHTS & RECOMMENDED ACTIONS', x + 5, y + 7);
   
@@ -485,13 +486,13 @@ export function drawInsightBox(
     
     // Headline - white text on dark
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
+    setIBMPlexSans(doc, 'bold');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(insight.headline, x + 14, insightY + 1);
     
     // Action (if exists)
     if (insight.action) {
-      doc.setFont('helvetica', 'normal');
+      setIBMPlexSans(doc, 'normal');
       doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
       doc.text(`-> ${insight.action}`, x + 14, insightY + 7);
       insightY += 14;
@@ -524,7 +525,7 @@ export function drawExecutiveTable(
   
   // Title - white text on dark
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(table.title.toUpperCase(), x, y);
   y += 6;
@@ -534,7 +535,7 @@ export function drawExecutiveTable(
   doc.rect(x, y, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(6);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   
   table.headers.forEach((header, idx) => {
     const colX = getColX(idx);
@@ -543,7 +544,7 @@ export function drawExecutiveTable(
   y += 10;
   
   // Data rows
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   
   table.rows.forEach((row, rowIdx) => {
     // Row background - dark theme colors
@@ -551,7 +552,7 @@ export function drawExecutiveTable(
       doc.setFillColor(...EXECUTIVE_COLORS.steel);
       doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.white);
-      doc.setFont('helvetica', 'bold');
+      setIBMPlexSans(doc, 'bold');
     } else if (row.highlight === 'risk') {
       doc.setFillColor(50, 20, 20); // Dark red tint
       doc.rect(x, y - 2, tableWidth, 8, 'F');
@@ -585,7 +586,7 @@ export function drawExecutiveTable(
     });
     
     // Reset styles
-    doc.setFont('helvetica', 'normal');
+    setIBMPlexSans(doc, 'normal');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     y += 8;
   });
@@ -615,7 +616,7 @@ export function drawHorizontalBarChart(
   
   // Title - white on dark
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(chart.title.toUpperCase(), x, y);
   y += 8;
@@ -623,7 +624,7 @@ export function drawHorizontalBarChart(
   chart.data.forEach((item, idx) => {
     // Label - white text
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
+    setIBMPlexSans(doc, 'normal');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(item.label, x, y + 5);
     
@@ -643,7 +644,7 @@ export function drawHorizontalBarChart(
     
     // Value label - white
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
+    setIBMPlexSans(doc, 'bold');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(`${item.value.toFixed(1)}%`, barX + barWidth + 5, y + 6);
     
@@ -687,12 +688,12 @@ export function drawBottomLine(ctx: PDFDrawContext, x: number, y: number, width:
   
   // Icon and label - red accent
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.azure);
   doc.text('BOTTOM LINE:', x + 5, y + 8);
   
   // Text - white
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(text, x + 40, y + 8);
@@ -712,7 +713,7 @@ export function drawQuarterlyTable(
   
   // Title - white on dark
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text('QUARTERLY EXPERT SPEND ANALYSIS (6 QUARTERS)', x, y);
   y += 6;
@@ -734,7 +735,7 @@ export function drawQuarterlyTable(
   y += 10;
   
   // Data rows
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   let totalPaid = 0;
   let totalApproved = 0;
   
@@ -791,7 +792,7 @@ export function drawQuarterlyTable(
   doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.rect(x, y - 2, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   
   colX = x + 2;
   doc.text('6Q TOTAL', colX, y + 4);
@@ -817,7 +818,7 @@ export function drawAppendixSection(
   
   // Section title - white on dark
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(section.title.toUpperCase(), x, y);
   y += 8;
@@ -825,7 +826,7 @@ export function drawAppendixSection(
   // Content text if present - white text
   if (section.content) {
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    setIBMPlexSans(doc, 'normal');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     const lines = doc.splitTextToSize(section.content, pageWidth - margins.left - margins.right);
     doc.text(lines, x, y);
@@ -864,6 +865,10 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
   const { jsPDF } = await import('jspdf');
   const orientation = config.orientation || 'portrait';
   const doc = new jsPDF({ orientation });
+  
+  // Register IBM Plex Sans font
+  await registerIBMPlexSans(doc);
+  
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const context = getReportContext();
@@ -911,9 +916,9 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
   doc.roundedRect(10, ctx.y, pageWidth - 20, 22, 3, 3, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
+  setIBMPlexSans(doc, 'bold');
   doc.text('KEY TAKEAWAY', 15, ctx.y + 8);
-  doc.setFont('helvetica', 'normal');
+  setIBMPlexSans(doc, 'normal');
   doc.setFontSize(9);
   
   // Word wrap the key takeaway
@@ -974,7 +979,7 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
     ctx.y = addNewPage();
     
     doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
+    setIBMPlexSans(doc, 'bold');
     doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text('APPENDIX: DETAILED ANALYSIS', 10, ctx.y);
     ctx.y += 12;
