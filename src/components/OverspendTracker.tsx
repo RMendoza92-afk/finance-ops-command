@@ -107,21 +107,35 @@ export function OverspendTracker() {
         formatCurrencyFull(s.totalOverLimit / s.count),
       ]),
       rawClaimData: [
-        // CWP threshold data
-        ...(cwpMetrics?.byState.length ? [{
+        // CWP threshold summary by state
+        {
           sheetName: 'CWP Threshold By State',
           columns: ['State', 'Closures', 'Net Closures', 'Over Limit', 'Trigger Alerts', 'State Limit', 'Over Limit Amount'],
-          rows: cwpMetrics.byState.map(s => [
-            s.state,
-            s.closures,
-            s.netClosures,
-            s.overLimit,
-            s.triggerAlerts,
-            formatCurrencyFull(s.stateLimit),
-            formatCurrencyFull(s.overLimitAmount),
-          ]),
-        }] : []),
-        // YTD claims detail
+          rows: cwpMetrics?.byState?.length 
+            ? cwpMetrics.byState.map(s => [
+                s.state,
+                s.closures,
+                s.netClosures,
+                s.overLimit,
+                s.triggerAlerts,
+                formatCurrencyFull(s.stateLimit),
+                formatCurrencyFull(s.overLimitAmount),
+              ])
+            : [['No CWP threshold data available', '', '', '', '', '', '']],
+        },
+        // CWP summary totals
+        {
+          sheetName: 'CWP Summary',
+          columns: ['Metric', 'Value'],
+          rows: [
+            ['Total CWP Closures', cwpMetrics?.totalClosures || 0],
+            ['Net Closures (within limits)', cwpMetrics?.netClosures || 0],
+            ['Over Limit Closures', cwpMetrics?.overLimitClosures || 0],
+            ['80% Trigger Alerts', cwpMetrics?.triggerAlerts || 0],
+            ['Total Over Limit Amount', formatCurrencyFull(cwpMetrics?.overLimitAmount || 0)],
+          ],
+        },
+        // YTD 2025 claims detail
         {
           sheetName: 'YTD 2025 Over-Limit Claims',
           columns: ['Date', 'Claim', 'State', 'Coverage Limit', 'Payment', 'Over Limit'],
@@ -133,7 +147,19 @@ export function OverspendTracker() {
             formatCurrencyFull(p.payment),
             formatCurrencyFull(p.overLimit),
           ]),
-        }
+        },
+        // YTD by state summary
+        {
+          sheetName: 'YTD 2025 By State',
+          columns: ['State', 'Claims', 'Total Payment', 'Total Over Limit', 'Avg Over Limit'],
+          rows: stateMetrics.map(s => [
+            s.state,
+            s.count,
+            formatCurrencyFull(s.totalPayment),
+            formatCurrencyFull(s.totalOverLimit),
+            formatCurrencyFull(s.totalOverLimit / s.count),
+          ]),
+        },
       ],
     };
   };
