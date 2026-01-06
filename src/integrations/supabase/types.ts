@@ -197,6 +197,51 @@ export type Database = {
         }
         Relationships: []
       }
+      lor_offers: {
+        Row: {
+          accident_description: string | null
+          area: string | null
+          claim_number: string
+          created_at: string
+          expires_date: string
+          extended_date: string
+          id: string
+          offer_amount: number
+          outcome_date: string | null
+          outcome_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accident_description?: string | null
+          area?: string | null
+          claim_number: string
+          created_at?: string
+          expires_date: string
+          extended_date: string
+          id?: string
+          offer_amount: number
+          outcome_date?: string | null
+          outcome_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accident_description?: string | null
+          area?: string | null
+          claim_number?: string
+          created_at?: string
+          expires_date?: string
+          extended_date?: string
+          id?: string
+          offer_amount?: number
+          outcome_date?: string | null
+          outcome_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       open_exposure: {
         Row: {
           created_at: string

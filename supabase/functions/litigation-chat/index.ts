@@ -289,6 +289,14 @@ Multi-pack claims are groups of claims that share the same incident/accident - i
 - When asked about multi-pack claims, use the multi_pack_claims data
 - Report: total groups, claims in packs, breakdown by pack size, and top groups by exposure
 
+## LOR INTERVENTION EXPERTISE:
+LOR (Letter of Representation) Intervention is an early settlement program for Texas claims:
+- Offers are made at LOR stage: $5,000, $6,000, or $7,500 tiers
+- Each offer has a 14-day deadline from the extended date
+- Track pending offers, acceptances, rejections, and expirations
+- When asked about LOR intervention, use the lor_intervention data
+- Report: pending offers, acceptance rate, total offered, offers by status
+
 ## CONFIDENCE PROTOCOL:
 - State facts with declarative authority: "There are X claims" not "approximately X"
 - All percentages are calculated to 2 decimal places
@@ -342,6 +350,7 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status
 - multi_pack_claims.open_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - multi_pack_claims.closed_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
+- lor_intervention: pending_count, accepted_count, rejected_count, expired_count, total_offered_usd, offers[]
 
 RESPOND ONLY WITH VERIFIED DATA. NO SPECULATION.`;
 
@@ -351,7 +360,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, dataContext, openExposureContext, multiPackContext } = await req.json();
+    const { messages, dataContext, openExposureContext, multiPackContext, lorContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -396,9 +405,33 @@ serve(async (req) => {
       rawClaims: [],
     };
 
+    // Build LOR intervention payload
+    const lorPayload = lorContext ? {
+      pending_count: lorContext.stats?.pending || 0,
+      accepted_count: lorContext.stats?.accepted || 0,
+      rejected_count: lorContext.stats?.rejected || 0,
+      expired_count: lorContext.stats?.expired || 0,
+      total_count: lorContext.stats?.total || 0,
+      total_offered_usd: lorContext.stats?.totalOffered || 0,
+      offers: (lorContext.offers || []).map((o: any) => ({
+        claim_number: o.claim_number,
+        accident: o.accident_description,
+        area: o.area,
+        offer_usd: o.offer_amount,
+        extended_date: o.extended_date,
+        expires_date: o.expires_date,
+        status: o.status,
+      })),
+    } : null;
+
     const now = new Date();
     const multiPackPayload = buildMultiPackPayload(multiPackContext);
     const verifiedPayload = buildVerifiedPayload(ctx, exp, now, multiPackPayload);
+    
+    // Add LOR data to payload
+    if (lorPayload) {
+      (verifiedPayload as any).lor_intervention = lorPayload;
+    }
     
     console.log("ORACLE Request:", {
       question: userQuestion.slice(0, 100),
@@ -406,6 +439,7 @@ serve(async (req) => {
       openInventory: verifiedPayload.open_inventory.grand_total,
       cp1Total: verifiedPayload.cp1.total,
       multiPackGroups: multiPackPayload?.open_claims_multi_pack?.total_multi_pack_groups || 0,
+      lorOffers: lorPayload?.total_count || 0,
     });
 
     // Build developer prompt with data
