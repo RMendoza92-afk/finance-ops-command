@@ -296,8 +296,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   const typeGroupUniqueClaims = new Map<string, Set<string>>();
   const typeGroupExposures = new Map<string, number>();
   
-  // Texas Rear End tracking (Areas 101-110, Loss Desc contains "R/E")
-  const texasAreas = ['101', '102', '103', '104', '105', '106', '107', '108', '109', '110'];
+  // Texas Rear End tracking (State = TEXAS, Loss Desc contains "R/E")
   const texasAreaMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
   const texasAgeMap = {
     age365Plus: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
@@ -461,19 +460,20 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       dt.total++;
     }
     
-    // Track Texas Rear End claims (Areas 101-110, Loss Description contains "R/E")
-    const areaNum = row['Area#']?.trim() || '';
+    // Track Texas Rear End claims (State = TEXAS, Loss Description contains "R/E")
+    const accidentState = row['Accident Location State']?.trim().toUpperCase() || '';
+    const accidentCity = row['Accident Location City']?.trim() || '';
     const lossDesc = row['Description of Accident']?.trim() || '';
-    const isTexasArea = texasAreas.some(a => areaNum.startsWith(a));
+    const isTexas = accidentState === 'TEXAS' || accidentState === 'TX';
     const isRearEnd = lossDesc.toUpperCase().includes('R/E');
     
-    if (isTexasArea && isRearEnd) {
-      // Track by area
-      const areaKey = areaNum.substring(0, 3); // Just the number like "101"
-      if (!texasAreaMap.has(areaKey)) {
-        texasAreaMap.set(areaKey, { claims: 0, reserves: 0, lowEval: 0, highEval: 0 });
+    if (isTexas && isRearEnd) {
+      // Track by city (as area substitute)
+      const cityKey = accidentCity || 'Unknown';
+      if (!texasAreaMap.has(cityKey)) {
+        texasAreaMap.set(cityKey, { claims: 0, reserves: 0, lowEval: 0, highEval: 0 });
       }
-      const areaData = texasAreaMap.get(areaKey)!;
+      const areaData = texasAreaMap.get(cityKey)!;
       areaData.claims++;
       areaData.reserves += reserves;
       areaData.lowEval += lowEval;
@@ -622,17 +622,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     closed: 0,
   };
   
-  // Build Texas Rear End data
-  const areaNames: Record<string, string> = {
-    '101': '101 EL PASO', '102': '102 RIO GRANDE/VALL', '103': '103 LAREDO/DEL RIO',
-    '104': '104 CORPUS', '105': '105 SAN ANTONIO', '106': '106 WEST TEXAS',
-    '107': '107 HOUSTON', '108': '108 DFW', '109': '109 DALLAS', '110': '110 AUSTIN'
-  };
-  
+  // Build Texas Rear End data (by city)
   const texasRearEndByArea: TexasRearEndArea[] = [];
-  texasAreaMap.forEach((data, areaCode) => {
+  texasAreaMap.forEach((data, city) => {
     texasRearEndByArea.push({
-      area: areaNames[areaCode] || areaCode,
+      area: city,
       claims: data.claims,
       reserves: data.reserves,
       lowEval: data.lowEval,
