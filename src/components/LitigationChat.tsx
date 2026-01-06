@@ -10,6 +10,7 @@ import jsPDF from "jspdf";
 import { useLitigationData, LitigationMatter, ClosedMultiPackSummary } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
+import { useLOROffers } from "@/hooks/useLOROffers";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
 import { DrilldownModal } from "@/components/DrilldownModal";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -227,6 +228,7 @@ export function LitigationChat() {
   
   const { data: litigationData, multiPackData: closedMultiPackData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
+  const { offers: lorOffers, stats: lorStats } = useLOROffers();
   const { generatePDF, generateExcel } = useExportData();
 
   // Build a lookup map for quick claim resolution
@@ -1013,6 +1015,10 @@ export function LitigationChat() {
           multiPackContext: {
             openClaims: openExposureContext?.multiPackData || null,
             closedClaims: closedMultiPackContext || null,
+          },
+          lorContext: {
+            offers: lorOffers,
+            stats: lorStats,
           },
         }),
       });
