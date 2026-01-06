@@ -6,43 +6,43 @@
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* Default: Fred Loya Insurance Branding - Red & Gold */
+/* Default: Fred Loya Insurance Branding - Black, Red, Grey */
 :root {
-  --background: 0 0% 8%;
-  --foreground: 45 100% 96%;
-  --card: 0 0% 12%;
-  --card-foreground: 45 100% 96%;
-  --popover: 0 0% 12%;
-  --popover-foreground: 45 100% 96%;
-  --primary: 0 85% 45%;
+  --background: 0 0% 5%;
+  --foreground: 0 0% 95%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 95%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 95%;
+  --primary: 0 85% 50%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 45 100% 50%;
-  --secondary-foreground: 0 0% 0%;
-  --muted: 0 0% 18%;
-  --muted-foreground: 45 40% 70%;
-  --accent: 45 100% 50%;
-  --accent-foreground: 0 0% 0%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 0 70% 45%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
   --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
-  --warning: 45 100% 50%;
+  --warning: 38 92% 50%;
   --warning-foreground: 0 0% 0%;
-  --info: 45 80% 55%;
-  --info-foreground: 0 0% 0%;
-  --border: 0 50% 25%;
-  --input: 0 30% 20%;
-  --ring: 45 100% 50%;
+  --info: 0 0% 70%;
+  --info-foreground: 0 0% 5%;
+  --border: 0 0% 20%;
+  --input: 0 0% 15%;
+  --ring: 0 85% 50%;
   --radius: 0.5rem;
-  --sidebar-background: 0 0% 10%;
-  --sidebar-foreground: 45 100% 96%;
-  --sidebar-primary: 0 85% 45%;
+  --sidebar-background: 0 0% 8%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 0 85% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 45 100% 50%;
-  --sidebar-accent-foreground: 0 0% 0%;
-  --sidebar-border: 0 50% 25%;
-  --sidebar-ring: 45 100% 50%;
-  --table-header: 0 60% 18%;
+  --sidebar-accent: 0 60% 40%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 0 85% 50%;
+  --table-header: 0 0% 12%;
   --terminal-mode: 0;
 }
 
