@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, MessageSquare, FileSpreadsheet, FileText } from "lucide-react";
+import { Loader2, Send, MessageSquare, FileSpreadsheet, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SMSDialogProps {
@@ -23,10 +23,68 @@ interface SMSDialogProps {
   onExportExcel?: () => void;
 }
 
+// Format phone number as user types (US format)
+const formatPhoneNumber = (value: string): string => {
+  const digits = value.replace(/\D/g, '');
+  
+  // Handle country code
+  if (digits.startsWith('1') && digits.length > 1) {
+    const phoneDigits = digits.slice(1);
+    if (phoneDigits.length <= 3) return `+1 (${phoneDigits}`;
+    if (phoneDigits.length <= 6) return `+1 (${phoneDigits.slice(0, 3)}) ${phoneDigits.slice(3)}`;
+    return `+1 (${phoneDigits.slice(0, 3)}) ${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
+  }
+  
+  // US number without country code
+  if (digits.length <= 3) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+};
+
+// Validate phone number and return status
+const validatePhone = (value: string): { isValid: boolean; error?: string; cleanNumber?: string } => {
+  const digits = value.replace(/\D/g, '');
+  
+  if (!digits) {
+    return { isValid: false, error: 'Phone number is required' };
+  }
+  
+  // Must be 10 digits (US) or 11 digits starting with 1
+  if (digits.length < 10) {
+    return { isValid: false, error: `Enter ${10 - digits.length} more digit${digits.length === 9 ? '' : 's'}` };
+  }
+  
+  if (digits.length === 10) {
+    // Check for invalid area codes (can't start with 0 or 1)
+    if (digits[0] === '0' || digits[0] === '1') {
+      return { isValid: false, error: 'Invalid area code' };
+    }
+    return { isValid: true, cleanNumber: `+1${digits}` };
+  }
+  
+  if (digits.length === 11 && digits[0] === '1') {
+    // Check for invalid area codes
+    if (digits[1] === '0' || digits[1] === '1') {
+      return { isValid: false, error: 'Invalid area code' };
+    }
+    return { isValid: true, cleanNumber: `+${digits}` };
+  }
+  
+  return { isValid: false, error: 'Invalid phone number format' };
+};
+
 export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }: SMSDialogProps) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  const validation = useMemo(() => validatePhone(phoneNumber), [phoneNumber]);
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhoneNumber(formatted);
+  };
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -45,15 +103,10 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
     `— FLI Claims Dashboard`;
 
   const handleSendSMS = async () => {
-    if (!phoneNumber.trim()) {
-      toast.error("Please enter a phone number");
-      return;
-    }
-
-    // Basic phone validation
-    const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
-    if (cleanPhone.length < 10) {
-      toast.error("Please enter a valid phone number");
+    setTouched(true);
+    
+    if (!validation.isValid || !validation.cleanNumber) {
+      toast.error(validation.error || "Please enter a valid phone number");
       return;
     }
 
@@ -61,7 +114,7 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
     try {
       const { data, error } = await supabase.functions.invoke('send-review-sms', {
         body: {
-          to: cleanPhone,
+          to: validation.cleanNumber,
           claimType: context.claimType || 'General',
           claimCount: context.claimCount || 1,
           region: context.region || 'N/A',
@@ -72,7 +125,7 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
       if (error) throw error;
 
       toast.success("SMS sent successfully!", {
-        description: `Message delivered to ${cleanPhone}`
+        description: `Message delivered to ${validation.cleanNumber}`
       });
       onClose();
     } catch (err: any) {
@@ -121,15 +174,40 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
           {/* Phone Number */}
           <div className="space-y-1.5">
             <Label htmlFor="phone" className="text-xs sm:text-sm">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="+1 (555) 123-4567"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="font-mono text-sm h-9"
-            />
-            <p className="text-xs text-muted-foreground">US numbers only</p>
+            <div className="relative">
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={phoneNumber}
+                onChange={handlePhoneChange}
+                onBlur={() => setTouched(true)}
+                className={`font-mono text-sm h-9 pr-9 ${
+                  touched && !validation.isValid 
+                    ? 'border-destructive focus-visible:ring-destructive' 
+                    : validation.isValid 
+                    ? 'border-green-500 focus-visible:ring-green-500' 
+                    : ''
+                }`}
+              />
+              {phoneNumber && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {validation.isValid ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : touched ? (
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                  ) : null}
+                </div>
+              )}
+            </div>
+            {touched && !validation.isValid && validation.error ? (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {validation.error}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">US numbers only (10 digits)</p>
+            )}
           </div>
 
           {/* Message Preview */}
