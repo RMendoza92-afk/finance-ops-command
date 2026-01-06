@@ -289,7 +289,7 @@ const Index = () => {
             <OverspendTracker />
           </div>
         ) : (
-          <OverextensionTable data={filteredData} />
+          <OverextensionTable data={filteredData} knownExpertSpend={5681152} />
         )}
       </main>
 
