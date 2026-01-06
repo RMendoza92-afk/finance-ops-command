@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
+import { supabase } from "@/integrations/supabase/client";
+import { format, subDays, parseISO } from "date-fns";
 
 export interface OpenExposurePhase {
   phase: string;
@@ -460,19 +462,77 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
 }
 
-// Known baseline for Jan 2, 2026 (BI/UM/UI only) - provided by user
-// This will be replaced when we have historical raw data files
-const KNOWN_BASELINES: { [date: string]: { total: number; reserves: number; date: string } } = {
-  'jan2_2026': { total: 19493, reserves: 0, date: 'Jan 2, 2026' }
-};
+// Known baseline for Jan 2, 2026 (BI/UM/UI only) - fallback if no DB snapshot
+const FALLBACK_BASELINE = { total: 19493, reserves: 0, date: 'Jan 2, 2026' };
 
-function getBaselineForComparison(): { grandTotal: number; reserves: number; date: string } {
-  // Return the most recent baseline we have
-  return { 
-    grandTotal: KNOWN_BASELINES.jan2_2026.total, 
-    reserves: KNOWN_BASELINES.jan2_2026.reserves,
-    date: KNOWN_BASELINES.jan2_2026.date
+interface SnapshotData {
+  snapshot_date: string;
+  total_claims: number;
+  total_reserves: number;
+  total_low_eval: number;
+  total_high_eval: number;
+  cp1_claims: number;
+  cp1_rate: number;
+  no_eval_count: number;
+  no_eval_reserves: number;
+  age_365_plus: number;
+  age_181_365: number;
+  age_61_180: number;
+  age_under_60: number;
+  type_group_breakdown: Record<string, number>;
+}
+
+// Save current data as a snapshot
+async function saveSnapshot(data: Omit<OpenExposureData, 'delta' | 'dataDate'>, snapshotDate: string): Promise<void> {
+  const typeGroupBreakdown: Record<string, number> = {};
+  data.typeGroupSummaries.forEach(tg => {
+    typeGroupBreakdown[tg.typeGroup] = tg.grandTotal;
+  });
+
+  const snapshot = {
+    snapshot_date: snapshotDate,
+    total_claims: data.totals.grandTotal,
+    total_reserves: data.financials.totalOpenReserves,
+    total_low_eval: data.financials.totalLowEval,
+    total_high_eval: data.financials.totalHighEval,
+    cp1_claims: data.cp1Data.totals.yes,
+    cp1_rate: parseFloat(data.cp1Data.cp1Rate),
+    no_eval_count: data.financials.noEvalCount,
+    no_eval_reserves: data.financials.noEvalReserves,
+    age_365_plus: data.totals.age365Plus,
+    age_181_365: data.totals.age181To365,
+    age_61_180: data.totals.age61To180,
+    age_under_60: data.totals.ageUnder60,
+    type_group_breakdown: typeGroupBreakdown,
   };
+
+  const { error } = await supabase
+    .from('inventory_snapshots')
+    .upsert(snapshot, { onConflict: 'snapshot_date' });
+
+  if (error) {
+    console.warn('Failed to save snapshot:', error);
+  } else {
+    console.log('Snapshot saved for:', snapshotDate);
+  }
+}
+
+// Get the most recent snapshot before a given date for comparison
+async function getPreviousSnapshot(beforeDate: string): Promise<SnapshotData | null> {
+  const { data, error } = await supabase
+    .from('inventory_snapshots')
+    .select('*')
+    .lt('snapshot_date', beforeDate)
+    .order('snapshot_date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) {
+    console.log('No previous snapshot found, using fallback baseline');
+    return null;
+  }
+
+  return data as SnapshotData;
 }
 
 export function useOpenExposureData() {
@@ -520,27 +580,54 @@ export function useOpenExposureData() {
           typeGroups: currentData.typeGroupSummaries.slice(0, 5).map(t => `${t.typeGroup}: ${t.grandTotal}`),
         });
         
-        // Get baseline for delta comparison (BI/UM/UI filtered)
-        const baseline = getBaselineForComparison();
+        // Current snapshot date (from filename or hardcoded for now)
+        const currentSnapshotDate = '2026-01-05';
         
-        // Calculate delta
-        const delta = {
-          previousTotal: baseline.grandTotal,
-          currentTotal: currentData.totals.grandTotal,
-          change: currentData.totals.grandTotal - baseline.grandTotal,
-          changePercent: baseline.grandTotal > 0 
-            ? ((currentData.totals.grandTotal - baseline.grandTotal) / baseline.grandTotal) * 100 
-            : 0,
-          reservesChange: 0,
-          reservesChangePercent: 0,
-          previousDate: baseline.date,
-          currentDate: 'Jan 5, 2026'
-        };
+        // Save current data as snapshot
+        await saveSnapshot(currentData, currentSnapshotDate);
+        
+        // Get previous snapshot for delta comparison
+        const previousSnapshot = await getPreviousSnapshot(currentSnapshotDate);
+        
+        // Calculate delta using DB snapshot or fallback
+        let delta;
+        if (previousSnapshot) {
+          const prevReserves = Number(previousSnapshot.total_reserves);
+          const currReserves = currentData.financials.totalOpenReserves;
+          delta = {
+            previousTotal: previousSnapshot.total_claims,
+            currentTotal: currentData.totals.grandTotal,
+            change: currentData.totals.grandTotal - previousSnapshot.total_claims,
+            changePercent: previousSnapshot.total_claims > 0 
+              ? ((currentData.totals.grandTotal - previousSnapshot.total_claims) / previousSnapshot.total_claims) * 100 
+              : 0,
+            reservesChange: currReserves - prevReserves,
+            reservesChangePercent: prevReserves > 0 
+              ? ((currReserves - prevReserves) / prevReserves) * 100 
+              : 0,
+            previousDate: format(parseISO(previousSnapshot.snapshot_date), 'MMM d, yyyy'),
+            currentDate: format(parseISO(currentSnapshotDate), 'MMM d, yyyy')
+          };
+        } else {
+          // Use fallback baseline
+          delta = {
+            previousTotal: FALLBACK_BASELINE.total,
+            currentTotal: currentData.totals.grandTotal,
+            change: currentData.totals.grandTotal - FALLBACK_BASELINE.total,
+            changePercent: FALLBACK_BASELINE.total > 0 
+              ? ((currentData.totals.grandTotal - FALLBACK_BASELINE.total) / FALLBACK_BASELINE.total) * 100 
+              : 0,
+            reservesChange: 0,
+            reservesChangePercent: 0,
+            previousDate: FALLBACK_BASELINE.date,
+            currentDate: format(parseISO(currentSnapshotDate), 'MMM d, yyyy')
+          };
+        }
         
         setData({
           ...currentData,
           delta,
-          dataDate: 'January 5, 2026'
+          dataDate: format(parseISO(currentSnapshotDate), 'MMMM d, yyyy')
         });
         setLoading(false);
       } catch (err: any) {

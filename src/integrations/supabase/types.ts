@@ -68,6 +68,66 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_snapshots: {
+        Row: {
+          age_181_365: number
+          age_365_plus: number
+          age_61_180: number
+          age_under_60: number
+          cp1_claims: number
+          cp1_rate: number
+          created_at: string
+          id: string
+          no_eval_count: number
+          no_eval_reserves: number
+          snapshot_date: string
+          total_claims: number
+          total_high_eval: number
+          total_low_eval: number
+          total_reserves: number
+          type_group_breakdown: Json | null
+          updated_at: string
+        }
+        Insert: {
+          age_181_365?: number
+          age_365_plus?: number
+          age_61_180?: number
+          age_under_60?: number
+          cp1_claims?: number
+          cp1_rate?: number
+          created_at?: string
+          id?: string
+          no_eval_count?: number
+          no_eval_reserves?: number
+          snapshot_date: string
+          total_claims: number
+          total_high_eval?: number
+          total_low_eval?: number
+          total_reserves?: number
+          type_group_breakdown?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          age_181_365?: number
+          age_365_plus?: number
+          age_61_180?: number
+          age_under_60?: number
+          cp1_claims?: number
+          cp1_rate?: number
+          created_at?: string
+          id?: string
+          no_eval_count?: number
+          no_eval_reserves?: number
+          snapshot_date?: string
+          total_claims?: number
+          total_high_eval?: number
+          total_low_eval?: number
+          total_reserves?: number
+          type_group_breakdown?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       litigation_matters: {
         Row: {
           claimant: string | null
