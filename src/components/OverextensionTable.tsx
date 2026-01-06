@@ -458,13 +458,15 @@ export function OverextensionTable({ data, knownExpertSpend }: OverextensionTabl
     const calculatedExpert = sortedData.reduce((sum, d) => sum + d.expertSpend, 0);
     // Use known value if provided, otherwise use calculated
     const totalExpert = knownExpertSpend ?? calculatedExpert;
+    // Waste ratio: $5.6M expert with 2.34x waste ratio = $13.1M reactive
+    const wasteRatio = totalExpert > 0 ? totalReactive / totalExpert : 0;
     
     // Executive review counts
     const execCritical = sortedData.filter(d => d.executiveReview.level === 'CRITICAL').length;
     const execRequired = sortedData.filter(d => d.executiveReview.level === 'REQUIRED').length;
     const execWatch = sortedData.filter(d => d.executiveReview.level === 'WATCH').length;
     
-    return { redCount, orangeCount, greenCount, totalReactive, totalExpert, execCritical, execRequired, execWatch };
+    return { redCount, orangeCount, greenCount, totalReactive, totalExpert, wasteRatio, execCritical, execRequired, execWatch };
   }, [sortedData, knownExpertSpend]);
 
   return (
@@ -508,13 +510,13 @@ export function OverextensionTable({ data, knownExpertSpend }: OverextensionTabl
           <div className="text-emerald-400 text-lg sm:text-2xl font-bold font-mono">{stats.greenCount}</div>
           <div className="text-emerald-400/70 text-[10px] sm:text-xs uppercase tracking-wide">Normal</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2 sm:p-4 hidden sm:block">
-          <div className="text-foreground text-lg sm:text-2xl font-bold font-mono">{formatCurrency(stats.totalReactive)}</div>
-          <div className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wide">Total Reactive</div>
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 sm:p-4 hidden sm:block">
+          <div className="text-emerald-400 text-lg sm:text-2xl font-bold font-mono">{formatCurrency(stats.totalExpert)}</div>
+          <div className="text-emerald-400/70 text-[10px] sm:text-xs uppercase tracking-wide">Expert Spend</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-2 sm:p-4 hidden sm:block">
-          <div className="text-foreground text-lg sm:text-2xl font-bold font-mono">{formatCurrency(stats.totalExpert)}</div>
-          <div className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-wide">Total Expert</div>
+        <div className="bg-[#b41e1e]/10 border border-[#b41e1e]/30 rounded-lg p-2 sm:p-4 hidden sm:block">
+          <div className="text-[#b41e1e] text-lg sm:text-2xl font-bold font-mono">{stats.wasteRatio.toFixed(2)}x</div>
+          <div className="text-[#b41e1e]/70 text-[10px] sm:text-xs uppercase tracking-wide">Waste Ratio</div>
         </div>
       </div>
 
