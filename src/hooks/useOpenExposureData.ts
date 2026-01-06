@@ -145,6 +145,7 @@ export interface RawClaimExport {
   adjuster: string;
   areaNumber: string;
   lossDescription: string;
+  exposureCategory: string;
 }
 
 export interface CP1ByTypeGroup {
@@ -169,6 +170,9 @@ export interface MultiPackGroup {
     reserves: number;
     lowEval: number;
     highEval: number;
+    exposureCategory: string;
+    overallCP1: string;
+    evaluationPhase: string;
   }[];
   totalReserves: number;
   totalLowEval: number;
@@ -417,6 +421,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       adjuster,
       areaNumber,
       lossDescription,
+      exposureCategory: row['Exposure Category']?.trim() || '',
     });
     
     // Update grand totals (claim counts)
@@ -738,6 +743,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     reserves: number;
     lowEval: number;
     highEval: number;
+    exposureCategory: string;
+    overallCP1: string;
+    evaluationPhase: string;
   }[]>();
   
   const extractBaseClaim = (claimNum: string): string => {
@@ -766,6 +774,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       reserves: claim.openReserves,
       lowEval: claim.lowEval,
       highEval: claim.highEval,
+      exposureCategory: claim.exposureCategory,
+      overallCP1: claim.overallCP1,
+      evaluationPhase: claim.evaluationPhase,
     });
   }
   
