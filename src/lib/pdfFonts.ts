@@ -90,10 +90,14 @@ export async function registerIBMPlexSans(doc: any): Promise<void> {
  * Sets the font to IBM Plex Sans if available, otherwise falls back to Helvetica
  */
 export function setIBMPlexSans(doc: any, style: 'normal' | 'bold' = 'normal'): void {
-  try {
+  const list = typeof doc?.getFontList === 'function' ? doc.getFontList() : undefined;
+  const hasIBM = !!(list && (list as any).IBMPlexSans && (list as any).IBMPlexSans[style]);
+
+  if (hasIBM) {
     doc.setFont('IBMPlexSans', style);
-  } catch {
-    // Fallback to helvetica if IBM Plex Sans is not registered
-    doc.setFont('helvetica', style === 'bold' ? 'bold' : 'normal');
+    return;
   }
+
+  // Fallback (and avoid jsPDF "Unable to look up font label" warnings)
+  doc.setFont('helvetica', style === 'bold' ? 'bold' : 'normal');
 }

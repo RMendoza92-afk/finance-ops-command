@@ -506,100 +506,129 @@ export function drawInsightBox(
 
 export function drawExecutiveTable(
   ctx: PDFDrawContext,
-  x: number, y: number,
+  x: number,
+  y: number,
   table: ExecutiveTable
 ): number {
   const { doc, pageWidth, margins } = ctx;
   const tableWidth = pageWidth - margins.left - margins.right;
-  
-  // Calculate column widths - first column gets more space for labels
+
   const numCols = table.headers.length;
-  const firstColWidth = Math.min(tableWidth * 0.2, 35); // First col for labels
-  const remainingWidth = tableWidth - firstColWidth - 10;
-  const otherColWidth = remainingWidth / (numCols - 1);
-  
-  const getColX = (idx: number) => {
-    if (idx === 0) return x + 3;
-    return x + firstColWidth + ((idx - 1) * otherColWidth);
+  const paddingX = 2;
+  const headerFontSize = numCols >= 9 ? 5 : 6;
+  const cellFontSize = numCols >= 9 ? 5 : 6;
+  const lineHeight = cellFontSize * 0.55; // tuned for 5-6pt text
+
+  // Column widths: first column larger for labels, remaining distributed
+  const firstColWidth = Math.min(tableWidth * 0.22, 42);
+  const remainingWidth = tableWidth - firstColWidth;
+  const otherColWidth = numCols > 1 ? remainingWidth / (numCols - 1) : remainingWidth;
+
+  const colWidths = Array.from({ length: numCols }, (_, idx) => (idx === 0 ? firstColWidth : otherColWidth));
+  const colX = (idx: number) => x + colWidths.slice(0, idx).reduce((a, b) => a + b, 0);
+
+  const wrapCell = (text: string, colIdx: number) => {
+    const width = Math.max(8, colWidths[colIdx] - paddingX * 2);
+    // jsPDF returns string[] when it wraps
+    const lines = doc.splitTextToSize(text, width);
+    return Array.isArray(lines) ? (lines as string[]) : [String(lines)];
   };
-  
-  // Title - white text on dark
+
+  // Title
   doc.setFontSize(10);
   setIBMPlexSans(doc, 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(table.title.toUpperCase(), x, y);
   y += 6;
-  
-  // Header row - dark steel background
+
+  // Header row (dynamic height)
   doc.setFillColor(...EXECUTIVE_COLORS.steel);
-  doc.rect(x, y, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
-  doc.setFontSize(6);
+  doc.setFontSize(headerFontSize);
   setIBMPlexSans(doc, 'bold');
-  
-  table.headers.forEach((header, idx) => {
-    const colX = getColX(idx);
-    doc.text(header, colX, y + 6);
+
+  const headerLinesByCol = table.headers.map((h, idx) => wrapCell(h, idx));
+  const headerMaxLines = Math.max(1, ...headerLinesByCol.map((l) => l.length));
+  const headerHeight = Math.max(8, headerMaxLines * lineHeight + 4);
+
+  doc.rect(x, y, tableWidth, headerHeight, 'F');
+
+  headerLinesByCol.forEach((lines, idx) => {
+    const startX = colX(idx) + paddingX;
+    const startY = y + 4 + lineHeight; // baseline for first line
+    lines.slice(0, 3).forEach((line, lineIdx) => {
+      doc.text(String(line), startX, startY + lineIdx * lineHeight);
+    });
   });
-  y += 10;
-  
-  // Data rows
+
+  y += headerHeight + 2;
+
+  // Data rows (dynamic height per row)
+  doc.setFontSize(cellFontSize);
   setIBMPlexSans(doc, 'normal');
-  
+
   table.rows.forEach((row, rowIdx) => {
-    // Row background - dark theme colors
+    // Determine wrapped lines per cell, then row height
+    const cellStrings = row.cells.map((cell) => (typeof cell === 'number' ? cell.toLocaleString() : String(cell)));
+    const wrapped = cellStrings.map((s, idx) => wrapCell(s, idx));
+    const maxLines = Math.max(1, ...wrapped.map((l) => l.length));
+    const rowHeight = Math.max(8, maxLines * lineHeight + 4);
+
+    // Row background / text color
     if (row.highlight === 'total') {
       doc.setFillColor(...EXECUTIVE_COLORS.steel);
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.white);
       setIBMPlexSans(doc, 'bold');
     } else if (row.highlight === 'risk') {
-      doc.setFillColor(50, 20, 20); // Dark red tint
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setFillColor(50, 20, 20);
       doc.setTextColor(...EXECUTIVE_COLORS.danger);
+      setIBMPlexSans(doc, 'normal');
     } else if (row.highlight === 'success') {
-      doc.setFillColor(20, 50, 30); // Dark green tint
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setFillColor(20, 50, 30);
       doc.setTextColor(...EXECUTIVE_COLORS.success);
+      setIBMPlexSans(doc, 'normal');
     } else if (row.highlight === 'warning') {
-      doc.setFillColor(50, 40, 15); // Dark amber tint
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setFillColor(50, 40, 15);
       doc.setTextColor(...EXECUTIVE_COLORS.warning);
+      setIBMPlexSans(doc, 'normal');
     } else if (rowIdx % 2 === 0) {
-      doc.setFillColor(...EXECUTIVE_COLORS.darkNavy); // Alternating dark
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setFillColor(...EXECUTIVE_COLORS.darkNavy);
       doc.setTextColor(...EXECUTIVE_COLORS.white);
+      setIBMPlexSans(doc, 'normal');
     } else {
-      doc.setFillColor(...EXECUTIVE_COLORS.navy); // Pure black
-      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setFillColor(...EXECUTIVE_COLORS.navy);
       doc.setTextColor(...EXECUTIVE_COLORS.white);
+      setIBMPlexSans(doc, 'normal');
     }
-    
-    doc.setFontSize(6);
-    row.cells.forEach((cell, cellIdx) => {
-      const colX = getColX(cellIdx);
-      const cellStr = typeof cell === 'number' ? cell.toLocaleString() : cell.toString();
-      // Truncate long text to prevent overlap
-      const maxChars = cellIdx === 0 ? 12 : 10;
-      const displayStr = cellStr.length > maxChars ? cellStr.slice(0, maxChars) + '..' : cellStr;
-      doc.text(displayStr, colX, y + 4);
+
+    doc.rect(x, y, tableWidth, rowHeight, 'F');
+
+    wrapped.forEach((lines, cellIdx) => {
+      const startX = colX(cellIdx) + paddingX;
+      const startY = y + 3 + lineHeight;
+      // Hard cap lines to prevent runaway heights; still avoids overlap
+      lines.slice(0, 3).forEach((line, lineIdx) => {
+        doc.text(String(line), startX, startY + lineIdx * lineHeight);
+      });
     });
-    
-    // Reset styles
+
+    // Reset for next row
+    doc.setFontSize(cellFontSize);
     setIBMPlexSans(doc, 'normal');
-    doc.setTextColor(...EXECUTIVE_COLORS.white);
-    y += 8;
+
+    y += rowHeight;
   });
-  
+
   // Footnote
   if (table.footnote) {
-    y += 2;
+    y += 3;
     doc.setFontSize(5);
+    setIBMPlexSans(doc, 'normal');
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
     doc.text(table.footnote, x, y);
     y += 4;
   }
-  
+
   return y + 5;
 }
 
