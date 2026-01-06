@@ -1,10 +1,10 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData } from "@/hooks/useOpenExposureData";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData, MultiPackSummary, MultiPackGroup } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
-import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter } from "lucide-react";
+import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -299,6 +299,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [cp1DrilldownCoverage, setCp1DrilldownCoverage] = useState<string | null>(null);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
   const [loadingReviewers, setLoadingReviewers] = useState(true);
+  const [showMultiPackDrawer, setShowMultiPackDrawer] = useState(false);
+  const [selectedPackSize, setSelectedPackSize] = useState<number | null>(null);
 
   // Fetch reviewers from database
   useEffect(() => {
@@ -2711,8 +2713,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
         </div>
 
-        {/* CEO Metrics Row - Stack on mobile, 3 cols on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 p-3 sm:p-5 bg-muted/20 rounded-xl border border-border/50">
+        {/* CEO Metrics Row - Stack on mobile, 4 cols on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 p-3 sm:p-5 bg-muted/20 rounded-xl border border-border/50">
           {/* Budget Burn Rate */}
           <div 
             className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg"
@@ -2765,6 +2767,27 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               </p>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
+          </div>
+
+          {/* Multi-Pack Claims */}
+          <div 
+            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-purple-500/50 transition-all hover:shadow-lg"
+            onClick={() => setShowMultiPackDrawer(true)}
+          >
+            <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
+              <Layers className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Multi-Pack Claims</p>
+              <p className="text-lg sm:text-2xl font-bold text-purple-500 mt-0.5 sm:mt-1">
+                {data?.multiPackData?.totalMultiPackGroups || 0}
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">groups</span>
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
+                {data?.multiPackData?.totalClaimsInPacks || 0} claims • Same incident
+              </p>
+            </div>
+            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 flex-shrink-0" />
           </div>
         </div>
         </div>
@@ -4507,6 +4530,142 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           coverageData={CP1_DATA.byCoverage.find(c => c.coverage === cp1DrilldownCoverage) || { noCP: 0, yes: 0, total: 0, cp1Rate: 0 }}
         />
       )}
+
+      {/* Multi-Pack Claims Drawer */}
+      <Sheet open={showMultiPackDrawer} onOpenChange={setShowMultiPackDrawer}>
+        <SheetContent className="w-[700px] sm:max-w-[700px] overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5 text-purple-500" />
+                Multi-Pack Claims
+              </SheetTitle>
+            </div>
+            <SheetDescription>
+              Claims grouped by common base number (same incident with multiple claimants)
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Groups</p>
+                <p className="text-2xl font-bold text-purple-500 mt-1">{data?.multiPackData?.totalMultiPackGroups || 0}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Claims in Packs</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{data?.multiPackData?.totalClaimsInPacks || 0}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Reserves</p>
+                <p className="text-2xl font-bold text-foreground mt-1">
+                  {formatCurrency(data?.multiPackData?.groups.reduce((sum, g) => sum + g.totalReserves, 0) || 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Pack Size Breakdown */}
+            <div className="bg-card border border-border rounded-lg p-4">
+              <h4 className="text-sm font-semibold mb-4">By Pack Size</h4>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant={selectedPackSize === null ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedPackSize(null)}
+                >
+                  All ({data?.multiPackData?.totalMultiPackGroups || 0})
+                </Button>
+                {data?.multiPackData?.byPackSize.map((pack) => (
+                  <Button 
+                    key={pack.packSize}
+                    variant={selectedPackSize === pack.packSize ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setSelectedPackSize(pack.packSize)}
+                  >
+                    {pack.packSize}-Pack ({pack.groupCount})
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Claims Table */}
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="font-semibold">Base Claim #</TableHead>
+                    <TableHead className="text-center font-semibold">Pack Size</TableHead>
+                    <TableHead className="text-right font-semibold">Total Reserves</TableHead>
+                    <TableHead className="text-right font-semibold">Low Eval</TableHead>
+                    <TableHead className="text-right font-semibold">High Eval</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(data?.multiPackData?.groups || [])
+                    .filter(g => selectedPackSize === null || g.packSize === selectedPackSize)
+                    .slice(0, 50) // Limit to first 50 for performance
+                    .map((group) => (
+                      <React.Fragment key={group.baseClaimNumber}>
+                        <TableRow className="bg-purple-500/5 hover:bg-purple-500/10 cursor-pointer">
+                          <TableCell className="font-medium">
+                            <span className="text-purple-600">{group.baseClaimNumber}*</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="bg-purple-500/20 text-purple-600">
+                              {group.packSize}-Pack
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(group.totalReserves)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(group.totalLowEval)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(group.totalHighEval)}</TableCell>
+                        </TableRow>
+                        {/* Expanded claims */}
+                        {group.claims.map((claim, idx) => (
+                          <TableRow key={claim.claimNumber} className="bg-muted/10 text-sm">
+                            <TableCell className="pl-8 text-muted-foreground">
+                              ↳ {claim.claimNumber} <span className="text-xs">(Clmt #{claim.claimant})</span>
+                            </TableCell>
+                            <TableCell className="text-center text-xs text-muted-foreground">{claim.coverage}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.reserves)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.lowEval)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.highEval)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                </TableBody>
+              </Table>
+              {(data?.multiPackData?.groups.filter(g => selectedPackSize === null || g.packSize === selectedPackSize).length || 0) > 50 && (
+                <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                  Showing first 50 groups. Export to Excel for complete data.
+                </div>
+              )}
+            </div>
+
+            {/* Key Insights */}
+            <div className="bg-muted/30 rounded-lg p-4 border border-border">
+              <h4 className="text-sm font-semibold mb-3">Key Insights</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span className="font-medium text-foreground">{data?.multiPackData?.totalMultiPackGroups || 0}</span> incidents have multiple claimants ({data?.multiPackData?.totalClaimsInPacks || 0} total claims)
+                </li>
+                {data?.multiPackData?.byPackSize[0] && (
+                  <li className="flex items-start gap-2">
+                    <span className="text-warning mt-0.5">•</span>
+                    Largest pack size is <span className="font-medium text-foreground">{data.multiPackData.byPackSize[0].packSize}-Pack</span> ({data.multiPackData.byPackSize[0].groupCount} groups)
+                  </li>
+                )}
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  Multi-pack claims typically represent bus accidents, multi-vehicle collisions, or workplace incidents
+                </li>
+              </ul>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
