@@ -2239,6 +2239,95 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     toast.success('PDF + Excel exported: Texas Rear End Claims');
   }, [exportBoth, timestamp, selectedReviewer]);
 
+  const handleExportLORIntervention = useCallback(async () => {
+    const manager = selectedReviewer || 'Richie Mendoza';
+    
+    // LOR Offers data
+    const lorRawData: RawClaimData = {
+      columns: ['Claim Number', 'Area', 'Offer Amount', 'Extended Date', 'Expires Date', 'Status', 'Days Left', 'Accident Description', 'Outcome Date', 'Notes'],
+      rows: lorOffers.map(offer => {
+        const expireDate = new Date(offer.expires_date);
+        const today = new Date();
+        const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return [
+          offer.claim_number,
+          offer.area || 'TX',
+          offer.offer_amount,
+          format(new Date(offer.extended_date), 'MM/dd/yyyy'),
+          format(new Date(offer.expires_date), 'MM/dd/yyyy'),
+          offer.status,
+          daysLeft,
+          offer.accident_description || 'Rear-end',
+          offer.outcome_date ? format(new Date(offer.outcome_date), 'MM/dd/yyyy') : '',
+          offer.outcome_notes || '',
+        ];
+      }),
+      sheetName: 'LOR Offers',
+    };
+
+    // Summary stats
+    const summaryRawData: RawClaimData = {
+      columns: ['Metric', 'Value'],
+      rows: [
+        ['Total Offers', lorStats.total],
+        ['Pending', lorStats.pending],
+        ['Accepted', lorStats.accepted],
+        ['Rejected', lorStats.rejected],
+        ['Expired', lorStats.expired],
+        ['Total Offered', `$${lorStats.totalOffered.toLocaleString()}`],
+      ],
+      sheetName: 'Summary',
+    };
+
+    // Texas Rear End context
+    const contextRawData: RawClaimData = {
+      columns: ['Area', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+      rows: TEXAS_REAR_END_DATA.byArea.map(a => [
+        a.area,
+        a.claims,
+        a.reserves,
+        a.lowEval,
+        a.highEval,
+      ]),
+      sheetName: 'TX Rear End by Area',
+    };
+
+    const exportData: ExportableData = {
+      title: 'TX LOR Intervention Settlement Tracker',
+      subtitle: 'Rear-end early settlement • Low-impact claims • Stop the bleed',
+      timestamp,
+      affectsManager: manager,
+      summary: {
+        'Total Offers': lorStats.total,
+        'Pending': lorStats.pending,
+        'Accepted': lorStats.accepted,
+        'Rejected': lorStats.rejected,
+        'Total Offered': `$${lorStats.totalOffered.toLocaleString()}`,
+        'TX R/E Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
+        'TX R/E Reserves': formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves),
+      },
+      columns: ['Claim Number', 'Area', 'Offer Amount', 'Extended Date', 'Expires Date', 'Status', 'Days Left'],
+      rows: lorOffers.map(offer => {
+        const expireDate = new Date(offer.expires_date);
+        const today = new Date();
+        const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return [
+          offer.claim_number,
+          offer.area || 'TX',
+          `$${offer.offer_amount.toLocaleString()}`,
+          format(new Date(offer.extended_date), 'MM/dd/yyyy'),
+          format(new Date(offer.expires_date), 'MM/dd/yyyy'),
+          offer.status,
+          daysLeft.toString(),
+        ];
+      }),
+      rawClaimData: [lorRawData, summaryRawData, contextRawData],
+    };
+    
+    await exportBoth(exportData);
+    toast.success('PDF + Excel exported: LOR Intervention Tracker');
+  }, [exportBoth, timestamp, selectedReviewer, lorOffers, lorStats]);
+
   const handleExportClaimsByQueue = useCallback(async () => {
     if (!metrics) return;
     const manager = selectedReviewer || 'Richie Mendoza';
@@ -3393,7 +3482,21 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">TX LOR Intervention Settlement Tracker</h3>
             <p className="text-[10px] sm:text-xs text-muted-foreground">Rear-end early settlement • Low-impact claims • Stop the bleed</p>
           </div>
-          <LOROfferDialog onOfferAdded={refetchLOR} />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExportLORIntervention();
+              }}
+              className="h-7 text-xs gap-1.5"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Export
+            </Button>
+            <LOROfferDialog onOfferAdded={refetchLOR} />
+          </div>
         </div>
 
         {/* Combined Stats Row - Age + Area + Reserves in One */}
