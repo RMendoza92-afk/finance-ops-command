@@ -509,7 +509,17 @@ export function drawExecutiveTable(
 ): number {
   const { doc, pageWidth, margins } = ctx;
   const tableWidth = pageWidth - margins.left - margins.right;
-  const colWidth = (tableWidth - 10) / table.headers.length;
+  
+  // Calculate column widths - first column gets more space for labels
+  const numCols = table.headers.length;
+  const firstColWidth = Math.min(tableWidth * 0.2, 35); // First col for labels
+  const remainingWidth = tableWidth - firstColWidth - 10;
+  const otherColWidth = remainingWidth / (numCols - 1);
+  
+  const getColX = (idx: number) => {
+    if (idx === 0) return x + 3;
+    return x + firstColWidth + ((idx - 1) * otherColWidth);
+  };
   
   // Title
   doc.setFontSize(10);
@@ -522,11 +532,12 @@ export function drawExecutiveTable(
   doc.setFillColor(...EXECUTIVE_COLORS.navy);
   doc.rect(x, y, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   
   table.headers.forEach((header, idx) => {
-    doc.text(header, x + 5 + (idx * colWidth), y + 6);
+    const colX = getColX(idx);
+    doc.text(header, colX, y + 6);
   });
   y += 10;
   
@@ -560,10 +571,14 @@ export function drawExecutiveTable(
       doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
     }
     
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     row.cells.forEach((cell, cellIdx) => {
+      const colX = getColX(cellIdx);
       const cellStr = typeof cell === 'number' ? cell.toLocaleString() : cell.toString();
-      doc.text(cellStr, x + 5 + (cellIdx * colWidth), y + 4);
+      // Truncate long text to prevent overlap
+      const maxChars = cellIdx === 0 ? 12 : 10;
+      const displayStr = cellStr.length > maxChars ? cellStr.slice(0, maxChars) + '..' : cellStr;
+      doc.text(displayStr, colX, y + 4);
     });
     
     // Reset styles
@@ -575,7 +590,7 @@ export function drawExecutiveTable(
   // Footnote
   if (table.footnote) {
     y += 2;
-    doc.setFontSize(6);
+    doc.setFontSize(5);
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
     doc.text(table.footnote, x, y);
     y += 4;
