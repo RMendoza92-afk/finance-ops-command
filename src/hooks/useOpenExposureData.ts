@@ -460,21 +460,19 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
 }
 
-// Parse the old summary format for delta comparison
-function parseSummaryCSVTotals(csvText: string): { grandTotal: number; reserves: number } {
-  const lines = csvText.split('\n');
-  let grandTotal = 0;
-  let reserves = 0;
-  
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const cols = lines[i].split(',');
-    if (cols[0]?.trim() === 'Grand Total') {
-      grandTotal = parseInt(cols[7]?.replace(/,/g, '') || '0', 10) || 0;
-      break;
-    }
-  }
-  
-  return { grandTotal, reserves };
+// Known baseline for Jan 2, 2026 (BI/UM/UI only) - provided by user
+// This will be replaced when we have historical raw data files
+const KNOWN_BASELINES: { [date: string]: { total: number; reserves: number; date: string } } = {
+  'jan2_2026': { total: 19493, reserves: 0, date: 'Jan 2, 2026' }
+};
+
+function getBaselineForComparison(): { grandTotal: number; reserves: number; date: string } {
+  // Return the most recent baseline we have
+  return { 
+    grandTotal: KNOWN_BASELINES.jan2_2026.total, 
+    reserves: KNOWN_BASELINES.jan2_2026.reserves,
+    date: KNOWN_BASELINES.jan2_2026.date
+  };
 }
 
 export function useOpenExposureData() {
@@ -488,10 +486,6 @@ export function useOpenExposureData() {
         // Load current raw data (Jan 5)
         const currentRes = await fetch('/data/open-exposure-raw-jan5.csv');
         const currentCsv = await currentRes.text();
-        
-        // Load previous summary data (Jan 2) for delta calculation
-        const prevRes = await fetch('/data/open-exposure-report-jan2.csv');
-        const prevCsv = await prevRes.text();
         
         // Parse current raw data
         const parsed = Papa.parse<RawClaimRow>(currentCsv, {
@@ -526,20 +520,20 @@ export function useOpenExposureData() {
           typeGroups: currentData.typeGroupSummaries.slice(0, 5).map(t => `${t.typeGroup}: ${t.grandTotal}`),
         });
         
-        // Parse previous summary for delta
-        const prevTotals = parseSummaryCSVTotals(prevCsv);
+        // Get baseline for delta comparison (BI/UM/UI filtered)
+        const baseline = getBaselineForComparison();
         
         // Calculate delta
         const delta = {
-          previousTotal: prevTotals.grandTotal,
+          previousTotal: baseline.grandTotal,
           currentTotal: currentData.totals.grandTotal,
-          change: currentData.totals.grandTotal - prevTotals.grandTotal,
-          changePercent: prevTotals.grandTotal > 0 
-            ? ((currentData.totals.grandTotal - prevTotals.grandTotal) / prevTotals.grandTotal) * 100 
+          change: currentData.totals.grandTotal - baseline.grandTotal,
+          changePercent: baseline.grandTotal > 0 
+            ? ((currentData.totals.grandTotal - baseline.grandTotal) / baseline.grandTotal) * 100 
             : 0,
           reservesChange: 0,
           reservesChangePercent: 0,
-          previousDate: 'Jan 2, 2026',
+          previousDate: baseline.date,
           currentDate: 'Jan 5, 2026'
         };
         
