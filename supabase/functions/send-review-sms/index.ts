@@ -1,9 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+interface ClaimData {
+  claim_id: string;
+  area: string;
+  reserves: number;
+  age_bucket: string;
+  loss_description: string;
+}
 
 interface SMSRequest {
   to: string;
@@ -11,6 +20,10 @@ interface SMSRequest {
   claimCount: number;
   region: string;
   lossDescription: string;
+  reviewer: string;
+  deadline: string;
+  claims: ClaimData[];
+  excelBase64?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -20,26 +33,97 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, claimType, claimCount, region, lossDescription }: SMSRequest = await req.json();
+    const { 
+      to, 
+      claimType, 
+      claimCount, 
+      region, 
+      lossDescription, 
+      reviewer, 
+      deadline,
+      claims,
+      excelBase64 
+    }: SMSRequest = await req.json();
     
     console.log(`Sending SMS to ${to} for ${claimCount} ${claimType} claims in ${region}`);
 
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
     const twilioPhone = Deno.env.get("TWILIO_PHONE_NUMBER");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!accountSid || !authToken || !twilioPhone) {
       console.error("Missing Twilio credentials");
       throw new Error("Twilio credentials not configured");
     }
 
-    const message = `🚨 FILE REVIEW REQUESTED\n\n` +
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase credentials");
+      throw new Error("Supabase credentials not configured");
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let downloadUrl = '';
+
+    // Upload Excel file if provided
+    if (excelBase64) {
+      try {
+        // Decode base64 to binary
+        const binaryString = atob(excelBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Generate unique filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `review-${reviewer.replace(/\s+/g, '-')}-${timestamp}.xlsx`;
+
+        // Upload to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('review-exports')
+          .upload(filename, bytes, {
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            upsert: true
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+        } else {
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('review-exports')
+            .getPublicUrl(filename);
+          
+          downloadUrl = urlData.publicUrl;
+          console.log('Excel uploaded:', downloadUrl);
+        }
+      } catch (uploadErr) {
+        console.error('Error uploading Excel:', uploadErr);
+      }
+    }
+
+    // Build SMS message
+    let message = `🚨 FILE REVIEW REQUESTED\n\n` +
+      `Reviewer: ${reviewer}\n` +
       `Region: ${region}\n` +
-      `Claim Type: ${claimType}\n` +
-      `Loss Desc: ${lossDescription}\n` +
-      `Claims: ${claimCount}\n\n` +
-      `Action needed: Review flagged inventory ASAP.\n` +
-      `— FLI Claims Dashboard`;
+      `Claims: ${claimCount} (${claimType})\n` +
+      `Loss: ${lossDescription}\n` +
+      `Due: ${deadline}\n`;
+
+    if (downloadUrl) {
+      message += `\n📊 Download claims: ${downloadUrl}\n`;
+    }
+
+    message += `\n— FLI Claims Dashboard`;
+
+    // Ensure message doesn't exceed SMS limits (will be split automatically by Twilio)
+    if (message.length > 1600) {
+      message = message.substring(0, 1597) + '...';
+    }
 
     // Format phone numbers (ensure they have country code)
     const formattedTo = to.startsWith("+") ? to : `+1${to}`;
@@ -70,7 +154,11 @@ serve(async (req: Request): Promise<Response> => {
     console.log("SMS sent successfully:", result.sid);
 
     return new Response(
-      JSON.stringify({ success: true, messageSid: result.sid }),
+      JSON.stringify({ 
+        success: true, 
+        messageSid: result.sid,
+        downloadUrl: downloadUrl || null
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
