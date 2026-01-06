@@ -2506,8 +2506,24 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           <div>
             <h2 className="text-lg sm:text-2xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-              As of January 2, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
+              As of January 5, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
             </p>
+            {/* Delta from previous period */}
+            {data?.delta && (
+              <div className={`flex items-center gap-2 mt-2 text-xs ${data.delta.change >= 0 ? 'text-destructive' : 'text-success'}`}>
+                {data.delta.change >= 0 ? (
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowDownRight className="h-3.5 w-3.5" />
+                )}
+                <span className="font-semibold">
+                  {data.delta.change >= 0 ? '+' : ''}{formatNumber(data.delta.change)} claims ({data.delta.changePercent >= 0 ? '+' : ''}{data.delta.changePercent.toFixed(1)}%)
+                </span>
+                <span className="text-muted-foreground">
+                  vs {data.delta.previousDate} ({formatNumber(data.delta.previousTotal)})
+                </span>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-6 items-center">
             <div className="text-center sm:px-5 sm:border-r border-border">
