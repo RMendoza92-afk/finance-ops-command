@@ -22,8 +22,55 @@ function isRestrictedCellRequest(q: string): boolean {
   return patterns.some((p) => p.test(s));
 }
 
+// --- BUILD MULTI-PACK PAYLOAD ---
+function buildMultiPackPayload(multiPackContext: any) {
+  if (!multiPackContext) return null;
+  
+  const open = multiPackContext.openClaims;
+  const closed = multiPackContext.closedClaims;
+  
+  return {
+    open_claims_multi_pack: open ? {
+      total_multi_pack_groups: open.totalMultiPackGroups || 0,
+      total_claims_in_packs: open.totalClaimsInPacks || 0,
+      by_pack_size: (open.byPackSize || []).map((ps: any) => ({
+        pack_size: ps.packSize,
+        group_count: ps.groupCount,
+        claim_count: ps.claimCount,
+        reserves_usd: ps.reserves || 0,
+      })),
+      top_multi_pack_groups: (open.topGroups || []).slice(0, 10).map((g: any) => ({
+        base_claim: g.baseClaimNumber,
+        pack_size: g.packSize,
+        total_reserves_usd: g.totalReserves || 0,
+        total_low_eval_usd: g.totalLowEval || 0,
+        total_high_eval_usd: g.totalHighEval || 0,
+        claimants: g.claims?.map((c: any) => c.claimant).join(', ') || '',
+      })),
+    } : null,
+    
+    closed_claims_multi_pack: closed ? {
+      total_multi_pack_groups: closed.totalMultiPackGroups || 0,
+      total_claims_in_packs: closed.totalClaimsInPacks || 0,
+      by_pack_size: (closed.byPackSize || []).map((ps: any) => ({
+        pack_size: ps.packSize,
+        group_count: ps.groupCount,
+        claim_count: ps.claimCount,
+        total_paid_usd: ps.totalPaid || 0,
+      })),
+      top_multi_pack_groups: (closed.topGroups || []).slice(0, 10).map((g: any) => ({
+        base_claim: g.baseClaimNumber,
+        pack_size: g.packSize,
+        total_paid_usd: g.totalPaid || 0,
+        total_indemnities_usd: g.totalIndemnities || 0,
+        claimants: g.claims?.map((c: any) => c.claimant).join(', ') || '',
+      })),
+    } : null,
+  };
+}
+
 // --- BUILD VERIFIED AGGREGATE PAYLOAD ---
-function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
+function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: any) {
   const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
   const year = now.getFullYear();
 
@@ -218,6 +265,9 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
       team: m.team,
       reserves_usd: m.reserves || 0,
     })) || [],
+    
+    // Multi-pack claims data (claims sharing same incident/base claim number)
+    multi_pack_claims: multiPackPayload,
   };
 
   return verified;
@@ -231,6 +281,13 @@ const SYSTEM_PROMPT = `You are the LITIGATION ORACLE - the singular, authoritati
 - You DO NOT speculate, hedge, or qualify beyond the data
 - You DO NOT provide cell-level, row-level, or raw data exports
 - You REFUSE requests that would expose individual PII or exact claim details
+
+## MULTI-PACK CLAIMS EXPERTISE:
+Multi-pack claims are groups of claims that share the same incident/accident - identified by matching base claim numbers (first 11 characters). Example: claims 39-0000430132 and 39-0000431432 both start with "39-00004301" so they're a "2-pack".
+- A "2-pack" means 2 claimants from the same incident
+- A "3-pack" means 3 claimants, etc.
+- When asked about multi-pack claims, use the multi_pack_claims data
+- Report: total groups, claims in packs, breakdown by pack size, and top groups by exposure
 
 ## CONFIDENCE PROTOCOL:
 - State facts with declarative authority: "There are X claims" not "approximately X"
@@ -283,6 +340,8 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - financials_by_age[]: age_bucket, claims, open_reserves_usd, low_eval_usd, high_eval_usd
 - top_closures_sample[]: claim_id, amount_paid_usd, team
 - high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status
+- multi_pack_claims.open_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
+- multi_pack_claims.closed_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 
 RESPOND ONLY WITH VERIFIED DATA. NO SPECULATION.`;
 
@@ -292,7 +351,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, dataContext, openExposureContext } = await req.json();
+    const { messages, dataContext, openExposureContext, multiPackContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -338,13 +397,15 @@ serve(async (req) => {
     };
 
     const now = new Date();
-    const verifiedPayload = buildVerifiedPayload(ctx, exp, now);
+    const multiPackPayload = buildMultiPackPayload(multiPackContext);
+    const verifiedPayload = buildVerifiedPayload(ctx, exp, now, multiPackPayload);
     
     console.log("ORACLE Request:", {
       question: userQuestion.slice(0, 100),
       portfolioSize: verifiedPayload.portfolio.total_open_matters,
       openInventory: verifiedPayload.open_inventory.grand_total,
       cp1Total: verifiedPayload.cp1.total,
+      multiPackGroups: multiPackPayload?.open_claims_multi_pack?.total_multi_pack_groups || 0,
     });
 
     // Build developer prompt with data
