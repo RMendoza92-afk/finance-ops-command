@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet } from "lucide-react";
+import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData } from "@/hooks/useLitigationData";
@@ -48,6 +48,12 @@ const QUICK_ACTIONS = [
     query: "Break down performance by team - show closures, total paid, and open matters for each team.",
     icon: Users,
     color: "text-purple-500"
+  },
+  { 
+    label: "Compare Periods", 
+    query: "Compare this week vs last week AND this month vs last month: show closures count, total paid, new filings, and net inventory change. Highlight any significant variances (>10% change).",
+    icon: GitCompare,
+    color: "text-cyan-500"
   },
 ];
 
