@@ -1264,61 +1264,27 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     return { total: reviews.length, assigned, inReview, completed, flagged, totalReserves };
   }, [reviews]);
 
-  // Known totals from user source (January 2, 2026)
-  const KNOWN_TOTALS = {
-    totalOpenClaims: 10109,
-    totalOpenExposures: 19501,
-    atr: { claims: 3994, exposures: 8385 },
-    lit: { claims: 3747, exposures: 6161 },
-    bi3: { claims: 2227, exposures: 4616 },
-    earlyBI: { claims: 141, exposures: 339 },
-    flagged: 252,
-    newClaims: 1,
-    closed: 2,
-  };
+  // Dynamic totals from CSV - single source of truth
+  const KNOWN_TOTALS = useMemo(() => data?.knownTotals || {
+    totalOpenClaims: 0,
+    totalOpenExposures: 0,
+    atr: { claims: 0, exposures: 0 },
+    lit: { claims: 0, exposures: 0 },
+    bi3: { claims: 0, exposures: 0 },
+    earlyBI: { claims: 0, exposures: 0 },
+    flagged: 0,
+    newClaims: 0,
+    closed: 0,
+  }, [data]);
 
-  // CP1 (Limits Tendered / Policy Limits Offered) Data by Coverage with Age Breakdown
-  const CP1_DATA = {
-    // BI Coverage with full age breakdown
-    biByAge: [
-      { age: '365+ Days', noCP: 3593, yes: 3019, total: 6612 },
-      { age: '181-365 Days', noCP: 2168, yes: 1656, total: 3824 },
-      { age: '61-180 Days', noCP: 3117, yes: 1086, total: 4203 },
-      { age: 'Under 60 Days', noCP: 3188, yes: 497, total: 3685 },
-    ],
-    biTotal: { noCP: 12066, yes: 6258, total: 18324 },
-    // All coverages summary
-    byCoverage: [
-      { coverage: 'BI', noCP: 12066, yes: 6258, total: 18324, cp1Rate: 34.2 },
-      { coverage: 'PD', noCP: 5844, yes: 566, total: 6410, cp1Rate: 8.8 },
-      { coverage: 'UM', noCP: 866, yes: 219, total: 1085, cp1Rate: 20.2 },
-      { coverage: 'CL', noCP: 640, yes: 31, total: 671, cp1Rate: 4.6 },
-      { coverage: 'OC', noCP: 173, yes: 1, total: 174, cp1Rate: 0.6 },
-      { coverage: 'UI', noCP: 26, yes: 28, total: 54, cp1Rate: 51.9 },
-      { coverage: 'UP', noCP: 22, yes: 2, total: 24, cp1Rate: 8.3 },
-    ],
-    totals: {
-      noCP: 19637,
-      yes: 7105,
-      grandTotal: 26742,
-    },
-    cp1Rate: ((7105 / 26742) * 100).toFixed(1), // 26.6%
-    // 12-month historical trend data
-    monthlyTrend: [
-      { month: 'Feb 25', cp1Rate: 24.2, cp1Count: 6420, totalClaims: 26528 },
-      { month: 'Mar 25', cp1Rate: 24.8, cp1Count: 6580, totalClaims: 26532 },
-      { month: 'Apr 25', cp1Rate: 25.1, cp1Count: 6690, totalClaims: 26653 },
-      { month: 'May 25', cp1Rate: 25.4, cp1Count: 6755, totalClaims: 26594 },
-      { month: 'Jun 25', cp1Rate: 25.8, cp1Count: 6845, totalClaims: 26531 },
-      { month: 'Jul 25', cp1Rate: 26.0, cp1Count: 6912, totalClaims: 26585 },
-      { month: 'Aug 25', cp1Rate: 26.2, cp1Count: 6975, totalClaims: 26622 },
-      { month: 'Sep 25', cp1Rate: 26.1, cp1Count: 6948, totalClaims: 26620 },
-      { month: 'Oct 25', cp1Rate: 26.3, cp1Count: 7010, totalClaims: 26654 },
-      { month: 'Nov 25', cp1Rate: 26.4, cp1Count: 7048, totalClaims: 26697 },
-      { month: 'Dec 25', cp1Rate: 26.5, cp1Count: 7078, totalClaims: 26709 },
-      { month: 'Jan 26', cp1Rate: 26.6, cp1Count: 7105, totalClaims: 26742 },
-    ],
-  };
+  // Dynamic CP1 data from CSV - single source of truth
+  const CP1_DATA = useMemo(() => data?.cp1Data || {
+    biByAge: [],
+    biTotal: { noCP: 0, yes: 0, total: 0 },
+    byCoverage: [],
+    totals: { noCP: 0, yes: 0, grandTotal: 0 },
+    cp1Rate: '0.0',
+  }, [data]);
 
   // EXECUTIVE METRICS - Trend Analysis & Closure Data
   const EXECUTIVE_METRICS = {
@@ -1349,53 +1315,45 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     },
   };
 
-  // Financial reserves by age bucket and type group - ACTUAL DATA
-  const FINANCIAL_DATA = {
-    byAge: [
-      { age: '365+ Days', claims: 5630, openReserves: 115000000, lowEval: 72000000, highEval: 81000000 },
-      { age: '181-365 Days', claims: 3953, openReserves: 78000000, lowEval: 46000000, highEval: 52000000 },
-      { age: '61-180 Days', claims: 5576, openReserves: 68000000, lowEval: 27000000, highEval: 31000000 },
-      { age: 'Under 60 Days', claims: 8420, openReserves: 39841051, lowEval: 8500000, highEval: 9600000 },
-    ],
-    byQueue: [
-      { queue: 'ATR', openReserves: 109732166, lowEval: 36762202, highEval: 41000000, noEvalCount: 1245 },
-      { queue: 'Litigation', openReserves: 67319959, lowEval: 33561499, highEval: 38000000, noEvalCount: 0 },
-      { queue: 'BI3', openReserves: 55241032, lowEval: 26233823, highEval: 29500000, noEvalCount: 892 },
-      { queue: 'UM-UIM', openReserves: 12127676, lowEval: 1698151, highEval: 2000000, noEvalCount: 85 },
-      { queue: 'Non Rep', openReserves: 12829329, lowEval: 2680853, highEval: 3000000, noEvalCount: 120 },
-    ],
-    // Full Type Group breakdown (BI-focused, excludes Subro, PD, TLL, Other)
-    byTypeGroup: [
-      { typeGroup: 'ATR', reserves: 109732166 },
-      { typeGroup: 'LIT', reserves: 67319959 },
-      { typeGroup: 'BI3', reserves: 55241032 },
-      { typeGroup: 'Non Rep', reserves: 12829329 },
-      { typeGroup: 'UM-UIM', reserves: 12127676 },
-      { typeGroup: 'O30', reserves: 5210000 },
-      { typeGroup: 'DTL', reserves: 2847000 },
-      { typeGroup: 'TLC', reserves: 2818100 },
-      { typeGroup: 'ARB', reserves: 2397600 },
-      { typeGroup: 'FIR', reserves: 1818100 },
-      { typeGroup: 'COVG', reserves: 603340 },
-      { typeGroup: 'SCP', reserves: 426800 },
-      { typeGroup: 'TCP', reserves: 170100 },
-      { typeGroup: 'TLU', reserves: 153900 },
-      { typeGroup: 'ACP', reserves: 57200 },
-      { typeGroup: 'ROP', reserves: 50125 },
-      { typeGroup: 'PI', reserves: 48297 },
-      { typeGroup: 'SCL', reserves: 11400 },
-      { typeGroup: 'UP', reserves: 11400 },
-      { typeGroup: 'U30', reserves: 5000 },
-    ],
-    totals: {
-      // Adjusted totals excluding Subro ($7.25M), PD ($7.26M), TLL ($9.64M), Other ($19.44M) = $43.59M removed
-      totalOpenReserves: 257250162,   // $257.25M - BI-focused reserves
-      totalLowEval: 100936528,        // $100.94M - Low Eval (excluding Subro/PD/TLL/Other)
-      totalHighEval: 113500000,       // $113.5M - High Eval
-      noEvalAmount: 156313634,        // $156.31M - No Eval/Pending
-      noEvalCount: 2342,
+  // Dynamic financial data from CSV - single source of truth
+  const FINANCIAL_DATA = useMemo(() => {
+    if (!data?.financials) {
+      return {
+        byAge: [],
+        byQueue: [],
+        byTypeGroup: [],
+        totals: { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalAmount: 0, noEvalCount: 0 }
+      };
     }
-  };
+    return {
+      byAge: data.financials.byAge,
+      byQueue: [], // Not available in raw CSV
+      byTypeGroup: data.financials.byTypeGroup,
+      totals: {
+        totalOpenReserves: data.financials.totalOpenReserves,
+        totalLowEval: data.financials.totalLowEval,
+        totalHighEval: data.financials.totalHighEval,
+        noEvalAmount: 0,
+        noEvalCount: data.financials.noEvalCount,
+      }
+    };
+  }, [data]);
+
+  // Historical CP1 trend data (static - for trend charts)
+  const CP1_MONTHLY_TREND = [
+    { month: 'Feb 25', cp1Rate: 24.2, cp1Count: 6420, totalClaims: 26528 },
+    { month: 'Mar 25', cp1Rate: 24.8, cp1Count: 6580, totalClaims: 26532 },
+    { month: 'Apr 25', cp1Rate: 25.1, cp1Count: 6690, totalClaims: 26653 },
+    { month: 'May 25', cp1Rate: 25.4, cp1Count: 6755, totalClaims: 26594 },
+    { month: 'Jun 25', cp1Rate: 25.8, cp1Count: 6845, totalClaims: 26531 },
+    { month: 'Jul 25', cp1Rate: 26.0, cp1Count: 6912, totalClaims: 26585 },
+    { month: 'Aug 25', cp1Rate: 26.2, cp1Count: 6975, totalClaims: 26622 },
+    { month: 'Sep 25', cp1Rate: 26.1, cp1Count: 6948, totalClaims: 26620 },
+    { month: 'Oct 25', cp1Rate: 26.3, cp1Count: 7010, totalClaims: 26654 },
+    { month: 'Nov 25', cp1Rate: 26.4, cp1Count: 7048, totalClaims: 26697 },
+    { month: 'Dec 25', cp1Rate: 26.5, cp1Count: 7078, totalClaims: 26709 },
+    { month: 'Jan 26', cp1Rate: parseFloat(CP1_DATA.cp1Rate), cp1Count: CP1_DATA.totals.yes, totalClaims: CP1_DATA.totals.grandTotal },
+  ];
 
   // Rear Ends - Texas Areas 101-110 | Loss Desc: IV R/E CV only
   const TEXAS_REAR_END_DATA = {
@@ -1436,19 +1394,19 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       .sort((a, b) => b.grandTotal - a.grandTotal)
       .slice(0, 8);
 
-    // Use dynamic financials from CSV if available, fallback to hardcoded
-    const dynamicFinancials = data.financials ? {
+    // Use dynamic financials from CSV
+    const dynamicFinancials = {
       byAge: data.financials.byAge,
-      byQueue: FINANCIAL_DATA.byQueue, // Keep hardcoded for now
+      byQueue: FINANCIAL_DATA.byQueue,
       byTypeGroup: data.financials.byTypeGroup.length > 0 ? data.financials.byTypeGroup : FINANCIAL_DATA.byTypeGroup,
       totals: {
         totalOpenReserves: data.financials.totalOpenReserves,
         totalLowEval: data.financials.totalLowEval,
         totalHighEval: data.financials.totalHighEval,
-        noEvalAmount: FINANCIAL_DATA.totals.noEvalAmount, // Keep hardcoded
+        noEvalAmount: 0,
         noEvalCount: data.financials.noEvalCount,
       }
-    } : FINANCIAL_DATA;
+    };
 
     // Age distribution for chart with financials
     const ageDistribution = dynamicFinancials.byAge.map(item => ({
@@ -2527,7 +2485,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           <div>
             <h2 className="text-lg sm:text-2xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-              As of January 5, 2026 • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
+              As of {data?.dataDate || 'Loading...'} • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
             </p>
             {/* Delta from previous period */}
             {data?.delta && (
@@ -4103,7 +4061,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               </h4>
               <div className="border rounded-lg p-4 bg-card">
                 <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={CP1_DATA.monthlyTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <AreaChart data={CP1_MONTHLY_TREND} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="cp1Gradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
