@@ -155,6 +155,38 @@ export interface CP1ByTypeGroup {
   cp1Rate: number;
 }
 
+// Multi-pack claim grouping - claims that share a common base (same incident)
+export interface MultiPackGroup {
+  baseClaimNumber: string;
+  packSize: number; // e.g., "2-pack", "3-pack"
+  claims: {
+    claimNumber: string;
+    claimant: string;
+    coverage: string;
+    days: number;
+    ageBucket: string;
+    typeGroup: string;
+    reserves: number;
+    lowEval: number;
+    highEval: number;
+  }[];
+  totalReserves: number;
+  totalLowEval: number;
+  totalHighEval: number;
+}
+
+export interface MultiPackSummary {
+  totalMultiPackGroups: number;
+  totalClaimsInPacks: number;
+  byPackSize: {
+    packSize: number;
+    groupCount: number;
+    claimCount: number;
+    reserves: number;
+  }[];
+  groups: MultiPackGroup[];
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
@@ -189,6 +221,7 @@ export interface OpenExposureData {
   knownTotals: KnownTotals;
   texasRearEnd: TexasRearEndData;
   rawClaims: RawClaimExport[]; // Raw data for export/validation
+  multiPackData: MultiPackSummary; // Multi-pack claim grouping
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -691,6 +724,84 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   });
   cp1ByTypeGroupArray.sort((a, b) => b.yes - a.yes);
   
+  // ============ MULTI-PACK GROUPING ============
+  // Group claims by their base claim number (first 11 chars of claim#)
+  // e.g., "39-0000430132" and "39-0000430145" share base "39-00004301"
+  const claimBaseMap = new Map<string, {
+    claimNumber: string;
+    claimant: string;
+    coverage: string;
+    days: number;
+    ageBucket: string;
+    typeGroup: string;
+    reserves: number;
+    lowEval: number;
+    highEval: number;
+  }[]>();
+  
+  for (const claim of rawClaimsExport) {
+    // Extract base claim number (first 11 characters: "39-00004301")
+    const base = claim.claimNumber.substring(0, 11);
+    if (!claimBaseMap.has(base)) {
+      claimBaseMap.set(base, []);
+    }
+    claimBaseMap.get(base)!.push({
+      claimNumber: claim.claimNumber,
+      claimant: claim.claimant,
+      coverage: claim.coverage,
+      days: claim.days,
+      ageBucket: claim.ageBucket,
+      typeGroup: claim.typeGroup,
+      reserves: claim.openReserves,
+      lowEval: claim.lowEval,
+      highEval: claim.highEval,
+    });
+  }
+  
+  // Build multi-pack groups (only groups with 2+ claims)
+  const multiPackGroups: MultiPackGroup[] = [];
+  claimBaseMap.forEach((claims, baseClaimNumber) => {
+    if (claims.length >= 2) {
+      const totalReserves = claims.reduce((sum, c) => sum + c.reserves, 0);
+      const totalLowEval = claims.reduce((sum, c) => sum + c.lowEval, 0);
+      const totalHighEval = claims.reduce((sum, c) => sum + c.highEval, 0);
+      multiPackGroups.push({
+        baseClaimNumber,
+        packSize: claims.length,
+        claims: claims.sort((a, b) => parseInt(a.claimant) - parseInt(b.claimant)),
+        totalReserves,
+        totalLowEval,
+        totalHighEval,
+      });
+    }
+  });
+  
+  // Sort by pack size (largest first) then by reserves
+  multiPackGroups.sort((a, b) => b.packSize - a.packSize || b.totalReserves - a.totalReserves);
+  
+  // Calculate summary by pack size
+  const packSizeMap = new Map<number, { groupCount: number; claimCount: number; reserves: number }>();
+  for (const group of multiPackGroups) {
+    if (!packSizeMap.has(group.packSize)) {
+      packSizeMap.set(group.packSize, { groupCount: 0, claimCount: 0, reserves: 0 });
+    }
+    const ps = packSizeMap.get(group.packSize)!;
+    ps.groupCount++;
+    ps.claimCount += group.claims.length;
+    ps.reserves += group.totalReserves;
+  }
+  
+  const byPackSize = Array.from(packSizeMap.entries())
+    .map(([packSize, data]) => ({ packSize, ...data }))
+    .sort((a, b) => b.packSize - a.packSize);
+  
+  const multiPackData: MultiPackSummary = {
+    totalMultiPackGroups: multiPackGroups.length,
+    totalClaimsInPacks: multiPackGroups.reduce((sum, g) => sum + g.claims.length, 0),
+    byPackSize,
+    groups: multiPackGroups,
+  };
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -718,6 +829,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     knownTotals,
     texasRearEnd,
     rawClaims: rawClaimsExport,
+    multiPackData,
   };
 }
 
