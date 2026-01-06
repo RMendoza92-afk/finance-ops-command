@@ -1426,18 +1426,30 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             'hsl(var(--success))'
     }));
 
-    // Type groups from data
+    // Type groups with correct counts - claims = unique claim#, exposures = rows
+    const typeGroupLabels: Record<string, string> = {
+      'ATR': 'ATR',
+      'LIT': 'Litigation',
+      'BI3': 'BI3',
+      'EBI': 'Early BI',
+      'COVG': 'Coverage',
+      'SPD': 'Special',
+      'LIM': 'Limits',
+      'COV': 'Coverage',
+    };
+    
+    // Use CSV data with unique claims for Claims, exposures for Exposures
     const typeGroups = data.typeGroupSummaries.length > 0 
       ? data.typeGroupSummaries.slice(0, 10).map(t => ({
-          typeGroup: t.typeGroup,
-          claims: t.grandTotal,
-          exposures: t.grandTotal, // Exposures = claims for now
+          typeGroup: typeGroupLabels[t.typeGroup] || t.typeGroup,
+          claims: t.uniqueClaims,
+          exposures: t.grandTotal,
         }))
       : [
-          { typeGroup: 'ATR', claims: KNOWN_TOTALS.atr.claims, exposures: KNOWN_TOTALS.atr.exposures },
-          { typeGroup: 'Litigation', claims: KNOWN_TOTALS.lit.claims, exposures: KNOWN_TOTALS.lit.exposures },
-          { typeGroup: 'BI3', claims: KNOWN_TOTALS.bi3.claims, exposures: KNOWN_TOTALS.bi3.exposures },
-          { typeGroup: 'Early BI', claims: KNOWN_TOTALS.earlyBI.claims, exposures: KNOWN_TOTALS.earlyBI.exposures },
+          { typeGroup: 'ATR', claims: 3987, exposures: 8349 },
+          { typeGroup: 'Litigation', claims: 3755, exposures: 6198 },
+          { typeGroup: 'BI3', claims: 2219, exposures: 4600 },
+          { typeGroup: 'Early BI', claims: 142, exposures: 360 },
         ];
 
     return {
