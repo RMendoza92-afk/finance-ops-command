@@ -725,8 +725,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   cp1ByTypeGroupArray.sort((a, b) => b.yes - a.yes);
   
   // ============ MULTI-PACK GROUPING ============
-  // Group claims by their base claim number (first 11 chars of claim#)
-  // e.g., "39-0000430132" and "39-0000430145" share base "39-00004301"
+  // Group claims by prefix + first 6 digits after prefix
+  // Format: XX-XXXXXX-XX where prefix is 2-3 chars, base is 6 digits, rest is exposure
+  // e.g., "39-0000430132" and "39-0000431432" share base "39-000043"
   const claimBaseMap = new Map<string, {
     claimNumber: string;
     claimant: string;
@@ -739,9 +740,15 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     highEval: number;
   }[]>();
   
+  const extractBaseClaim = (claimNum: string): string => {
+    const dashIdx = claimNum.indexOf('-');
+    if (dashIdx === -1) return claimNum.substring(0, 8);
+    // prefix + first 6 digits after dash = base claim
+    return claimNum.substring(0, dashIdx + 1 + 6);
+  };
+  
   for (const claim of rawClaimsExport) {
-    // Extract base claim number (first 11 characters: "39-00004301")
-    const base = claim.claimNumber.substring(0, 11);
+    const base = extractBaseClaim(claim.claimNumber);
     if (!claimBaseMap.has(base)) {
       claimBaseMap.set(base, []);
     }
