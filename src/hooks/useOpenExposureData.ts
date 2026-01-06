@@ -174,6 +174,14 @@ function getAgeBucketLabel(bucket: string): string {
   }
 }
 
+// Only include these coverage types for BI measurement
+const INCLUDED_COVERAGES = ['BI', 'UM', 'UI'];
+
+function isIncludedCoverage(coverage: string): boolean {
+  const trimmed = coverage?.trim().toUpperCase() || '';
+  return INCLUDED_COVERAGES.includes(trimmed);
+}
+
 // Process raw claims data - SINGLE SOURCE OF TRUTH
 function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' | 'dataDate'> {
   const phaseMap = new Map<string, Map<string, { age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; total: number }>>();
@@ -212,10 +220,14 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
     
+    const coverage = row['Coverage']?.trim() || 'Unknown';
+    
+    // FILTER: Only include BI, UM, UI coverages
+    if (!isIncludedCoverage(coverage)) continue;
+    
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
     const days = parseInt(row['Days'] || '0', 10) || 0;
     const ageBucket = getAgeBucket(days);
-    const coverage = row['Coverage']?.trim() || 'Unknown';
     
     // Parse financial data
     const reserves = parseCurrency(row['Open Reserves'] || '0');
@@ -504,7 +516,7 @@ export function useOpenExposureData() {
         
         const currentData = processRawClaims(parsed.data);
         
-        console.log('Processed data summary:', {
+        console.log('Processed data summary (BI/UM/UI only):', {
           totalClaims: currentData.totals.grandTotal,
           totalReserves: currentData.financials.totalOpenReserves,
           totalLowEval: currentData.financials.totalLowEval,
