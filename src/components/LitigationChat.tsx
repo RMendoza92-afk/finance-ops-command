@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare, LayoutDashboard, DollarSign, Clock, Shield, BarChart3, PieChart } from "lucide-react";
+import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare, LayoutDashboard, DollarSign, Clock, Shield, BarChart3, PieChart, Download } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData, LitigationMatter } from "@/hooks/useLitigationData";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
 import { DrilldownModal } from "@/components/DrilldownModal";
@@ -26,7 +27,7 @@ const CLAIM_ID_REGEX = /\b(M-\d{4,8}|\d{6,10}|CLM-\d{4,8}|[A-Z]{1,3}-\d{5,8})\b/
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/litigation-chat`;
 
 // Report categories organized by dashboard tab
-type ReportCategory = 'trending' | 'executive' | 'exposure' | 'inventory' | 'financials';
+type ReportCategory = 'trending' | 'executive' | 'exposure' | 'inventory' | 'exports';
 
 interface ReportOption {
   id: string;
@@ -160,33 +161,33 @@ const REPORT_CATEGORIES: Record<ReportCategory, { label: string; icon: React.Ele
       },
     ]
   },
-  financials: {
-    label: "Financials",
-    icon: DollarSign,
+  exports: {
+    label: "Exports",
+    icon: Download,
     reports: [
       { 
-        id: "total-reserves",
-        label: "Reserve Summary", 
-        query: "What are the total reserves? Break down by type group and coverage. Show any reserve adequacy concerns.",
-        icon: DollarSign,
-        color: "text-emerald-500",
-        description: "Total reserves and distribution"
+        id: "full-data-pdf",
+        label: "Full Data PDF", 
+        query: "EXPORT_PDF: Generate a comprehensive PDF report with portfolio summary, key metrics, risk analysis, and top claims.",
+        icon: FileText,
+        color: "text-destructive",
+        description: "Complete portfolio PDF report"
       },
       { 
-        id: "indemnity-paid",
-        label: "Indemnity Analysis", 
-        query: "Summarize indemnity payments: total paid MTD, YTD, average payment, and top 10 largest payments this month.",
-        icon: TrendingUp,
-        color: "text-primary",
-        description: "Indemnity payment analysis"
+        id: "full-data-excel",
+        label: "Full Data Excel", 
+        query: "EXPORT_EXCEL: Generate a comprehensive Excel workbook with all claims data, summary metrics, and breakdowns by category.",
+        icon: FileSpreadsheet,
+        color: "text-success",
+        description: "Complete data Excel export"
       },
       { 
-        id: "expense-ratio",
-        label: "Expense Ratios", 
-        query: "Calculate expense ratios: expense vs indemnity by category. Flag any categories with expense ratio over 30%.",
-        icon: PieChart,
-        color: "text-amber-500",
-        description: "Expense to indemnity ratio analysis"
+        id: "claims-list",
+        label: "Claims List", 
+        query: "List all open claims with their key details: claim ID, claimant, coverage, team, adjuster, reserves, and pain level. Format as a data table.",
+        icon: BarChart3,
+        color: "text-blue-500",
+        description: "Detailed claims listing"
       },
     ]
   },
@@ -226,6 +227,7 @@ export function LitigationChat() {
   
   const { data: litigationData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
+  const { generatePDF, generateExcel } = useExportData();
 
   // Build a lookup map for quick claim resolution
   const claimLookup = useMemo(() => {
@@ -884,6 +886,88 @@ export function LitigationChat() {
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    
+    // Handle direct export commands
+    if (messageText.startsWith('EXPORT_PDF:') || messageText.startsWith('EXPORT_EXCEL:')) {
+      const isExcel = messageText.startsWith('EXPORT_EXCEL:');
+      try {
+        const totalReserves = openExposureContext?.knownTotals?.totalOpenExposures || dataContext?.totalReserves || 0;
+        const cp1Rate = openExposureContext?.cp1Data?.cp1Rate || '0';
+        const cp1Total = openExposureContext?.cp1Data?.total || 0;
+        
+        const exportData: ExportableData = {
+          title: isExcel ? 'Litigation Portfolio Data Export' : 'Litigation Portfolio Executive Summary',
+          subtitle: 'Comprehensive claims and exposure analysis',
+          timestamp: new Date().toLocaleString(),
+          summary: {
+            'Total Matters': dataContext?.totalMatters?.toLocaleString() || '0',
+            'Total Reserves': '$' + (totalReserves / 1000000).toFixed(1) + 'M',
+            'CP1 Rate': cp1Rate + '%',
+            'CWP Count': dataContext?.totalCWP?.toLocaleString() || '0',
+            'CWN Count': dataContext?.totalCWN?.toLocaleString() || '0',
+          },
+          bulletInsights: [
+            `Portfolio contains ${dataContext?.totalMatters?.toLocaleString() || 0} total matters`,
+            `Total reserves of $${(totalReserves / 1000000).toFixed(1)}M across all type groups`,
+            `CP1 rate at ${cp1Rate}% (${cp1Total.toLocaleString()} claims)`,
+            `${dataContext?.evaluationStatus?.withoutEvaluation || 0} claims without evaluation assigned`,
+          ],
+          columns: ['Claim', 'Claimant', 'Coverage', 'Team', 'Adjuster', 'Status', 'Indemnity', 'Pain Level'],
+          rows: (litigationData || []).slice(0, 500).map(m => [
+            m.claim || m.uniqueRecord,
+            m.claimant,
+            m.coverage || m.expCategory,
+            m.team,
+            m.adjusterName,
+            m.cwpCwn,
+            '$' + m.indemnitiesAmount.toLocaleString(),
+            m.endPainLvl.toString()
+          ]),
+          rawClaimData: isExcel ? [{
+            sheetName: 'All Claims',
+            columns: ['Claim', 'Unique Record', 'Claimant', 'Coverage', 'Category', 'Team', 'Dept', 'Adjuster', 'Status', 'Indemnity', 'Total Amount', 'Net Amount', 'Start Pain', 'End Pain', 'Payment Date'],
+            rows: (litigationData || []).map(m => [
+              m.claim,
+              m.uniqueRecord,
+              m.claimant,
+              m.coverage,
+              m.expCategory,
+              m.team,
+              m.dept,
+              m.adjusterName,
+              m.cwpCwn,
+              m.indemnitiesAmount,
+              m.totalAmount,
+              m.netAmount,
+              m.startPainLvl,
+              m.endPainLvl,
+              m.paymentDate || ''
+            ])
+          }] : undefined
+        };
+
+        if (isExcel) {
+          generateExcel(exportData);
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: `✅ **Excel Export Complete**\n\nI've generated a comprehensive Excel workbook with:\n- **Executive Summary** sheet with key metrics\n- **All Claims** sheet with ${(litigationData || []).length.toLocaleString()} records\n\nThe file has been downloaded to your device.` 
+          }]);
+        } else {
+          await generatePDF(exportData);
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: `✅ **PDF Export Complete**\n\nI've generated an executive PDF report with:\n- Portfolio summary metrics\n- Key findings and insights\n- Top 500 claims data table\n\nThe file has been downloaded to your device.` 
+          }]);
+        }
+        setIsLoading(false);
+        return;
+      } catch (error) {
+        console.error('Export error:', error);
+        toast.error('Failed to generate export');
+        setIsLoading(false);
+        return;
+      }
+    }
     
     let assistantContent = "";
     
