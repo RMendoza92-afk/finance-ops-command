@@ -3346,7 +3346,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     <th className="text-left py-2 px-3">Area</th>
                     <th className="text-left py-2 px-3">Age</th>
                     <th className="text-right py-2 px-3">Reserves</th>
-                    <th className="text-left py-2 px-3">Assigned</th>
                     <th className="text-left py-2 px-3">Status</th>
                     <th className="text-left py-2 px-3">Actions</th>
                   </tr>
@@ -3362,7 +3361,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                       <td className="py-1.5 px-3 text-right text-primary font-semibold">
                         ${Number(review.reserves).toLocaleString()}
                       </td>
-                      <td className="py-1.5 px-3">{review.assigned_to}</td>
                       <td className="py-1.5 px-3">
                         {review.status === 'assigned' && <Badge className="bg-blue-500 text-xs">Assigned</Badge>}
                         {review.status === 'in_review' && <Badge className="bg-amber-500 text-xs">In Review</Badge>}
