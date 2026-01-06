@@ -741,10 +741,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   }[]>();
   
   const extractBaseClaim = (claimNum: string): string => {
-    const dashIdx = claimNum.indexOf('-');
-    if (dashIdx === -1) return claimNum.substring(0, 8);
-    // prefix + first 6 digits after dash = base claim
-    return claimNum.substring(0, dashIdx + 1 + 6);
+    // Base claim = everything except last 2 digits (exposure number)
+    // e.g., "39-0000430132" -> base "39-00004301", exposure "32"
+    if (claimNum.length < 4) return claimNum;
+    return claimNum.slice(0, -2);
   };
   
   for (const claim of rawClaimsExport) {
