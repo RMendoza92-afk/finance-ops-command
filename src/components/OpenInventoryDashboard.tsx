@@ -3,6 +3,7 @@ import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data } fro
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
+import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -3086,7 +3087,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Deploy Directive */}
           <div className="bg-muted/30 rounded-lg border border-border p-3 sm:p-4">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Deploy Review</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase">Deploy Review</h4>
+              <ReviewerSettings />
+            </div>
             <RadioGroup 
               value={selectedClaimFilter} 
               onValueChange={(val) => {
