@@ -3434,66 +3434,62 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           </div>
         </div>
 
-        {/* LOR Offer Tracker */}
+        {/* LOR Intervention Tracker */}
         <div className="bg-muted/20 rounded-lg border border-primary/30 p-3 sm:p-4 mb-3 sm:mb-4">
           <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <h4 className="text-[10px] sm:text-xs font-semibold text-primary uppercase">LOR Intervention Offers</h4>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">14-day deadline tracking</span>
+            <h4 className="text-[10px] sm:text-xs font-semibold text-primary uppercase">LOR Intervention</h4>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">14-day deadline</span>
           </div>
           
-          {/* LOR Offers Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 px-2 text-muted-foreground font-medium">Claim #</th>
-                  <th className="text-right py-2 px-2 text-muted-foreground font-medium">Offer</th>
-                  <th className="text-center py-2 px-2 text-muted-foreground font-medium">Extended</th>
-                  <th className="text-center py-2 px-2 text-muted-foreground font-medium">Expires</th>
-                  <th className="text-center py-2 px-2 text-muted-foreground font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Active LOR Offers */}
-                {[
-                  { claim: '65-0000558113', offer: 7500, extended: '12/30/25', expires: '01/14/26', status: 'pending' }
-                ].map((lorOffer) => {
-                  const expireDate = new Date('2026-01-14');
-                  const today = new Date();
-                  const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                  const isExpired = daysLeft < 0;
-                  const isUrgent = daysLeft <= 3 && daysLeft >= 0;
-                  
-                  return (
-                    <tr key={lorOffer.claim} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-2 px-2 font-mono font-medium text-foreground">{lorOffer.claim}</td>
-                      <td className="py-2 px-2 text-right font-semibold text-primary">${lorOffer.offer.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-center text-muted-foreground">{lorOffer.extended}</td>
-                      <td className="py-2 px-2 text-center text-muted-foreground">{lorOffer.expires}</td>
-                      <td className="py-2 px-2 text-center">
-                        {isExpired ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-destructive/20 text-destructive font-medium">EXPIRED</span>
-                        ) : isUrgent ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-warning/20 text-warning font-medium">{daysLeft}d LEFT</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-muted text-muted-foreground font-medium">{daysLeft}d LEFT</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* LOR Offers */}
+          <div className="space-y-2">
+            {[
+              { 
+                claim: '65-0000558113', 
+                accident: 'Lane Change / Side Swipe',
+                area: 'Houston',
+                offer: 7500, 
+                extended: '12/30/25', 
+                expires: '01/14/26'
+              }
+            ].map((lorOffer) => {
+              const expireDate = new Date('2026-01-14');
+              const today = new Date();
+              const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const isExpired = daysLeft < 0;
+              const isUrgent = daysLeft <= 3 && daysLeft >= 0;
+              
+              return (
+                <div key={lorOffer.claim} className="p-3 rounded-lg border border-border bg-card">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="font-mono text-sm font-semibold text-foreground">{lorOffer.claim}</p>
+                      <p className="text-xs text-muted-foreground">{lorOffer.accident} • {lorOffer.area}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-primary">${lorOffer.offer.toLocaleString()}</p>
+                      {isExpired ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-destructive/20 text-destructive font-medium">EXPIRED</span>
+                      ) : isUrgent ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-warning/20 text-warning font-medium">{daysLeft}d LEFT</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-success/20 text-success font-medium">{daysLeft}d LEFT</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                    <span>Extended: {lorOffer.extended}</span>
+                    <span>Expires: {lorOffer.expires}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           
           {/* Summary */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
-            <div className="flex gap-4 text-[10px] sm:text-xs">
-              <span className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">1</span></span>
-              <span className="text-muted-foreground">Accepted: <span className="font-semibold text-success">0</span></span>
-              <span className="text-muted-foreground">Expired: <span className="font-semibold text-destructive">0</span></span>
-            </div>
-            <span className="text-[10px] text-muted-foreground">Offers: $5K / $6K / $7.5K</span>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50 text-[10px] sm:text-xs">
+            <span className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">1</span></span>
+            <span className="text-muted-foreground">Offer tiers: $5K / $6K / $7.5K</span>
           </div>
         </div>
 
