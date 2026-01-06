@@ -879,16 +879,16 @@ export function useExportData() {
 
     y += 5; // Reduced gap
 
-    // MANAGER ACCOUNTABILITY - Files & Money - Compact rows
+    // MANAGER ACCOUNTABILITY - High Eval Exposure - Compact rows
     if (breakdowns.highEvalAdjusters.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...C.gold);
-      doc.text('MANAGER ACCOUNTABILITY - FILES & MONEY ON HAND', m.l, y);
+      doc.text('MANAGER ACCOUNTABILITY - HIGH EVALUATION EXPOSURE', m.l, y);
       y += 4;
 
-      // Full width table for manager data
-      const adjColW = [cw * 0.05, cw * 0.30, cw * 0.20, cw * 0.22, cw * 0.23];
+      // Simplified 3-column table: Rank, Name, High Eval Amount
+      const adjColW = [cw * 0.08, cw * 0.52, cw * 0.40];
       
       doc.setFillColor(...C.header);
       doc.rect(m.l, y, cw, 5, 'F');
@@ -896,9 +896,7 @@ export function useExportData() {
       doc.setTextColor(...C.muted);
       doc.text('RANK', m.l + 3, y + 3.5);
       doc.text('MANAGER NAME', m.l + adjColW[0] + 3, y + 3.5);
-      doc.text('OPEN FILES', m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
-      doc.text('TOTAL RESERVES', m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3.5);
-      doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3.5);
+      doc.text('HIGH EVAL EXPOSURE', m.l + adjColW[0] + adjColW[1] + 3, y + 3.5);
       y += 5;
 
       doc.setFont('helvetica', 'normal');
@@ -915,21 +913,11 @@ export function useExportData() {
         
         // Adjuster name
         doc.setTextColor(...C.offWhite);
-        doc.text(sanitize(adj.name).substring(0, 28), m.l + adjColW[0] + 3, y + 3);
+        doc.text(sanitize(adj.name).substring(0, 40), m.l + adjColW[0] + 3, y + 3);
         
-        // Open files
-        doc.setTextColor(...C.white);
-        const fileCount = adj.files ? String(adj.files) : '-';
-        doc.text(fileCount, m.l + adjColW[0] + adjColW[1] + 3, y + 3);
-        
-        // Total reserves
-        doc.setTextColor(...C.amber);
-        const reserves = adj.reserves ? adj.reserves : '-';
-        doc.text(reserves, m.l + adjColW[0] + adjColW[1] + adjColW[2] + 3, y + 3);
-        
-        // High eval exposure
+        // High eval exposure (use value which contains the formatted amount)
         doc.setTextColor(...C.green);
-        doc.text(adj.value, m.l + adjColW[0] + adjColW[1] + adjColW[2] + adjColW[3] + 3, y + 3);
+        doc.text(adj.value, m.l + adjColW[0] + adjColW[1] + 3, y + 3);
         
         y += 4;
       });

@@ -2349,7 +2349,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     byAge: FINANCIAL_DATA.byAge,
                     byQueue: FINANCIAL_DATA.byQueue,
                     byTypeGroup: FINANCIAL_DATA.byTypeGroup,
-                    highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ name: a.name, value: String(a.value) })),
+                    highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ 
+                      name: a.name, 
+                      value: String(a.value),
+                    })),
                     quarterlyData: EXPERT_QUARTERLY_DATA,
                   }
                 );
