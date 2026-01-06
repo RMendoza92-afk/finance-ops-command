@@ -41,8 +41,9 @@ serve(async (req: Request): Promise<Response> => {
       `Action needed: Review flagged inventory ASAP.\n` +
       `— FLI Claims Dashboard`;
 
-    // Format phone number (ensure it has country code)
+    // Format phone numbers (ensure they have country code)
     const formattedTo = to.startsWith("+") ? to : `+1${to}`;
+    const formattedFrom = twilioPhone.startsWith("+") ? twilioPhone : `+1${twilioPhone}`;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     
@@ -54,7 +55,7 @@ serve(async (req: Request): Promise<Response> => {
       },
       body: new URLSearchParams({
         To: formattedTo,
-        From: twilioPhone,
+        From: formattedFrom,
         Body: message,
       }),
     });
