@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { useStateBILimits } from "@/hooks/useStateBILimits";
+import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBILimits";
 import { overLimitPayments2025, getOverLimitByState, overLimitTotals } from "@/data/overLimitPayments2025";
+import { useLitigationData } from "@/hooks/useLitigationData";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -12,7 +13,8 @@ import {
   FileText,
   FileSpreadsheet,
   Calendar,
-  Eye
+  Eye,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +29,7 @@ import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function formatCurrency(value: number): string {
   if (value >= 1000000) {
@@ -44,35 +47,57 @@ function formatCurrencyFull(value: number): string {
 
 export function OverspendTracker() {
   const { limits, loading: limitsLoading } = useStateBILimits();
+  const { data: litigationData, loading: dataLoading } = useLitigationData();
   const [showDetails, setShowDetails] = useState(false);
   const [showClaims, setShowClaims] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("ytd");
   const { generatePDF, generateExcel } = useExportData();
+
+  // Calculate CWP threshold metrics from litigation data
+  const cwpMetrics = useMemo(() => {
+    if (!litigationData.length || !limits.length) return null;
+    return calculateOverspendMetrics(litigationData, limits);
+  }, [litigationData, limits]);
 
   // Use actual YTD 2025 over-limit data
   const stateMetrics = useMemo(() => {
     return getOverLimitByState(overLimitPayments2025);
   }, []);
 
-  // Prepare export data
+  // Combined totals
+  const combinedTotals = useMemo(() => {
+    const cwpOver = cwpMetrics?.overLimitAmount || 0;
+    const ytdOver = overLimitTotals.totalOverLimit;
+    return {
+      totalOverLimit: cwpOver + ytdOver,
+      cwpOverLimit: cwpOver,
+      ytdOverLimit: ytdOver,
+      cwpCount: cwpMetrics?.overLimitClosures || 0,
+      ytdCount: overLimitTotals.claimCount,
+      totalCount: (cwpMetrics?.overLimitClosures || 0) + overLimitTotals.claimCount,
+    };
+  }, [cwpMetrics]);
+
+  // Prepare export data (includes both CWP and YTD)
   const getExportData = (): ExportableData => {
     return {
-      title: 'YTD 2025 BI Over-Limit Payments Report',
-      subtitle: 'Payments exceeding state per-person BI policy limits',
+      title: 'BI Over-Limit Payments Report',
+      subtitle: 'CWP Threshold Analysis + YTD 2025 Actual Over-Limit Payments',
       timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
       summary: {
-        'Total Claims': overLimitTotals.claimCount.toLocaleString(),
-        'Total Payments': formatCurrencyFull(overLimitTotals.totalPayments),
-        'Total Over Limit': formatCurrencyFull(overLimitTotals.totalOverLimit),
-        'States Impacted': stateMetrics.length.toString(),
+        'Total Over-Limit Claims': combinedTotals.totalCount.toLocaleString(),
+        'Total Overspend': formatCurrencyFull(combinedTotals.totalOverLimit),
+        'CWP Threshold Overspend': formatCurrencyFull(combinedTotals.cwpOverLimit),
+        'YTD 2025 Overspend': formatCurrencyFull(combinedTotals.ytdOverLimit),
       },
       bulletInsights: [
-        `${overLimitTotals.claimCount} claims paid above state BI limits in 2025 YTD`,
-        `Total overspend of ${formatCurrency(overLimitTotals.totalOverLimit)} across ${stateMetrics.length} states`,
+        `Combined: ${combinedTotals.totalCount} claims totaling ${formatCurrency(combinedTotals.totalOverLimit)} above state BI limits`,
+        `CWP Threshold: ${combinedTotals.cwpCount} matters at ${formatCurrency(combinedTotals.cwpOverLimit)} overspend`,
+        `YTD 2025: ${combinedTotals.ytdCount} claims at ${formatCurrency(combinedTotals.ytdOverLimit)} overspend`,
         stateMetrics.length > 0 
-          ? `Highest exposure: ${stateMetrics[0].state} with ${formatCurrency(stateMetrics[0].totalOverLimit)} over-limit`
-          : 'No state-level overspend detected',
-        `Average over-limit per claim: ${formatCurrency(overLimitTotals.totalOverLimit / overLimitTotals.claimCount)}`,
-      ],
+          ? `Highest YTD exposure: ${stateMetrics[0].state} with ${formatCurrency(stateMetrics[0].totalOverLimit)}`
+          : '',
+      ].filter(Boolean),
       columns: ['State', 'Claims', 'Total Payment', 'Over Limit Amount', 'Avg Over-Limit'],
       rows: stateMetrics.map(s => [
         s.state,
@@ -81,18 +106,35 @@ export function OverspendTracker() {
         formatCurrencyFull(s.totalOverLimit),
         formatCurrencyFull(s.totalOverLimit / s.count),
       ]),
-      rawClaimData: [{
-        sheetName: 'Over-Limit Claims Detail',
-        columns: ['Date', 'Claim', 'State', 'Coverage Limit', 'Payment', 'Over Limit'],
-        rows: overLimitPayments2025.map(p => [
-          p.date,
-          p.claim,
-          p.state,
-          formatCurrencyFull(p.coverageLimit),
-          formatCurrencyFull(p.payment),
-          formatCurrencyFull(p.overLimit),
-        ]),
-      }],
+      rawClaimData: [
+        // CWP threshold data
+        ...(cwpMetrics?.byState.length ? [{
+          sheetName: 'CWP Threshold By State',
+          columns: ['State', 'Closures', 'Net Closures', 'Over Limit', 'Trigger Alerts', 'State Limit', 'Over Limit Amount'],
+          rows: cwpMetrics.byState.map(s => [
+            s.state,
+            s.closures,
+            s.netClosures,
+            s.overLimit,
+            s.triggerAlerts,
+            formatCurrencyFull(s.stateLimit),
+            formatCurrencyFull(s.overLimitAmount),
+          ]),
+        }] : []),
+        // YTD claims detail
+        {
+          sheetName: 'YTD 2025 Over-Limit Claims',
+          columns: ['Date', 'Claim', 'State', 'Coverage Limit', 'Payment', 'Over Limit'],
+          rows: overLimitPayments2025.map(p => [
+            p.date,
+            p.claim,
+            p.state,
+            formatCurrencyFull(p.coverageLimit),
+            formatCurrencyFull(p.payment),
+            formatCurrencyFull(p.overLimit),
+          ]),
+        }
+      ],
     };
   };
 
@@ -116,7 +158,7 @@ export function OverspendTracker() {
     }
   };
 
-  if (limitsLoading) {
+  if (limitsLoading || dataLoading) {
     return (
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="animate-pulse space-y-4">
@@ -133,14 +175,14 @@ export function OverspendTracker() {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-              YTD 2025 BI Over-Limit Payments
+              BI Over-Limit Tracker
             </h3>
             <Badge variant="destructive" className="text-[10px]">
-              {overLimitTotals.claimCount} Claims
+              {combinedTotals.totalCount} Total Claims
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Payments exceeding state per-person BI policy limits • Actual claim data
+            CWP threshold analysis + YTD 2025 actual over-limit payments
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -171,148 +213,214 @@ export function OverspendTracker() {
             {showDetails ? (
               <>Hide <ChevronUp className="ml-1 h-3 w-3" /></>
             ) : (
-              <>By State <ChevronDown className="ml-1 h-3 w-3" /></>
+              <>Details <ChevronDown className="ml-1 h-3 w-3" /></>
             )}
           </Button>
         </div>
       </div>
 
-      {/* Summary KPIs */}
+      {/* Combined Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4 text-destructive" />
-            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Over-Limit Claims</span>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-destructive">{overLimitTotals.claimCount}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">YTD 2025</p>
-        </div>
-
-        <div className="rounded-lg border border-border bg-muted/20 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Total Paid</span>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{formatCurrency(overLimitTotals.totalPayments)}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Gross payments</p>
-        </div>
-
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
           <div className="flex items-center gap-2 mb-1">
             <AlertTriangle className="h-4 w-4 text-destructive" />
             <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Total Overspend</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(overLimitTotals.totalOverLimit)}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Above policy limits</p>
+          <p className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(combinedTotals.totalOverLimit)}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">{combinedTotals.totalCount} claims combined</p>
+        </div>
+
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Activity className="h-4 w-4 text-amber-500" />
+            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">CWP Threshold</span>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-amber-600">{formatCurrency(combinedTotals.cwpOverLimit)}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">{combinedTotals.cwpCount} matters</p>
+        </div>
+
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-destructive" />
+            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">YTD 2025</span>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(combinedTotals.ytdOverLimit)}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">{combinedTotals.ytdCount} claims</p>
         </div>
 
         <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-4 w-4 text-warning" />
-            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">States</span>
+            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">80% Triggers</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-warning">{stateMetrics.length}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">With over-limit claims</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">{cwpMetrics?.triggerAlerts || 0}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Approaching limits</p>
         </div>
       </div>
 
-      {/* State Summary Table */}
-      {showDetails && stateMetrics.length > 0 && (
-        <div className="space-y-3">
-          <div className="border border-border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="text-xs">State</TableHead>
-                  <TableHead className="text-xs text-right">Claims</TableHead>
-                  <TableHead className="text-xs text-right">Total Payment</TableHead>
-                  <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
-                  <TableHead className="text-xs text-right">Avg Over-Limit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stateMetrics.map((state) => (
-                  <TableRow key={state.state} className="text-xs">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {state.state}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{state.count}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(state.totalPayment)}</TableCell>
-                    <TableCell className="text-right text-destructive font-medium">
-                      {formatCurrency(state.totalOverLimit)}
+      {/* Detailed Views */}
+      {showDetails && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2 mb-3">
+            <TabsTrigger value="ytd" className="text-xs">
+              YTD 2025 Over-Limit ({overLimitTotals.claimCount})
+            </TabsTrigger>
+            <TabsTrigger value="cwp" className="text-xs">
+              CWP Threshold ({cwpMetrics?.overLimitClosures || 0})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* YTD 2025 Tab */}
+          <TabsContent value="ytd" className="space-y-3">
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-xs">State</TableHead>
+                    <TableHead className="text-xs text-right">Claims</TableHead>
+                    <TableHead className="text-xs text-right">Total Payment</TableHead>
+                    <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
+                    <TableHead className="text-xs text-right">Avg Over-Limit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stateMetrics.map((state) => (
+                    <TableRow key={state.state} className="text-xs">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          {state.state}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{state.count}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(state.totalPayment)}</TableCell>
+                      <TableCell className="text-right text-destructive font-medium">
+                        {formatCurrency(state.totalOverLimit)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(state.totalOverLimit / state.count)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold text-xs">
+                    <TableCell>TOTAL</TableCell>
+                    <TableCell className="text-right">{overLimitTotals.claimCount}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(overLimitTotals.totalPayments)}</TableCell>
+                    <TableCell className="text-right text-destructive">
+                      {formatCurrency(overLimitTotals.totalOverLimit)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {formatCurrency(state.totalOverLimit / state.count)}
+                      {formatCurrency(overLimitTotals.totalOverLimit / overLimitTotals.claimCount)}
                     </TableCell>
                   </TableRow>
-                ))}
-                {/* Totals row */}
-                <TableRow className="bg-muted/50 font-semibold text-xs">
-                  <TableCell>TOTAL</TableCell>
-                  <TableCell className="text-right">{overLimitTotals.claimCount}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(overLimitTotals.totalPayments)}</TableCell>
-                  <TableCell className="text-right text-destructive">
-                    {formatCurrency(overLimitTotals.totalOverLimit)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {formatCurrency(overLimitTotals.totalOverLimit / overLimitTotals.claimCount)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+                </TableBody>
+              </Table>
+            </div>
 
-          {/* Toggle claims detail */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowClaims(!showClaims)}
-            className="text-xs w-full"
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            {showClaims ? 'Hide' : 'View'} All {overLimitTotals.claimCount} Claims
-          </Button>
-        </div>
-      )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowClaims(!showClaims)}
+              className="text-xs w-full"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              {showClaims ? 'Hide' : 'View'} All {overLimitTotals.claimCount} Claims
+            </Button>
 
-      {/* Individual Claims Table */}
-      {showDetails && showClaims && (
-        <div className="border border-border rounded-lg overflow-hidden mt-3 max-h-[400px] overflow-y-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-muted z-10">
-              <TableRow>
-                <TableHead className="text-xs">Date</TableHead>
-                <TableHead className="text-xs">Claim</TableHead>
-                <TableHead className="text-xs">State</TableHead>
-                <TableHead className="text-xs text-right">Limit</TableHead>
-                <TableHead className="text-xs text-right">Payment</TableHead>
-                <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overLimitPayments2025.map((p, idx) => (
-                <TableRow key={`${p.claim}-${idx}`} className="text-xs">
-                  <TableCell className="font-mono text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {p.date}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono font-medium">{p.claim}</TableCell>
-                  <TableCell>{p.state}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(p.coverageLimit)}</TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(p.payment)}</TableCell>
-                  <TableCell className="text-right text-destructive font-medium">
-                    {formatCurrency(p.overLimit)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+            {showClaims && (
+              <div className="border border-border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-muted z-10">
+                    <TableRow>
+                      <TableHead className="text-xs">Date</TableHead>
+                      <TableHead className="text-xs">Claim</TableHead>
+                      <TableHead className="text-xs">State</TableHead>
+                      <TableHead className="text-xs text-right">Limit</TableHead>
+                      <TableHead className="text-xs text-right">Payment</TableHead>
+                      <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {overLimitPayments2025.map((p, idx) => (
+                      <TableRow key={`${p.claim}-${idx}`} className="text-xs">
+                        <TableCell className="font-mono text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {p.date}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono font-medium">{p.claim}</TableCell>
+                        <TableCell>{p.state}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(p.coverageLimit)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(p.payment)}</TableCell>
+                        <TableCell className="text-right text-destructive font-medium">
+                          {formatCurrency(p.overLimit)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* CWP Threshold Tab */}
+          <TabsContent value="cwp" className="space-y-3">
+            {cwpMetrics && cwpMetrics.byState.length > 0 ? (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-xs">State</TableHead>
+                      <TableHead className="text-xs text-right">Closures</TableHead>
+                      <TableHead className="text-xs text-right">Net</TableHead>
+                      <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
+                      <TableHead className="text-xs text-right text-warning">80% Triggers</TableHead>
+                      <TableHead className="text-xs text-right">State Limit</TableHead>
+                      <TableHead className="text-xs text-right text-destructive">Overspend</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cwpMetrics.byState.map((state) => (
+                      <TableRow key={state.state} className="text-xs">
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {state.state}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{state.closures}</TableCell>
+                        <TableCell className="text-right text-green-600">{state.netClosures}</TableCell>
+                        <TableCell className="text-right text-destructive font-medium">{state.overLimit}</TableCell>
+                        <TableCell className="text-right text-warning">{state.triggerAlerts}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(state.stateLimit)}</TableCell>
+                        <TableCell className="text-right text-destructive font-medium">
+                          {formatCurrency(state.overLimitAmount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold text-xs">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-right">{cwpMetrics.totalClosures}</TableCell>
+                      <TableCell className="text-right text-green-600">{cwpMetrics.netClosures}</TableCell>
+                      <TableCell className="text-right text-destructive">{cwpMetrics.overLimitClosures}</TableCell>
+                      <TableCell className="text-right text-warning">{cwpMetrics.triggerAlerts}</TableCell>
+                      <TableCell className="text-right">—</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        {formatCurrency(cwpMetrics.overLimitAmount)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                No CWP threshold violations detected
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
