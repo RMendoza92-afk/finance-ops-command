@@ -4,12 +4,14 @@ import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBIL
 import { 
   DollarSign, 
   TrendingUp, 
-  TrendingDown, 
   AlertTriangle, 
   CheckCircle2, 
   MapPin,
   ChevronDown,
-  ChevronUp 
+  ChevronUp,
+  FileText,
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useExportData, ExportableData } from "@/hooks/useExportData";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 function formatCurrency(value: number): string {
   if (value >= 1000000) {
@@ -32,14 +37,73 @@ function formatCurrency(value: number): string {
 }
 
 export function OverspendTracker() {
-  const { data: matters, loading: mattersLoading } = useLitigationData();
+  const { data: matters, loading: mattersLoading, dataSource } = useLitigationData();
   const { limits, loading: limitsLoading } = useStateBILimits();
   const [showDetails, setShowDetails] = useState(false);
+  const { generatePDF, generateExcel } = useExportData();
 
   const metrics = useMemo(() => {
     if (!matters.length || !limits.length) return null;
     return calculateOverspendMetrics(matters, limits);
   }, [matters, limits]);
+
+  // Prepare export data
+  const getExportData = (): ExportableData | null => {
+    if (!metrics) return null;
+    
+    return {
+      title: 'State BI Limit Overspend Report',
+      subtitle: 'Closed matters vs 2025 per-person state minimums with 80% trigger authority',
+      timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+      summary: {
+        'Total Closures': metrics.totalClosures.toLocaleString(),
+        'Net Closures': `${metrics.netClosures} (${((metrics.netClosures / metrics.totalClosures) * 100).toFixed(1)}%)`,
+        'Over Limit': `${metrics.overLimitClosures} (${((metrics.overLimitClosures / metrics.totalClosures) * 100).toFixed(1)}%)`,
+        'Trigger Alerts': metrics.triggerAlerts.toLocaleString(),
+        'Total Overspend': formatCurrency(metrics.overLimitAmount),
+      },
+      bulletInsights: [
+        `${metrics.netClosures} closures (${((metrics.netClosures / metrics.totalClosures) * 100).toFixed(1)}%) settled within state BI limits`,
+        `${metrics.overLimitClosures} closures exceeded state limits, totaling ${formatCurrency(metrics.overLimitAmount)} in overspend`,
+        `${metrics.triggerAlerts} matters at 80%+ threshold requiring executive authority`,
+        metrics.byState.length > 0 
+          ? `Highest overspend: ${metrics.byState[0].state} with ${metrics.byState[0].overLimit} over-limit closures`
+          : 'No state-level overspend detected',
+      ],
+      columns: ['State', 'BI Limit', 'Total Closures', 'Net Closures', 'Over Limit', 'Trigger Alerts', 'Overspend Amount'],
+      rows: metrics.byState.map(s => [
+        s.state,
+        formatCurrency(s.stateLimit),
+        s.closures,
+        s.netClosures,
+        s.overLimit,
+        s.triggerAlerts,
+        s.overLimitAmount > 0 ? formatCurrency(s.overLimitAmount) : '—',
+      ]),
+    };
+  };
+
+  const handleExportPDF = async () => {
+    const exportData = getExportData();
+    if (!exportData) return;
+    try {
+      await generatePDF(exportData);
+      toast.success('PDF exported successfully');
+    } catch (err) {
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const handleExportExcel = () => {
+    const exportData = getExportData();
+    if (!exportData) return;
+    try {
+      generateExcel(exportData);
+      toast.success('Excel exported successfully');
+    } catch (err) {
+      toast.error('Failed to export Excel');
+    }
+  };
 
   if (mattersLoading || limitsLoading) {
     return (
@@ -70,27 +134,50 @@ export function OverspendTracker() {
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
             State BI Limit Overspend Tracker
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
             Closed matters vs 2025 per-person state minimums • 80% trigger authority
+            <span className="ml-2 text-muted-foreground/60">
+              (Source: {dataSource === 'csv' ? 'CSV' : 'Database'})
+            </span>
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowDetails(!showDetails)}
-          className="text-xs"
-        >
-          {showDetails ? (
-            <>Hide Details <ChevronUp className="ml-1 h-3 w-3" /></>
-          ) : (
-            <>By State <ChevronDown className="ml-1 h-3 w-3" /></>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPDF}
+            className="text-xs h-7 px-2"
+          >
+            <FileText className="h-3 w-3 mr-1" />
+            PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="text-xs h-7 px-2"
+          >
+            <FileSpreadsheet className="h-3 w-3 mr-1" />
+            Excel
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-xs h-7"
+          >
+            {showDetails ? (
+              <>Hide <ChevronUp className="ml-1 h-3 w-3" /></>
+            ) : (
+              <>By State <ChevronDown className="ml-1 h-3 w-3" /></>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Summary KPIs */}
@@ -148,7 +235,7 @@ export function OverspendTracker() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {metrics.byState.slice(0, 15).map((state) => (
+              {metrics.byState.map((state) => (
                 <TableRow key={state.state} className="text-xs">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1.5">
@@ -168,11 +255,6 @@ export function OverspendTracker() {
               ))}
             </TableBody>
           </Table>
-          {metrics.byState.length > 15 && (
-            <div className="p-2 text-center text-xs text-muted-foreground border-t border-border">
-              Showing top 15 of {metrics.byState.length} states
-            </div>
-          )}
         </div>
       )}
     </div>
