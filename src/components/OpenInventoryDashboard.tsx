@@ -3685,146 +3685,87 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
       </div>
 
-      {/* Pending Decisions Drilldown Sheet */}
+      {/* Pending Decisions Drilldown Sheet - Pain Level > 5, No Eval */}
       <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
         <SheetContent className="sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
               <Flag className="h-5 w-5 text-warning" />
-              Pending Executive Decisions
+              Decisions Pending
             </SheetTitle>
             <SheetDescription>
-              {pendingDecisionsStats.total} matters requiring executive attention • Total Exposure: {formatCurrency(pendingDecisionsStats.totalExposure)}
+              {decisionsData?.totalCount || 0} claims with pain level 6+ and no evaluation set • Total Reserves: {formatCurrency(decisionsData?.totalReserves || 0)}
             </SheetDescription>
           </SheetHeader>
 
-          {/* PDF Export Button */}
-          <div className="py-3 border-b border-border">
-            <Button 
-              onClick={generateDecisionsPDF} 
-              disabled={generatingDecisionsPDF || pendingDecisions.length === 0}
-              className="w-full"
-              variant="outline"
-            >
-              {generatingDecisionsPDF ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Export to PDF
-            </Button>
+          {/* Summary Stats by Pain Level */}
+          <div className="grid grid-cols-5 gap-2 py-4 border-b border-border">
+            {[6, 7, 8, 9, 10].map(level => {
+              const levelData = decisionsData?.byPainLevel[level];
+              return (
+                <div key={level} className={`text-center p-2 rounded-lg ${
+                  level >= 9 ? 'bg-destructive/10' : level >= 7 ? 'bg-warning/10' : 'bg-muted/50'
+                }`}>
+                  <p className={`text-xl font-bold ${
+                    level >= 9 ? 'text-destructive' : level >= 7 ? 'text-warning' : 'text-foreground'
+                  }`}>{levelData?.count || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">Pain {level}</p>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-3 py-4 border-b border-border">
-            <div className="text-center p-3 bg-destructive/10 rounded-lg">
-              <p className="text-2xl font-bold text-destructive">{pendingDecisionsStats.critical}</p>
-              <p className="text-xs text-muted-foreground">Critical</p>
-            </div>
-            <div className="text-center p-3 bg-warning/10 rounded-lg">
-              <p className="text-2xl font-bold text-warning">{pendingDecisionsStats.thisWeek}</p>
-              <p className="text-xs text-muted-foreground">Due This Week</p>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-foreground">{pendingDecisionsStats.statuteDeadlines}</p>
-              <p className="text-xs text-muted-foreground">Statute Risk</p>
-            </div>
-          </div>
-
-          {/* Decisions List */}
+          {/* Claims List */}
           <div className="py-4 space-y-3">
-            {loadingDecisions ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-muted-foreground">Loading decisions...</span>
-              </div>
-            ) : pendingDecisions.length === 0 ? (
+            {!decisionsData || decisionsData.claims.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Flag className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No pending decisions found</p>
-                <p className="text-sm">Matters over $500K or aged 180+ days will appear here</p>
+                <p className="text-sm">Claims with pain level 6+ and no eval will appear here</p>
               </div>
             ) : (
-              [...pendingDecisions].sort((a, b) => {
-                const severityOrder = { critical: 0, high: 1, medium: 2 };
-                return severityOrder[a.severity] - severityOrder[b.severity];
-              }).map((decision) => (
-                <div 
-                  key={decision.matterId} 
-                  className={`p-4 rounded-lg border ${
-                    decision.severity === 'critical' ? 'border-destructive/50 bg-destructive/5' :
-                    decision.severity === 'high' ? 'border-warning/50 bg-warning/5' :
-                    'border-border bg-muted/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm text-primary">{decision.matterId}</span>
-                        <Badge variant={
-                          decision.severity === 'critical' ? 'destructive' :
-                          decision.severity === 'high' ? 'default' : 'secondary'
-                        } className="text-xs">
-                          {decision.severity.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <p className="font-semibold text-foreground mt-1">{decision.claimant}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-foreground">{formatCurrencyFullValue(decision.amount)}</p>
-                      <p className="text-xs text-muted-foreground">{decision.daysOpen} days open</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Lead:</span>
-                      <span className="font-medium">{decision.lead}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Deadline:</span>
-                      <span className={`font-medium ${new Date(decision.deadline) <= new Date(Date.now() + 7*24*60*60*1000) ? 'text-destructive' : ''}`}>
-                        {format(new Date(decision.deadline), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {(decision.department || decision.type || decision.location) && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {decision.department && <Badge variant="outline" className="text-xs">{decision.department}</Badge>}
-                      {decision.type && <Badge variant="outline" className="text-xs">{decision.type}</Badge>}
-                      {decision.location && <Badge variant="outline" className="text-xs">{decision.location}</Badge>}
-                    </div>
-                  )}
-
-                  <div className="mt-3 p-2 bg-background/50 rounded border border-border/50">
-                    <p className="text-xs text-muted-foreground mb-1">Reason for Escalation</p>
-                    <p className="text-sm">{decision.reason}</p>
-                  </div>
-
-                  <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                    <div className="flex items-start gap-2">
-                      <Gavel className="h-4 w-4 text-primary mt-0.5" />
+              [...decisionsData.claims]
+                .sort((a, b) => b.painLevel - a.painLevel || b.reserves - a.reserves)
+                .slice(0, 50)
+                .map((claim) => (
+                  <div 
+                    key={claim.claimNumber} 
+                    className={`p-4 rounded-lg border ${
+                      claim.painLevel >= 9 ? 'border-destructive/50 bg-destructive/5' :
+                      claim.painLevel >= 7 ? 'border-warning/50 bg-warning/5' :
+                      'border-border bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-xs text-primary font-medium uppercase">Recommended Action</p>
-                        <p className="text-sm font-medium text-foreground">{decision.recommendedAction}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm text-primary">{claim.claimNumber}</span>
+                          <Badge variant={
+                            claim.painLevel >= 9 ? 'destructive' :
+                            claim.painLevel >= 7 ? 'default' : 'secondary'
+                          } className="text-xs">
+                            Pain {claim.painLevel}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{claim.state} • {claim.biStatus}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-foreground">{formatCurrency(claim.reserves)}</p>
+                        <p className="text-xs text-muted-foreground">{claim.team}</p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="default" className="flex-1">
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1">
-                      Request More Info
-                    </Button>
+                    <div className="mt-3 p-2 bg-warning/10 rounded border border-warning/30">
+                      <p className="text-xs text-warning font-medium">⚠ NO EVALUATION SET</p>
+                      <p className="text-sm text-muted-foreground">High pain level claim requires low/high eval</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
+            )}
+            {decisionsData && decisionsData.claims.length > 50 && (
+              <p className="text-xs text-muted-foreground text-center">
+                Showing 50 of {decisionsData.claims.length} claims
+              </p>
             )}
           </div>
         </SheetContent>
