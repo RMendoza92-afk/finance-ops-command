@@ -3356,22 +3356,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 <Eye className="h-3 w-3" /> Live Review Progress
               </h4>
               <div className="flex gap-4 text-xs">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  Assigned: {reviewStats.assigned}
-                </span>
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  In Review: {reviewStats.inReview}
-                </span>
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  Completed: {reviewStats.completed}
-                </span>
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  Flagged: {reviewStats.flagged}
-                </span>
                 <span className="font-semibold text-primary">
                   ${reviewStats.totalReserves.toLocaleString()} reserves
                 </span>
