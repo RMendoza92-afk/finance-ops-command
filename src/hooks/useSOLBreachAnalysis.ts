@@ -64,14 +64,19 @@ interface SOLBreachClaim {
   state: string;
   expCreateDate: string;
   solExpiryDate: Date;
+  biStatus: string;
   reserves: number;
   solYears: number;
 }
 
 export interface SOLBreachData {
-  breaches: SOLBreachClaim[];
-  totalReserves: number;
-  count: number;
+  inProgressBreaches: SOLBreachClaim[];
+  settledBreaches: SOLBreachClaim[];
+  inProgressTotal: number;
+  settledTotal: number;
+  combinedTotal: number;
+  inProgressCount: number;
+  settledCount: number;
   byState: Record<string, { count: number; reserves: number }>;
 }
 
@@ -122,20 +127,15 @@ export function useSOLBreachAnalysis() {
         const today = new Date('2026-01-06'); // Current date
         
         const inProgressBreaches: SOLBreachClaim[] = [];
+        const settledBreaches: SOLBreachClaim[] = [];
         const byState: Record<string, { count: number; reserves: number }> = {};
-        
-        // Debug: Log first row columns to check exact names
-        if (rows.length > 0) {
-          console.log('SOL Analysis - Column names:', Object.keys(rows[0]));
-          console.log('SOL Analysis - Sample BI Status values:', rows.slice(0, 10).map(r => r['BI Status']));
-        }
         
         for (const row of rows) {
           // Handle different possible column name formats
           const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
           
-          // Only check "Decisions Pending"
-          if (biStatus !== 'Decisions Pending') continue;
+          // Only check "In Progress" or "Settled"
+          if (biStatus !== 'In Progress' && biStatus !== 'Settled') continue;
           
           const state = row['Accident Location State']?.trim().toUpperCase() || '';
           const expCreateDateStr = row['Exp. Create Date']?.trim() || '';
@@ -159,11 +159,16 @@ export function useSOLBreachAnalysis() {
               state,
               expCreateDate: expCreateDateStr,
               solExpiryDate,
+              biStatus,
               reserves,
               solYears,
             };
             
-            inProgressBreaches.push(breach);
+            if (biStatus === 'In Progress') {
+              inProgressBreaches.push(breach);
+            } else {
+              settledBreaches.push(breach);
+            }
             
             // Track by state
             if (!byState[state]) {
@@ -174,12 +179,17 @@ export function useSOLBreachAnalysis() {
           }
         }
         
-        const totalReserves = inProgressBreaches.reduce((sum, b) => sum + b.reserves, 0);
+        const inProgressTotal = inProgressBreaches.reduce((sum, b) => sum + b.reserves, 0);
+        const settledTotal = settledBreaches.reduce((sum, b) => sum + b.reserves, 0);
         
         setData({
-          breaches: inProgressBreaches,
-          totalReserves,
-          count: inProgressBreaches.length,
+          inProgressBreaches,
+          settledBreaches,
+          inProgressTotal,
+          settledTotal,
+          combinedTotal: inProgressTotal + settledTotal,
+          inProgressCount: inProgressBreaches.length,
+          settledCount: settledBreaches.length,
           byState,
         });
         setLoading(false);
