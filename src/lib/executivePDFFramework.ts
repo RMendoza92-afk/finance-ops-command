@@ -406,13 +406,14 @@ export function drawKPICard(
 ): void {
   const { doc } = ctx;
   
-  // Card shadow
-  doc.setFillColor(230, 230, 230);
-  doc.roundedRect(x + 1, y + 1, width, height, 3, 3, 'F');
-  
-  // Card background
-  doc.setFillColor(...EXECUTIVE_COLORS.white);
+  // Card background - dark card surface (matches --card: 0 0% 7%)
+  doc.setFillColor(...EXECUTIVE_COLORS.darkNavy);
   doc.roundedRect(x, y, width, height, 3, 3, 'F');
+  
+  // Card border
+  doc.setDrawColor(...EXECUTIVE_COLORS.steel);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 3, 3, 'S');
   
   // Left accent bar
   const accentColor = metric.deltaDirection === 'positive' ? EXECUTIVE_COLORS.success :
@@ -427,10 +428,10 @@ export function drawKPICard(
   doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
   doc.text(metric.label.toUpperCase(), x + 8, y + 10);
   
-  // Value
+  // Value - white text on dark
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
   const valueStr = typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value;
   doc.text(valueStr.toString(), x + 8, y + 22);
   
@@ -456,11 +457,11 @@ export function drawInsightBox(
 ): number {
   const { doc } = ctx;
   
-  // Background
-  doc.setFillColor(255, 250, 240);
+  // Background - dark muted surface
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.roundedRect(x, y, width, 8 + insights.length * 14, 3, 3, 'F');
   
-  // Border
+  // Border - warning/amber accent
   doc.setDrawColor(...EXECUTIVE_COLORS.warning);
   doc.setLineWidth(0.5);
   doc.roundedRect(x, y, width, 8 + insights.length * 14, 3, 3, 'S');
@@ -469,7 +470,7 @@ export function drawInsightBox(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...EXECUTIVE_COLORS.warning);
-  doc.text('⚡ KEY INSIGHTS & RECOMMENDED ACTIONS', x + 5, y + 7);
+  doc.text('KEY INSIGHTS & RECOMMENDED ACTIONS', x + 5, y + 7);
   
   let insightY = y + 14;
   
@@ -482,17 +483,17 @@ export function drawInsightBox(
     doc.setFillColor(...priorityColor);
     doc.circle(x + 8, insightY, 2, 'F');
     
-    // Headline
+    // Headline - white text on dark
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(insight.headline, x + 14, insightY + 1);
     
     // Action (if exists)
     if (insight.action) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
-      doc.text(`→ ${insight.action}`, x + 14, insightY + 7);
+      doc.text(`-> ${insight.action}`, x + 14, insightY + 7);
       insightY += 14;
     } else {
       insightY += 10;
@@ -521,15 +522,15 @@ export function drawExecutiveTable(
     return x + firstColWidth + ((idx - 1) * otherColWidth);
   };
   
-  // Title
+  // Title - white text on dark
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(table.title.toUpperCase(), x, y);
   y += 6;
   
-  // Header row
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Header row - dark steel background
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.rect(x, y, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(6);
@@ -545,30 +546,32 @@ export function drawExecutiveTable(
   doc.setFont('helvetica', 'normal');
   
   table.rows.forEach((row, rowIdx) => {
-    // Row background
+    // Row background - dark theme colors
     if (row.highlight === 'total') {
-      doc.setFillColor(...EXECUTIVE_COLORS.navy);
+      doc.setFillColor(...EXECUTIVE_COLORS.steel);
       doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.white);
       doc.setFont('helvetica', 'bold');
     } else if (row.highlight === 'risk') {
-      doc.setFillColor(254, 242, 242);
+      doc.setFillColor(50, 20, 20); // Dark red tint
       doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.danger);
     } else if (row.highlight === 'success') {
-      doc.setFillColor(240, 253, 244);
+      doc.setFillColor(20, 50, 30); // Dark green tint
       doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.success);
     } else if (row.highlight === 'warning') {
-      doc.setFillColor(255, 251, 235);
+      doc.setFillColor(50, 40, 15); // Dark amber tint
       doc.rect(x, y - 2, tableWidth, 8, 'F');
       doc.setTextColor(...EXECUTIVE_COLORS.warning);
     } else if (rowIdx % 2 === 0) {
-      doc.setFillColor(250, 250, 252);
+      doc.setFillColor(...EXECUTIVE_COLORS.darkNavy); // Alternating dark
       doc.rect(x, y - 2, tableWidth, 8, 'F');
-      doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+      doc.setTextColor(...EXECUTIVE_COLORS.white);
     } else {
-      doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+      doc.setFillColor(...EXECUTIVE_COLORS.navy); // Pure black
+      doc.rect(x, y - 2, tableWidth, 8, 'F');
+      doc.setTextColor(...EXECUTIVE_COLORS.white);
     }
     
     doc.setFontSize(6);
@@ -583,7 +586,7 @@ export function drawExecutiveTable(
     
     // Reset styles
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     y += 8;
   });
   
@@ -610,24 +613,24 @@ export function drawHorizontalBarChart(
   const barHeight = 8;
   const spacing = 12;
   
-  // Title
+  // Title - white on dark
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(chart.title.toUpperCase(), x, y);
   y += 8;
   
   chart.data.forEach((item, idx) => {
-    // Label
+    // Label - white text
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(item.label, x, y + 5);
     
-    // Bar background
+    // Bar background - dark steel
     const barX = x + 35;
     const barWidth = width - 70;
-    doc.setFillColor(...EXECUTIVE_COLORS.lightGray);
+    doc.setFillColor(...EXECUTIVE_COLORS.steel);
     doc.roundedRect(barX, y, barWidth, barHeight, 2, 2, 'F');
     
     // Bar value
@@ -638,9 +641,10 @@ export function drawHorizontalBarChart(
     doc.setFillColor(...barColor);
     doc.roundedRect(barX, y, Math.max(valueWidth, 4), barHeight, 2, 2, 'F');
     
-    // Value label
+    // Value label - white
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(`${item.value.toFixed(1)}%`, barX + barWidth + 5, y + 6);
     
     y += spacing;
@@ -652,11 +656,11 @@ export function drawHorizontalBarChart(
 export function drawExecutiveFooter(ctx: PDFDrawContext, pageNum: number, totalPages: number): void {
   const { doc, pageWidth, pageHeight, context, config } = ctx;
   
-  // Footer background
-  doc.setFillColor(...EXECUTIVE_COLORS.lightGray);
+  // Footer background - dark steel
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
   
-  // Classification
+  // Classification - white text
   doc.setFontSize(6);
   doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
   doc.text(config.classification || 'CONFIDENTIAL - FOR INTERNAL USE ONLY', 10, pageHeight - 5);
@@ -674,24 +678,24 @@ export function drawExecutiveFooter(ctx: PDFDrawContext, pageNum: number, totalP
 export function drawBottomLine(ctx: PDFDrawContext, x: number, y: number, width: number, text: string): number {
   const { doc } = ctx;
   
-  // Box
-  doc.setFillColor(240, 249, 255);
+  // Box - dark with red accent border
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.roundedRect(x, y, width, 18, 3, 3, 'F');
   doc.setDrawColor(...EXECUTIVE_COLORS.azure);
   doc.setLineWidth(0.5);
   doc.roundedRect(x, y, width, 18, 3, 3, 'S');
   
-  // Icon and label
+  // Icon and label - red accent
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
-  doc.text('📊 BOTTOM LINE:', x + 5, y + 8);
+  doc.setTextColor(...EXECUTIVE_COLORS.azure);
+  doc.text('BOTTOM LINE:', x + 5, y + 8);
   
-  // Text
+  // Text - white
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
-  doc.text(text, x + 45, y + 8);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
+  doc.text(text, x + 40, y + 8);
   
   return y + 25;
 }
@@ -706,18 +710,18 @@ export function drawQuarterlyTable(
   const { doc, pageWidth, margins } = ctx;
   const tableWidth = pageWidth - margins.left - margins.right;
   
-  // Title
+  // Title - white on dark
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text('QUARTERLY EXPERT SPEND ANALYSIS (6 QUARTERS)', x, y);
   y += 6;
   
-  // Headers
+  // Headers - steel background
   const headers = ['Quarter', 'Paid', 'Monthly Avg', 'Approved', 'Monthly Avg', 'Variance'];
   const colWidths = [32, 28, 28, 28, 28, 28];
   
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.rect(x, y, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(7);
@@ -738,36 +742,39 @@ export function drawQuarterlyTable(
     totalPaid += row.paid;
     totalApproved += row.approved;
     
-    // Alternating row background
+    // Alternating row background - dark theme
     if (rowIdx % 2 === 0) {
-      doc.setFillColor(250, 250, 252);
+      doc.setFillColor(...EXECUTIVE_COLORS.darkNavy);
+      doc.rect(x, y - 2, tableWidth, 8, 'F');
+    } else {
+      doc.setFillColor(...EXECUTIVE_COLORS.navy);
       doc.rect(x, y - 2, tableWidth, 8, 'F');
     }
     
     colX = x + 2;
     doc.setFontSize(7);
     
-    // Quarter
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    // Quarter - white text
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(row.quarter, colX, y + 4);
     colX += colWidths[0];
     
-    // Paid
+    // Paid - green
     doc.setTextColor(...EXECUTIVE_COLORS.success);
     doc.text(formatCurrency(row.paid, true), colX, y + 4);
     colX += colWidths[1];
     
-    // Paid Monthly
+    // Paid Monthly - muted
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
     doc.text(formatCurrency(row.paidMonthly, true), colX, y + 4);
     colX += colWidths[2];
     
-    // Approved
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    // Approved - white
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text(formatCurrency(row.approved, true), colX, y + 4);
     colX += colWidths[3];
     
-    // Approved Monthly
+    // Approved Monthly - muted
     doc.setTextColor(...EXECUTIVE_COLORS.textSecondary);
     doc.text(formatCurrency(row.approvedMonthly, true), colX, y + 4);
     colX += colWidths[4];
@@ -780,8 +787,8 @@ export function drawQuarterlyTable(
     y += 8;
   });
   
-  // Totals row
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Totals row - steel background
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.rect(x, y - 2, tableWidth, 8, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFont('helvetica', 'bold');
@@ -808,18 +815,18 @@ export function drawAppendixSection(
 ): number {
   const { doc, pageWidth, margins } = ctx;
   
-  // Section title
+  // Section title - white on dark
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...EXECUTIVE_COLORS.navy);
+  doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.text(section.title.toUpperCase(), x, y);
   y += 8;
   
-  // Content text if present
+  // Content text if present - white text
   if (section.content) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...EXECUTIVE_COLORS.textPrimary);
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     const lines = doc.splitTextToSize(section.content, pageWidth - margins.left - margins.right);
     doc.text(lines, x, y);
     y += lines.length * 4 + 6;
@@ -871,9 +878,16 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
     config,
   };
   
-  // Helper to add new page with header
+  // Draw dark page background
+  const drawPageBackground = () => {
+    doc.setFillColor(...EXECUTIVE_COLORS.navy);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+  };
+  
+  // Helper to add new page with header and dark background
   const addNewPage = () => {
     doc.addPage();
+    drawPageBackground();
     return drawExecutiveHeader(ctx);
   };
   
@@ -886,11 +900,14 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
   
   // === PAGE 1: EXECUTIVE SUMMARY ===
   
+  // Dark background for first page
+  drawPageBackground();
+  
   // Header
   ctx.y = drawExecutiveHeader(ctx);
   
-  // Key Takeaway Box
-  doc.setFillColor(...EXECUTIVE_COLORS.navy);
+  // Key Takeaway Box - steel background
+  doc.setFillColor(...EXECUTIVE_COLORS.steel);
   doc.roundedRect(10, ctx.y, pageWidth - 20, 22, 3, 3, 'F');
   doc.setTextColor(...EXECUTIVE_COLORS.white);
   doc.setFontSize(9);
@@ -958,7 +975,7 @@ export async function generateExecutiveReport(config: ExecutiveReportConfig): Pr
     
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...EXECUTIVE_COLORS.navy);
+    doc.setTextColor(...EXECUTIVE_COLORS.white);
     doc.text('APPENDIX: DETAILED ANALYSIS', 10, ctx.y);
     ctx.y += 12;
     
