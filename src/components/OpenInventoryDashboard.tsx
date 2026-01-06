@@ -3863,17 +3863,17 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-secondary/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground uppercase">Annual Budget (2024 + 5%)</p>
+                <p className="text-xs text-muted-foreground uppercase">Annual Budget (2025 + 5%)</p>
                 <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.annualBudget)}</p>
               </div>
               <div className="p-4 bg-secondary/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground uppercase">YTD Payments (Nov 2025)</p>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.ytdPaid)}</p>
+                <p className="text-xs text-muted-foreground uppercase">2025 BI Paid (Jan-Nov)</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2025)}</p>
               </div>
               <div className={`p-4 rounded-lg border-2 ${budgetMetrics.onTrack ? 'bg-success/10 border-success/40' : 'bg-destructive/10 border-destructive/40'}`}>
-                <p className="text-xs text-muted-foreground uppercase">Burn Rate</p>
+                <p className="text-xs text-muted-foreground uppercase">2026 YTD BI Paid</p>
                 <p className={`text-2xl font-bold ${budgetMetrics.onTrack ? 'text-success' : 'text-destructive'}`}>
-                  {budgetMetrics.burnRate}%
+                  {formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2026)}
                 </p>
               </div>
               <div className="p-4 bg-primary/10 rounded-lg border border-primary/40">
@@ -3886,7 +3886,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Budget Utilization</span>
-                <span className="font-medium">{budgetMetrics.burnRate}% used</span>
+                <span className="font-medium">{budgetMetrics.burnRate < 1 ? '<0.01' : budgetMetrics.burnRate}% used</span>
               </div>
               <div className="h-3 bg-secondary rounded-full overflow-hidden">
                 <div 
@@ -3894,54 +3894,32 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     budgetMetrics.burnRate > 90 ? 'bg-destructive' :
                     budgetMetrics.burnRate > 75 ? 'bg-warning' : 'bg-success'
                   }`}
-                  style={{ width: `${Math.min(budgetMetrics.burnRate, 100)}%` }}
+                  style={{ width: `${Math.max(Math.min(budgetMetrics.burnRate, 100), 0.5)}%` }}
                 />
               </div>
             </div>
 
             {/* Coverage Breakdown - YoY Comparison */}
             <div>
-              <h4 className="text-sm font-semibold mb-3">Coverage Breakdown - YoY Comparison</h4>
+              <h4 className="text-sm font-semibold mb-3">BI Litigation Spend - YoY Comparison</h4>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-xs">Coverage</TableHead>
-                      <TableHead className="text-xs text-right">2024 YTD</TableHead>
-                      <TableHead className="text-xs text-right">2025 YTD</TableHead>
-                      <TableHead className="text-xs text-right">Change</TableHead>
+                      <TableHead className="text-xs text-right">2025 (Jan-Nov)</TableHead>
+                      <TableHead className="text-xs text-right">2026 YTD</TableHead>
                       <TableHead className="text-xs text-right">Claims</TableHead>
                       <TableHead className="text-xs text-right">Avg/Claim</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.values(budgetMetrics.coverageBreakdown).map((cov) => (
-                      <TableRow key={cov.name}>
-                        <TableCell className="font-medium">{cov.name}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(cov.ytd2025)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(cov.ytd2026)}</TableCell>
-                        <TableCell className={`text-right font-medium ${
-                          cov.change >= 0 ? 'text-destructive' : 'text-success'
-                        }`}>
-                          {cov.change >= 0 ? '+' : '-'}
-                          {formatCurrency(Math.abs(cov.change))}
-                        </TableCell>
-                        <TableCell className="text-right">{cov.claimCount2026.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">${cov.avgPerClaim2026.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="bg-muted/30 font-bold">
-                      <TableCell>Total</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.total2025)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.ytdPaid)}</TableCell>
-                      <TableCell className={`text-right ${
-                        budgetMetrics.ytdPaid - budgetMetrics.total2025 >= 0 ? 'text-destructive' : 'text-success'
-                      }`}>
-                        {budgetMetrics.ytdPaid - budgetMetrics.total2025 >= 0 ? '+' : '-'}
-                        {formatCurrency(Math.abs(budgetMetrics.ytdPaid - budgetMetrics.total2025))}
-                      </TableCell>
-                      <TableCell className="text-right">2</TableCell>
-                      <TableCell className="text-right">$20,758</TableCell>
+                    <TableRow>
+                      <TableCell className="font-medium">Bodily Injury</TableCell>
+                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2025)}</TableCell>
+                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2026)}</TableCell>
+                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.bi.claimCount2026.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.bi.avgPerClaim2026.toLocaleString()}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
