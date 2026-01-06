@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare, LayoutDashboard, DollarSign, Clock, Shield, BarChart3, PieChart } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData, LitigationMatter } from "@/hooks/useLitigationData";
@@ -22,45 +23,170 @@ const CLAIM_ID_REGEX = /\b(M-\d{4,8}|\d{6,10}|CLM-\d{4,8}|[A-Z]{1,3}-\d{5,8})\b/
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/litigation-chat`;
 
-// Quick action categories
-const QUICK_ACTIONS = [
-  { 
-    label: "MTD Closures", 
-    query: "What was closed month to date, total paid, and list the top 10 recent closures with amounts?",
+// Report categories organized by dashboard tab
+type ReportCategory = 'trending' | 'executive' | 'exposure' | 'inventory' | 'financials';
+
+interface ReportOption {
+  id: string;
+  label: string;
+  query: string;
+  icon: React.ElementType;
+  color: string;
+  description: string;
+}
+
+const REPORT_CATEGORIES: Record<ReportCategory, { label: string; icon: React.ElementType; reports: ReportOption[] }> = {
+  trending: {
+    label: "Trending",
     icon: TrendingUp,
-    color: "text-emerald-500"
+    reports: [
+      { 
+        id: "mtd-closures",
+        label: "MTD Closures", 
+        query: "What was closed month to date, total paid, and list the top 10 recent closures with amounts?",
+        icon: TrendingUp,
+        color: "text-emerald-500",
+        description: "Month-to-date closure activity and top recent closures"
+      },
+      { 
+        id: "weekly-compare",
+        label: "Week-over-Week", 
+        query: "Compare this week vs last week: show closures count, total paid, new filings, and net inventory change. Highlight any significant variances (>10% change).",
+        icon: GitCompare,
+        color: "text-cyan-500",
+        description: "Compare this week's metrics to last week"
+      },
+      { 
+        id: "monthly-compare",
+        label: "Month-over-Month", 
+        query: "Compare this month vs last month: closures, total paid, new filings, inventory delta. Call out any major changes.",
+        icon: BarChart3,
+        color: "text-blue-500",
+        description: "Compare this month's metrics to last month"
+      },
+    ]
   },
-  { 
-    label: "Aged 365+", 
-    query: "Show me the aged inventory breakdown. How many claims are over 365 days by type group? List the worst offenders.",
-    icon: AlertTriangle,
-    color: "text-destructive"
+  executive: {
+    label: "Executive",
+    icon: LayoutDashboard,
+    reports: [
+      { 
+        id: "portfolio-summary",
+        label: "Portfolio Summary", 
+        query: "Give me a complete portfolio summary: total open matters, total reserves, total exposure, CP1 rate, and breakdown by major category.",
+        icon: PieChart,
+        color: "text-primary",
+        description: "High-level portfolio overview with key metrics"
+      },
+      { 
+        id: "team-performance",
+        label: "Team Performance", 
+        query: "Break down performance by team - show closures, total paid, open matters, and CP1 rate for each team.",
+        icon: Users,
+        color: "text-purple-500",
+        description: "Performance metrics by team"
+      },
+      { 
+        id: "risk-flags",
+        label: "Risk Flags", 
+        query: "Show me claims with high risk indicators: aged 365+, high exposure, CP1, or no evaluation. Summarize counts and total exposure.",
+        icon: AlertTriangle,
+        color: "text-destructive",
+        description: "High-risk claims requiring attention"
+      },
+    ]
   },
-  { 
-    label: "CP1 Analysis", 
-    query: "Give me the full CP1 exposure analysis - totals by coverage, by age bucket, and the overall CP1 rate.",
+  exposure: {
+    label: "Exposure",
+    icon: Shield,
+    reports: [
+      { 
+        id: "cp1-analysis",
+        label: "CP1 Full Analysis", 
+        query: "Give me the full CP1 exposure analysis - totals by coverage, by type group, by age bucket, and the overall CP1 rate.",
+        icon: FileSpreadsheet,
+        color: "text-warning",
+        description: "Complete CP1 breakdown by all dimensions"
+      },
+      { 
+        id: "exposure-by-type",
+        label: "Exposure by Type", 
+        query: "Break down open exposure by type group: show count, total reserves, net exposure, and insurance expectancy for each type.",
+        icon: PieChart,
+        color: "text-blue-500",
+        description: "Exposure breakdown by type group"
+      },
+      { 
+        id: "high-exposure",
+        label: "High Exposure Claims", 
+        query: "List the top 20 claims by net exposure. Include matter ID, type, reserves, and exposure amount.",
+        icon: AlertTriangle,
+        color: "text-destructive",
+        description: "Highest exposure claims in portfolio"
+      },
+    ]
+  },
+  inventory: {
+    label: "Inventory",
     icon: FileSpreadsheet,
-    color: "text-warning"
+    reports: [
+      { 
+        id: "aged-inventory",
+        label: "Aged 365+ Claims", 
+        query: "Show me the aged inventory breakdown. How many claims are over 365 days by type group? List the 15 oldest claims.",
+        icon: Clock,
+        color: "text-destructive",
+        description: "Claims aged over 365 days"
+      },
+      { 
+        id: "no-eval",
+        label: "No Evaluation Set", 
+        query: "How many claims have no evaluation set? What's the total reserve exposure? List a sample of these claims by type.",
+        icon: Sparkles,
+        color: "text-amber-500",
+        description: "Claims without evaluation"
+      },
+      { 
+        id: "age-buckets",
+        label: "Age Distribution", 
+        query: "Show inventory by age bucket: 0-60, 61-180, 181-365, 365+ days. Include count, reserves, and exposure for each bucket.",
+        icon: BarChart3,
+        color: "text-blue-500",
+        description: "Inventory broken down by age ranges"
+      },
+    ]
   },
-  { 
-    label: "No Eval Claims", 
-    query: "How many claims have no evaluation set? What's the total reserve exposure? List a sample of these claims.",
-    icon: Sparkles,
-    color: "text-blue-500"
+  financials: {
+    label: "Financials",
+    icon: DollarSign,
+    reports: [
+      { 
+        id: "total-reserves",
+        label: "Reserve Summary", 
+        query: "What are the total reserves? Break down by type group and coverage. Show any reserve adequacy concerns.",
+        icon: DollarSign,
+        color: "text-emerald-500",
+        description: "Total reserves and distribution"
+      },
+      { 
+        id: "indemnity-paid",
+        label: "Indemnity Analysis", 
+        query: "Summarize indemnity payments: total paid MTD, YTD, average payment, and top 10 largest payments this month.",
+        icon: TrendingUp,
+        color: "text-primary",
+        description: "Indemnity payment analysis"
+      },
+      { 
+        id: "expense-ratio",
+        label: "Expense Ratios", 
+        query: "Calculate expense ratios: expense vs indemnity by category. Flag any categories with expense ratio over 30%.",
+        icon: PieChart,
+        color: "text-amber-500",
+        description: "Expense to indemnity ratio analysis"
+      },
+    ]
   },
-  { 
-    label: "Team Stats", 
-    query: "Break down performance by team - show closures, total paid, and open matters for each team.",
-    icon: Users,
-    color: "text-purple-500"
-  },
-  { 
-    label: "Compare Periods", 
-    query: "Compare this week vs last week AND this month vs last month: show closures count, total paid, new filings, and net inventory change. Highlight any significant variances (>10% change).",
-    icon: GitCompare,
-    color: "text-cyan-500"
-  },
-];
+};
 
 // Aggregated matter type for drilldown modal
 interface AggregatedMatter {
@@ -726,50 +852,55 @@ export function LitigationChat() {
         <CardContent className="p-0 flex flex-col h-[calc(100%-56px)]">
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 && (
-              <div className="space-y-4">
-                <div className="text-center text-muted-foreground text-sm py-4">
-                  <Sparkles className="h-10 w-10 mx-auto mb-3 text-primary opacity-70" />
-                  <p className="font-semibold text-foreground mb-1">I am the Litigation Oracle</p>
-                  <p className="text-xs mb-4">Ask anything. I furnish data, lists, analysis—with exact numbers.</p>
+              <div className="space-y-3">
+                <div className="text-center text-muted-foreground text-sm py-2">
+                  <Sparkles className="h-8 w-8 mx-auto mb-2 text-primary opacity-70" />
+                  <p className="font-semibold text-foreground mb-0.5">Litigation Oracle</p>
+                  <p className="text-xs">Select a report below</p>
                 </div>
                 
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide px-1">Quick Analysis</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {QUICK_ACTIONS.map((action) => (
-                      <Button
-                        key={action.label}
-                        variant="outline"
-                        size="sm"
-                        className="h-auto py-2 px-3 justify-start text-left hover:bg-muted/50 transition-colors"
-                        onClick={() => handleQuickAction(action.query)}
-                        disabled={isLoading || !dataReady}
-                      >
-                        <action.icon className={`h-4 w-4 mr-2 ${action.color}`} />
-                        <span className="text-xs">{action.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 mt-4">
-                  <p className="text-xs text-muted-foreground px-1 mb-2">Or ask anything:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 px-1">
-                    <li className="flex items-center gap-2">
-                      <span className="text-primary">•</span>
-                      "List all claims over $100K in reserves"
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-primary">•</span>
-                      "What's the CP1 rate for BI coverage?"
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-primary">•</span>
-                      "Compare team A vs team B closures"
-                    </li>
-                  </ul>
-                </div>
+                {/* Tabbed Report Selector */}
+                <Tabs defaultValue="trending" className="w-full">
+                  <TabsList className="w-full grid grid-cols-5 h-auto p-1 bg-muted/50">
+                    {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
+                      const category = REPORT_CATEGORIES[cat];
+                      return (
+                        <TabsTrigger
+                          key={cat}
+                          value={cat}
+                          className="text-[10px] px-1 py-1.5 flex flex-col gap-0.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        >
+                          <category.icon className="h-3 w-3" />
+                          <span className="hidden sm:inline">{category.label}</span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                  
+                  {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
+                    const category = REPORT_CATEGORIES[cat];
+                    return (
+                      <TabsContent key={cat} value={cat} className="mt-2 space-y-1.5">
+                        {category.reports.map((report) => (
+                          <Button
+                            key={report.id}
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-auto py-2 px-3 justify-start text-left hover:bg-primary/10 hover:border-primary/30 transition-colors group"
+                            onClick={() => handleQuickAction(report.query)}
+                            disabled={isLoading || !dataReady}
+                          >
+                            <report.icon className={`h-4 w-4 mr-2 flex-shrink-0 ${report.color} group-hover:scale-110 transition-transform`} />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-medium block">{report.label}</span>
+                              <span className="text-[10px] text-muted-foreground block truncate">{report.description}</span>
+                            </div>
+                          </Button>
+                        ))}
+                      </TabsContent>
+                    );
+                  })}
+                </Tabs>
               </div>
             )}
             
