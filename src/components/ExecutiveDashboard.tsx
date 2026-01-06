@@ -36,7 +36,7 @@ interface PainLevelRow {
 
 interface ExecutiveDashboardProps {
   data: LitigationMatter[];
-  onDrilldown: (claimId: string) => void;
+  onDrilldown?: (claimId: string) => void;
 }
 
 // Determine litigation stage based on pain level

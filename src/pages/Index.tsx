@@ -1,12 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
-import { OverextensionTable } from "@/components/OverextensionTable";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
 import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
-import { Loader2, AlertTriangle, TrendingUp, LayoutDashboard, Table2, FileStack } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -15,10 +14,7 @@ import {
   calculateExecutiveReview 
 } from "@/lib/executiveReview";
 
-type TabType = 'executive' | 'management';
-
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('executive');
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
     const savedPainData = localStorage.getItem('painLevelOverrides');
@@ -30,7 +26,6 @@ const Index = () => {
     }
     return defaultGlobalFilters;
   });
-  const [drilldownClaimId, setDrilldownClaimId] = useState<string | null>(null);
   const { data: litigationData, loading, error, stats, refetch, dataSource } = useLitigationData();
 
   // Handle pain level data updates from PainLevelUpload
@@ -189,12 +184,6 @@ const Index = () => {
     });
   }, [filters, litigationData]);
 
-  // Handle drilldown from Executive Dashboard
-  const handleDrilldown = (claimId: string) => {
-    setDrilldownClaimId(claimId);
-    setFilters(prev => ({ ...prev, searchText: claimId }));
-    setActiveTab('management');
-  };
 
   if (loading) {
     return (
@@ -235,36 +224,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tab Navigation - Mobile Optimized */}
-        {filters.inventoryStatus !== 'open' && (
-        <div className="flex items-center gap-1 sm:gap-2 mt-3 sm:mt-5 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('executive')}
-            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'executive'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Executive Dashboard</span>
-            <span className="sm:hidden">Executive</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('management')}
-            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'management'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            <Table2 className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Management Data</span>
-            <span className="sm:hidden">Data</span>
-            <span className="px-1.5 sm:px-2 py-0.5 rounded text-xs bg-background/20">{filteredData.length}</span>
-          </button>
-        </div>
-        )}
       </header>
       
       <main className="px-3 sm:px-6 py-3 sm:py-6">
@@ -277,19 +236,16 @@ const Index = () => {
           filterOptions={filterOptions}
         />
 
-        {/* Tab Content */}
+        {/* Content */}
         {filters.inventoryStatus === 'open' ? (
           <OpenInventoryDashboard filters={filters} />
-        ) : activeTab === 'executive' ? (
+        ) : (
           <div className="space-y-6">
             <ExecutiveDashboard 
               data={filteredData} 
-              onDrilldown={handleDrilldown} 
             />
             <OverspendTracker />
           </div>
-        ) : (
-          <OverextensionTable data={filteredData} knownExpertSpend={5681152} />
         )}
       </main>
 
