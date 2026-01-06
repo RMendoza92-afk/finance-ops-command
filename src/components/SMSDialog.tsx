@@ -12,12 +12,14 @@ interface SMSDialogProps {
   open: boolean;
   onClose: () => void;
   context: {
-    claimType?: string;
-    claimCount?: number;
-    region?: string;
     matterId?: string;
+    claimant?: string;
     exposure?: number;
-    description?: string;
+    reserves?: number;
+    painLevel?: number;
+    daysOpen?: number;
+    phase?: string;
+    actionRequired?: string;
   };
   onExportPDF?: () => void;
   onExportExcel?: () => void;
@@ -88,19 +90,29 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+    if (amount >= 1000) return `$${Math.round(amount / 1000)}K`;
     return `$${amount.toLocaleString()}`;
   };
 
-  const defaultMessage = `🚨 FILE REVIEW REQUESTED\n\n` +
-    (context.region ? `Region: ${context.region}\n` : '') +
-    (context.claimType ? `Claim Type: ${context.claimType}\n` : '') +
-    (context.matterId ? `Matter ID: ${context.matterId}\n` : '') +
-    (context.exposure ? `Exposure: ${formatCurrency(context.exposure)}\n` : '') +
-    (context.claimCount ? `Claims: ${context.claimCount}\n` : '') +
-    (context.description ? `Notes: ${context.description}\n` : '') +
-    `\nAction needed: Review flagged inventory ASAP.\n` +
-    `— FLI Claims Dashboard`;
+  // Build preview message matching edge function format
+  let previewMessage = `⚠️ FLI REVIEW ALERT\n\n`;
+  if (context.matterId) previewMessage += `📋 ${context.matterId}\n`;
+  if (context.claimant) previewMessage += `👤 ${context.claimant}\n`;
+  
+  const metrics: string[] = [];
+  if (context.exposure) metrics.push(`Exp: ${formatCurrency(context.exposure)}`);
+  if (context.reserves) metrics.push(`Rsv: ${formatCurrency(context.reserves)}`);
+  if (metrics.length > 0) previewMessage += `💰 ${metrics.join(' | ')}\n`;
+  
+  const status: string[] = [];
+  if (context.painLevel) status.push(`P${context.painLevel}`);
+  if (context.daysOpen) status.push(`${context.daysOpen}d open`);
+  if (context.phase) status.push(context.phase);
+  if (status.length > 0) previewMessage += `📊 ${status.join(' • ')}\n`;
+  
+  if (context.actionRequired) previewMessage += `\n🎯 ${context.actionRequired}\n`;
+  if (customMessage) previewMessage += `\n📝 ${customMessage}\n`;
+  previewMessage += `\n— FLI Dashboard`;
 
   const handleSendSMS = async () => {
     setTouched(true);
@@ -115,10 +127,15 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
       const { data, error } = await supabase.functions.invoke('send-review-sms', {
         body: {
           to: validation.cleanNumber,
-          claimType: context.claimType || 'General',
-          claimCount: context.claimCount || 1,
-          region: context.region || 'N/A',
-          lossDescription: customMessage || context.description || 'Review required'
+          matterId: context.matterId,
+          claimant: context.claimant,
+          exposure: context.exposure,
+          reserves: context.reserves,
+          painLevel: context.painLevel,
+          daysOpen: context.daysOpen,
+          phase: context.phase,
+          actionRequired: context.actionRequired || 'Review flagged file',
+          customNote: customMessage || undefined
         }
       });
 
@@ -213,8 +230,8 @@ export function SMSDialog({ open, onClose, context, onExportPDF, onExportExcel }
           {/* Message Preview */}
           <div className="space-y-1.5">
             <Label className="text-xs sm:text-sm">Message Preview</Label>
-            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 sm:max-h-32 overflow-auto border">
-              {defaultMessage}
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 sm:max-h-32 overflow-auto border font-mono">
+              {previewMessage}
             </div>
           </div>
 

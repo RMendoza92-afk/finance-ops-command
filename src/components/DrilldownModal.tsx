@@ -261,10 +261,10 @@ export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
         onClose={() => setSmsDialogOpen(false)}
         context={{
           matterId: matter.uniqueRecord,
-          claimType: matter.coverage,
-          region: matter.team,
+          claimant: matter.claimant,
           exposure: matter.totalPaid,
-          description: `${matter.claimant} - ${matter.litigationStage} stage, ${matter.riskFlag} risk`
+          phase: matter.litigationStage,
+          actionRequired: `${matter.riskFlag} risk - Review required`
         }}
       />
     </Dialog>

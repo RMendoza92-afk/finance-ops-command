@@ -355,16 +355,14 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
             setSelectedClaimForSMS(null);
           }}
           context={selectedClaimForSMS ? {
-            claimType: coverage,
             matterId: selectedClaimForSMS.matter_id,
+            claimant: selectedClaimForSMS.claimant || undefined,
             exposure: selectedClaimForSMS.total_amount || 0,
-            region: selectedClaimForSMS.location || undefined,
-            description: selectedClaimForSMS.executiveReview.reasons.join(', '),
+            daysOpen: selectedClaimForSMS.days_open || undefined,
+            phase: selectedClaimForSMS.type || undefined,
+            actionRequired: selectedClaimForSMS.executiveReview.reasons[0] || 'Executive review required',
           } : {
-            claimType: coverage,
-            claimCount: claimsWithReview.length,
-            exposure: stats.totalExposure,
-            description: `${stats.criticalCount} CRITICAL, ${stats.requiredCount} REQUIRED reviews`
+            actionRequired: `${stats.criticalCount} CRITICAL, ${stats.requiredCount} REQUIRED reviews`,
           }}
           onExportExcel={() => {
             const exportData = claimsWithReview.map(c => ({
