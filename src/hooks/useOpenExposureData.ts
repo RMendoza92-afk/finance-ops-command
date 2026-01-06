@@ -119,6 +119,23 @@ export interface TexasRearEndData {
   byAge: TexasRearEndAge[];
 }
 
+// Raw claim export format (for CP1 validation)
+export interface RawClaimExport {
+  claimNumber: string;
+  claimant: string;
+  coverage: string;
+  days: number;
+  ageBucket: string;
+  typeGroup: string;
+  openReserves: number;
+  lowEval: number;
+  highEval: number;
+  cp1Flag: string;
+  overallCP1: string;
+  evaluationPhase: string;
+  demandType: string;
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
@@ -151,6 +168,7 @@ export interface OpenExposureData {
   };
   knownTotals: KnownTotals;
   texasRearEnd: TexasRearEndData;
+  rawClaims: RawClaimExport[]; // Raw data for export/validation
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -273,6 +291,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
   let texasSummary = { totalClaims: 0, totalReserves: 0, lowEval: 0, highEval: 0 };
   
+  // Raw claims for export/validation
+  const rawClaimsExport: RawClaimExport[] = [];
+  
   for (const row of rows) {
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
@@ -305,6 +326,23 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     const evalPhase = row['Evaluation Phase']?.trim() || '';
     const demandType = row['Demand Type']?.trim() || '(blank)';
+    
+    // Add to raw claims export
+    rawClaimsExport.push({
+      claimNumber: row['Claim#']?.trim() || '',
+      claimant: row['Claimant']?.trim() || '',
+      coverage,
+      days,
+      ageBucket: getAgeBucketLabel(ageBucket),
+      typeGroup,
+      openReserves: reserves,
+      lowEval,
+      highEval,
+      cp1Flag: isCP1 ? 'Yes' : 'No',
+      overallCP1: row['Overall CP1 Flag']?.trim() || '',
+      evaluationPhase: evalPhase,
+      demandType,
+    });
     
     // Update grand totals (claim counts)
     grandTotals[ageBucket]++;
@@ -606,6 +644,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     },
     knownTotals,
     texasRearEnd,
+    rawClaims: rawClaimsExport,
   };
 }
 

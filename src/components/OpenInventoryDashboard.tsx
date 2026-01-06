@@ -1106,15 +1106,42 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       const insightsSheet = XLSX.utils.aoa_to_sheet(insightsData);
       XLSX.utils.book_append_sheet(workbook, insightsSheet, 'Key Insights');
 
+      // Sheet 5: Raw Claims Data (for validation)
+      if (data?.rawClaims && data.rawClaims.length > 0) {
+        const rawClaimsData = [
+          ['RAW CLAIMS DATA - CP1 VALIDATION'],
+          [`Total Claims: ${data.rawClaims.length} (BI/UM/UI coverages only)`],
+          [],
+          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type'],
+          ...data.rawClaims.map(claim => [
+            claim.claimNumber,
+            claim.claimant,
+            claim.coverage,
+            claim.days,
+            claim.ageBucket,
+            claim.typeGroup,
+            claim.openReserves,
+            claim.lowEval,
+            claim.highEval,
+            claim.cp1Flag,
+            claim.overallCP1,
+            claim.evaluationPhase,
+            claim.demandType
+          ])
+        ];
+        const rawClaimsSheet = XLSX.utils.aoa_to_sheet(rawClaimsData);
+        XLSX.utils.book_append_sheet(workbook, rawClaimsSheet, 'Raw Claims Data');
+      }
+
       XLSX.writeFile(workbook, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-      toast.success('CP1 Analysis Excel generated');
+      toast.success('CP1 Analysis Excel generated with raw data');
     } catch (err) {
       console.error('Error generating Excel:', err);
       toast.error('Failed to generate Excel');
     } finally {
       setGeneratingCP1Excel(false);
     }
-  }, []);
+  }, [data]);
 
   // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1)
   const generateCombinedBoardPackage = useCallback(async () => {
