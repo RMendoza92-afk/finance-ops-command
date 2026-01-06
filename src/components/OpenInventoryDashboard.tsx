@@ -4540,6 +4540,45 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 <Layers className="h-5 w-5 text-purple-500" />
                 Multi-Pack Claims
               </SheetTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  import('xlsx').then((XLSX) => {
+                    const groups = data?.multiPackData?.groups || [];
+                    const rows: any[] = [];
+                    groups
+                      .filter(g => selectedPackSize === null || g.packSize === selectedPackSize)
+                      .forEach((group) => {
+                        group.claims.forEach((claim, idx) => {
+                          rows.push({
+                            'Base Claim #': group.baseClaimNumber,
+                            'Pack Size': group.packSize,
+                            'Claim Number': claim.claimNumber,
+                            'Claimant #': claim.claimant,
+                            'Coverage': claim.coverage,
+                            'Days Open': claim.days,
+                            'Reserves': claim.reserves,
+                            'Low Eval': claim.lowEval,
+                            'High Eval': claim.highEval,
+                            'Group Total Reserves': idx === 0 ? group.totalReserves : '',
+                            'Group Total Low Eval': idx === 0 ? group.totalLowEval : '',
+                            'Group Total High Eval': idx === 0 ? group.totalHighEval : '',
+                          });
+                        });
+                      });
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Multi-Pack Claims');
+                    XLSX.writeFile(wb, `Multi-Pack-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                    toast.success('Multi-Pack Claims exported to Excel');
+                  });
+                }}
+                className="gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Export
+              </Button>
             </div>
             <SheetDescription>
               Claims grouped by common base number (same incident with multiple claimants)
