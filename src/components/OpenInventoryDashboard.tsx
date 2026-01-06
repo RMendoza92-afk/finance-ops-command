@@ -1092,10 +1092,11 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       const highestCoverage = [...CP1_DATA.byCoverage].sort((a, b) => b.cp1Rate - a.cp1Rate)[0];
       const aged365Rate = CP1_DATA.biByAge[0]?.total > 0 ? ((CP1_DATA.biByAge[0].yes / CP1_DATA.biByAge[0].total) * 100).toFixed(1) : '0.0';
       const under60Rate = CP1_DATA.biByAge[3]?.total > 0 ? ((CP1_DATA.biByAge[3].yes / CP1_DATA.biByAge[3].total) * 100).toFixed(1) : '0.0';
+      const biCP1Rate = CP1_DATA.biTotal.total > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1) : '0.0';
       const insightsData = [
         ['KEY INSIGHTS'],
         [],
-        [`BI represents ${CP1_DATA.totals.yes > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.totals.yes) * 100).toFixed(1) : '0.0'}% of all CP1 tendered claims (${CP1_DATA.biTotal.yes.toLocaleString()} of ${CP1_DATA.totals.yes.toLocaleString()})`],
+        [`BI CP1 rate is ${biCP1Rate}% (${CP1_DATA.biTotal.yes.toLocaleString()} of ${CP1_DATA.biTotal.total.toLocaleString()} claims)`],
         [`Aged 365+ BI claims have highest CP1 rate at ${aged365Rate}% (${CP1_DATA.biByAge[0]?.yes?.toLocaleString() || 0} claims)`],
         [`${highestCoverage?.coverage || 'N/A'} coverage has highest CP1 rate at ${highestCoverage?.cp1Rate?.toFixed(1) || '0.0'}% (${highestCoverage?.yes || 0} of ${highestCoverage?.total || 0} claims)`],
         [`Under 60 Days BI claims have lowest CP1 rate at ${under60Rate}% - early resolution opportunity`],
@@ -4203,7 +4204,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-0.5">•</span>
-                  BI represents <span className="font-medium text-foreground">{CP1_DATA.totals.yes > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.totals.yes) * 100).toFixed(1) : '0.0'}%</span> of all CP1 tendered claims
+                  BI CP1 rate is <span className="font-medium text-foreground">{CP1_DATA.biTotal.total > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1) : '0.0'}%</span> ({CP1_DATA.biTotal.yes.toLocaleString()} of {CP1_DATA.biTotal.total.toLocaleString()} claims)
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-warning mt-0.5">•</span>
