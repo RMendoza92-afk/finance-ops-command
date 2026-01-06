@@ -853,25 +853,32 @@ export function LitigationChat() {
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 && (
               <div className="space-y-3">
-                <div className="text-center text-muted-foreground text-sm py-2">
-                  <Sparkles className="h-8 w-8 mx-auto mb-2 text-primary opacity-70" />
-                  <p className="font-semibold text-foreground mb-0.5">Litigation Oracle</p>
-                  <p className="text-xs">Select a report below</p>
+                {/* Executive Header */}
+                <div className="bg-[#161616] rounded-lg p-3 border border-[#2d2d2d]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center">
+                      <Sparkles className="h-5 w-5 text-[#0c0c0c]" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-[#f0f0f0] text-sm tracking-tight">Litigation Oracle</p>
+                      <p className="text-[10px] text-[#8c8c8c]">Board-Ready Intelligence Reports</p>
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Tabbed Report Selector */}
+                {/* Tabbed Report Selector - Executive Dark Theme */}
                 <Tabs defaultValue="trending" className="w-full">
-                  <TabsList className="w-full grid grid-cols-5 h-auto p-1 bg-muted/50">
+                  <TabsList className="w-full grid grid-cols-5 h-auto p-0.5 bg-[#121212] border border-[#2d2d2d] rounded-lg">
                     {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
                       const category = REPORT_CATEGORIES[cat];
                       return (
                         <TabsTrigger
                           key={cat}
                           value={cat}
-                          className="text-[10px] px-1 py-1.5 flex flex-col gap-0.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                          className="text-[10px] px-1 py-2 flex flex-col gap-0.5 rounded-md text-[#8c8c8c] data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-[#d4af37] data-[state=active]:border-t data-[state=active]:border-[#d4af37]/50 transition-all"
                         >
-                          <category.icon className="h-3 w-3" />
-                          <span className="hidden sm:inline">{category.label}</span>
+                          <category.icon className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline font-medium">{category.label}</span>
                         </TabsTrigger>
                       );
                     })}
@@ -880,22 +887,30 @@ export function LitigationChat() {
                   {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
                     const category = REPORT_CATEGORIES[cat];
                     return (
-                      <TabsContent key={cat} value={cat} className="mt-2 space-y-1.5">
-                        {category.reports.map((report) => (
-                          <Button
+                      <TabsContent key={cat} value={cat} className="mt-2 space-y-1">
+                        {category.reports.map((report, idx) => (
+                          <button
                             key={report.id}
-                            variant="outline"
-                            size="sm"
-                            className="w-full h-auto py-2 px-3 justify-start text-left hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                             onClick={() => handleQuickAction(report.query)}
                             disabled={isLoading || !dataReady}
+                            className={`w-full text-left p-2.5 rounded-lg border transition-all group disabled:opacity-50 disabled:cursor-not-allowed
+                              ${idx % 2 === 0 ? 'bg-[#121212]' : 'bg-[#181818]'}
+                              border-[#2d2d2d] hover:border-[#d4af37]/40 hover:bg-[#1a1a1a]
+                            `}
                           >
-                            <report.icon className={`h-4 w-4 mr-2 flex-shrink-0 ${report.color} group-hover:scale-110 transition-transform`} />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs font-medium block">{report.label}</span>
-                              <span className="text-[10px] text-muted-foreground block truncate">{report.description}</span>
+                            <div className="flex items-start gap-2.5">
+                              <div className={`w-7 h-7 rounded flex-shrink-0 flex items-center justify-center bg-[#0c0c0c] border border-[#2d2d2d] group-hover:border-[#d4af37]/30`}>
+                                <report.icon className={`h-3.5 w-3.5 ${report.color} group-hover:text-[#d4af37] transition-colors`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-semibold text-[#f0f0f0] block group-hover:text-[#d4af37] transition-colors">{report.label}</span>
+                                <span className="text-[10px] text-[#8c8c8c] block leading-tight mt-0.5">{report.description}</span>
+                              </div>
+                              <div className="text-[#2d2d2d] group-hover:text-[#d4af37] transition-colors">
+                                <Send className="h-3 w-3" />
+                              </div>
                             </div>
-                          </Button>
+                          </button>
                         ))}
                       </TabsContent>
                     );
