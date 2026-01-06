@@ -43,9 +43,9 @@ export interface BudgetAnalysis {
   yoyChange: number;
   yoyChangePercent: number;
   coverageBreakdown: {
-    bi: { name: string; ytd2025: number; ytd2024: number; change: number; claimCount2025: number; claimCount2024: number };
-    cl: { name: string; ytd2025: number; ytd2024: number; change: number; claimCount2025: number; claimCount2024: number };
-    oc: { name: string; ytd2025: number; ytd2024: number; change: number; claimCount2025: number; claimCount2024: number };
+    bi: { name: string; ytd2026: number; ytd2025: number; change: number; claimCount2026: number; claimCount2025: number; avgPerClaim2026: number; avgPerClaim2025: number };
+    cl: { name: string; ytd2026: number; ytd2025: number; change: number; claimCount2026: number; claimCount2025: number; avgPerClaim2026: number; avgPerClaim2025: number };
+    oc: { name: string; ytd2026: number; ytd2025: number; change: number; claimCount2026: number; claimCount2025: number; avgPerClaim2026: number; avgPerClaim2025: number };
   };
   monthlyData: { month: string; budget: number; actual: number; variance: number }[];
 }
