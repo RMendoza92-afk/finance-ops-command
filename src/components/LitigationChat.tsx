@@ -474,11 +474,26 @@ export function LitigationChat() {
         }),
       });
       
-      if (!resp.ok || !resp.body) {
+      if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to get response");
       }
       
+      // Check for restricted response (non-streaming JSON)
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const jsonResp = await resp.json();
+        if (jsonResp.restricted) {
+          updateAssistant(jsonResp.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      if (!resp.body) {
+        throw new Error("No response body");
+      }
+
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
