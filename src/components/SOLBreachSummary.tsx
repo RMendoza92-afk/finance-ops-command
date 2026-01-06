@@ -1,7 +1,8 @@
 import { useSOLBreachAnalysis } from "@/hooks/useSOLBreachAnalysis";
-import { Loader2, AlertTriangle, Gavel } from "lucide-react";
+import { Loader2, AlertTriangle, Gavel, Clock, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const formatCurrency = (val: number) => 
   new Intl.NumberFormat('en-US', { 
@@ -11,7 +12,7 @@ const formatCurrency = (val: number) =>
   }).format(val);
 
 export function SOLBreachSummary() {
-  const { data, loading, error } = useSOLBreachAnalysis();
+  const { data, loading, error, exportToExcel } = useSOLBreachAnalysis();
 
   if (loading) {
     return (
@@ -44,18 +45,29 @@ export function SOLBreachSummary() {
   return (
     <Card className="border-destructive/50 bg-destructive/5 shadow-lg">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-destructive/20 rounded-lg">
-            <Gavel className="h-5 w-5 text-destructive" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-destructive/20 rounded-lg">
+              <Gavel className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold text-destructive">
+                STATUTE OF LIMITATIONS BREACH ANALYSIS
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                "In Progress" & "Settled" claims - Breached & Approaching (90 days)
+              </p>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-lg font-bold text-destructive">
-              STATUTE OF LIMITATIONS BREACH ANALYSIS
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              "In Progress" & "Settled" claims past SOL deadline (Exp. Create Date + State SOL)
-            </p>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportToExcel}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export Review
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -64,29 +76,29 @@ export function SOLBreachSummary() {
           <div className="bg-card rounded-lg p-4 border border-destructive/30">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase">In Progress Breaches</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase">Breached (Past SOL)</span>
             </div>
-            <p className="text-2xl font-bold text-destructive">{formatCurrency(data.inProgressTotal)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{data.inProgressCount} claims</p>
+            <p className="text-2xl font-bold text-destructive">{formatCurrency(data.breachedTotal)}</p>
+            <p className="text-sm text-muted-foreground mt-1">{data.breachedCount} claims</p>
           </div>
           
           <div className="bg-card rounded-lg p-4 border border-warning/30">
             <div className="flex items-center gap-2 mb-2">
-              <Gavel className="h-4 w-4 text-warning" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Settled Breaches</span>
+              <Clock className="h-4 w-4 text-warning" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase">Approaching (90 Days)</span>
             </div>
-            <p className="text-2xl font-bold text-warning">{formatCurrency(data.settledTotal)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{data.settledCount} claims</p>
+            <p className="text-2xl font-bold text-warning">{formatCurrency(data.approachingTotal)}</p>
+            <p className="text-sm text-muted-foreground mt-1">{data.approachingCount} claims</p>
           </div>
           
           <div className="bg-destructive/10 rounded-lg p-4 border-2 border-destructive/50">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-destructive animate-pulse" />
-              <span className="text-xs font-bold text-destructive uppercase">Combined SOL Breach</span>
+              <span className="text-xs font-bold text-destructive uppercase">Combined SOL Risk</span>
             </div>
             <p className="text-3xl font-bold text-destructive">{formatCurrency(data.combinedTotal)}</p>
             <p className="text-sm text-destructive/80 mt-1">
-              {data.inProgressCount + data.settledCount} claims at risk
+              {data.totalPendingCount} claims at risk
             </p>
           </div>
         </div>
@@ -108,10 +120,10 @@ export function SOLBreachSummary() {
         )}
 
         {/* Detail Tables */}
-        {data.inProgressCount > 0 && (
+        {data.breachedCount > 0 && (
           <div>
             <h4 className="text-sm font-bold text-destructive mb-2">
-              In Progress Claims Breaching SOL ({data.inProgressCount})
+              Breached Claims - Past SOL Deadline ({data.breachedCount})
             </h4>
             <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
               <table className="w-full text-xs">
@@ -119,36 +131,40 @@ export function SOLBreachSummary() {
                   <tr>
                     <th className="text-left p-2 font-semibold">Claim #</th>
                     <th className="text-left p-2 font-semibold">State</th>
+                    <th className="text-left p-2 font-semibold">BI Status</th>
                     <th className="text-left p-2 font-semibold">Create Date</th>
                     <th className="text-left p-2 font-semibold">SOL (Yrs)</th>
+                    <th className="text-right p-2 font-semibold">Days Past</th>
                     <th className="text-right p-2 font-semibold">Reserves</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.inProgressBreaches.slice(0, 50).map((claim, i) => (
+                  {data.breachedClaims.slice(0, 50).map((claim, i) => (
                     <tr key={i} className="border-t border-border hover:bg-muted/50">
                       <td className="p-2 font-mono">{claim.claimNumber}</td>
                       <td className="p-2">{claim.state}</td>
+                      <td className="p-2">{claim.biStatus}</td>
                       <td className="p-2">{claim.expCreateDate}</td>
                       <td className="p-2">{claim.solYears}</td>
+                      <td className="p-2 text-right text-destructive font-medium">{Math.abs(claim.daysUntilExpiry)}</td>
                       <td className="p-2 text-right font-medium">{formatCurrency(claim.reserves)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {data.inProgressCount > 50 && (
+            {data.breachedCount > 50 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Showing 50 of {data.inProgressCount} claims
+                Showing 50 of {data.breachedCount} claims
               </p>
             )}
           </div>
         )}
 
-        {data.settledCount > 0 && (
+        {data.approachingCount > 0 && (
           <div>
             <h4 className="text-sm font-bold text-warning mb-2">
-              Settled Claims Breaching SOL ({data.settledCount})
+              Approaching SOL - Within 90 Days ({data.approachingCount})
             </h4>
             <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
               <table className="w-full text-xs">
@@ -156,35 +172,39 @@ export function SOLBreachSummary() {
                   <tr>
                     <th className="text-left p-2 font-semibold">Claim #</th>
                     <th className="text-left p-2 font-semibold">State</th>
+                    <th className="text-left p-2 font-semibold">BI Status</th>
                     <th className="text-left p-2 font-semibold">Create Date</th>
                     <th className="text-left p-2 font-semibold">SOL (Yrs)</th>
+                    <th className="text-right p-2 font-semibold">Days Left</th>
                     <th className="text-right p-2 font-semibold">Reserves</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.settledBreaches.slice(0, 50).map((claim, i) => (
+                  {data.approachingClaims.slice(0, 50).map((claim, i) => (
                     <tr key={i} className="border-t border-border hover:bg-muted/50">
                       <td className="p-2 font-mono">{claim.claimNumber}</td>
                       <td className="p-2">{claim.state}</td>
+                      <td className="p-2">{claim.biStatus}</td>
                       <td className="p-2">{claim.expCreateDate}</td>
                       <td className="p-2">{claim.solYears}</td>
+                      <td className="p-2 text-right text-warning font-medium">{claim.daysUntilExpiry}</td>
                       <td className="p-2 text-right font-medium">{formatCurrency(claim.reserves)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {data.settledCount > 50 && (
+            {data.approachingCount > 50 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Showing 50 of {data.settledCount} claims
+                Showing 50 of {data.approachingCount} claims
               </p>
             )}
           </div>
         )}
 
-        {data.inProgressCount === 0 && data.settledCount === 0 && (
+        {data.breachedCount === 0 && data.approachingCount === 0 && (
           <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground">No SOL breaches found.</p>
+            <p className="text-sm text-muted-foreground">No SOL breaches or approaching deadlines found.</p>
           </div>
         )}
       </CardContent>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { parse, addYears, isBefore } from "date-fns";
+import { parse, addYears, addDays, isBefore, isAfter } from "date-fns";
+import * as XLSX from "xlsx";
 
 // Statute of Limitations by State (in years)
 const STATE_SOL: Record<string, number> = {
@@ -67,16 +68,19 @@ interface SOLBreachClaim {
   biStatus: string;
   reserves: number;
   solYears: number;
+  daysUntilExpiry: number;
+  category: 'breached' | 'approaching';
 }
 
 export interface SOLBreachData {
-  inProgressBreaches: SOLBreachClaim[];
-  settledBreaches: SOLBreachClaim[];
-  inProgressTotal: number;
-  settledTotal: number;
+  breachedClaims: SOLBreachClaim[];
+  approachingClaims: SOLBreachClaim[];
+  breachedTotal: number;
+  approachingTotal: number;
   combinedTotal: number;
-  inProgressCount: number;
-  settledCount: number;
+  breachedCount: number;
+  approachingCount: number;
+  totalPendingCount: number; // breached + approaching for Decisions Pending
   byState: Record<string, { count: number; reserves: number }>;
 }
 
@@ -125,9 +129,10 @@ export function useSOLBreachAnalysis() {
         
         const rows = parsed.data as Record<string, string>[];
         const today = new Date('2026-01-06'); // Current date
+        const approachingThreshold = addDays(today, 90); // 90 days from now
         
-        const inProgressBreaches: SOLBreachClaim[] = [];
-        const settledBreaches: SOLBreachClaim[] = [];
+        const breachedClaims: SOLBreachClaim[] = [];
+        const approachingClaims: SOLBreachClaim[] = [];
         const byState: Record<string, { count: number; reserves: number }> = {};
         
         for (const row of rows) {
@@ -151,6 +156,7 @@ export function useSOLBreachAnalysis() {
           
           // Calculate SOL expiry date
           const solExpiryDate = addYears(expCreateDate, solYears);
+          const daysUntilExpiry = Math.floor((solExpiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           
           // Check if SOL is breached (expiry date is before today)
           if (isBefore(solExpiryDate, today)) {
@@ -162,13 +168,11 @@ export function useSOLBreachAnalysis() {
               biStatus,
               reserves,
               solYears,
+              daysUntilExpiry,
+              category: 'breached',
             };
             
-            if (biStatus === 'In Progress') {
-              inProgressBreaches.push(breach);
-            } else {
-              settledBreaches.push(breach);
-            }
+            breachedClaims.push(breach);
             
             // Track by state
             if (!byState[state]) {
@@ -176,20 +180,37 @@ export function useSOLBreachAnalysis() {
             }
             byState[state].count++;
             byState[state].reserves += reserves;
+          } 
+          // Check if SOL is approaching (within 90 days)
+          else if (isBefore(solExpiryDate, approachingThreshold)) {
+            const approaching: SOLBreachClaim = {
+              claimNumber,
+              state,
+              expCreateDate: expCreateDateStr,
+              solExpiryDate,
+              biStatus,
+              reserves,
+              solYears,
+              daysUntilExpiry,
+              category: 'approaching',
+            };
+            
+            approachingClaims.push(approaching);
           }
         }
         
-        const inProgressTotal = inProgressBreaches.reduce((sum, b) => sum + b.reserves, 0);
-        const settledTotal = settledBreaches.reduce((sum, b) => sum + b.reserves, 0);
+        const breachedTotal = breachedClaims.reduce((sum, b) => sum + b.reserves, 0);
+        const approachingTotal = approachingClaims.reduce((sum, b) => sum + b.reserves, 0);
         
         setData({
-          inProgressBreaches,
-          settledBreaches,
-          inProgressTotal,
-          settledTotal,
-          combinedTotal: inProgressTotal + settledTotal,
-          inProgressCount: inProgressBreaches.length,
-          settledCount: settledBreaches.length,
+          breachedClaims,
+          approachingClaims,
+          breachedTotal,
+          approachingTotal,
+          combinedTotal: breachedTotal + approachingTotal,
+          breachedCount: breachedClaims.length,
+          approachingCount: approachingClaims.length,
+          totalPendingCount: breachedClaims.length + approachingClaims.length,
           byState,
         });
         setLoading(false);
@@ -202,5 +223,55 @@ export function useSOLBreachAnalysis() {
     loadAndAnalyze();
   }, []);
 
-  return { data, loading, error };
+  // Export function for Excel
+  const exportToExcel = () => {
+    if (!data) return;
+
+    const breachedRows = data.breachedClaims.map(c => ({
+      'Category': 'BREACHED - PAST SOL',
+      'Claim #': c.claimNumber,
+      'State': c.state,
+      'BI Status': c.biStatus,
+      'Exp. Create Date': c.expCreateDate,
+      'SOL (Years)': c.solYears,
+      'SOL Expiry Date': c.solExpiryDate.toLocaleDateString(),
+      'Days Past Due': Math.abs(c.daysUntilExpiry),
+      'Open Reserves': c.reserves,
+    }));
+
+    const approachingRows = data.approachingClaims.map(c => ({
+      'Category': 'APPROACHING - WITHIN 90 DAYS',
+      'Claim #': c.claimNumber,
+      'State': c.state,
+      'BI Status': c.biStatus,
+      'Exp. Create Date': c.expCreateDate,
+      'SOL (Years)': c.solYears,
+      'SOL Expiry Date': c.solExpiryDate.toLocaleDateString(),
+      'Days Until Expiry': c.daysUntilExpiry,
+      'Open Reserves': c.reserves,
+    }));
+
+    const allRows = [...breachedRows, ...approachingRows];
+
+    const ws = XLSX.utils.json_to_sheet(allRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'SOL Review');
+
+    // Add summary sheet
+    const summaryData = [
+      { 'Metric': 'Report Date', 'Value': '2026-01-06' },
+      { 'Metric': 'Total Breached Claims', 'Value': data.breachedCount },
+      { 'Metric': 'Breached Reserves', 'Value': data.breachedTotal },
+      { 'Metric': 'Total Approaching Claims (90 days)', 'Value': data.approachingCount },
+      { 'Metric': 'Approaching Reserves', 'Value': data.approachingTotal },
+      { 'Metric': 'Combined Total Claims', 'Value': data.totalPendingCount },
+      { 'Metric': 'Combined Total Reserves', 'Value': data.combinedTotal },
+    ];
+    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    XLSX.writeFile(wb, `SOL_Review_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  return { data, loading, error, exportToExcel };
 }
