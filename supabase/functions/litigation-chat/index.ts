@@ -31,6 +31,7 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
   const verified = {
     snapshot_date: now.toISOString().split('T')[0],
     confidence_threshold: 0.98,
+    data_source: "PRODUCTION_DATABASE",
     
     // Portfolio-level aggregates (98%+ confidence)
     portfolio: {
@@ -72,10 +73,10 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
       age_under_60: exp.totals?.ageUnder60 || 0,
     },
     
-    // CP1 exposure
+    // CP1 exposure - COMPLETE DATA
     cp1: {
       total: exp.cp1Data?.total || 0,
-      cp1_rate_pct: exp.cp1Data?.cp1Rate || 0,
+      cp1_rate_pct: parseFloat(exp.cp1Data?.cp1Rate) || 0,
       evaluated_total: exp.cp1Data?.totals?.grandTotal || 0,
       yes_cp1: exp.cp1Data?.totals?.yes || 0,
       no_cp1: exp.cp1Data?.totals?.noCP || 0,
@@ -90,12 +91,14 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
       no_eval_reserves_usd: exp.financials?.noEvalReserves || 0,
     },
     
-    // Team summaries (aggregates only)
+    // Team summaries with CP1 data
     team_summaries: Object.entries(ctx.byTeam || {}).map(([team, data]: [string, any]) => ({
       team,
-      count: data.count || 0,
+      total_claims: data.count || 0,
       closed: data.closed || 0,
       total_paid_usd: data.totalPaid || 0,
+      cp1_count: data.cp1Count || 0,
+      cp1_rate_pct: data.count > 0 ? ((data.cp1Count || 0) / data.count * 100).toFixed(1) : '0',
     })),
     
     // Category summaries
@@ -115,20 +118,45 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
       without_eval: data.withoutEval || 0,
     })),
     
-    // Type group summaries
+    // Type group summaries (ATR, LIT, BI3, etc.)
     type_group_summaries: (exp.typeGroupSummaries || []).map((g: any) => ({
       type_group: g.typeGroup,
       grand_total: g.grandTotal || 0,
+      unique_claims: g.uniqueClaims || g.grandTotal || 0,
       age_365_plus: g.age365Plus || 0,
+      age_181_to_365: g.age181To365 || 0,
+      age_61_to_180: g.age61To180 || 0,
+      age_under_60: g.ageUnder60 || 0,
       reserves_usd: g.reserves || 0,
+      low_eval_usd: g.lowEval || 0,
+      high_eval_usd: g.highEval || 0,
     })),
     
-    // CP1 by coverage
+    // CP1 by coverage - COMPLETE
     cp1_by_coverage: (exp.cp1Data?.byCoverage || []).map((c: any) => ({
       coverage: c.coverage,
       total: c.total || 0,
       yes: c.yes || 0,
+      no_cp: c.noCP || 0,
       cp1_rate_pct: c.cp1Rate || 0,
+      reserves_usd: c.reserves || 0,
+    })),
+    
+    // CP1 by type group (from raw claims)
+    cp1_by_type_group: (exp.cp1ByTypeGroup || []).map((t: any) => ({
+      type_group: t.typeGroup,
+      total: t.total || 0,
+      yes: t.yes || 0,
+      no_cp: t.noCP || 0,
+      cp1_rate_pct: t.total > 0 ? (t.yes / t.total * 100).toFixed(1) : '0',
+    })),
+    
+    // CP1 BI by age
+    cp1_bi_by_age: (exp.cp1Data?.biByAge || []).map((a: any) => ({
+      age_bucket: a.age,
+      no_cp: a.noCP || 0,
+      yes: a.yes || 0,
+      total: (a.noCP || 0) + (a.yes || 0),
     })),
     
     // Financials by age
@@ -140,24 +168,56 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
       high_eval_usd: a.highEval || 0,
     })),
     
+    // Financials by type group
+    financials_by_type_group: (exp.financials?.byTypeGroup || []).map((t: any) => ({
+      type_group: t.typeGroup,
+      reserves_usd: t.reserves || 0,
+    })),
+    
     // Top closures sample (anonymized identifiers allowed)
-    top_closures_sample: (ctx.monthToDate?.closedMatters || []).slice(0, 10).map((m: any) => ({
+    top_closures_sample: (ctx.monthToDate?.closedMatters || []).slice(0, 15).map((m: any) => ({
       claim_id: m.claim,
       amount_paid_usd: m.amountPaid || 0,
       team: m.team,
+      adjuster: m.adjuster,
     })),
     
-    // Critical exposure sample
+    // High exposure claims sample
     high_exposure_sample: (exp.rawClaims || [])
       .filter((c: any) => (c.openReserves || 0) > 100000)
-      .slice(0, 10)
+      .slice(0, 15)
       .map((c: any) => ({
         claim_id: c.claimNumber,
         coverage: c.coverage,
+        type_group: c.typeGroup,
         days_open: c.days,
         reserves_usd: c.openReserves || 0,
+        low_eval_usd: c.lowEval || 0,
+        high_eval_usd: c.highEval || 0,
         cp1_status: c.overallCP1,
       })),
+      
+    // No evaluation claims sample
+    no_eval_sample: (exp.rawClaims || [])
+      .filter((c: any) => c.lowEval === 0 && c.highEval === 0)
+      .slice(0, 15)
+      .map((c: any) => ({
+        claim_id: c.claimNumber,
+        coverage: c.coverage,
+        type_group: c.typeGroup,
+        days_open: c.days,
+        reserves_usd: c.openReserves || 0,
+        age_bucket: c.ageBucket,
+      })),
+    
+    // Claims without evaluation by category
+    no_eval_by_category: ctx.mattersWithoutEvaluation?.slice(0, 20).map((m: any) => ({
+      claim_id: m.claim,
+      category: m.category,
+      coverage: m.coverage,
+      team: m.team,
+      reserves_usd: m.reserves || 0,
+    })) || [],
   };
 
   return verified;
