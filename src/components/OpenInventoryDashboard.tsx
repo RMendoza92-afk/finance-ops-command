@@ -3680,6 +3680,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             .sort((a, b) => b.age365Plus - a.age365Plus)
             .slice(0, 10);
           
+          // Get raw claims that are 365+ days for these type groups
+          const agedTypeGroupNames = agedGroups.map(g => g.typeGroup);
+          const agedRawClaims = data.rawClaims.filter(claim => 
+            claim.days >= 365 && agedTypeGroupNames.includes(claim.typeGroup)
+          ).sort((a, b) => b.days - a.days);
+          
           const manager = selectedReviewer || 'Richie Mendoza';
           const exportData: ExportableData = {
             title: 'Aged Inventory Alert',
@@ -3697,22 +3703,41 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               formatNumber(group.grandTotal),
               `${((group.age365Plus / group.grandTotal) * 100).toFixed(0)}%`,
             ]),
-            rawClaimData: [{
-              columns: ['Type Group', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Grand Total', 'Aged Percentage'],
-              rows: agedGroups.map(group => [
-                group.typeGroup,
-                group.age365Plus,
-                group.age181To365,
-                group.age61To180,
-                group.ageUnder60,
-                group.grandTotal,
-                ((group.age365Plus / group.grandTotal) * 100).toFixed(1),
-              ]),
-              sheetName: 'Aged Claims Detail',
-            }],
+            rawClaimData: [
+              {
+                columns: ['Type Group', '365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days', 'Grand Total', 'Aged Percentage'],
+                rows: agedGroups.map(group => [
+                  group.typeGroup,
+                  group.age365Plus,
+                  group.age181To365,
+                  group.age61To180,
+                  group.ageUnder60,
+                  group.grandTotal,
+                  ((group.age365Plus / group.grandTotal) * 100).toFixed(1),
+                ]),
+                sheetName: 'Summary',
+              },
+              {
+                columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Type Group', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Eval Phase', 'Demand Type'],
+                rows: agedRawClaims.map(claim => [
+                  claim.claimNumber,
+                  claim.claimant,
+                  claim.coverage,
+                  claim.days,
+                  claim.typeGroup,
+                  claim.openReserves,
+                  claim.lowEval,
+                  claim.highEval,
+                  claim.overallCP1,
+                  claim.evaluationPhase,
+                  claim.demandType,
+                ]),
+                sheetName: 'Raw Claims 365+ Days',
+              },
+            ],
           };
           await exportBoth(exportData);
-          toast.success('PDF + Excel exported: Aged Inventory Alert');
+          toast.success(`PDF + Excel exported: Aged Inventory Alert (${agedRawClaims.length} raw claims)`);
         }}
       >
         <div className="flex items-center gap-2 mb-4">
