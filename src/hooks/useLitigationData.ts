@@ -208,13 +208,17 @@ export function useLitigationData() {
   };
 
   const calculateMultiPack = (allData: LitigationMatter[]): ClosedMultiPackSummary => {
-    // Group claims by base claim = everything except last 2 digits (exposure number)
-    // e.g., "39-0000430132" -> base "39-00004301", exposure "32"
+    // Group claims by base claim = everything before the last dash (exposure number follows last dash)
+    // e.g., "65-158035-2" -> base "65-158035", exposure "2"
     const claimBaseMap = new Map<string, LitigationMatter[]>();
     
     const extractBaseClaim = (claimNum: string): string => {
-      if (claimNum.length < 4) return claimNum;
-      return claimNum.slice(0, -2);
+      const lastDashIdx = claimNum.lastIndexOf('-');
+      if (lastDashIdx === -1 || lastDashIdx === claimNum.indexOf('-')) {
+        // No second dash - return as-is (single claim, not multi-pack)
+        return claimNum;
+      }
+      return claimNum.substring(0, lastDashIdx);
     };
     
     for (const matter of allData) {
