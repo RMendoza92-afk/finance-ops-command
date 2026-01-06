@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,15 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import { useLitigationData } from "@/hooks/useLitigationData";
+import { useLitigationData, LitigationMatter } from "@/hooks/useLitigationData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
+import { DrilldownModal } from "@/components/DrilldownModal";
 import loyaLogo from "@/assets/fli_logo.jpg";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
+
+// Regex to match claim IDs in Oracle responses (e.g., M-12345, 12345678, CLM-12345)
+const CLAIM_ID_REGEX = /\b(M-\d{4,8}|\d{6,10}|CLM-\d{4,8}|[A-Z]{1,3}-\d{5,8})\b/g;
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/litigation-chat`;
 
@@ -58,16 +62,131 @@ const QUICK_ACTIONS = [
   },
 ];
 
+// Aggregated matter type for drilldown modal
+interface AggregatedMatter {
+  id: string;
+  uniqueRecord: string;
+  claim: string;
+  claimant: string;
+  coverage: string;
+  litigationStage: 'Early' | 'Mid' | 'Late' | 'Very Late';
+  expertType: string;
+  expertSpend: number;
+  reactiveSpend: number;
+  postureRatio: number;
+  riskFlag: 'GREEN' | 'ORANGE' | 'RED';
+  team: string;
+  adjuster: string;
+  dept: string;
+  totalPaid: number;
+  indemnity: number;
+  expense: number;
+  painBand: string;
+  transactions: LitigationMatter[];
+}
+
 export function LitigationChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedMatter, setSelectedMatter] = useState<AggregatedMatter | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { data: litigationData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
+
+  // Build a lookup map for quick claim resolution
+  const claimLookup = useMemo(() => {
+    const map = new Map<string, LitigationMatter[]>();
+    litigationData?.forEach(m => {
+      const key = m.claim?.toLowerCase() || m.uniqueRecord?.toLowerCase();
+      if (key) {
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(m);
+      }
+      // Also index by uniqueRecord
+      const urKey = m.uniqueRecord?.toLowerCase();
+      if (urKey && urKey !== key) {
+        if (!map.has(urKey)) map.set(urKey, []);
+        map.get(urKey)!.push(m);
+      }
+    });
+    return map;
+  }, [litigationData]);
+
+  // Handle clicking on a claim ID in the Oracle response
+  const handleClaimClick = useCallback((claimId: string) => {
+    const normalized = claimId.toLowerCase();
+    const matches = claimLookup.get(normalized);
+    
+    if (!matches || matches.length === 0) {
+      // Try partial match
+      const partialMatches: LitigationMatter[] = [];
+      claimLookup.forEach((matters, key) => {
+        if (key.includes(normalized) || normalized.includes(key)) {
+          partialMatches.push(...matters);
+        }
+      });
+      
+      if (partialMatches.length === 0) {
+        toast.info(`Claim ${claimId} not found in local data`);
+        return;
+      }
+      
+      buildAggregatedMatter(partialMatches, claimId);
+      return;
+    }
+    
+    buildAggregatedMatter(matches, claimId);
+  }, [claimLookup]);
+
+  // Build aggregated matter from transactions
+  const buildAggregatedMatter = useCallback((transactions: LitigationMatter[], claimId: string) => {
+    if (transactions.length === 0) return;
+    
+    const first = transactions[0];
+    const totalPaid = transactions.reduce((sum, t) => sum + t.totalAmount, 0);
+    const indemnity = transactions.reduce((sum, t) => sum + t.indemnitiesAmount, 0);
+    const expense = totalPaid - indemnity;
+    
+    // Determine litigation stage based on days (approximated from data)
+    const avgPain = transactions.reduce((sum, t) => sum + t.endPainLvl, 0) / transactions.length;
+    let stage: 'Early' | 'Mid' | 'Late' | 'Very Late' = 'Early';
+    if (avgPain >= 7) stage = 'Very Late';
+    else if (avgPain >= 5) stage = 'Late';
+    else if (avgPain >= 3) stage = 'Mid';
+    
+    // Risk flag based on amounts
+    let riskFlag: 'GREEN' | 'ORANGE' | 'RED' = 'GREEN';
+    if (totalPaid > 200000 || avgPain >= 7) riskFlag = 'RED';
+    else if (totalPaid > 75000 || avgPain >= 5) riskFlag = 'ORANGE';
+    
+    const aggregated: AggregatedMatter = {
+      id: first.id,
+      uniqueRecord: first.uniqueRecord || claimId,
+      claim: first.claim || claimId,
+      claimant: first.claimant,
+      coverage: first.coverage || first.expCategory,
+      litigationStage: stage,
+      expertType: first.expCategory,
+      expertSpend: expense * 0.6, // Approximation
+      reactiveSpend: expense * 0.4,
+      postureRatio: expense > 0 ? totalPaid / expense : 0,
+      riskFlag,
+      team: first.team,
+      adjuster: first.adjusterName,
+      dept: first.dept,
+      totalPaid,
+      indemnity,
+      expense,
+      painBand: `${first.startPainLvl}-${first.endPainLvl}`,
+      transactions,
+    };
+    
+    setSelectedMatter(aggregated);
+  }, []);
 
   // Build litigation data context
   const dataContext = useMemo(() => {
@@ -668,24 +787,7 @@ export function LitigationChat() {
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {msg.content.split('\n').map((line, lineIdx) => (
                       <p key={lineIdx} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
-                        {line.startsWith('- ') || line.startsWith('* ') ? (
-                          <span className="flex gap-2">
-                            <span className="text-primary">•</span>
-                            <span>{line.slice(2)}</span>
-                          </span>
-                        ) : line.startsWith('**') && line.endsWith('**') ? (
-                          <strong className="text-primary">{line.slice(2, -2)}</strong>
-                        ) : line.startsWith('###') ? (
-                          <strong className="text-primary text-base">{line.replace(/^#+\s*/, '')}</strong>
-                        ) : line.startsWith('##') ? (
-                          <strong className="text-primary text-lg">{line.replace(/^#+\s*/, '')}</strong>
-                        ) : line.startsWith('#') ? (
-                          <strong className="text-primary text-xl">{line.replace(/^#+\s*/, '')}</strong>
-                        ) : line.startsWith('|') ? (
-                          <code className="text-xs bg-background px-1 rounded">{line}</code>
-                        ) : (
-                          line
-                        )}
+                        {renderLineWithClickableClaims(line, msg.role === 'assistant' ? handleClaimClick : undefined)}
                       </p>
                     ))}
                   </div>
@@ -750,6 +852,89 @@ export function LitigationChat() {
           </div>
         </CardContent>
       )}
+      
+      {/* Drilldown Modal for clicked claims */}
+      <DrilldownModal 
+        matter={selectedMatter} 
+        onClose={() => setSelectedMatter(null)} 
+      />
     </Card>
   );
+}
+
+// Helper function to render line content with clickable claim IDs
+function renderLineWithClickableClaims(
+  line: string, 
+  onClaimClick?: (claimId: string) => void
+): React.ReactNode {
+  // Handle special line formatting first
+  if (line.startsWith('- ') || line.startsWith('* ')) {
+    return (
+      <span className="flex gap-2">
+        <span className="text-primary">•</span>
+        <span>{parseClaimIds(line.slice(2), onClaimClick)}</span>
+      </span>
+    );
+  }
+  if (line.startsWith('**') && line.endsWith('**')) {
+    return <strong className="text-primary">{parseClaimIds(line.slice(2, -2), onClaimClick)}</strong>;
+  }
+  if (line.startsWith('###')) {
+    return <strong className="text-primary text-base">{parseClaimIds(line.replace(/^#+\s*/, ''), onClaimClick)}</strong>;
+  }
+  if (line.startsWith('##')) {
+    return <strong className="text-primary text-lg">{parseClaimIds(line.replace(/^#+\s*/, ''), onClaimClick)}</strong>;
+  }
+  if (line.startsWith('#')) {
+    return <strong className="text-primary text-xl">{parseClaimIds(line.replace(/^#+\s*/, ''), onClaimClick)}</strong>;
+  }
+  if (line.startsWith('|')) {
+    return <code className="text-xs bg-background px-1 rounded">{parseClaimIds(line, onClaimClick)}</code>;
+  }
+  
+  return parseClaimIds(line, onClaimClick);
+}
+
+// Parse text and replace claim IDs with clickable spans
+function parseClaimIds(
+  text: string, 
+  onClaimClick?: (claimId: string) => void
+): React.ReactNode {
+  if (!onClaimClick) return text;
+  
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  
+  // Reset regex state
+  CLAIM_ID_REGEX.lastIndex = 0;
+  
+  while ((match = CLAIM_ID_REGEX.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    
+    // Add clickable claim ID
+    const claimId = match[1];
+    parts.push(
+      <button
+        key={`${match.index}-${claimId}`}
+        onClick={() => onClaimClick(claimId)}
+        className="text-primary underline underline-offset-2 hover:text-primary/80 font-mono font-medium cursor-pointer transition-colors"
+        title={`View details for ${claimId}`}
+      >
+        {claimId}
+      </button>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  
+  return parts.length > 0 ? parts : text;
 }
