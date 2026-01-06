@@ -3977,25 +3977,24 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               Decisions Pending
             </SheetTitle>
             <SheetDescription>
-              {decisionsData?.totalCount || 0} claims with pain level 6+ and no evaluation set • Total Reserves: {formatCurrency(decisionsData?.totalReserves || 0)}
+              {decisionsData?.totalCount || 0} claims with high reserves and no evaluation • Total: {formatCurrency(decisionsData?.totalReserves || 0)}
             </SheetDescription>
           </SheetHeader>
 
-          {/* Summary Stats by Pain Level */}
-          <div className="grid grid-cols-5 gap-2 py-4 border-b border-border">
-            {[6, 7, 8, 9, 10].map(level => {
-              const levelData = decisionsData?.byPainLevel[level];
-              return (
-                <div key={level} className={`text-center p-2 rounded-lg ${
-                  level >= 9 ? 'bg-destructive/10' : level >= 7 ? 'bg-warning/10' : 'bg-muted/50'
-                }`}>
-                  <p className={`text-xl font-bold ${
-                    level >= 9 ? 'text-destructive' : level >= 7 ? 'text-warning' : 'text-foreground'
-                  }`}>{levelData?.count || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">Pain {level}</p>
-                </div>
-              );
-            })}
+          {/* Summary Stats by Pain Category */}
+          <div className="grid grid-cols-3 gap-2 py-4 border-b border-border">
+            {Object.entries(decisionsData?.byPainLevel || {}).slice(0, 3).map(([category, levelData]) => (
+              <div key={category} className={`text-center p-2 rounded-lg ${
+                category.includes('High') || category === 'Limits' ? 'bg-destructive/10' : 
+                category === 'Pending' ? 'bg-warning/10' : 'bg-muted/50'
+              }`}>
+                <p className={`text-xl font-bold ${
+                  category.includes('High') || category === 'Limits' ? 'text-destructive' : 
+                  category === 'Pending' ? 'text-warning' : 'text-foreground'
+                }`}>{levelData?.count || 0}</p>
+                <p className="text-[10px] text-muted-foreground">{category}</p>
+              </div>
+            ))}
           </div>
 
           {/* Claims List */}
@@ -4004,46 +4003,49 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <div className="text-center py-8 text-muted-foreground">
                 <Flag className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No pending decisions found</p>
-                <p className="text-sm">Claims with pain level 6+ and no eval will appear here</p>
+                <p className="text-sm">Claims with high reserves and no eval will appear here</p>
               </div>
             ) : (
-              [...decisionsData.claims]
-                .sort((a, b) => b.painLevel - a.painLevel || b.reserves - a.reserves)
+              decisionsData.claims
                 .slice(0, 50)
-                .map((claim) => (
-                  <div 
-                    key={claim.claimNumber} 
-                    className={`p-4 rounded-lg border ${
-                      claim.painLevel >= 9 ? 'border-destructive/50 bg-destructive/5' :
-                      claim.painLevel >= 7 ? 'border-warning/50 bg-warning/5' :
-                      'border-border bg-muted/30'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm text-primary">{claim.claimNumber}</span>
-                          <Badge variant={
-                            claim.painLevel >= 9 ? 'destructive' :
-                            claim.painLevel >= 7 ? 'default' : 'secondary'
-                          } className="text-xs">
-                            Pain {claim.painLevel}
-                          </Badge>
+                .map((claim) => {
+                  const isHighPain = claim.painLevel.includes('5+') || claim.painLevel === 'Limits' || claim.painLevel.includes('High');
+                  const isPending = claim.painLevel === 'Pending' || claim.painLevel === 'Blank';
+                  return (
+                    <div 
+                      key={claim.claimNumber} 
+                      className={`p-4 rounded-lg border ${
+                        isHighPain ? 'border-destructive/50 bg-destructive/5' :
+                        isPending ? 'border-warning/50 bg-warning/5' :
+                        'border-border bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm text-primary">{claim.claimNumber}</span>
+                            <Badge variant={
+                              isHighPain ? 'destructive' :
+                              isPending ? 'default' : 'secondary'
+                            } className="text-xs">
+                              {claim.painLevel}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{claim.state} • {claim.biStatus}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">{claim.state} • {claim.biStatus}</p>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-foreground">{formatCurrency(claim.reserves)}</p>
+                          <p className="text-xs text-muted-foreground">{claim.team}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-foreground">{formatCurrency(claim.reserves)}</p>
-                        <p className="text-xs text-muted-foreground">{claim.team}</p>
-                      </div>
-                    </div>
 
-                    <div className="mt-3 p-2 bg-warning/10 rounded border border-warning/30">
-                      <p className="text-xs text-warning font-medium">⚠ NO EVALUATION SET</p>
-                      <p className="text-sm text-muted-foreground">High pain level claim requires low/high eval</p>
+                      <div className="mt-3 p-2 bg-warning/10 rounded border border-warning/30">
+                        <p className="text-xs text-warning font-medium">⚠ {claim.reason?.toUpperCase() || 'NO EVALUATION SET'}</p>
+                        <p className="text-sm text-muted-foreground">Requires low/high evaluation decision</p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
             )}
             {decisionsData && decisionsData.claims.length > 50 && (
               <p className="text-xs text-muted-foreground text-center">

@@ -5,16 +5,17 @@ interface DecisionsPendingData {
   totalCount: number;
   totalReserves: number;
   claims: DecisionClaim[];
-  byPainLevel: Record<number, { count: number; reserves: number }>;
+  byPainLevel: Record<string, { count: number; reserves: number }>;
 }
 
 interface DecisionClaim {
   claimNumber: string;
   state: string;
-  painLevel: number;
+  painLevel: string;
   reserves: number;
   biStatus: string;
   team: string;
+  reason: string;
 }
 
 function parseCurrency(val: string): number {
@@ -24,21 +25,6 @@ function parseCurrency(val: string): number {
     return -parseFloat(cleaned.slice(1, -1)) || 0;
   }
   return parseFloat(cleaned) || 0;
-}
-
-function parsePainLevel(val: string): number | null {
-  if (!val || val.trim() === '' || val === 'Pending' || val === 'Blank') return null;
-  // Handle ranges like "7-9" - take the high end
-  if (val.includes('-')) {
-    const parts = val.split('-');
-    return parseInt(parts[1]) || null;
-  }
-  // Handle "Under 5" type values
-  if (val.toLowerCase().includes('under')) return null;
-  // Handle "Limits" as high pain level (10)
-  if (val.toLowerCase() === 'limits') return 10;
-  const num = parseInt(val);
-  return isNaN(num) ? null : num;
 }
 
 export function useDecisionsPending() {
@@ -59,49 +45,74 @@ export function useDecisionsPending() {
         
         const rows = parsed.data as Record<string, string>[];
         const claims: DecisionClaim[] = [];
-        const byPainLevel: Record<number, { count: number; reserves: number }> = {};
+        const byPainLevel: Record<string, { count: number; reserves: number }> = {};
         
         for (const row of rows) {
-          // Get pain level - prefer Final End Pain, then End Pain Level
-          const finalEndPain = row['Final End Pain']?.trim() || '';
-          const endPainLevel = row['End Pain Level']?.trim() || '';
-          const painLevelStr = finalEndPain || endPainLevel;
-          const painLevel = parsePainLevel(painLevelStr);
-          
-          // Skip if pain level is null or <= 5
-          if (painLevel === null || painLevel <= 5) continue;
-          
-          // Check for no eval (Low and High must be empty/0)
+          const reserves = parseCurrency(row['Open Reserves'] || '0');
           const lowEval = parseCurrency(row['Low'] || '0');
           const highEval = parseCurrency(row['High'] || '0');
+          const hasNoEval = lowEval === 0 && highEval === 0;
           
-          // Only include if BOTH low and high eval are 0/empty
-          if (lowEval !== 0 || highEval !== 0) continue;
+          // Get pain level info
+          const finalEndPain = row['Final End Pain']?.trim() || '';
+          const endPainLevel = row['End Pain Level']?.trim() || '';
+          const painLevelStr = finalEndPain || endPainLevel || 'Unknown';
           
-          const reserves = parseCurrency(row['Open Reserves'] || '0');
+          // Determine if this claim needs a decision
+          // Criteria: High reserves ($15K+) with no evaluation set
+          const needsDecision = reserves >= 15000 && hasNoEval;
+          
+          if (!needsDecision) continue;
+          
           const claimNumber = row['Claim#'] || '';
           const state = row['Accident Location State']?.trim() || '';
           const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
           const team = row['Team Group']?.trim() || '';
           
+          // Determine reason
+          let reason = 'High reserves with no evaluation';
+          if (painLevelStr === 'Pending' || painLevelStr === 'Blank') {
+            reason = 'Pending pain assessment + no evaluation';
+          } else if (painLevelStr.includes('5+') || painLevelStr === 'Limits') {
+            reason = 'High pain level + no evaluation';
+          }
+          
           claims.push({
             claimNumber,
             state,
-            painLevel,
+            painLevel: painLevelStr,
             reserves,
             biStatus,
             team,
+            reason,
           });
           
-          // Track by pain level
-          if (!byPainLevel[painLevel]) {
-            byPainLevel[painLevel] = { count: 0, reserves: 0 };
+          // Track by pain level category
+          const category = painLevelStr === 'Pending' || painLevelStr === 'Blank' 
+            ? 'Pending' 
+            : painLevelStr.includes('5+') || painLevelStr === 'Limits'
+              ? 'High (5+)'
+              : painLevelStr.includes('Under')
+                ? 'Under 5'
+                : painLevelStr || 'Unknown';
+          
+          if (!byPainLevel[category]) {
+            byPainLevel[category] = { count: 0, reserves: 0 };
           }
-          byPainLevel[painLevel].count++;
-          byPainLevel[painLevel].reserves += reserves;
+          byPainLevel[category].count++;
+          byPainLevel[category].reserves += reserves;
         }
         
+        // Sort by reserves descending
+        claims.sort((a, b) => b.reserves - a.reserves);
+        
         const totalReserves = claims.reduce((sum, c) => sum + c.reserves, 0);
+        
+        console.log('Decisions Pending Analysis:', {
+          totalClaims: claims.length,
+          totalReserves,
+          byCategory: byPainLevel,
+        });
         
         setData({
           totalCount: claims.length,
