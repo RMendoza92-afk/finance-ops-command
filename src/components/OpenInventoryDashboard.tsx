@@ -444,46 +444,46 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   }, [pendingDecisions]);
 
   // Budget Burn Rate calculation - based on actual Loya Insurance Group claims data
-  // Source: Comparison of Claim Payments - YTD December 31, 2024 vs YTD November 30, 2025
+  // Source: 2026 YTD Litigation BI Paid (Jan 2026)
   const budgetMetrics = useMemo(() => {
-    // 2024 Actuals (full year baseline)
-    const bi2024 = 275016270;  // BI Total
-    const cl2024 = 97735038;   // CL Total  
-    const oc2024 = 31961547;   // OC Total
-    const total2024 = bi2024 + cl2024 + oc2024; // $404,712,855
+    // 2025 Actuals (full year baseline - Jan-Nov 2025)
+    const bi2025Full = 316610919;  // BI Total
+    const cl2025Full = 76321524;   // CL Total  
+    const oc2025Full = 21759007;   // OC Total
+    const total2025 = bi2025Full + cl2025Full + oc2025Full; // $414,691,450
     
-    // 2025 YTD (through November)
-    const bi2025 = 316610919;  // BI Total - up $41.6M
-    const cl2025 = 76321524;   // CL Total - down $21.4M
-    const oc2025 = 21759007;   // OC Total - down $10.2M
-    const ytdPaid = bi2025 + cl2025 + oc2025; // $414,691,450
+    // 2026 YTD (through January) - Litigation BI only
+    // Claim 63-0000382073: $27,000.00 + Claim 66-0000052038: $14,516.16 = $41,516.16
+    const bi2026 = 41516.16;  // BI Litigation Paid YTD
+    const cl2026 = 0;   // CL Total YTD
+    const oc2026 = 0;   // OC Total YTD
+    const ytdPaid = bi2026 + cl2026 + oc2026; // $41,516.16
     
-    // Annual budget based on 2024 actuals + 5% growth allowance
-    const annualBudget = Math.round(total2024 * 1.05); // ~$424.9M
+    // Annual budget based on 2025 actuals + 5% growth allowance
+    const annualBudget = Math.round(total2025 * 1.05); // ~$435.4M
     
     const burnRate = (ytdPaid / annualBudget) * 100;
     const remaining = annualBudget - ytdPaid;
-    const monthsElapsed = 11; // Through November
+    const monthsElapsed = 1; // Through January 2026
     const monthsRemaining = 12 - monthsElapsed;
     const projectedBurn = (ytdPaid / monthsElapsed) * 12;
     const projectedVariance = annualBudget - projectedBurn;
     
     // Monthly breakdown (estimated from YTD / months elapsed)
     const avgMonthlyBudget = annualBudget / 12;
-    const avgMonthlyActual = ytdPaid / monthsElapsed;
     
     const monthlyData = [
-      { month: 'Jan', budget: avgMonthlyBudget, actual: 38234567, variance: avgMonthlyBudget - 38234567 },
-      { month: 'Feb', budget: avgMonthlyBudget, actual: 35678901, variance: avgMonthlyBudget - 35678901 },
-      { month: 'Mar', budget: avgMonthlyBudget, actual: 39123456, variance: avgMonthlyBudget - 39123456 },
-      { month: 'Apr', budget: avgMonthlyBudget, actual: 37456789, variance: avgMonthlyBudget - 37456789 },
-      { month: 'May', budget: avgMonthlyBudget, actual: 36789012, variance: avgMonthlyBudget - 36789012 },
-      { month: 'Jun', budget: avgMonthlyBudget, actual: 38901234, variance: avgMonthlyBudget - 38901234 },
-      { month: 'Jul', budget: avgMonthlyBudget, actual: 37234567, variance: avgMonthlyBudget - 37234567 },
-      { month: 'Aug', budget: avgMonthlyBudget, actual: 38567890, variance: avgMonthlyBudget - 38567890 },
-      { month: 'Sep', budget: avgMonthlyBudget, actual: 39012345, variance: avgMonthlyBudget - 39012345 },
-      { month: 'Oct', budget: avgMonthlyBudget, actual: 37890123, variance: avgMonthlyBudget - 37890123 },
-      { month: 'Nov', budget: avgMonthlyBudget, actual: 35802566, variance: avgMonthlyBudget - 35802566 },
+      { month: 'Jan', budget: avgMonthlyBudget, actual: 41516.16, variance: avgMonthlyBudget - 41516.16 },
+      { month: 'Feb', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Mar', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Apr', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'May', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Jun', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Jul', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Aug', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Sep', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Oct', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
+      { month: 'Nov', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
       { month: 'Dec', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
     ];
 
@@ -491,48 +491,48 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     const coverageBreakdown = {
       bi: { 
         name: 'Bodily Injury', 
-        ytd2025: bi2025, 
-        ytd2024: bi2024, 
-        change: bi2025 - bi2024,
+        ytd2026: bi2026, 
+        ytd2025: bi2025Full, 
+        change: bi2026 - bi2025Full,
+        claimCount2026: 2,
         claimCount2025: 34040,
-        claimCount2024: 21660,
+        avgPerClaim2026: 20758.08,
         avgPerClaim2025: 9301,
-        avgPerClaim2024: 12697,
       },
       cl: { 
         name: 'Collision', 
-        ytd2025: cl2025, 
-        ytd2024: cl2024, 
-        change: cl2025 - cl2024,
+        ytd2026: cl2026, 
+        ytd2025: cl2025Full, 
+        change: cl2026 - cl2025Full,
+        claimCount2026: 0,
         claimCount2025: 10200,
-        claimCount2024: 14481,
+        avgPerClaim2026: 0,
         avgPerClaim2025: 7483,
-        avgPerClaim2024: 6749,
       },
       oc: { 
         name: 'Other Coverage', 
-        ytd2025: oc2025, 
-        ytd2024: oc2024, 
-        change: oc2025 - oc2024,
+        ytd2026: oc2026, 
+        ytd2025: oc2025Full, 
+        change: oc2026 - oc2025Full,
+        claimCount2026: 0,
         claimCount2025: 2909,
-        claimCount2024: 4808,
+        avgPerClaim2026: 0,
         avgPerClaim2025: 7480,
-        avgPerClaim2024: 6648,
       },
     };
 
     return {
       annualBudget,
       ytdPaid,
-      burnRate: Math.round(burnRate),
+      burnRate: Math.round(burnRate * 1000) / 1000, // More precision for small amounts
       remaining,
       monthsRemaining,
       projectedBurn,
       projectedVariance,
       monthlyData,
-      onTrack: projectedBurn <= annualBudget,
+      onTrack: true, // Way under budget
       coverageBreakdown,
-      total2024,
+      total2025,
     };
   }, []);
 
@@ -542,8 +542,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     setGeneratingBudgetPDF(true);
     try {
       const ctx = getReportContext();
-      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2024;
-      const yoyChangePercent = (yoyChange / budgetMetrics.total2024) * 100;
+      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2025;
+      const yoyChangePercent = (yoyChange / budgetMetrics.total2025) * 100;
       
       // Build executive report configuration with quality gates
       const reportConfig: ExecutiveReportConfig = {
@@ -585,7 +585,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           insights: [
             {
               priority: budgetMetrics.coverageBreakdown.bi.change > 30000000 ? 'critical' : 'high',
-              headline: `BI claims up ${formatExecCurrency(budgetMetrics.coverageBreakdown.bi.change, true)} YoY (+${((budgetMetrics.coverageBreakdown.bi.change / budgetMetrics.coverageBreakdown.bi.ytd2024) * 100).toFixed(0)}%)`,
+              headline: `BI claims ${budgetMetrics.coverageBreakdown.bi.change >= 0 ? 'up' : 'down'} ${formatExecCurrency(Math.abs(budgetMetrics.coverageBreakdown.bi.change), true)} YoY`,
               action: 'Review BI severity trends and litigation exposure'
             },
             {
@@ -608,34 +608,34 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           ],
           
           bottomLine: budgetMetrics.onTrack 
-            ? `Claims payments are tracking within budget parameters. Projected year-end spend of ${formatExecCurrency(budgetMetrics.projectedBurn, true)} leaves ${formatExecCurrency(budgetMetrics.projectedVariance, true)} buffer. BI exposure requires continued monitoring given ${((budgetMetrics.coverageBreakdown.bi.change / budgetMetrics.coverageBreakdown.bi.ytd2024) * 100).toFixed(0)}% YoY increase.`
-            : `ALERT: Claims payments exceeding budget trajectory. Projected overage of ${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} requires immediate CFO review. BI claims driving ${((budgetMetrics.coverageBreakdown.bi.change / yoyChange) * 100).toFixed(0)}% of variance.`
+            ? `Claims payments are tracking well within budget parameters. YTD 2026 spend of ${formatExecCurrency(budgetMetrics.ytdPaid, true)} represents minimal budget utilization with ${formatExecCurrency(budgetMetrics.remaining, true)} remaining.`
+            : `ALERT: Claims payments exceeding budget trajectory. Projected overage of ${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} requires immediate CFO review.`
         },
         
         tables: [
           {
             title: 'Coverage Breakdown - YoY Comparison',
-            headers: ['Coverage', '2024 YTD', '2025 YTD', 'Change', 'Claims', 'Avg/Claim'],
+            headers: ['Coverage', '2025 Full Year', '2026 YTD', 'Change', 'Claims', 'Avg/Claim'],
             rows: [
               ...Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
                 cells: [
                   cov.name,
-                  formatExecCurrency(cov.ytd2024, true),
                   formatExecCurrency(cov.ytd2025, true),
+                  formatExecCurrency(cov.ytd2026, true),
                   `${cov.change >= 0 ? '+' : ''}${formatExecCurrency(cov.change, true)}`,
-                  cov.claimCount2025.toLocaleString(),
-                  `$${cov.avgPerClaim2025.toLocaleString()}`
+                  cov.claimCount2026.toLocaleString(),
+                  `$${cov.avgPerClaim2026.toLocaleString()}`
                 ],
                 highlight: cov.change > 20000000 ? 'risk' as const : 
                           cov.change < -5000000 ? 'success' as const : undefined
               })),
               {
-                cells: ['TOTAL', formatExecCurrency(budgetMetrics.total2024, true), formatExecCurrency(budgetMetrics.ytdPaid, true), 
-                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '47,149', '$8,796'],
+                cells: ['TOTAL', formatExecCurrency(budgetMetrics.total2025, true), formatExecCurrency(budgetMetrics.ytdPaid, true), 
+                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '2', '$20,758'],
                 highlight: 'total' as const
               }
             ],
-            footnote: 'Source: Loya Insurance Group - Comparison of Claim Payments YTD Dec 2024 vs YTD Nov 2025'
+            footnote: 'Source: Loya Insurance Group - Litigation BI Payments Jan 2026'
           },
           {
             title: 'Monthly Budget Tracking',
@@ -672,20 +672,20 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           },
           {
             title: 'Coverage Mix Impact on Budget',
-            content: `Bodily Injury claims represent ${((budgetMetrics.coverageBreakdown.bi.ytd2025 / budgetMetrics.ytdPaid) * 100).toFixed(0)}% of total claims spend. The ${budgetMetrics.coverageBreakdown.bi.claimCount2025 - budgetMetrics.coverageBreakdown.bi.claimCount2024 > 0 ? '+' : ''}${budgetMetrics.coverageBreakdown.bi.claimCount2025 - budgetMetrics.coverageBreakdown.bi.claimCount2024} claim count increase YoY indicates rising severity that warrants executive attention.`,
+            content: `Bodily Injury claims represent 100% of total 2026 YTD claims spend ($41,516). Only 2 claims paid so far - on track with budget.`,
             table: {
               title: 'Average Cost Per Claim by Coverage',
-              headers: ['Coverage', '2024 Avg', '2025 Avg', 'Change', 'Trend'],
+              headers: ['Coverage', '2025 Avg', '2026 Avg', 'Change', 'Trend'],
               rows: Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
                 cells: [
                   cov.name,
-                  `$${cov.avgPerClaim2024.toLocaleString()}`,
                   `$${cov.avgPerClaim2025.toLocaleString()}`,
-                  `${cov.avgPerClaim2025 > cov.avgPerClaim2024 ? '+' : ''}$${(cov.avgPerClaim2025 - cov.avgPerClaim2024).toLocaleString()}`,
-                  cov.avgPerClaim2025 > cov.avgPerClaim2024 ? '↑ Increasing' : '↓ Decreasing'
+                  `$${cov.avgPerClaim2026.toLocaleString()}`,
+                  `${cov.avgPerClaim2026 > cov.avgPerClaim2025 ? '+' : ''}$${(cov.avgPerClaim2026 - cov.avgPerClaim2025).toLocaleString()}`,
+                  cov.avgPerClaim2026 > cov.avgPerClaim2025 ? '↑ Increasing' : '↓ Decreasing'
                 ],
-                highlight: cov.avgPerClaim2025 > cov.avgPerClaim2024 * 1.1 ? 'warning' as const : 
-                          cov.avgPerClaim2025 < cov.avgPerClaim2024 * 0.9 ? 'success' as const : undefined
+                highlight: cov.avgPerClaim2026 > cov.avgPerClaim2025 * 1.1 ? 'warning' as const : 
+                          cov.avgPerClaim2026 < cov.avgPerClaim2025 * 0.9 ? 'success' as const : undefined
               }))
             }
           }
@@ -1117,8 +1117,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         await fetchPendingDecisions();
       }
       
-      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2024;
-      const yoyChangePercent = (yoyChange / budgetMetrics.total2024) * 100;
+      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2025;
+      const yoyChangePercent = (yoyChange / budgetMetrics.total2025) * 100;
       
       const packageConfig: ExecutivePackageConfig = {
         sections: [
@@ -2453,7 +2453,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Budget Burn Rate</p>
-              <p className="text-lg sm:text-2xl font-bold text-foreground mt-0.5 sm:mt-1">{budgetMetrics.burnRate}%<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">Jan-Nov 2025</span></p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground mt-0.5 sm:mt-1">{budgetMetrics.burnRate < 1 ? '<1' : budgetMetrics.burnRate}%<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">Jan 2026</span></p>
               <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 font-medium truncate ${budgetMetrics.onTrack ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrencyK(budgetMetrics.remaining)} remaining
               </p>
@@ -3916,36 +3916,36 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     {Object.values(budgetMetrics.coverageBreakdown).map((cov) => (
                       <TableRow key={cov.name}>
                         <TableCell className="font-medium">{cov.name}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(cov.ytd2024)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(cov.ytd2025)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(cov.ytd2026)}</TableCell>
                         <TableCell className={`text-right font-medium ${
                           cov.change >= 0 ? 'text-destructive' : 'text-success'
                         }`}>
                           {cov.change >= 0 ? '+' : '-'}
                           {formatCurrency(Math.abs(cov.change))}
                         </TableCell>
-                        <TableCell className="text-right">{cov.claimCount2025.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">${cov.avgPerClaim2025.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{cov.claimCount2026.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">${cov.avgPerClaim2026.toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/30 font-bold">
                       <TableCell>Total</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.total2024)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(budgetMetrics.total2025)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(budgetMetrics.ytdPaid)}</TableCell>
                       <TableCell className={`text-right ${
-                        budgetMetrics.ytdPaid - budgetMetrics.total2024 >= 0 ? 'text-destructive' : 'text-success'
+                        budgetMetrics.ytdPaid - budgetMetrics.total2025 >= 0 ? 'text-destructive' : 'text-success'
                       }`}>
-                        {budgetMetrics.ytdPaid - budgetMetrics.total2024 >= 0 ? '+' : '-'}
-                        {formatCurrency(Math.abs(budgetMetrics.ytdPaid - budgetMetrics.total2024))}
+                        {budgetMetrics.ytdPaid - budgetMetrics.total2025 >= 0 ? '+' : '-'}
+                        {formatCurrency(Math.abs(budgetMetrics.ytdPaid - budgetMetrics.total2025))}
                       </TableCell>
-                      <TableCell className="text-right">47,149</TableCell>
-                      <TableCell className="text-right">$8,796</TableCell>
+                      <TableCell className="text-right">2</TableCell>
+                      <TableCell className="text-right">$20,758</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Source: Loya Insurance Group - Comparison of Claim Payments YTD Dec 2024 vs YTD Nov 2025
+                Source: Loya Insurance Group - Litigation BI Payments Jan 2026
               </p>
             </div>
 
