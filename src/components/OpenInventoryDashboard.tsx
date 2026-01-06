@@ -1420,14 +1420,15 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     ],
   };
 
-  // Calculate derived metrics
+  // Calculate derived metrics - now uses dynamic financials from CSV
   const metrics = useMemo(() => {
     if (!data) return null;
 
-    const litTotal = KNOWN_TOTALS.lit.claims;
+    const litTotal = data.typeGroupSummaries.find(t => t.typeGroup === 'LIT')?.grandTotal || KNOWN_TOTALS.lit.claims;
     const aged365Plus = data.totals.age365Plus;
-    const agedPct = KNOWN_TOTALS.totalOpenClaims > 0 
-      ? ((aged365Plus / KNOWN_TOTALS.totalOpenClaims) * 100).toFixed(1)
+    const totalClaims = data.totals.grandTotal || KNOWN_TOTALS.totalOpenClaims;
+    const agedPct = totalClaims > 0 
+      ? ((aged365Plus / totalClaims) * 100).toFixed(1)
       : '0';
 
     // Top 5 phases by count
@@ -1435,8 +1436,22 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       .sort((a, b) => b.grandTotal - a.grandTotal)
       .slice(0, 8);
 
+    // Use dynamic financials from CSV if available, fallback to hardcoded
+    const dynamicFinancials = data.financials ? {
+      byAge: data.financials.byAge,
+      byQueue: FINANCIAL_DATA.byQueue, // Keep hardcoded for now
+      byTypeGroup: data.financials.byTypeGroup.length > 0 ? data.financials.byTypeGroup : FINANCIAL_DATA.byTypeGroup,
+      totals: {
+        totalOpenReserves: data.financials.totalOpenReserves,
+        totalLowEval: data.financials.totalLowEval,
+        totalHighEval: data.financials.totalHighEval,
+        noEvalAmount: FINANCIAL_DATA.totals.noEvalAmount, // Keep hardcoded
+        noEvalCount: data.financials.noEvalCount,
+      }
+    } : FINANCIAL_DATA;
+
     // Age distribution for chart with financials
-    const ageDistribution = FINANCIAL_DATA.byAge.map(item => ({
+    const ageDistribution = dynamicFinancials.byAge.map(item => ({
       ...item,
       fill: item.age === '365+ Days' ? 'hsl(var(--destructive))' :
             item.age === '181-365 Days' ? 'hsl(var(--warning))' :
@@ -1444,13 +1459,19 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             'hsl(var(--success))'
     }));
 
-    // Type groups from known data
-    const typeGroups = [
-      { typeGroup: 'ATR', claims: KNOWN_TOTALS.atr.claims, exposures: KNOWN_TOTALS.atr.exposures },
-      { typeGroup: 'Litigation', claims: KNOWN_TOTALS.lit.claims, exposures: KNOWN_TOTALS.lit.exposures },
-      { typeGroup: 'BI3', claims: KNOWN_TOTALS.bi3.claims, exposures: KNOWN_TOTALS.bi3.exposures },
-      { typeGroup: 'Early BI', claims: KNOWN_TOTALS.earlyBI.claims, exposures: KNOWN_TOTALS.earlyBI.exposures },
-    ];
+    // Type groups from data
+    const typeGroups = data.typeGroupSummaries.length > 0 
+      ? data.typeGroupSummaries.slice(0, 10).map(t => ({
+          typeGroup: t.typeGroup,
+          claims: t.grandTotal,
+          exposures: t.grandTotal, // Exposures = claims for now
+        }))
+      : [
+          { typeGroup: 'ATR', claims: KNOWN_TOTALS.atr.claims, exposures: KNOWN_TOTALS.atr.exposures },
+          { typeGroup: 'Litigation', claims: KNOWN_TOTALS.lit.claims, exposures: KNOWN_TOTALS.lit.exposures },
+          { typeGroup: 'BI3', claims: KNOWN_TOTALS.bi3.claims, exposures: KNOWN_TOTALS.bi3.exposures },
+          { typeGroup: 'Early BI', claims: KNOWN_TOTALS.earlyBI.claims, exposures: KNOWN_TOTALS.earlyBI.exposures },
+        ];
 
     return {
       litTotal,
@@ -1459,10 +1480,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       topPhases,
       ageDistribution,
       typeGroups,
-      totalOpenClaims: KNOWN_TOTALS.totalOpenClaims,
-      totalOpenExposures: KNOWN_TOTALS.totalOpenExposures,
+      totalOpenClaims: totalClaims,
+      totalOpenExposures: totalClaims, // Use same as claims for now
       flagged: KNOWN_TOTALS.flagged,
-      financials: FINANCIAL_DATA,
+      financials: dynamicFinancials,
     };
   }, [data]);
 

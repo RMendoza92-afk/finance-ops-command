@@ -25,6 +25,9 @@ export interface TypeGroupSummary {
   age61To180: number;
   ageUnder60: number;
   grandTotal: number;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
 }
 
 export interface CP1Data {
@@ -37,12 +40,19 @@ export interface CP1Data {
     type: string;
     count: number;
   }[];
-  // Detailed breakdown by coverage type
   byCoverage: {
     coverage: string;
     count: number;
     reserves: number;
   }[];
+}
+
+export interface FinancialsByAge {
+  age: string;
+  claims: number;
+  openReserves: number;
+  lowEval: number;
+  highEval: number;
 }
 
 export interface OpenExposureData {
@@ -56,12 +66,24 @@ export interface OpenExposureData {
     ageUnder60: number;
     grandTotal: number;
   };
-  // Delta from previous period
+  financials: {
+    totalOpenReserves: number;
+    totalLowEval: number;
+    totalHighEval: number;
+    noEvalCount: number;
+    byAge: FinancialsByAge[];
+    byTypeGroup: {
+      typeGroup: string;
+      reserves: number;
+    }[];
+  };
   delta?: {
     previousTotal: number;
     currentTotal: number;
     change: number;
     changePercent: number;
+    reservesChange: number;
+    reservesChangePercent: number;
     previousDate: string;
     currentDate: string;
   };
@@ -77,10 +99,14 @@ interface RawClaimRow {
   'Type Group': string;
   'Open Reserves': string;
   'BI Reserves': string;
+  'Low': string;
+  'High': string;
   'CP1 Exposure Flag': string;
   'CP1 Claim Flag': string;
   'Overall CP1 Flag': string;
   'Exposure Category': string;
+  'Evaluation Phase': string;
+  'Demand Type': string;
   [key: string]: string;
 }
 
@@ -89,10 +115,11 @@ function parseNumber(val: string): number {
   return parseInt(val.replace(/,/g, ''), 10) || 0;
 }
 
-function parseReserves(val: string): number {
-  if (!val || val.trim() === '') return 0;
-  // Remove $ and commas, handle parentheses for negatives
-  const cleaned = val.replace(/[$,]/g, '').trim();
+function parseCurrency(val: string): number {
+  if (!val || val.trim() === '' || val === '(blank)') return 0;
+  // Remove $, commas, spaces
+  const cleaned = val.replace(/[$,\s]/g, '').trim();
+  // Handle parentheses for negatives
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
     return -parseFloat(cleaned.slice(1, -1)) || 0;
   }
@@ -106,156 +133,88 @@ function getAgeBucket(days: number): 'age365Plus' | 'age181To365' | 'age61To180'
   return 'ageUnder60';
 }
 
-// Parse the old summary format
-function parseSummaryCSV(csvText: string): { totals: OpenExposureData['totals']; litPhases: OpenExposurePhase[]; typeGroupSummaries: TypeGroupSummary[]; cp1Data: CP1Data | null } {
-  const lines = csvText.split('\n');
-  const litPhases: OpenExposurePhase[] = [];
-  const typeGroupSummaries: TypeGroupSummary[] = [];
-  let cp1Data: CP1Data | null = null;
-  let totals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
-  
-  let currentPhase: OpenExposurePhase | null = null;
-  let inLitSection = false;
-  
-  for (let i = 4; i < lines.length; i++) {
-    const cols = lines[i].split(',');
-    if (cols.length < 8) continue;
-    
-    const typeGroup = cols[0]?.trim();
-    const evalPhase = cols[1]?.trim();
-    const demandType = cols[2]?.trim() || '(blank)';
-    const age365Plus = parseNumber(cols[3]);
-    const age181To365 = parseNumber(cols[4]);
-    const age61To180 = parseNumber(cols[5]);
-    const ageUnder60 = parseNumber(cols[6]);
-    const grandTotal = parseNumber(cols[7]);
-    
-    if (!typeGroup && !evalPhase && grandTotal === 0) continue;
-    
-    if (typeGroup === 'LIT') {
-      inLitSection = true;
-      if (evalPhase && !evalPhase.includes('Total')) {
-        currentPhase = {
-          phase: evalPhase,
-          demandTypes: [],
-          total365Plus: 0,
-          total181To365: 0,
-          total61To180: 0,
-          totalUnder60: 0,
-          grandTotal: 0
-        };
-        currentPhase.demandTypes.push({
-          type: demandType,
-          age365Plus,
-          age181To365,
-          age61To180,
-          ageUnder60,
-          total: grandTotal
-        });
-        litPhases.push(currentPhase);
-      }
-    } else if (typeGroup === '' && inLitSection) {
-      if (evalPhase && !evalPhase.includes('Total') && currentPhase?.phase !== evalPhase) {
-        currentPhase = {
-          phase: evalPhase,
-          demandTypes: [],
-          total365Plus: 0,
-          total181To365: 0,
-          total61To180: 0,
-          totalUnder60: 0,
-          grandTotal: 0
-        };
-        currentPhase.demandTypes.push({
-          type: demandType,
-          age365Plus,
-          age181To365,
-          age61To180,
-          ageUnder60,
-          total: grandTotal
-        });
-        litPhases.push(currentPhase);
-      } else if (evalPhase && evalPhase.includes('Total') && currentPhase) {
-        currentPhase.total365Plus = age365Plus;
-        currentPhase.total181To365 = age181To365;
-        currentPhase.total61To180 = age61To180;
-        currentPhase.totalUnder60 = ageUnder60;
-        currentPhase.grandTotal = grandTotal;
-        
-        if (evalPhase === 'Limits Tendered CP1 Total') {
-          cp1Data = {
-            total: grandTotal,
-            age365Plus,
-            age181To365,
-            age61To180,
-            ageUnder60,
-            demandTypes: currentPhase.demandTypes.map(dt => ({
-              type: dt.type,
-              count: dt.total
-            })),
-            byCoverage: []
-          };
-        }
-      } else if (!evalPhase && currentPhase) {
-        currentPhase.demandTypes.push({
-          type: demandType,
-          age365Plus,
-          age181To365,
-          age61To180,
-          ageUnder60,
-          total: grandTotal
-        });
-      }
-    } else if (typeGroup === 'LIT Total') {
-      inLitSection = false;
-    } else if (typeGroup && typeGroup !== 'Grand Total' && !typeGroup.includes('Total')) {
-      typeGroupSummaries.push({
-        typeGroup,
-        age365Plus,
-        age181To365,
-        age61To180,
-        ageUnder60,
-        grandTotal
-      });
-    } else if (typeGroup === 'Grand Total') {
-      totals = { age365Plus, age181To365, age61To180, ageUnder60, grandTotal };
-      break;
-    }
+function getAgeBucketLabel(bucket: string): string {
+  switch (bucket) {
+    case 'age365Plus': return '365+ Days';
+    case 'age181To365': return '181-365 Days';
+    case 'age61To180': return '61-180 Days';
+    case 'ageUnder60': return 'Under 60 Days';
+    default: return bucket;
   }
-  
-  return { totals, litPhases, typeGroupSummaries, cp1Data };
 }
 
-// Process raw claims data into summary format
+// Process raw claims data
 function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
   const phaseMap = new Map<string, Map<string, { age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; total: number }>>();
-  const typeGroupMap = new Map<string, { age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; grandTotal: number }>();
+  const typeGroupMap = new Map<string, { 
+    age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; 
+    grandTotal: number; reserves: number; lowEval: number; highEval: number 
+  }>();
   const cp1Map = new Map<string, { count: number; reserves: number }>();
+  
+  // Financial aggregation by age bucket
+  const ageFinancials = {
+    age365Plus: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    age181To365: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    age61To180: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    ageUnder60: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+  };
   
   let cp1Totals = { total: 0, age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0 };
   let grandTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
+  let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0 };
   
   for (const row of rows) {
+    // Skip header row or empty rows
+    if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
+    
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
-    const days = parseInt(row['Days'] || row['Age'] || '0', 10) || 0;
+    const days = parseInt(row['Days'] || '0', 10) || 0;
     const ageBucket = getAgeBucket(days);
-    const reserves = parseReserves(row['Open Reserves'] || row['BI Reserves'] || '0');
+    
+    // Parse financial data
+    const reserves = parseCurrency(row['Open Reserves'] || '0');
+    const lowEval = parseCurrency(row['Low'] || '0');
+    const highEval = parseCurrency(row['High'] || '0');
+    
     const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
                   row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
                   row['CP1 Claim Flag']?.toLowerCase() === 'yes';
     const coverage = row['Coverage']?.trim() || 'Unknown';
-    const exposureCategory = row['Exposure Category']?.trim() || 'Unknown';
+    const evalPhase = row['Evaluation Phase']?.trim() || '';
+    const demandType = row['Demand Type']?.trim() || '(blank)';
     
-    // Update grand totals
+    // Update grand totals (claim counts)
     grandTotals[ageBucket]++;
     grandTotals.grandTotal++;
     
+    // Update financial totals
+    financialTotals.totalOpenReserves += reserves;
+    financialTotals.totalLowEval += lowEval;
+    financialTotals.totalHighEval += highEval;
+    if (lowEval === 0 && highEval === 0) {
+      financialTotals.noEvalCount++;
+    }
+    
+    // Update age bucket financials
+    ageFinancials[ageBucket].claims++;
+    ageFinancials[ageBucket].reserves += reserves;
+    ageFinancials[ageBucket].lowEval += lowEval;
+    ageFinancials[ageBucket].highEval += highEval;
+    
     // Update type group summaries
     if (!typeGroupMap.has(typeGroup)) {
-      typeGroupMap.set(typeGroup, { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 });
+      typeGroupMap.set(typeGroup, { 
+        age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, 
+        grandTotal: 0, reserves: 0, lowEval: 0, highEval: 0 
+      });
     }
     const tg = typeGroupMap.get(typeGroup)!;
     tg[ageBucket]++;
     tg.grandTotal++;
+    tg.reserves += reserves;
+    tg.lowEval += lowEval;
+    tg.highEval += highEval;
     
     // Track CP1 data
     if (isCP1) {
@@ -271,13 +230,11 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     }
     
     // Track phases for LIT type group
-    if (typeGroup === 'LIT') {
-      const phase = exposureCategory || 'Unknown';
-      if (!phaseMap.has(phase)) {
-        phaseMap.set(phase, new Map());
+    if (typeGroup === 'LIT' && evalPhase) {
+      if (!phaseMap.has(evalPhase)) {
+        phaseMap.set(evalPhase, new Map());
       }
-      const demandMap = phaseMap.get(phase)!;
-      const demandType = row['Demand Type']?.trim() || '(blank)';
+      const demandMap = phaseMap.get(evalPhase)!;
       if (!demandMap.has(demandType)) {
         demandMap.set(demandType, { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, total: 0 });
       }
@@ -313,6 +270,9 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     });
   });
   
+  // Sort phases by total descending
+  litPhases.sort((a, b) => b.grandTotal - a.grandTotal);
+  
   // Convert type group map to array
   const typeGroupSummaries: TypeGroupSummary[] = [];
   typeGroupMap.forEach((counts, typeGroup) => {
@@ -335,12 +295,43 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     byCoverage: cp1ByCoverage
   };
   
+  // Build financials by age
+  const byAge: FinancialsByAge[] = [
+    { age: '365+ Days', claims: ageFinancials.age365Plus.claims, openReserves: ageFinancials.age365Plus.reserves, lowEval: ageFinancials.age365Plus.lowEval, highEval: ageFinancials.age365Plus.highEval },
+    { age: '181-365 Days', claims: ageFinancials.age181To365.claims, openReserves: ageFinancials.age181To365.reserves, lowEval: ageFinancials.age181To365.lowEval, highEval: ageFinancials.age181To365.highEval },
+    { age: '61-180 Days', claims: ageFinancials.age61To180.claims, openReserves: ageFinancials.age61To180.reserves, lowEval: ageFinancials.age61To180.lowEval, highEval: ageFinancials.age61To180.highEval },
+    { age: 'Under 60 Days', claims: ageFinancials.ageUnder60.claims, openReserves: ageFinancials.ageUnder60.reserves, lowEval: ageFinancials.ageUnder60.lowEval, highEval: ageFinancials.ageUnder60.highEval },
+  ];
+  
+  // Build financials by type group
+  const byTypeGroup = typeGroupSummaries.map(tg => ({
+    typeGroup: tg.typeGroup,
+    reserves: tg.reserves
+  }));
+  
   return {
     litPhases,
     typeGroupSummaries,
     cp1Data,
-    totals: grandTotals
+    totals: grandTotals,
+    financials: {
+      ...financialTotals,
+      byAge,
+      byTypeGroup,
+    }
   };
+}
+
+// Parse the old summary format for delta comparison
+function parseSummaryCSVTotals(csvText: string): { grandTotal: number } {
+  const lines = csvText.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const cols = lines[i].split(',');
+    if (cols[0]?.trim() === 'Grand Total') {
+      return { grandTotal: parseNumber(cols[7]) };
+    }
+  }
+  return { grandTotal: 0 };
 }
 
 export function useOpenExposureData() {
@@ -369,19 +360,42 @@ export function useOpenExposureData() {
           console.warn('CSV parsing warnings:', parsed.errors.slice(0, 5));
         }
         
+        console.log(`Parsed ${parsed.data.length} rows from raw CSV`);
+        
+        // Debug: Log first row to verify column names
+        if (parsed.data.length > 0) {
+          const firstRow = parsed.data[0];
+          console.log('First row keys:', Object.keys(firstRow).slice(0, 15));
+          console.log('Sample reserves value:', firstRow['Open Reserves']);
+          console.log('Sample Low value:', firstRow['Low']);
+          console.log('Sample High value:', firstRow['High']);
+          console.log('Sample Type Group:', firstRow['Type Group']);
+          console.log('Sample Days:', firstRow['Days']);
+        }
+        
         const currentData = processRawClaims(parsed.data);
         
+        console.log('Processed financials:', {
+          totalReserves: currentData.financials.totalOpenReserves,
+          totalLowEval: currentData.financials.totalLowEval,
+          totalHighEval: currentData.financials.totalHighEval,
+          claimCount: currentData.totals.grandTotal,
+          byAge: currentData.financials.byAge,
+        });
+        
         // Parse previous summary for delta
-        const prevData = parseSummaryCSV(prevCsv);
+        const prevTotals = parseSummaryCSVTotals(prevCsv);
         
         // Calculate delta
         const delta = {
-          previousTotal: prevData.totals.grandTotal,
+          previousTotal: prevTotals.grandTotal,
           currentTotal: currentData.totals.grandTotal,
-          change: currentData.totals.grandTotal - prevData.totals.grandTotal,
-          changePercent: prevData.totals.grandTotal > 0 
-            ? ((currentData.totals.grandTotal - prevData.totals.grandTotal) / prevData.totals.grandTotal) * 100 
+          change: currentData.totals.grandTotal - prevTotals.grandTotal,
+          changePercent: prevTotals.grandTotal > 0 
+            ? ((currentData.totals.grandTotal - prevTotals.grandTotal) / prevTotals.grandTotal) * 100 
             : 0,
+          reservesChange: 0, // We don't have previous reserves in summary format
+          reservesChangePercent: 0,
           previousDate: 'Jan 2, 2026',
           currentDate: 'Jan 5, 2026'
         };
