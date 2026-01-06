@@ -130,8 +130,15 @@ export function useSOLBreachAnalysis() {
         const settledBreaches: SOLBreachClaim[] = [];
         const byState: Record<string, { count: number; reserves: number }> = {};
         
+        // Debug: Log first row columns to check exact names
+        if (rows.length > 0) {
+          console.log('SOL Analysis - Column names:', Object.keys(rows[0]));
+          console.log('SOL Analysis - Sample BI Status values:', rows.slice(0, 10).map(r => r['BI Status']));
+        }
+        
         for (const row of rows) {
-          const biStatus = row['BI Status']?.trim() || '';
+          // Handle different possible column name formats
+          const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
           
           // Only check "In Progress" or "Settled"
           if (biStatus !== 'In Progress' && biStatus !== 'Settled') continue;
