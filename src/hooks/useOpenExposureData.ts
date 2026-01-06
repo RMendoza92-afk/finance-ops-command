@@ -229,8 +229,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     grandTotal: number; reserves: number; lowEval: number; highEval: number 
   }>();
   
-  // CP1 tracking by coverage
+  // CP1 tracking by coverage (for BI/UM/UI detailed breakdown)
   const cp1ByCoverage = new Map<string, { noCP: number; yes: number; reserves: number }>();
+  
+  // CP1 tracking for ALL coverages (for grand total)
+  let cp1AllCoverages = { noCP: 0, yes: 0 };
   
   // CP1 BI tracking by age bucket
   const cp1BiByAge = {
@@ -276,7 +279,19 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     const coverage = row['Coverage']?.trim() || 'Unknown';
     
-    // FILTER: Only include BI, UM, UI coverages
+    // CP1 detection - ANY flag (track for ALL coverages first)
+    const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
+                  row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
+                  row['CP1 Claim Flag']?.toLowerCase() === 'yes';
+    
+    // Track CP1 for ALL coverages (for grand total - 19,585 total claims)
+    if (isCP1) {
+      cp1AllCoverages.yes++;
+    } else {
+      cp1AllCoverages.noCP++;
+    }
+    
+    // FILTER: Only include BI, UM, UI coverages for detailed breakdown
     if (!isIncludedCoverage(coverage)) continue;
     
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
@@ -287,11 +302,6 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const reserves = parseCurrency(row['Open Reserves'] || '0');
     const lowEval = parseCurrency(row['Low'] || '0');
     const highEval = parseCurrency(row['High'] || '0');
-    
-    // CP1 detection - ANY flag
-    const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
-                  row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
-                  row['CP1 Claim Flag']?.toLowerCase() === 'yes';
     
     const evalPhase = row['Evaluation Phase']?.trim() || '';
     const demandType = row['Demand Type']?.trim() || '(blank)';
@@ -478,11 +488,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     total: biByAge.reduce((s, b) => s + b.total, 0),
   };
   
-  // Calculate CP1 totals
+  // Calculate CP1 totals - use ALL coverages for grand total
   const cp1TotalsCalc = {
-    noCP: cp1CoverageArray.reduce((s, c) => s + c.noCP, 0),
-    yes: cp1CoverageArray.reduce((s, c) => s + c.yes, 0),
-    grandTotal: cp1CoverageArray.reduce((s, c) => s + c.total, 0),
+    noCP: cp1AllCoverages.noCP,
+    yes: cp1AllCoverages.yes,
+    grandTotal: cp1AllCoverages.noCP + cp1AllCoverages.yes,
   };
   
   const cp1Data: CP1Data = {
