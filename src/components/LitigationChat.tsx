@@ -699,19 +699,21 @@ export function LitigationChat() {
       y = m.t;
     }
 
-    // === RESPONSE CONTENT - CLEAN EXECUTIVE LAYOUT ===
-    const contentStartY = y;
+    // === RESPONSE CONTENT - FLOWING EXECUTIVE LAYOUT ===
     
-    // Section divider
-    doc.setFillColor(...C.azure);
-    doc.rect(m.l, y, 50, 2, 'F');
+    // Section header
     setIBMPlexSans(doc, 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(...C.white);
-    doc.text('ANALYSIS', m.l + 55, y + 1);
-    y += 12;
+    doc.setTextColor(...C.azure);
+    doc.text('INTELLIGENCE RESPONSE', m.l, y + 2);
+    
+    // Subtle underline
+    doc.setDrawColor(...C.steel);
+    doc.setLineWidth(0.3);
+    doc.line(m.l, y + 6, m.l + 60, y + 6);
+    y += 16;
 
-    // Render each section professionally
+    // Render each section with flowing text
     sections.forEach((section, sectionIdx) => {
       // Page break check
       if (y > ph - m.b - 40) {
@@ -721,28 +723,21 @@ export function LitigationChat() {
         y = m.t;
       }
 
-      // Section header with number
-      doc.setFillColor(...C.steel);
-      doc.roundedRect(m.l, y, cw, 12, 2, 2, 'F');
-      
-      // Section number badge
-      doc.setFillColor(...C.azure);
-      doc.circle(m.l + 10, y + 6, 5, 'F');
-      setIBMPlexSans(doc, 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...C.white);
-      doc.text(String(sectionIdx + 1), m.l + 10, y + 7.5, { align: 'center' });
-      
-      // Section title
+      // Section header - clean typography, no box
       setIBMPlexSans(doc, 'bold');
       doc.setFontSize(10);
       doc.setTextColor(...C.white);
-      doc.text(section.title.toUpperCase(), m.l + 20, y + 8);
+      doc.text(section.title.toUpperCase(), m.l, y + 2);
       
-      y += 16;
+      // Thin accent line under section title
+      doc.setDrawColor(...C.azure);
+      doc.setLineWidth(0.5);
+      doc.line(m.l, y + 5, m.l + Math.min(doc.getTextWidth(section.title.toUpperCase()) + 8, cw * 0.4), y + 5);
+      
+      y += 12;
 
-      // Section content with proper formatting
-      section.items.forEach((item, itemIdx) => {
+      // Section content - flowing prose style
+      section.items.forEach((item) => {
         if (y > ph - m.b - 15) {
           doc.addPage();
           doc.setFillColor(...C.navy);
@@ -750,99 +745,95 @@ export function LitigationChat() {
           y = m.t;
         }
 
-        // Alternating row backgrounds for readability
-        if (itemIdx % 2 === 0) {
-          doc.setFillColor(...C.darkNavy);
-        } else {
-          doc.setFillColor(28, 28, 28);
-        }
+        const lineHeight = 5;
 
         // Bullet points
         if (item.startsWith('- ') || item.startsWith('* ')) {
           const bulletText = item.slice(2);
-          const textLines = doc.splitTextToSize(bulletText, cw - 20);
+          const textLines = doc.splitTextToSize(bulletText, cw - 14);
           
-          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
-          
-          // Bullet dot
+          // Small bullet dot
           doc.setFillColor(...C.azure);
-          doc.circle(m.l + 5, y + 2, 1.5, 'F');
+          doc.circle(m.l + 3, y + 1.5, 1, 'F');
           
           setIBMPlexSans(doc, 'normal');
           doc.setFontSize(9);
-          doc.setTextColor(...C.white);
+          doc.setTextColor(...C.textPrimary);
           
           textLines.forEach((tl: string, i: number) => {
-            doc.text(tl, m.l + 12, y + 3 + (i * 5.5));
+            doc.text(tl, m.l + 8, y + 2 + (i * lineHeight));
           });
           
-          y += (textLines.length * 5.5) + 6;
+          y += (textLines.length * lineHeight) + 3;
         }
         // Numbered items
         else if (/^\d+\./.test(item)) {
-          const num = item.match(/^\d+/)?.[0] || '';
+          const num = item.match(/^\d+\.?/)?.[0] || '';
           const restText = item.replace(/^\d+\.\s*/, '');
-          const textLines = doc.splitTextToSize(restText, cw - 22);
+          const textLines = doc.splitTextToSize(restText, cw - 16);
           
-          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
-          
-          // Number badge
-          doc.setFillColor(...C.steel);
-          doc.circle(m.l + 6, y + 2, 4, 'F');
+          // Number in accent color
           setIBMPlexSans(doc, 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor(...C.white);
-          doc.text(num, m.l + 6, y + 3.5, { align: 'center' });
+          doc.setFontSize(9);
+          doc.setTextColor(...C.azure);
+          doc.text(num, m.l, y + 2);
           
           setIBMPlexSans(doc, 'normal');
           doc.setFontSize(9);
-          doc.setTextColor(...C.white);
+          doc.setTextColor(...C.textPrimary);
           
           textLines.forEach((tl: string, i: number) => {
-            doc.text(tl, m.l + 14, y + 3 + (i * 5.5));
+            doc.text(tl, m.l + 10, y + 2 + (i * lineHeight));
           });
           
-          y += (textLines.length * 5.5) + 6;
+          y += (textLines.length * lineHeight) + 3;
         }
-        // Key-value pairs (contains colon mid-line)
+        // Key-value pairs
         else if (item.includes(':') && item.indexOf(':') < 40 && !item.endsWith(':')) {
           const [key, ...valueParts] = item.split(':');
           const value = valueParts.join(':').trim();
           
-          doc.rect(m.l, y - 2, cw, 10, 'F');
-          
           setIBMPlexSans(doc, 'bold');
           doc.setFontSize(9);
           doc.setTextColor(...C.textSecondary);
-          doc.text(key.trim() + ':', m.l + 5, y + 4);
+          doc.text(key.trim() + ':', m.l, y + 2);
+          
+          const keyWidth = doc.getTextWidth(key.trim() + ': ');
+          const valueLines = doc.splitTextToSize(value, cw - keyWidth - 5);
           
           setIBMPlexSans(doc, 'normal');
-          doc.setFontSize(9);
           doc.setTextColor(...C.white);
-          const keyWidth = doc.getTextWidth(key.trim() + ':  ');
-          const valueLines = doc.splitTextToSize(value, cw - keyWidth - 15);
-          doc.text(valueLines[0] || '', m.l + 5 + keyWidth, y + 4);
+          valueLines.forEach((vl: string, i: number) => {
+            doc.text(vl, m.l + keyWidth, y + 2 + (i * lineHeight));
+          });
           
-          y += 12;
+          y += (valueLines.length * lineHeight) + 3;
         }
         // Regular paragraph
         else {
-          const textLines = doc.splitTextToSize(item, cw - 12);
-          doc.rect(m.l, y - 2, cw, (textLines.length * 5.5) + 4, 'F');
+          const textLines = doc.splitTextToSize(item, cw);
           
           setIBMPlexSans(doc, 'normal');
           doc.setFontSize(9);
-          doc.setTextColor(...C.white);
+          doc.setTextColor(...C.textPrimary);
           
           textLines.forEach((tl: string, i: number) => {
-            doc.text(tl, m.l + 6, y + 3 + (i * 5.5));
+            doc.text(tl, m.l, y + 2 + (i * lineHeight));
           });
           
-          y += (textLines.length * 5.5) + 6;
+          y += (textLines.length * lineHeight) + 3;
         }
       });
       
-      y += 8; // Section spacing
+      y += 6; // Section spacing
+      
+      // Add subtle separator between sections (not after last)
+      if (sectionIdx < sections.length - 1 && y < ph - m.b - 20) {
+        doc.setDrawColor(...C.steel);
+        doc.setLineWidth(0.15);
+        doc.line(m.l + 20, y, pw - m.r - 20, y);
+        y += 8;
+      }
     });
 
     // === FOOTER ON ALL PAGES ===
