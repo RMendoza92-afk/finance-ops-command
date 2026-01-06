@@ -1119,8 +1119,8 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           context={{
             matterId: selectedCaseForSMS.matterId,
             exposure: selectedCaseForSMS.exposure,
-            region: selectedCaseForSMS.stage,
-            description: `${selectedCaseForSMS.level} review - ${selectedCaseForSMS.adjuster}`
+            phase: selectedCaseForSMS.stage,
+            actionRequired: `${selectedCaseForSMS.level} review - ${selectedCaseForSMS.adjuster}`
           }}
         />
       )}

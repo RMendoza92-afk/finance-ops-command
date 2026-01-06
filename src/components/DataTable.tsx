@@ -298,10 +298,10 @@ export function DataTable({ data, view }: DataTableProps) {
           }}
           context={{
             matterId: selectedMatter.uniqueRecord,
-            claimType: selectedMatter.class,
-            region: selectedMatter.team,
+            claimant: selectedMatter.claim,
             exposure: selectedMatter.netAmount,
-            description: `${selectedMatter.claim} - Pain Level: ${selectedMatter.endPainLvl}`
+            painLevel: selectedMatter.endPainLvl,
+            actionRequired: `Review ${selectedMatter.class} matter`
           }}
         />
       )}

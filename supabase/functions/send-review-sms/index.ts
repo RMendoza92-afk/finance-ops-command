@@ -16,14 +16,15 @@ interface ClaimData {
 
 interface SMSRequest {
   to: string;
-  claimType: string;
-  claimCount: number;
-  region: string;
-  lossDescription: string;
-  reviewer: string;
-  deadline: string;
-  claims: ClaimData[];
-  excelBase64?: string;
+  matterId?: string;
+  claimant?: string;
+  exposure?: number;
+  reserves?: number;
+  painLevel?: number;
+  daysOpen?: number;
+  phase?: string;
+  actionRequired?: string;
+  customNote?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -35,90 +36,74 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const { 
       to, 
-      claimType, 
-      claimCount, 
-      region, 
-      lossDescription, 
-      reviewer, 
-      deadline,
-      claims,
-      excelBase64 
+      matterId,
+      claimant,
+      exposure,
+      reserves,
+      painLevel,
+      daysOpen,
+      phase,
+      actionRequired,
+      customNote
     }: SMSRequest = await req.json();
     
-    console.log(`Sending SMS to ${to} for ${claimCount} ${claimType} claims in ${region}`);
+    console.log(`Sending SMS to ${to} for matter ${matterId || 'N/A'}`);
 
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
     const twilioPhone = Deno.env.get("TWILIO_PHONE_NUMBER");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!accountSid || !authToken || !twilioPhone) {
       console.error("Missing Twilio credentials");
       throw new Error("Twilio credentials not configured");
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase credentials");
-      throw new Error("Supabase credentials not configured");
+    // Format currency for SMS
+    const formatCurrency = (amt: number): string => {
+      if (amt >= 1000000) return `$${(amt / 1000000).toFixed(1)}M`;
+      if (amt >= 1000) return `$${Math.round(amt / 1000)}K`;
+      return `$${amt.toLocaleString()}`;
+    };
+
+    // Build concise, actionable SMS message
+    let message = `⚠️ FLI REVIEW ALERT\n\n`;
+    
+    if (matterId) {
+      message += `📋 ${matterId}\n`;
     }
-
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    let downloadUrl = '';
-
-    // Upload Excel file if provided
-    if (excelBase64) {
-      try {
-        // Decode base64 to binary
-        const binaryString = atob(excelBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Generate unique filename
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `review-${reviewer.replace(/\s+/g, '-')}-${timestamp}.xlsx`;
-
-        // Upload to storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('review-exports')
-          .upload(filename, bytes, {
-            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            upsert: true
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-        } else {
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('review-exports')
-            .getPublicUrl(filename);
-          
-          downloadUrl = urlData.publicUrl;
-          console.log('Excel uploaded:', downloadUrl);
-        }
-      } catch (uploadErr) {
-        console.error('Error uploading Excel:', uploadErr);
-      }
+    
+    if (claimant) {
+      message += `👤 ${claimant}\n`;
     }
-
-    // Build SMS message
-    let message = `🚨 FILE REVIEW REQUESTED\n\n` +
-      `Reviewer: ${reviewer}\n` +
-      `Region: ${region}\n` +
-      `Claims: ${claimCount} (${claimType})\n` +
-      `Loss: ${lossDescription}\n` +
-      `Due: ${deadline}\n`;
-
-    if (downloadUrl) {
-      message += `\n📊 Download claims: ${downloadUrl}\n`;
+    
+    // Key metrics on one line
+    const metrics: string[] = [];
+    if (exposure) metrics.push(`Exp: ${formatCurrency(exposure)}`);
+    if (reserves) metrics.push(`Rsv: ${formatCurrency(reserves)}`);
+    if (metrics.length > 0) {
+      message += `💰 ${metrics.join(' | ')}\n`;
     }
-
-    message += `\n— FLI Claims Dashboard`;
+    
+    // Status indicators
+    const status: string[] = [];
+    if (painLevel) status.push(`P${painLevel}`);
+    if (daysOpen) status.push(`${daysOpen}d open`);
+    if (phase) status.push(phase);
+    if (status.length > 0) {
+      message += `📊 ${status.join(' • ')}\n`;
+    }
+    
+    // Action required
+    if (actionRequired) {
+      message += `\n🎯 ${actionRequired}\n`;
+    }
+    
+    // Custom note
+    if (customNote) {
+      message += `\n📝 ${customNote}\n`;
+    }
+    
+    message += `\n— FLI Dashboard`;
 
     // Ensure message doesn't exceed SMS limits (will be split automatically by Twilio)
     if (message.length > 1600) {
@@ -190,8 +175,7 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageSid: result.sid,
-        downloadUrl: downloadUrl || null
+        messageSid: result.sid
       }),
       {
         status: 200,
