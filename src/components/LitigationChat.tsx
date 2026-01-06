@@ -35,6 +35,7 @@ interface ReportOption {
   icon: React.ElementType;
   color: string;
   description: string;
+  disabled?: boolean;
 }
 
 const REPORT_CATEGORIES: Record<ReportCategory, { label: string; icon: React.ElementType; reports: ReportOption[] }> = {
@@ -47,8 +48,9 @@ const REPORT_CATEGORIES: Record<ReportCategory, { label: string; icon: React.Ele
         label: "MTD Closures", 
         query: "What was closed month to date, total paid, and list the top 10 recent closures with amounts?",
         icon: TrendingUp,
-        color: "text-emerald-500",
-        description: "Month-to-date closure activity and top recent closures"
+        color: "text-muted-foreground",
+        description: "Coming Soon",
+        disabled: true
       },
       { 
         id: "weekly-compare",
@@ -1081,24 +1083,26 @@ export function LitigationChat() {
                         {category.reports.map((report, idx) => (
                           <button
                             key={report.id}
-                            onClick={() => handleQuickAction(report.query)}
-                            disabled={isLoading || !dataReady}
+                            onClick={() => !report.disabled && handleQuickAction(report.query)}
+                            disabled={isLoading || !dataReady || report.disabled}
                             className={`w-full text-left p-2.5 rounded-lg border transition-all group disabled:opacity-50 disabled:cursor-not-allowed
                               ${idx % 2 === 0 ? 'bg-[#121212]' : 'bg-[#181818]'}
-                              border-[#2d2d2d] hover:border-[#d4af37]/40 hover:bg-[#1a1a1a]
+                              ${report.disabled ? 'border-[#1a1a1a] opacity-40' : 'border-[#2d2d2d] hover:border-[#d4af37]/40 hover:bg-[#1a1a1a]'}
                             `}
                           >
                             <div className="flex items-start gap-2.5">
-                              <div className={`w-7 h-7 rounded flex-shrink-0 flex items-center justify-center bg-[#0c0c0c] border border-[#2d2d2d] group-hover:border-[#d4af37]/30`}>
-                                <report.icon className={`h-3.5 w-3.5 ${report.color} group-hover:text-[#d4af37] transition-colors`} />
+                              <div className={`w-7 h-7 rounded flex-shrink-0 flex items-center justify-center bg-[#0c0c0c] border ${report.disabled ? 'border-[#1a1a1a]' : 'border-[#2d2d2d] group-hover:border-[#d4af37]/30'}`}>
+                                <report.icon className={`h-3.5 w-3.5 ${report.disabled ? 'text-muted-foreground' : report.color} ${!report.disabled && 'group-hover:text-[#d4af37]'} transition-colors`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="text-xs font-semibold text-[#f0f0f0] block group-hover:text-[#d4af37] transition-colors">{report.label}</span>
-                                <span className="text-[10px] text-[#8c8c8c] block leading-tight mt-0.5">{report.description}</span>
+                                <span className={`text-xs font-semibold block ${report.disabled ? 'text-muted-foreground' : 'text-[#f0f0f0] group-hover:text-[#d4af37]'} transition-colors`}>{report.label}</span>
+                                <span className={`text-[10px] block leading-tight mt-0.5 ${report.disabled ? 'text-muted-foreground/60 italic' : 'text-[#8c8c8c]'}`}>{report.description}</span>
                               </div>
-                              <div className="text-[#2d2d2d] group-hover:text-[#d4af37] transition-colors">
-                                <Send className="h-3 w-3" />
-                              </div>
+                              {!report.disabled && (
+                                <div className="text-[#2d2d2d] group-hover:text-[#d4af37] transition-colors">
+                                  <Send className="h-3 w-3" />
+                                </div>
+                              )}
                             </div>
                           </button>
                         ))}
