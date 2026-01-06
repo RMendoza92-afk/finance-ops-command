@@ -3382,130 +3382,152 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
       </div>
 
-      {/* Texas Rear End — Age-Based Tracker */}
+      {/* TX LOR Intervention Settlement Tracker */}
       <div 
-        className="bg-card border border-border rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
+        className="bg-card border border-primary/30 rounded-xl p-4 sm:p-5 cursor-pointer hover:border-primary/50 transition-colors"
         onDoubleClick={handleExportTexasRearEnd}
         title="Double-click to export"
       >
-        <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Texas Rear End Settlement Tracker</h3>
-        <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">Early settlement focus by age • Real-time impact tracking</p>
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div>
+            <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">TX LOR Intervention Settlement Tracker</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Rear-end early settlement • Low-impact claims • Stop the bleed</p>
+          </div>
+          <LOROfferDialog onOfferAdded={refetchLOR} />
+        </div>
 
-        {/* Age Buckets - Responsive Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
-          {TEXAS_REAR_END_DATA.byAge.map((bucket, idx) => {
-            const pctOfTotal = ((bucket.claims / TEXAS_REAR_END_DATA.summary.totalClaims) * 100).toFixed(0);
-            const isAged = bucket.age.includes('365+') || bucket.age.includes('181-365');
-            return (
-              <div 
-                key={bucket.age} 
-                className={`p-2 sm:p-3 rounded-lg border ${
-                  idx === 0 ? 'border-destructive/30 bg-destructive/5' : 
-                  idx === 1 ? 'border-warning/30 bg-warning/5' : 
-                  'border-border bg-muted/20'
-                }`}
-              >
-                <p className={`text-[10px] sm:text-xs font-medium ${idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : 'text-muted-foreground'}`}>
-                  {bucket.age}
-                </p>
-                <p className="text-base sm:text-lg font-bold text-foreground">{bucket.claims.toLocaleString()}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrencyK(bucket.reserves)} • {pctOfTotal}%</p>
+        {/* Combined Stats Row - Age + Area + Reserves in One */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
+          {/* Total Claims */}
+          <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
+            <div className="flex items-center gap-2 mb-1">
+              <Car className="h-4 w-4 text-primary" />
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Total R/E Claims</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{TEXAS_REAR_END_DATA.summary.totalClaims.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves)} reserves</p>
+          </div>
+          
+          {/* Aged 365+ Priority */}
+          <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-destructive" />
+              <p className="text-[10px] sm:text-xs font-medium text-destructive uppercase">365+ Days</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-destructive">{TEXAS_REAR_END_DATA.byAge[0]?.claims || 0}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{formatCurrencyK(TEXAS_REAR_END_DATA.byAge[0]?.reserves || 0)} at risk</p>
+          </div>
+          
+          {/* Early Settlement Opportunity */}
+          <div className="p-3 rounded-lg border border-success/30 bg-success/5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-4 w-4 text-success" />
+              <p className="text-[10px] sm:text-xs font-medium text-success uppercase">Under 60 Days</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-success">{TEXAS_REAR_END_DATA.byAge[3]?.claims || 0}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Early settle opportunity</p>
+          </div>
+          
+          {/* LOR Active Offers */}
+          <div className="p-3 rounded-lg border border-warning/30 bg-warning/5">
+            <div className="flex items-center gap-2 mb-1">
+              <Send className="h-4 w-4 text-warning" />
+              <p className="text-[10px] sm:text-xs font-medium text-warning uppercase">Active LOR Offers</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-warning">{lorStats.pending}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">${lorStats.totalOffered.toLocaleString()} offered</p>
+          </div>
+        </div>
+
+        {/* Combined Area + Age Table */}
+        <div className="bg-muted/20 rounded-lg border border-border overflow-hidden mb-3 sm:mb-4">
+          <div className="p-2 sm:p-3 border-b border-border bg-muted/30">
+            <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase">By Area — Claims & Reserves</p>
+          </div>
+          <div className="grid grid-cols-5 gap-0.5 p-2">
+            {TEXAS_REAR_END_DATA.byArea.slice(0, 5).map((area, idx) => (
+              <div key={area.area} className="p-2 sm:p-3 rounded bg-card text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate font-medium">{area.area}</p>
+                <p className="text-sm sm:text-lg font-bold text-foreground">{area.claims}</p>
+                <p className="text-[10px] text-muted-foreground">{formatCurrencyK(area.reserves)}</p>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Settlement Impact Tracker - Placeholder for real-time data */}
-        <div className="bg-muted/20 rounded-lg border border-border p-3 sm:p-4 mb-3 sm:mb-4">
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <h4 className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase">Settlement Impact This Month</h4>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Data pending</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-            <div>
-              <p className="text-lg sm:text-2xl font-bold text-success">—</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Settled</p>
-            </div>
-            <div>
-              <p className="text-lg sm:text-2xl font-bold text-primary">—</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Reserves Released</p>
-            </div>
-            <div>
-              <p className="text-lg sm:text-2xl font-bold text-foreground">—</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Avg Days to Settle</p>
-            </div>
-          </div>
-        </div>
-
-        {/* LOR Intervention Tracker */}
-        <div className="bg-muted/20 rounded-lg border border-primary/30 p-3 sm:p-4 mb-3 sm:mb-4">
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <h4 className="text-[10px] sm:text-xs font-semibold text-primary uppercase">LOR Intervention</h4>
-            <LOROfferDialog onOfferAdded={refetchLOR} />
+            ))}
           </div>
           
-          {/* LOR Offers from Database */}
-          <div className="space-y-2">
-            {lorOffers.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No active LOR offers</p>
-            ) : (
-              lorOffers.filter(o => o.status === 'pending').map((lorOffer) => {
-                const expireDate = new Date(lorOffer.expires_date);
-                const today = new Date();
-                const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                const isExpired = daysLeft < 0;
-                const isUrgent = daysLeft <= 3 && daysLeft >= 0;
-                
-                return (
-                  <div key={lorOffer.id} className="p-3 rounded-lg border border-border bg-card">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <p className="font-mono text-sm font-semibold text-foreground">{lorOffer.claim_number}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {lorOffer.accident_description || 'No description'} • {lorOffer.area || 'Unknown'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-primary">${lorOffer.offer_amount.toLocaleString()}</p>
-                        {isExpired ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-destructive/20 text-destructive font-medium">EXPIRED</span>
-                        ) : isUrgent ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-warning/20 text-warning font-medium">{daysLeft}d LEFT</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-success/20 text-success font-medium">{daysLeft}d LEFT</span>
-                        )}
-                      </div>
+          {/* Age Distribution Row */}
+          <div className="p-2 sm:p-3 border-t border-border">
+            <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase mb-2">Age Distribution</p>
+            <div className="flex gap-2">
+              {TEXAS_REAR_END_DATA.byAge.map((bucket, idx) => (
+                <div 
+                  key={bucket.age} 
+                  className={`flex-1 p-2 rounded text-center ${
+                    idx === 0 ? 'bg-destructive/10 border border-destructive/20' : 
+                    idx === 1 ? 'bg-warning/10 border border-warning/20' : 
+                    idx === 3 ? 'bg-success/10 border border-success/20' :
+                    'bg-muted/30 border border-border/50'
+                  }`}
+                >
+                  <p className={`text-[9px] sm:text-[10px] font-medium ${
+                    idx === 0 ? 'text-destructive' : idx === 1 ? 'text-warning' : idx === 3 ? 'text-success' : 'text-muted-foreground'
+                  }`}>{bucket.age}</p>
+                  <p className="text-xs sm:text-sm font-bold text-foreground">{bucket.claims}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Active LOR Offers */}
+        <div className="space-y-2 mb-3">
+          {lorOffers.filter(o => o.status === 'pending').length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground border border-dashed border-border rounded-lg">
+              <p className="text-xs">No active LOR offers — Add offers to track early settlements</p>
+            </div>
+          ) : (
+            lorOffers.filter(o => o.status === 'pending').map((lorOffer) => {
+              const expireDate = new Date(lorOffer.expires_date);
+              const today = new Date();
+              const daysLeft = Math.ceil((expireDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const isExpired = daysLeft < 0;
+              const isUrgent = daysLeft <= 3 && daysLeft >= 0;
+              
+              return (
+                <div key={lorOffer.id} className="p-3 rounded-lg border border-border bg-card flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-sm font-semibold text-foreground">{lorOffer.claim_number}</p>
+                      <span className="text-[10px] text-muted-foreground">•</span>
+                      <p className="text-xs text-muted-foreground truncate">{lorOffer.area || 'TX'}</p>
                     </div>
-                    <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                      <span>Extended: {format(new Date(lorOffer.extended_date), 'MM/dd/yy')}</span>
-                      <span>Expires: {format(new Date(lorOffer.expires_date), 'MM/dd/yy')}</span>
-                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {lorOffer.accident_description || 'Rear-end'} • Exp: {format(new Date(lorOffer.expires_date), 'MM/dd')}
+                    </p>
                   </div>
-                );
-              })
-            )}
-          </div>
-          
-          {/* Summary */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50 text-[10px] sm:text-xs">
-            <div className="flex gap-3">
-              <span className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">{lorStats.pending}</span></span>
-              <span className="text-muted-foreground">Accepted: <span className="font-semibold text-success">{lorStats.accepted}</span></span>
-              <span className="text-muted-foreground">Expired: <span className="font-semibold text-destructive">{lorStats.expired}</span></span>
-            </div>
-            <span className="text-muted-foreground">Tiers: $5K / $6K / $7.5K</span>
-          </div>
+                  <div className="text-right flex items-center gap-2">
+                    <p className="text-lg font-bold text-primary">${lorOffer.offer_amount.toLocaleString()}</p>
+                    {isExpired ? (
+                      <span className="px-2 py-1 rounded text-[10px] bg-destructive/20 text-destructive font-medium">EXPIRED</span>
+                    ) : isUrgent ? (
+                      <span className="px-2 py-1 rounded text-[10px] bg-warning/20 text-warning font-medium">{daysLeft}d</span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-[10px] bg-success/20 text-success font-medium">{daysLeft}d</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
-
-        {/* Area Breakdown */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {TEXAS_REAR_END_DATA.byArea.slice(0, 5).map((area, idx) => (
-            <div key={area.area} className="p-2 rounded-lg border border-border bg-muted/20 text-center">
-              <p className="text-[10px] text-muted-foreground truncate">{area.area}</p>
-              <p className="text-sm font-bold text-foreground">{area.claims}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrencyK(area.reserves)}</p>
-            </div>
-          ))}
+        
+        {/* Bottom Summary */}
+        <div className="flex items-center justify-between pt-3 border-t border-border text-[10px] sm:text-xs">
+          <div className="flex gap-4">
+            <span className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">{lorStats.pending}</span></span>
+            <span className="text-muted-foreground">Accepted: <span className="font-semibold text-success">{lorStats.accepted}</span></span>
+            <span className="text-muted-foreground">Rejected: <span className="font-semibold text-destructive">{lorStats.rejected}</span></span>
+          </div>
+          <span className="text-muted-foreground">Tiers: <span className="font-medium">$5K / $6K / $7.5K</span></span>
         </div>
       </div>
 
