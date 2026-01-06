@@ -294,6 +294,22 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
+  // Format claim number as XX-XXXXXX-X (2 digits prefix, 6 digits claim, 1 digit exposure)
+  const formatClaimNumber = (claimId: string): string => {
+    if (!claimId) return '';
+    // Remove any existing dashes and non-numeric characters except for the last digit which could be a suffix
+    const cleaned = claimId.replace(/[^0-9]/g, '');
+    if (cleaned.length >= 9) {
+      // Format as XX-XXXXXX-X
+      return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 8)}-${cleaned.slice(8, 9)}`;
+    } else if (cleaned.length >= 8) {
+      // Format as XX-XXXXXX (no suffix)
+      return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 8)}`;
+    }
+    // Return original if format doesn't match expected pattern
+    return claimId;
+  };
+
   // Helper to build raw claim data for Excel
   const buildRawClaimData = useCallback((filterFn?: (m: typeof aggregatedData[0]) => boolean): RawClaimData => {
     const filteredData = filterFn ? aggregatedData.filter(filterFn) : aggregatedData;
@@ -1065,7 +1081,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
               
               {/* Matter ID - Primary Identifier for correlation */}
               <p className="text-base font-bold text-[#0c2340] truncate mb-2 group-hover:text-[#b41e1e] transition-colors font-mono">
-                {caseItem.matterId}
+                {formatClaimNumber(caseItem.matterId)}
               </p>
               
               {/* Score breakdown - all reasons */}
