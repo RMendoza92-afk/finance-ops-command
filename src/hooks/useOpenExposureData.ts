@@ -69,6 +69,13 @@ export interface CP1Data {
     grandTotal: number;
   };
   cp1Rate: string;
+  // CP1 claims by BI Status
+  byStatus: {
+    inProgress: number;
+    settled: number;
+    inProgressPct: string;
+    settledPct: string;
+  };
 }
 
 export interface FinancialsByAge {
@@ -269,6 +276,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // CP1 tracking for ALL coverages (for grand total)
   let cp1AllCoverages = { noCP: 0, yes: 0 };
   
+  // CP1 tracking by BI Status (In Progress vs Settled)
+  let cp1ByStatus = { inProgress: 0, settled: 0 };
+  
   // CP1 BI tracking by age bucket
   const cp1BiByAge = {
     age365Plus: { noCP: 0, yes: 0 },
@@ -323,6 +333,14 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // Track CP1 for ALL coverages (for grand total - 19,585 total claims)
     if (isCP1) {
       cp1AllCoverages.yes++;
+      
+      // Track CP1 by BI Status
+      const biStatus = row['BI Status']?.trim().toLowerCase() || '';
+      if (biStatus === 'in progress') {
+        cp1ByStatus.inProgress++;
+      } else if (biStatus === 'settled') {
+        cp1ByStatus.settled++;
+      }
     } else {
       cp1AllCoverages.noCP++;
     }
@@ -569,6 +587,15 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     grandTotal: cp1AllCoverages.noCP + cp1AllCoverages.yes,
   };
   
+  // Calculate CP1 by status percentages
+  const cp1StatusTotal = cp1ByStatus.inProgress + cp1ByStatus.settled;
+  const byStatus = {
+    inProgress: cp1ByStatus.inProgress,
+    settled: cp1ByStatus.settled,
+    inProgressPct: cp1StatusTotal > 0 ? ((cp1ByStatus.inProgress / cp1StatusTotal) * 100).toFixed(1) : '0.0',
+    settledPct: cp1StatusTotal > 0 ? ((cp1ByStatus.settled / cp1StatusTotal) * 100).toFixed(1) : '0.0',
+  };
+
   const cp1Data: CP1Data = {
     ...cp1Totals,
     demandTypes: cp1CoverageArray.slice(0, 10).map(c => ({ type: c.coverage, count: c.count })),
@@ -578,7 +605,8 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     totals: cp1TotalsCalc,
     cp1Rate: cp1TotalsCalc.grandTotal > 0 
       ? ((cp1TotalsCalc.yes / cp1TotalsCalc.grandTotal) * 100).toFixed(1)
-      : '0.0'
+      : '0.0',
+    byStatus,
   };
   
   // Build financials by age
