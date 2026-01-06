@@ -6,6 +6,7 @@ import { DrilldownModal } from "./DrilldownModal";
 
 interface OverextensionTableProps {
   data: LitigationMatter[];
+  knownExpertSpend?: number; // Optional known value to display instead of calculated
 }
 
 type SortField = 'riskFlag' | 'litigationStage' | 'expertType' | 'expertSpend' | 'reactiveSpend' | 'postureRatio' | 'team' | 'adjuster' | 'executiveReview';
@@ -264,7 +265,7 @@ function ExecutiveReviewBadge({ review }: { review: ExecutiveReviewResult }) {
   );
 }
 
-export function OverextensionTable({ data }: OverextensionTableProps) {
+export function OverextensionTable({ data, knownExpertSpend }: OverextensionTableProps) {
   const [sortField, setSortField] = useState<SortField>('executiveReview');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedMatter, setSelectedMatter] = useState<AggregatedMatter | null>(null);
@@ -454,7 +455,9 @@ export function OverextensionTable({ data }: OverextensionTableProps) {
     const orangeCount = sortedData.filter(d => d.riskFlag === 'ORANGE').length;
     const greenCount = sortedData.filter(d => d.riskFlag === 'GREEN').length;
     const totalReactive = sortedData.reduce((sum, d) => sum + d.reactiveSpend, 0);
-    const totalExpert = sortedData.reduce((sum, d) => sum + d.expertSpend, 0);
+    const calculatedExpert = sortedData.reduce((sum, d) => sum + d.expertSpend, 0);
+    // Use known value if provided, otherwise use calculated
+    const totalExpert = knownExpertSpend ?? calculatedExpert;
     
     // Executive review counts
     const execCritical = sortedData.filter(d => d.executiveReview.level === 'CRITICAL').length;
@@ -462,7 +465,7 @@ export function OverextensionTable({ data }: OverextensionTableProps) {
     const execWatch = sortedData.filter(d => d.executiveReview.level === 'WATCH').length;
     
     return { redCount, orangeCount, greenCount, totalReactive, totalExpert, execCritical, execRequired, execWatch };
-  }, [sortedData]);
+  }, [sortedData, knownExpertSpend]);
 
   return (
     <>
