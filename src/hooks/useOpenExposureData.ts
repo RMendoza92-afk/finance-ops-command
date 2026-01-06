@@ -112,6 +112,13 @@ export interface OpenExposureData {
       typeGroup: string;
       reserves: number;
     }[];
+    byQueue: {
+      queue: string;
+      openReserves: number;
+      lowEval: number;
+      highEval: number;
+      claims: number;
+    }[];
   };
   knownTotals: KnownTotals;
   delta?: {
@@ -457,6 +464,13 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       noEvalReserves: financialTotals.noEvalReserves,
       byAge,
       byTypeGroup,
+      byQueue: typeGroupSummaries.map(tg => ({
+        queue: tg.typeGroup,
+        openReserves: tg.reserves,
+        lowEval: tg.lowEval,
+        highEval: tg.highEval,
+        claims: tg.grandTotal,
+      })),
     },
     knownTotals,
   };
