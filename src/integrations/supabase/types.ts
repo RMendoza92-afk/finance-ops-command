@@ -276,6 +276,36 @@ export type Database = {
           },
         ]
       }
+      report_downloads: {
+        Row: {
+          downloaded_at: string
+          file_format: string
+          id: string
+          metadata: Json | null
+          report_name: string
+          report_type: string
+          row_count: number | null
+        }
+        Insert: {
+          downloaded_at?: string
+          file_format?: string
+          id?: string
+          metadata?: Json | null
+          report_name: string
+          report_type: string
+          row_count?: number | null
+        }
+        Update: {
+          downloaded_at?: string
+          file_format?: string
+          id?: string
+          metadata?: Json | null
+          report_name?: string
+          report_type?: string
+          row_count?: number | null
+        }
+        Relationships: []
+      }
       reviewers: {
         Row: {
           created_at: string
