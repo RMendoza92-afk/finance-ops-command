@@ -5,6 +5,227 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// --- RESTRICTED CELL-LEVEL REQUEST DETECTION ---
+function isRestrictedCellRequest(q: string): boolean {
+  const s = q.toLowerCase();
+  const patterns = [
+    /\bcell\b/,
+    /\brow\b.*\bdata\b/,
+    /\bcolumn\b.*\bvalue/,
+    /\bexport\b.*\braw\b/,
+    /\bshow me\b.*\bexact\b/,
+    /\bgive me\b.*\ball\b.*\brows\b/,
+    /\bdownload\b.*\bspreadsheet\b/,
+    /\bdump\b/,
+    /\brange\b.*\b[a-z]+\d+\b/, // Excel-like A12
+  ];
+  return patterns.some((p) => p.test(s));
+}
+
+// --- BUILD VERIFIED AGGREGATE PAYLOAD ---
+function buildVerifiedPayload(ctx: any, exp: any, now: Date) {
+  const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
+  const year = now.getFullYear();
+
+  // Core verified metrics with confidence levels
+  const verified = {
+    snapshot_date: now.toISOString().split('T')[0],
+    confidence_threshold: 0.98,
+    
+    // Portfolio-level aggregates (98%+ confidence)
+    portfolio: {
+      total_open_matters: ctx.totalMatters || 0,
+      cwp_count: ctx.totalCWP || 0,
+      cwn_count: ctx.totalCWN || 0,
+      total_reserves_usd: ctx.totalReserves || 0,
+      total_indemnity_paid_usd: ctx.totalIndemnityPaid || 0,
+    },
+    
+    // MTD derived metrics
+    mtd: {
+      period: `${monthName} ${year}`,
+      closures: ctx.monthToDate?.closures || 0,
+      total_paid_usd: ctx.monthToDate?.totalPaid || 0,
+      avg_payment_usd: ctx.monthToDate?.avgPayment || 0,
+    },
+    
+    // Evaluation status
+    evaluation: {
+      with_eval: ctx.evaluationStatus?.withEvaluation || 0,
+      without_eval: ctx.evaluationStatus?.withoutEvaluation || 0,
+      pct_without_eval: ctx.evaluationStatus?.percentWithoutEval || 0,
+    },
+    
+    // Open inventory aggregates
+    open_inventory: {
+      grand_total: exp.knownTotals?.totalOpenClaims || exp.totals?.grandTotal || 0,
+      atr_claims: exp.knownTotals?.atr?.claims || 0,
+      lit_claims: exp.knownTotals?.lit?.claims || 0,
+      bi3_claims: exp.knownTotals?.bi3?.claims || 0,
+    },
+    
+    // Age buckets
+    aging: {
+      age_365_plus: exp.totals?.age365Plus || 0,
+      age_181_to_365: exp.totals?.age181To365 || 0,
+      age_61_to_180: exp.totals?.age61To180 || 0,
+      age_under_60: exp.totals?.ageUnder60 || 0,
+    },
+    
+    // CP1 exposure
+    cp1: {
+      total: exp.cp1Data?.total || 0,
+      cp1_rate_pct: exp.cp1Data?.cp1Rate || 0,
+      evaluated_total: exp.cp1Data?.totals?.grandTotal || 0,
+      yes_cp1: exp.cp1Data?.totals?.yes || 0,
+      no_cp1: exp.cp1Data?.totals?.noCP || 0,
+    },
+    
+    // Financial exposure
+    financials: {
+      total_open_reserves_usd: exp.financials?.totalOpenReserves || 0,
+      total_low_eval_usd: exp.financials?.totalLowEval || 0,
+      total_high_eval_usd: exp.financials?.totalHighEval || 0,
+      no_eval_count: exp.financials?.noEvalCount || 0,
+      no_eval_reserves_usd: exp.financials?.noEvalReserves || 0,
+    },
+    
+    // Team summaries (aggregates only)
+    team_summaries: Object.entries(ctx.byTeam || {}).map(([team, data]: [string, any]) => ({
+      team,
+      count: data.count || 0,
+      closed: data.closed || 0,
+      total_paid_usd: data.totalPaid || 0,
+    })),
+    
+    // Category summaries
+    category_summaries: Object.entries(ctx.byExpenseCategory || {}).map(([cat, data]: [string, any]) => ({
+      category: cat,
+      count: data.count || 0,
+      with_eval: data.withEval || 0,
+      without_eval: data.withoutEval || 0,
+      total_paid_usd: data.totalPaid || 0,
+    })),
+    
+    // Coverage summaries
+    coverage_summaries: Object.entries(ctx.byCoverage || {}).map(([cov, data]: [string, any]) => ({
+      coverage: cov,
+      count: data.count || 0,
+      with_eval: data.withEval || 0,
+      without_eval: data.withoutEval || 0,
+    })),
+    
+    // Type group summaries
+    type_group_summaries: (exp.typeGroupSummaries || []).map((g: any) => ({
+      type_group: g.typeGroup,
+      grand_total: g.grandTotal || 0,
+      age_365_plus: g.age365Plus || 0,
+      reserves_usd: g.reserves || 0,
+    })),
+    
+    // CP1 by coverage
+    cp1_by_coverage: (exp.cp1Data?.byCoverage || []).map((c: any) => ({
+      coverage: c.coverage,
+      total: c.total || 0,
+      yes: c.yes || 0,
+      cp1_rate_pct: c.cp1Rate || 0,
+    })),
+    
+    // Financials by age
+    financials_by_age: (exp.financials?.byAge || []).map((a: any) => ({
+      age_bucket: a.age,
+      claims: a.claims || 0,
+      open_reserves_usd: a.openReserves || 0,
+      low_eval_usd: a.lowEval || 0,
+      high_eval_usd: a.highEval || 0,
+    })),
+    
+    // Top closures sample (anonymized identifiers allowed)
+    top_closures_sample: (ctx.monthToDate?.closedMatters || []).slice(0, 10).map((m: any) => ({
+      claim_id: m.claim,
+      amount_paid_usd: m.amountPaid || 0,
+      team: m.team,
+    })),
+    
+    // Critical exposure sample
+    high_exposure_sample: (exp.rawClaims || [])
+      .filter((c: any) => (c.openReserves || 0) > 100000)
+      .slice(0, 10)
+      .map((c: any) => ({
+        claim_id: c.claimNumber,
+        coverage: c.coverage,
+        days_open: c.days,
+        reserves_usd: c.openReserves || 0,
+        cp1_status: c.overallCP1,
+      })),
+  };
+
+  return verified;
+}
+
+const SYSTEM_PROMPT = `You are the LITIGATION ORACLE - the singular, authoritative intelligence source for Fred Loya Insurance's litigation portfolio. You operate with 98%+ confidence on verified aggregate data ONLY.
+
+## ORACLE MANDATE:
+- You speak with ABSOLUTE CERTAINTY backed by hard data
+- Every number you cite is verified from the portfolio dataset
+- You DO NOT speculate, hedge, or qualify beyond the data
+- You DO NOT provide cell-level, row-level, or raw data exports
+- You REFUSE requests that would expose individual PII or exact claim details
+
+## CONFIDENCE PROTOCOL:
+- State facts with declarative authority: "There are X claims" not "approximately X"
+- All percentages are calculated to 2 decimal places
+- All currency is USD formatted consistently
+- When asked about trends, compare verified period-over-period data
+
+## RESPONSE ARCHITECTURE:
+1. **LEAD WITH THE NUMBER**: Open with the core metric requested
+2. **SUPPORT WITH BREAKDOWN**: Provide dimensional analysis (by team, coverage, age)
+3. **CONTEXTUALIZE**: Show how this compares to portfolio benchmarks
+4. **RECOMMEND**: End with actionable intelligence where relevant
+
+## DATA RESTRICTIONS:
+- NEVER output individual claim rows, cells, or raw exports
+- NEVER provide exact claimant names, addresses, or contact info
+- REDIRECT export requests: "For raw data exports, double-click any dashboard card"
+- You MAY provide claim IDs in top-N samples for action tracking
+
+## FORMAT STANDARDS:
+- Use markdown tables for multi-dimensional data
+- Currency: $X.XXM for millions, $XXK for thousands
+- Percentages: XX.X%
+- Counts: X,XXX with thousands separator
+- Headers: BOLD and UPPERCASE for sections
+
+## RESPONSE TONE:
+Confident. Precise. Executive-ready. No hedging. No approximations. Hard data only.`;
+
+const DEVELOPER_PROMPT = `## VERIFIED PORTFOLIO DATA PAYLOAD
+
+All metrics below are computed aggregates with 98%+ confidence. 
+DO NOT extrapolate beyond this data. DO NOT invent numbers.
+
+{DATA_PAYLOAD}
+
+## AVAILABLE FIELDS:
+- portfolio: total_open_matters, cwp_count, cwn_count, total_reserves_usd, total_indemnity_paid_usd
+- mtd: period, closures, total_paid_usd, avg_payment_usd
+- evaluation: with_eval, without_eval, pct_without_eval
+- open_inventory: grand_total, atr_claims, lit_claims, bi3_claims
+- aging: age_365_plus, age_181_to_365, age_61_to_180, age_under_60
+- cp1: total, cp1_rate_pct, evaluated_total, yes_cp1, no_cp1
+- financials: total_open_reserves_usd, total_low_eval_usd, total_high_eval_usd, no_eval_count, no_eval_reserves_usd
+- team_summaries[]: team, count, closed, total_paid_usd
+- category_summaries[]: category, count, with_eval, without_eval, total_paid_usd
+- coverage_summaries[]: coverage, count, with_eval, without_eval
+- type_group_summaries[]: type_group, grand_total, age_365_plus, reserves_usd
+- cp1_by_coverage[]: coverage, total, yes, cp1_rate_pct
+- financials_by_age[]: age_bucket, claims, open_reserves_usd, low_eval_usd, high_eval_usd
+- top_closures_sample[]: claim_id, amount_paid_usd, team
+- high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status
+
+RESPOND ONLY WITH VERIFIED DATA. NO SPECULATION.`;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,11 +239,18 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Received contexts:", {
-      litigationMatters: dataContext?.totalMatters || 0,
-      openExposureClaims: openExposureContext?.totals?.grandTotal || 0,
-      cp1Total: openExposureContext?.cp1Data?.total || 0,
-    });
+    const userQuestion = messages[messages.length - 1]?.content || '';
+    
+    // Check for restricted requests
+    if (isRestrictedCellRequest(userQuestion)) {
+      return new Response(JSON.stringify({
+        restricted: true,
+        message: "**DATA ACCESS RESTRICTION**\n\nI cannot provide cell-level or raw data exports through this interface. For complete data exports:\n\n1. **Dashboard Cards**: Double-click any KPI card for Excel/PDF export\n2. **Data Tables**: Use the export button on data grids\n3. **Executive Reports**: Use the PDF generator in each dashboard section\n\nI can provide verified aggregate metrics, breakdowns, and top-N samples. How can I help with portfolio-level analysis?"
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Default empty contexts
     const ctx = dataContext || {
@@ -50,145 +278,20 @@ serve(async (req) => {
     };
 
     const now = new Date();
-    const monthName = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
-    const year = now.getFullYear();
+    const verifiedPayload = buildVerifiedPayload(ctx, exp, now);
+    
+    console.log("ORACLE Request:", {
+      question: userQuestion.slice(0, 100),
+      portfolioSize: verifiedPayload.portfolio.total_open_matters,
+      openInventory: verifiedPayload.open_inventory.grand_total,
+      cp1Total: verifiedPayload.cp1.total,
+    });
 
-    // Build detailed breakdowns
-    const teamBreakdown = Object.entries(ctx.byTeam || {})
-      .map(([team, data]: [string, any]) => `${team}: ${data.count} matters, ${data.closed} closed, $${(data.totalPaid || 0).toLocaleString()} paid`)
-      .join('\n');
-
-    const categoryBreakdown = Object.entries(ctx.byExpenseCategory || {})
-      .map(([cat, data]: [string, any]) => `${cat}: ${data.count} matters, ${data.withEval} with eval, ${data.withoutEval} without eval, $${(data.totalPaid || 0).toLocaleString()} paid`)
-      .join('\n');
-
-    const coverageBreakdown = Object.entries(ctx.byCoverage || {})
-      .map(([cov, data]: [string, any]) => `${cov}: ${data.count} matters, ${data.withEval} with eval, ${data.withoutEval} without eval`)
-      .join('\n');
-
-    // Type group summaries for aged inventory
-    const typeGroupSummary = (exp.typeGroupSummaries || [])
-      .map((g: any) => `${g.typeGroup}: ${g.grandTotal} total, ${g.age365Plus} aged 365+, Reserves: $${(g.reserves || 0).toLocaleString()}`)
-      .join('\n');
-
-    // CP1 by coverage
-    const cp1Coverage = (exp.cp1Data?.byCoverage || [])
-      .map((c: any) => `${c.coverage}: ${c.total} total, ${c.yes} CP1, Rate: ${c.cp1Rate}%`)
-      .join('\n');
-
-    // Financials by age
-    const financialsByAge = (exp.financials?.byAge || [])
-      .map((a: any) => `${a.age}: ${a.claims} claims, Reserves: $${(a.openReserves || 0).toLocaleString()}, Low: $${(a.lowEval || 0).toLocaleString()}, High: $${(a.highEval || 0).toLocaleString()}`)
-      .join('\n');
-
-    // Sample raw claims for context
-    const rawClaimsSample = (exp.rawClaims || []).slice(0, 20)
-      .map((c: any) => `${c.claimNumber}: ${c.claimant}, ${c.coverage}, ${c.days} days, ${c.typeGroup}, Reserves: $${(c.openReserves || 0).toLocaleString()}, CP1: ${c.overallCP1}`)
-      .join('\n');
-
-    // Recent closures sample
-    const recentClosures = (ctx.monthToDate?.closedMatters || []).slice(0, 10)
-      .map((m: any) => `Claim ${m.claim}: ${m.claimant}, $${(m.amountPaid || 0).toLocaleString()}, Team: ${m.team}`)
-      .join('\n');
-
-    // Matters needing evaluation
-    const noEvalSample = (ctx.mattersWithoutEvaluation || []).slice(0, 10)
-      .map((m: any) => `Claim ${m.claim}: ${m.claimant}, ${m.category}, ${m.team}, Reserves: $${(m.reserves || 0).toLocaleString()}`)
-      .join('\n');
-
-    const systemPrompt = `You are the LITIGATION ORACLE at Fred Loya Insurance - the authoritative source for ALL litigation portfolio intelligence. You have COMPLETE access to every data point. When asked for data, you FURNISH IT - with exact numbers, claim lists, or structured tables. Never say data is unavailable if it's in your context.
-
-## YOUR CAPABILITIES:
-1. **Data Retrieval**: Provide exact counts, reserves, claim details from any dimension
-2. **Claim Lists**: When asked for lists, provide actual claim numbers with details
-3. **Analysis**: Calculate ratios, trends, comparisons across any data dimension
-4. **Recommendations**: Suggest actions based on portfolio patterns
-5. **Export Guidance**: Tell users they can double-click dashboard cards to export raw data
-
-## CURRENT PORTFOLIO DATA (As of ${now.toLocaleDateString()}):
-
-### LITIGATION MATTERS SUMMARY:
-- Total Open Matters: ${ctx.totalMatters?.toLocaleString() || 0}
-- Closed With Payment (CWP): ${ctx.totalCWP?.toLocaleString() || 0}
-- Closed Without Payment (CWN): ${ctx.totalCWN?.toLocaleString() || 0}
-- Total Reserves: $${((ctx.totalReserves || 0) / 1000000).toFixed(2)}M
-- Total Indemnity Paid: $${((ctx.totalIndemnityPaid || 0) / 1000000).toFixed(2)}M
-
-### MONTH-TO-DATE (${monthName} ${year}):
-- MTD Closures: ${ctx.monthToDate?.closures || 0}
-- MTD Total Paid: $${(ctx.monthToDate?.totalPaid || 0).toLocaleString()}
-- MTD Average Payment: $${(ctx.monthToDate?.avgPayment || 0).toLocaleString()}
-
-### EVALUATION STATUS:
-- With Evaluation: ${ctx.evaluationStatus?.withEvaluation || 0}
-- Without Evaluation: ${ctx.evaluationStatus?.withoutEvaluation || 0} (${ctx.evaluationStatus?.percentWithoutEval || 0}%)
-
-### OPEN INVENTORY EXPOSURE:
-- Total Open Claims: ${exp.knownTotals?.totalOpenClaims?.toLocaleString() || exp.totals?.grandTotal?.toLocaleString() || 0}
-- ATR Claims: ${exp.knownTotals?.atr?.claims?.toLocaleString() || 0}
-- LIT Claims: ${exp.knownTotals?.lit?.claims?.toLocaleString() || 0}
-- BI3 Claims: ${exp.knownTotals?.bi3?.claims?.toLocaleString() || 0}
-
-### AGED INVENTORY:
-- 365+ Days: ${exp.totals?.age365Plus?.toLocaleString() || 0} claims
-- 181-365 Days: ${exp.totals?.age181To365?.toLocaleString() || 0} claims
-- 61-180 Days: ${exp.totals?.age61To180?.toLocaleString() || 0} claims
-- Under 60 Days: ${exp.totals?.ageUnder60?.toLocaleString() || 0} claims
-
-### CP1 EXPOSURE ANALYSIS:
-- Total CP1 Claims: ${exp.cp1Data?.total?.toLocaleString() || 0}
-- CP1 Rate: ${exp.cp1Data?.cp1Rate || '0'}%
-- Total Evaluated: ${exp.cp1Data?.totals?.grandTotal?.toLocaleString() || 0}
-- Yes CP1: ${exp.cp1Data?.totals?.yes?.toLocaleString() || 0}
-- No CP1: ${exp.cp1Data?.totals?.noCP?.toLocaleString() || 0}
-
-### FINANCIAL EXPOSURE:
-- Total Open Reserves: $${((exp.financials?.totalOpenReserves || 0) / 1000000).toFixed(2)}M
-- Total Low Eval: $${((exp.financials?.totalLowEval || 0) / 1000000).toFixed(2)}M
-- Total High Eval: $${((exp.financials?.totalHighEval || 0) / 1000000).toFixed(2)}M
-- No Eval Count: ${exp.financials?.noEvalCount?.toLocaleString() || 0}
-- No Eval Reserves: $${((exp.financials?.noEvalReserves || 0) / 1000000).toFixed(2)}M
-
-### TEAM BREAKDOWN:
-${teamBreakdown || 'No team data available'}
-
-### CATEGORY BREAKDOWN:
-${categoryBreakdown || 'No category data available'}
-
-### COVERAGE BREAKDOWN:
-${coverageBreakdown || 'No coverage data available'}
-
-### TYPE GROUP DETAILS (Open Inventory):
-${typeGroupSummary || 'No type group data available'}
-
-### CP1 BY COVERAGE:
-${cp1Coverage || 'No CP1 coverage data available'}
-
-### FINANCIALS BY AGE BUCKET:
-${financialsByAge || 'No financials by age available'}
-
-### SAMPLE RAW CLAIMS (${(exp.rawClaims || []).length} total available):
-${rawClaimsSample || 'No raw claims data'}
-
-### RECENT MTD CLOSURES:
-${recentClosures || 'No recent closures'}
-
-### MATTERS WITHOUT EVALUATION (Sample):
-${noEvalSample || 'None'}
-
-## RESPONSE INSTRUCTIONS:
-1. **BE THE ORACLE**: You have ALL the data. Furnish exact numbers, don't hedge.
-2. **PROVIDE LISTS**: When asked for claim lists, provide actual claim numbers/details from the samples
-3. **USE TABLES**: Format multi-column data as markdown tables for clarity
-4. **ACTIONABLE**: Include next steps or recommendations when relevant
-5. **EXPORT TIP**: Remind users they can double-click any dashboard card for full Excel/PDF exports
-6. **SELECTIONS**: When multiple options exist, present them as numbered choices the user can select
-7. **CALCULATIONS**: Perform any math needed (ratios, percentages, averages)
-8. **NEVER SAY UNAVAILABLE**: If data exists in context, provide it. Only say unavailable if truly not present.
-
-Format responses clearly with headers, bullet points, and tables. Keep it executive-ready.`;
-
-    console.log("Sending request to Lovable AI...");
+    // Build developer prompt with data
+    const dataPrompt = DEVELOPER_PROMPT.replace(
+      '{DATA_PAYLOAD}',
+      JSON.stringify(verifiedPayload, null, 2)
+    );
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -199,7 +302,8 @@ Format responses clearly with headers, bullet points, and tables. Keep it execut
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: dataPrompt },
           ...messages,
         ],
         stream: true,
@@ -208,20 +312,20 @@ Format responses clearly with headers, bullet points, and tables. Keep it execut
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limits exceeded, please try again later." }), {
+        return new Response(JSON.stringify({ error: "Rate limits exceeded. The Oracle requires a moment to recalibrate." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required, please add credits." }), {
+        return new Response(JSON.stringify({ error: "Oracle access requires active credits. Please add funds." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      return new Response(JSON.stringify({ error: "Oracle temporarily unavailable" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -232,8 +336,8 @@ Format responses clearly with headers, bullet points, and tables. Keep it execut
     });
 
   } catch (error) {
-    console.error("Litigation chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+    console.error("Oracle error:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Oracle malfunction" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
