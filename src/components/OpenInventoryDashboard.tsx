@@ -1502,6 +1502,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     byCoverage: [],
     totals: { noCP: 0, yes: 0, grandTotal: 0 },
     cp1Rate: '0.0',
+    byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
   }, [data]);
 
   // EXECUTIVE METRICS - Dynamic from CSV data
@@ -2750,7 +2751,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1</p>
               <p className="text-lg sm:text-2xl font-bold text-success mt-0.5 sm:mt-1">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">({CP1_DATA.cp1Rate}%)</span></p>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                BI: <span className="text-success font-semibold">{CP1_DATA.byCoverage[0].yes.toLocaleString()}</span> • PD: <span className="font-medium">{CP1_DATA.byCoverage[1].yes.toLocaleString()}</span>
+                In Progress: <span className="text-success font-semibold">{CP1_DATA.byStatus?.inProgressPct || '0'}%</span> • Settle: <span className="font-medium">{CP1_DATA.byStatus?.settledPct || '0'}%</span>
               </p>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
