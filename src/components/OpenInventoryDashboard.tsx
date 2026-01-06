@@ -2452,10 +2452,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
               <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Budget Burn Rate</p>
-              <p className="text-lg sm:text-2xl font-bold text-foreground mt-0.5 sm:mt-1">{budgetMetrics.burnRate < 1 ? '<1' : budgetMetrics.burnRate}%<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">Jan 2026</span></p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">BI Litigation Spend</p>
+              <div className="flex items-baseline gap-2 sm:gap-3 mt-0.5 sm:mt-1">
+                <p className="text-lg sm:text-2xl font-bold text-success">{formatCurrencyK(budgetMetrics.coverageBreakdown.bi.ytd2026)}<span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">Jan 2026</span></p>
+              </div>
               <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 font-medium truncate text-muted-foreground">
-                2025 (Jan-Nov): {formatCurrencyK(budgetMetrics.total2025)}
+                2025 (Jan-Nov): {formatCurrencyK(budgetMetrics.coverageBreakdown.bi.ytd2025)}
               </p>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
