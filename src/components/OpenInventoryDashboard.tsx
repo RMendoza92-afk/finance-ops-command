@@ -1335,7 +1335,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     }
     return {
       byAge: data.financials.byAge,
-      byQueue: [], // Not available in raw CSV
+      byQueue: data.financials.byQueue, // Now populated from CSV Type Group data
       byTypeGroup: data.financials.byTypeGroup,
       totals: {
         totalOpenReserves: data.financials.totalOpenReserves,
@@ -2061,16 +2061,16 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
           title: 'Reserve Adequacy by Queue',
           subtitle: 'Queue-level reserve analysis',
           timestamp,
-          columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval Count'],
+          columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'Claims'],
           rows: metrics.financials.byQueue.map(queue => [
             queue.queue,
             queue.openReserves,
             queue.lowEval,
             queue.highEval,
-            queue.noEvalCount,
+            queue.claims,
           ]),
           rawClaimData: [{
-            columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'No Eval Count', 'Median Eval', 'Variance'],
+            columns: ['Queue', 'Open Reserves', 'Low Eval', 'High Eval', 'Claims', 'Median Eval', 'Variance'],
             rows: metrics.financials.byQueue.map(queue => {
               const median = (queue.lowEval + queue.highEval) / 2;
               return [
@@ -2078,7 +2078,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 queue.openReserves,
                 queue.lowEval,
                 queue.highEval,
-                queue.noEvalCount,
+                queue.claims,
                 median,
                 queue.openReserves - median,
               ];
