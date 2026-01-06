@@ -229,7 +229,7 @@ const Index = () => {
             <div>
               <h1 className="text-sm sm:text-xl font-bold tracking-tight text-foreground">Litigation Command</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {filters.inventoryStatus === 'open' ? 'Open Inventory' : '2025 Portfolio'}
+                {filters.inventoryStatus === 'open' ? 'Open Inventory' : '2026 Portfolio'}
               </p>
             </div>
           </div>
