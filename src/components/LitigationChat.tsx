@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2 } from "lucide-react";
+import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData } from "@/hooks/useLitigationData";
@@ -17,6 +17,40 @@ interface Message {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/litigation-chat`;
 
+// Quick action categories
+const QUICK_ACTIONS = [
+  { 
+    label: "MTD Closures", 
+    query: "What was closed month to date, total paid, and list the top 10 recent closures with amounts?",
+    icon: TrendingUp,
+    color: "text-emerald-500"
+  },
+  { 
+    label: "Aged 365+", 
+    query: "Show me the aged inventory breakdown. How many claims are over 365 days by type group? List the worst offenders.",
+    icon: AlertTriangle,
+    color: "text-destructive"
+  },
+  { 
+    label: "CP1 Analysis", 
+    query: "Give me the full CP1 exposure analysis - totals by coverage, by age bucket, and the overall CP1 rate.",
+    icon: FileSpreadsheet,
+    color: "text-warning"
+  },
+  { 
+    label: "No Eval Claims", 
+    query: "How many claims have no evaluation set? What's the total reserve exposure? List a sample of these claims.",
+    icon: Sparkles,
+    color: "text-blue-500"
+  },
+  { 
+    label: "Team Stats", 
+    query: "Break down performance by team - show closures, total paid, and open matters for each team.",
+    icon: Users,
+    color: "text-purple-500"
+  },
+];
+
 export function LitigationChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -28,7 +62,7 @@ export function LitigationChat() {
   const { data: litigationData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
 
-  // Build data context from the loaded litigation data
+  // Build litigation data context
   const dataContext = useMemo(() => {
     if (!litigationData || litigationData.length === 0) return null;
 
@@ -36,7 +70,6 @@ export function LitigationChat() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // MTD Closures (CWP with payment in current month)
     const mtdClosures = litigationData.filter(m => {
       if (m.cwpCwn !== 'CWP' || !m.paymentDate) return false;
       const payDate = new Date(m.paymentDate);
@@ -45,7 +78,6 @@ export function LitigationChat() {
 
     const mtdPaid = mtdClosures.reduce((sum, m) => sum + m.indemnitiesAmount, 0);
 
-    // By expense category
     const byExpenseCategory: Record<string, { count: number; withEval: number; withoutEval: number; totalPaid: number }> = {};
     litigationData.forEach(m => {
       const cat = m.expCategory || 'Unknown';
@@ -61,7 +93,6 @@ export function LitigationChat() {
       }
     });
 
-    // By coverage
     const byCoverage: Record<string, { count: number; withEval: number; withoutEval: number }> = {};
     litigationData.forEach(m => {
       const cov = m.coverage || 'Unknown';
@@ -76,7 +107,6 @@ export function LitigationChat() {
       }
     });
 
-    // By team
     const byTeam: Record<string, { count: number; closed: number; totalPaid: number }> = {};
     litigationData.forEach(m => {
       const team = m.team || 'Unknown';
@@ -90,10 +120,7 @@ export function LitigationChat() {
       }
     });
 
-    // Matters without evaluation
     const withoutEvaluation = litigationData.filter(m => m.indemnitiesAmount === 0);
-
-    // Fixed reserves value
     const totalReserves = 257300000;
     
     return {
@@ -102,7 +129,6 @@ export function LitigationChat() {
       totalCWN: litigationData.filter(m => m.cwpCwn === 'CWN').length,
       totalReserves,
       totalIndemnityPaid: litigationData.reduce((sum, m) => sum + m.indemnitiesAmount, 0),
-
       monthToDate: {
         closures: mtdClosures.length,
         totalPaid: mtdPaid,
@@ -116,17 +142,14 @@ export function LitigationChat() {
           adjuster: m.adjusterName,
         }))
       },
-
       evaluationStatus: {
         withEvaluation: litigationData.filter(m => m.indemnitiesAmount > 0).length,
         withoutEvaluation: withoutEvaluation.length,
         percentWithoutEval: Math.round((withoutEvaluation.length / litigationData.length) * 100),
       },
-
       byExpenseCategory,
       byCoverage,
       byTeam,
-
       mattersWithoutEvaluation: withoutEvaluation.slice(0, 100).map(m => ({
         claim: m.claim,
         claimant: m.claimant,
@@ -136,7 +159,6 @@ export function LitigationChat() {
         adjuster: m.adjusterName,
         reserves: m.netAmount,
       })),
-
       sampleMatters: litigationData.slice(0, 100).map(m => ({
         claim: m.claim,
         claimant: m.claimant,
@@ -153,12 +175,24 @@ export function LitigationChat() {
     };
   }, [litigationData]);
 
+  // Build open exposure context
+  const openExposureContext = useMemo(() => {
+    if (!openExposureData) return null;
+    return {
+      totals: openExposureData.totals,
+      typeGroupSummaries: openExposureData.typeGroupSummaries,
+      cp1Data: openExposureData.cp1Data,
+      financials: openExposureData.financials,
+      knownTotals: openExposureData.knownTotals,
+      rawClaims: openExposureData.rawClaims?.slice(0, 100) || [], // Send sample of raw claims
+    };
+  }, [openExposureData]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
 
   const generateResponsePDF = (question: string, responseContent: string) => {
     const doc = new jsPDF();
@@ -167,7 +201,6 @@ export function LitigationChat() {
     const m = { l: 10, r: 10, t: 10 };
     const cw = pw - m.l - m.r;
 
-    // Executive dark color palette
     const C = {
       bg: [12, 12, 12] as [number, number, number],
       headerBg: [22, 22, 22] as [number, number, number],
@@ -187,7 +220,6 @@ export function LitigationChat() {
       return '$' + val.toLocaleString();
     };
 
-    // Sanitize text for PDF
     const sanitize = (text: string): string => {
       return text
         .replace(/[–—]/g, '-')
@@ -198,22 +230,17 @@ export function LitigationChat() {
         .replace(/[^\x20-\x7E\n]/g, '');
     };
 
-    // Background
     doc.setFillColor(...C.bg);
     doc.rect(0, 0, pw, ph, 'F');
 
-    // Header
     doc.setFillColor(...C.headerBg);
     doc.rect(0, 0, pw, 24, 'F');
     doc.setFillColor(...C.gold);
     doc.rect(0, 24, pw, 0.5, 'F');
 
-    // Logo
     try {
       doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
-    } catch (e) {
-      // Logo failed silently
-    }
+    } catch (e) {}
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
@@ -227,14 +254,12 @@ export function LitigationChat() {
 
     let y = 28;
 
-    // KPI Summary Box
     const kpiBoxH = 22;
     doc.setFillColor(...C.rowDark);
     doc.roundedRect(m.l, y, cw, kpiBoxH, 1, 1, 'F');
     doc.setFillColor(...C.gold);
     doc.rect(m.l, y, cw, 0.5, 'F');
 
-    // KPI metrics - 4 columns
     const kpiColW = cw / 4;
     const kpis = [
       { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '0' },
@@ -257,7 +282,6 @@ export function LitigationChat() {
 
     y += kpiBoxH + 4;
 
-    // Query Section
     doc.setFillColor(...C.rowDark);
     doc.roundedRect(m.l, y, cw, 18, 1, 1, 'F');
     doc.setFillColor(...C.gold);
@@ -276,7 +300,6 @@ export function LitigationChat() {
 
     y += 22;
 
-    // Response Section Header
     doc.setFillColor(...C.headerBg);
     doc.rect(m.l, y, cw, 8, 'F');
     doc.setFont('helvetica', 'bold');
@@ -285,7 +308,6 @@ export function LitigationChat() {
     doc.text('INTELLIGENCE RESPONSE', m.l + 3, y + 5);
     y += 10;
 
-    // Response content
     const sanitizedResponse = sanitize(responseContent);
     const lines = sanitizedResponse.split('\n');
     const lineH = 5;
@@ -294,7 +316,6 @@ export function LitigationChat() {
 
     lines.forEach((line, idx) => {
       if (y > ph - 20) {
-        // New page
         doc.addPage();
         doc.setFillColor(...C.bg);
         doc.rect(0, 0, pw, ph, 'F');
@@ -304,11 +325,9 @@ export function LitigationChat() {
       const trimmedLine = line.trim();
       const isEven = idx % 2 === 0;
 
-      // Row background
       doc.setFillColor(...(isEven ? C.rowDark : C.rowLight));
       doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
 
-      // Handle bullet points
       if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         const bulletText = trimmedLine.slice(2);
         const bulletLines = doc.splitTextToSize(bulletText, cw - 15);
@@ -331,9 +350,7 @@ export function LitigationChat() {
           doc.text(bl, m.l + 8, y);
           y += lineH;
         });
-      }
-      // Handle numbered lists
-      else if (/^\d+\./.test(trimmedLine)) {
+      } else if (/^\d+\./.test(trimmedLine)) {
         doc.setTextColor(...C.gold);
         doc.setFont('helvetica', 'bold');
         const num = trimmedLine.match(/^\d+\./)?.[0] || '';
@@ -357,9 +374,7 @@ export function LitigationChat() {
           doc.text(tl, m.l + 12, y);
           y += lineH;
         });
-      }
-      // Handle headers (lines ending with :)
-      else if (trimmedLine.endsWith(':') && trimmedLine.length < 60) {
+      } else if (trimmedLine.endsWith(':') && trimmedLine.length < 60) {
         y += 2;
         doc.setFillColor(...C.headerBg);
         doc.rect(m.l, y - 3, cw, lineH + 3, 'F');
@@ -368,9 +383,7 @@ export function LitigationChat() {
         doc.text(trimmedLine, m.l + 3, y);
         doc.setFont('helvetica', 'normal');
         y += lineH + 2;
-      }
-      // Regular text
-      else if (trimmedLine) {
+      } else if (trimmedLine) {
         const textLines = doc.splitTextToSize(trimmedLine, cw - 6);
         doc.setTextColor(...C.offWhite);
         doc.text(textLines[0] || '', m.l + 3, y);
@@ -389,11 +402,10 @@ export function LitigationChat() {
           y += lineH;
         });
       } else {
-        y += 3; // Empty line spacing
+        y += 3;
       }
     });
 
-    // Footer on all pages
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -414,15 +426,16 @@ export function LitigationChat() {
     toast.success('Executive report downloaded: ' + filename);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (overrideInput?: string) => {
+    const messageText = overrideInput || input;
+    if (!messageText.trim() || isLoading) return;
     
-    if (!dataContext) {
+    if (!dataContext && !openExposureContext) {
       toast.error("Data is still loading, please wait...");
       return;
     }
     
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: messageText };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
@@ -449,7 +462,8 @@ export function LitigationChat() {
         },
         body: JSON.stringify({ 
           messages: [...messages, userMessage],
-          dataContext 
+          dataContext,
+          openExposureContext,
         }),
       });
       
@@ -491,7 +505,6 @@ export function LitigationChat() {
         }
       }
       
-      // Generate PDF but keep the actual response visible in chat
       if (assistantContent.trim()) {
         generateResponsePDF(userMessage.content, assistantContent);
         toast.info("PDF report downloaded automatically");
@@ -512,31 +525,38 @@ export function LitigationChat() {
     }
   };
 
+  const handleQuickAction = (query: string) => {
+    sendMessage(query);
+  };
+
+  const dataReady = dataContext || openExposureContext;
+  const totalClaims = (openExposureContext?.totals?.grandTotal || 0) + (dataContext?.totalMatters || 0);
+
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50 bg-gradient-to-br from-primary to-primary/80"
         size="icon"
       >
-        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
     );
   }
 
   return (
-    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 ${
+    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-primary/20 ${
       isMinimized 
         ? "bottom-4 right-4 sm:bottom-6 sm:right-6 w-64 sm:w-72 h-12 sm:h-14" 
-        : "inset-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[600px] sm:max-h-[80vh]"
+        : "inset-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh]"
     }`}>
-      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-card to-muted/30">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <MessageCircle className="h-4 w-4" />
-          Litigation Assistant
-          {dataContext && (
-            <span className="text-xs text-muted-foreground">
-              ({dataContext.totalMatters.toLocaleString()} matters)
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="font-bold">Litigation Oracle</span>
+          {dataReady && (
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {totalClaims.toLocaleString()} claims
             </span>
           )}
         </CardTitle>
@@ -564,16 +584,50 @@ export function LitigationChat() {
         <CardContent className="p-0 flex flex-col h-[calc(100%-56px)]">
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm py-8">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium mb-2">Ask me about your litigation data</p>
-                <p className="text-xs">Examples:</p>
-                <ul className="text-xs mt-2 space-y-1">
-                  <li>"What was closed month to date and what was paid?"</li>
-                  <li>"How many matters without evaluations?"</li>
-                  <li>"Show me team performance breakdown"</li>
-                  <li>"Generate a PDF report of LIT category cases"</li>
-                </ul>
+              <div className="space-y-4">
+                <div className="text-center text-muted-foreground text-sm py-4">
+                  <Sparkles className="h-10 w-10 mx-auto mb-3 text-primary opacity-70" />
+                  <p className="font-semibold text-foreground mb-1">I am the Litigation Oracle</p>
+                  <p className="text-xs mb-4">Ask anything. I furnish data, lists, analysis—with exact numbers.</p>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide px-1">Quick Analysis</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {QUICK_ACTIONS.map((action) => (
+                      <Button
+                        key={action.label}
+                        variant="outline"
+                        size="sm"
+                        className="h-auto py-2 px-3 justify-start text-left hover:bg-muted/50 transition-colors"
+                        onClick={() => handleQuickAction(action.query)}
+                        disabled={isLoading || !dataReady}
+                      >
+                        <action.icon className={`h-4 w-4 mr-2 ${action.color}`} />
+                        <span className="text-xs">{action.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-xs text-muted-foreground px-1 mb-2">Or ask anything:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 px-1">
+                    <li className="flex items-center gap-2">
+                      <span className="text-primary">•</span>
+                      "List all claims over $100K in reserves"
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-primary">•</span>
+                      "What's the CP1 rate for BI coverage?"
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-primary">•</span>
+                      "Compare team A vs team B closures"
+                    </li>
+                  </ul>
+                </div>
               </div>
             )}
             
@@ -583,22 +637,30 @@ export function LitigationChat() {
                 className={`mb-4 ${msg.role === "user" ? "text-right" : "text-left"}`}
               >
                 <div
-                  className={`inline-block max-w-[85%] px-4 py-3 rounded-lg text-sm ${
+                  className={`inline-block max-w-[90%] px-4 py-3 rounded-lg text-sm ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
+                      : "bg-muted text-foreground border border-border"
                   }`}
                 >
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {msg.content.split('\n').map((line, lineIdx) => (
                       <p key={lineIdx} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
-                        {line.startsWith('- ') ? (
+                        {line.startsWith('- ') || line.startsWith('* ') ? (
                           <span className="flex gap-2">
-                            <span className="text-muted-foreground">•</span>
+                            <span className="text-primary">•</span>
                             <span>{line.slice(2)}</span>
                           </span>
                         ) : line.startsWith('**') && line.endsWith('**') ? (
-                          <strong>{line.slice(2, -2)}</strong>
+                          <strong className="text-primary">{line.slice(2, -2)}</strong>
+                        ) : line.startsWith('###') ? (
+                          <strong className="text-primary text-base">{line.replace(/^#+\s*/, '')}</strong>
+                        ) : line.startsWith('##') ? (
+                          <strong className="text-primary text-lg">{line.replace(/^#+\s*/, '')}</strong>
+                        ) : line.startsWith('#') ? (
+                          <strong className="text-primary text-xl">{line.replace(/^#+\s*/, '')}</strong>
+                        ) : line.startsWith('|') ? (
+                          <code className="text-xs bg-background px-1 rounded">{line}</code>
                         ) : (
                           line
                         )}
@@ -610,18 +672,17 @@ export function LitigationChat() {
             ))}
             
             {isLoading && (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing {dataContext?.totalMatters.toLocaleString()} matters...
+              <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded-lg px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span>Analyzing {totalClaims.toLocaleString()} claims...</span>
               </div>
             )}
-            
           </ScrollArea>
           
-          <div className="p-4 border-t">
+          <div className="p-4 border-t bg-muted/20">
             <div className="flex gap-2">
               <Input
-                placeholder="Ask about your litigation data..."
+                placeholder="Ask the Oracle anything..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -630,12 +691,16 @@ export function LitigationChat() {
               />
               <Button
                 size="icon"
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={isLoading || !input.trim()}
+                className="bg-primary hover:bg-primary/90"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+            <p className="text-[10px] text-muted-foreground mt-2 text-center">
+              PDF report auto-downloads with each response • Double-click dashboard cards for raw exports
+            </p>
           </div>
         </CardContent>
       )}
