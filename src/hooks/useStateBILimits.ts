@@ -12,18 +12,35 @@ export interface StateBILimit {
   notes: string | null;
 }
 
-// Prefix-to-state mapping based on FLI regional codes
+// Prefix-to-state mapping based on FLI policy company codes
 const PREFIX_STATE_MAP: Record<string, string> = {
-  '39': 'Texas',
-  '65': 'California',
-  '72': 'Florida',
-  '78': 'Arizona',
-  '41': 'New York',
-  '52': 'Illinois',
-  '63': 'Pennsylvania',
-  '55': 'Ohio',
-  '48': 'Georgia',
-  '33': 'North Carolina',
+  // Arizona
+  '82': 'Arizona', '97': 'Arizona', '57': 'Arizona',
+  // California
+  '72': 'California', '73': 'California',
+  // Colorado
+  '67': 'Colorado', '68': 'Colorado', '77': 'Colorado', '60': 'Colorado', '69': 'Colorado',
+  // Georgia
+  '40': 'Georgia', '83': 'Georgia', '84': 'Georgia',
+  // Illinois
+  '70': 'Illinois', '71': 'Illinois', '59': 'Illinois', '58': 'Illinois',
+  // Indiana
+  '61': 'Indiana', '90': 'Indiana', '95': 'Indiana',
+  // Nevada
+  '80': 'Nevada', '96': 'Nevada', '55': 'Nevada',
+  // New Mexico
+  '62': 'New Mexico', '64': 'New Mexico',
+  // Ohio
+  '93': 'Ohio', '94': 'Ohio', '98': 'Ohio',
+  // Texas
+  '66': 'Texas', '78': 'Texas', '65': 'Texas', '63': 'Texas', '76': 'Texas', 
+  '89': 'Texas', '74': 'Texas', '75': 'Texas', '51': 'Texas',
+  // Alabama
+  '79': 'Alabama', '47': 'Alabama', '81': 'Alabama',
+  // Oklahoma
+  '39': 'Oklahoma', '50': 'Oklahoma',
+  // Tennessee
+  '42': 'Tennessee',
 };
 
 export interface OverspendMetrics {
