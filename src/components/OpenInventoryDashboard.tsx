@@ -3258,17 +3258,55 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                       { duration: 8000 }
                     );
                   } else {
-                    // Send real SMS via edge function
+                    // Send real SMS via edge function with Excel attachment
                     const reviewerPhone = REVIEWER_PHONES[selectedReviewer];
                     if (reviewerPhone) {
                       try {
-                        const { error: smsError } = await supabase.functions.invoke('send-review-sms', {
+                        // Generate Excel data for the claims
+                        const XLSX = await import('xlsx');
+                        const excelData = claimsToInsert.map(c => ({
+                          'Claim ID': c.claim_id,
+                          'Area': c.area,
+                          'Loss Description': c.loss_description,
+                          'Reserves': c.reserves,
+                          'Low Eval': c.low_eval,
+                          'High Eval': c.high_eval,
+                          'Age Bucket': c.age_bucket,
+                          'Assigned To': c.assigned_to,
+                          'Deadline': format(new Date(deadline), 'MMMM d, yyyy'),
+                        }));
+                        
+                        const worksheet = XLSX.utils.json_to_sheet(excelData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Claims to Review');
+                        
+                        // Set column widths
+                        worksheet['!cols'] = [
+                          { wch: 15 }, // Claim ID
+                          { wch: 20 }, // Area
+                          { wch: 30 }, // Loss Description
+                          { wch: 12 }, // Reserves
+                          { wch: 12 }, // Low Eval
+                          { wch: 12 }, // High Eval
+                          { wch: 15 }, // Age Bucket
+                          { wch: 18 }, // Assigned To
+                          { wch: 18 }, // Deadline
+                        ];
+                        
+                        // Generate base64 Excel
+                        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+                        
+                        const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-review-sms', {
                           body: {
                             to: reviewerPhone,
                             claimType: filterData.ageBucket,
                             claimCount: claimsToInsert.length,
                             region: 'Texas 101-110',
                             lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                            reviewer: selectedReviewer,
+                            deadline: format(new Date(deadline), 'MMMM d, yyyy'),
+                            claims: claimsToInsert,
+                            excelBase64: excelBuffer,
                           }
                         });
                         if (smsError) {
@@ -3277,9 +3315,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                         } else {
                           toast.success(
                             <div className="space-y-1">
-                              <p className="font-semibold">📱 SMS Sent</p>
+                              <p className="font-semibold">📱 SMS Sent with Excel</p>
                               <p className="text-xs text-muted-foreground">
-                                Notification sent to {selectedReviewer}
+                                Notification + claim data sent to {selectedReviewer}
                               </p>
                             </div>,
                             { duration: 5000 }
