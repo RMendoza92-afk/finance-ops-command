@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { useLitigationData } from "@/hooks/useLitigationData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
+import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
 import loyaLogo from "@/assets/fli_logo.jpg";
 
 interface Message {
@@ -673,6 +674,30 @@ export function LitigationChat() {
                       </p>
                     ))}
                   </div>
+                  
+                  {/* Render trend comparison cards for assistant messages */}
+                  {msg.role === "assistant" && (() => {
+                    const trendData = parseTrendData(msg.content);
+                    if (!trendData) return null;
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {trendData.weekOverWeek && trendData.weekOverWeek.length > 0 && (
+                          <TrendComparisonCard
+                            title="Week-over-Week"
+                            period="vs last week"
+                            metrics={trendData.weekOverWeek}
+                          />
+                        )}
+                        {trendData.monthOverMonth && trendData.monthOverMonth.length > 0 && (
+                          <TrendComparisonCard
+                            title="Month-over-Month"
+                            period="vs last month"
+                            metrics={trendData.monthOverMonth}
+                          />
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
