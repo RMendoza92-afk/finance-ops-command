@@ -26,7 +26,8 @@ export interface TypeGroupSummary {
   age181To365: number;
   age61To180: number;
   ageUnder60: number;
-  grandTotal: number;
+  grandTotal: number; // exposures (rows)
+  uniqueClaims: number; // unique claim numbers
   reserves: number;
   lowEval: number;
   highEval: number;
@@ -254,6 +255,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // Type group claim counts for known totals
   const typeGroupCounts = new Map<string, number>();
   
+  // Track unique claims per type group (for Claims column) vs exposures (rows)
+  const typeGroupUniqueClaims = new Map<string, Set<string>>();
+  const typeGroupExposures = new Map<string, number>();
+  
   // Texas Rear End tracking (Areas 101-110, Loss Desc contains "R/E")
   const texasAreas = ['101', '102', '103', '104', '105', '106', '107', '108', '109', '110'];
   const texasAreaMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
@@ -324,8 +329,16 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     tg.lowEval += lowEval;
     tg.highEval += highEval;
     
-    // Track type group counts
+    // Track type group counts (exposures = rows)
     typeGroupCounts.set(typeGroup, (typeGroupCounts.get(typeGroup) || 0) + 1);
+    typeGroupExposures.set(typeGroup, (typeGroupExposures.get(typeGroup) || 0) + 1);
+    
+    // Track unique claims per type group
+    const claimNum = row['Claim#']?.trim() || '';
+    if (!typeGroupUniqueClaims.has(typeGroup)) {
+      typeGroupUniqueClaims.set(typeGroup, new Set());
+    }
+    typeGroupUniqueClaims.get(typeGroup)!.add(claimNum);
     
     // Track CP1 by coverage
     if (!cp1ByCoverage.has(coverage)) {
@@ -425,14 +438,15 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // Sort phases by total descending
   litPhases.sort((a, b) => b.grandTotal - a.grandTotal);
   
-  // Convert type group map to array
+  // Convert type group map to array with unique claims count
   const typeGroupSummaries: TypeGroupSummary[] = [];
   typeGroupMap.forEach((counts, typeGroup) => {
-    typeGroupSummaries.push({ typeGroup, ...counts });
+    const uniqueClaims = typeGroupUniqueClaims.get(typeGroup)?.size || 0;
+    typeGroupSummaries.push({ typeGroup, ...counts, uniqueClaims });
   });
   
-  // Sort by grandTotal descending
-  typeGroupSummaries.sort((a, b) => b.grandTotal - a.grandTotal);
+  // Sort by uniqueClaims descending (claims count, not exposures)
+  typeGroupSummaries.sort((a, b) => b.uniqueClaims - a.uniqueClaims);
   
   // Build CP1 byCoverage array
   const cp1CoverageArray: CP1Data['byCoverage'] = [];
@@ -497,29 +511,31 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     reserves: tg.reserves
   }));
   
-  // Build known totals from actual data
+  // Build known totals from actual data - claims = unique claim#, exposures = rows
+  const uniqueClaimsTotal = new Set(rows.filter(r => r['Claim#'] && isIncludedCoverage(r['Coverage']?.trim() || '')).map(r => r['Claim#'])).size;
+  
   const knownTotals: KnownTotals = {
-    totalOpenClaims: grandTotals.grandTotal,
-    totalOpenExposures: grandTotals.grandTotal, // Same as claims from this data
+    totalOpenClaims: uniqueClaimsTotal,
+    totalOpenExposures: grandTotals.grandTotal,
     atr: { 
-      claims: typeGroupCounts.get('ATR') || 0, 
-      exposures: typeGroupCounts.get('ATR') || 0 
+      claims: typeGroupUniqueClaims.get('ATR')?.size || 0, 
+      exposures: typeGroupExposures.get('ATR') || 0 
     },
     lit: { 
-      claims: typeGroupCounts.get('LIT') || 0, 
-      exposures: typeGroupCounts.get('LIT') || 0 
+      claims: typeGroupUniqueClaims.get('LIT')?.size || 0, 
+      exposures: typeGroupExposures.get('LIT') || 0 
     },
     bi3: { 
-      claims: typeGroupCounts.get('BI3') || 0, 
-      exposures: typeGroupCounts.get('BI3') || 0 
+      claims: typeGroupUniqueClaims.get('BI3')?.size || 0, 
+      exposures: typeGroupExposures.get('BI3') || 0 
     },
     earlyBI: { 
-      claims: typeGroupCounts.get('Early BI') || typeGroupCounts.get('EBI') || 0, 
-      exposures: typeGroupCounts.get('Early BI') || typeGroupCounts.get('EBI') || 0 
+      claims: typeGroupUniqueClaims.get('Early BI')?.size || typeGroupUniqueClaims.get('EBI')?.size || 0, 
+      exposures: typeGroupExposures.get('Early BI') || typeGroupExposures.get('EBI') || 0 
     },
-    flagged: 0, // Not available in raw data
-    newClaims: 0, // Not available in raw data
-    closed: 0, // Not available in raw data
+    flagged: 0,
+    newClaims: 0,
+    closed: 0,
   };
   
   // Build Texas Rear End data
