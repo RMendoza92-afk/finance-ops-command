@@ -88,6 +88,7 @@ interface Reviewer {
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { SOLBreachSummary } from "@/components/SOLBreachSummary";
 import { useSOLBreachAnalysis } from "@/hooks/useSOLBreachAnalysis";
+import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 
 interface OpenInventoryDashboardProps {
   filters: GlobalFilters;
@@ -96,6 +97,7 @@ interface OpenInventoryDashboardProps {
 export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps) {
   const { data, loading, error } = useOpenExposureData();
   const { data: solData } = useSOLBreachAnalysis();
+  const { data: decisionsData } = useDecisionsPending();
   const { exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
@@ -2463,7 +2465,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
           </div>
 
-          {/* Pending Decisions */}
+          {/* Pending Decisions - Pain Level > 5, No Eval */}
           <div 
             className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-warning/50 transition-all hover:shadow-lg"
             onClick={() => setShowDecisionsDrawer(true)}
@@ -2473,8 +2475,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Decisions Pending</p>
-              <p className="text-lg sm:text-2xl font-bold text-warning mt-0.5 sm:mt-1">{solData?.totalPendingCount || 0}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">SOL claims</span></p>
-              <p className="text-xs sm:text-sm text-destructive font-medium mt-0.5 sm:mt-1 truncate">{solData?.breachedCount || 0} breached • {solData?.approachingCount || 0} approaching</p>
+              <p className="text-lg sm:text-2xl font-bold text-warning mt-0.5 sm:mt-1">{decisionsData?.totalCount || 0}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">claims</span></p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">Pain 6+ • No eval set</p>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-warning flex-shrink-0" />
           </div>
