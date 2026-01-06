@@ -76,16 +76,13 @@ const EXPERT_QUARTERLY_DATA: QuarterlyData[] = [
 
 type ClaimReview = Tables<"claim_reviews">;
 
-const REVIEWERS = ['Richie Mendoza'];
-
-// Reviewer contact info for notifications (add contact details here)
-const REVIEWER_PHONES: Record<string, string> = {
-  'Richie Mendoza': '', // Add phone number in format: +1XXXXXXXXXX
-};
-
-const REVIEWER_EMAILS: Record<string, string> = {
-  'Richie Mendoza': '', // Add email address here
-};
+interface Reviewer {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  is_active: boolean;
+}
 
 import { GlobalFilters } from "@/components/GlobalFilters";
 
@@ -121,6 +118,37 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
   const [generatingBoardPackage, setGeneratingBoardPackage] = useState(false);
   const [cp1DrilldownCoverage, setCp1DrilldownCoverage] = useState<string | null>(null);
+  const [reviewers, setReviewers] = useState<Reviewer[]>([]);
+  const [loadingReviewers, setLoadingReviewers] = useState(true);
+
+  // Fetch reviewers from database
+  useEffect(() => {
+    const fetchReviewers = async () => {
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('reviewers')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (fetchError) {
+          console.error('Error fetching reviewers:', fetchError);
+          return;
+        }
+        setReviewers(data || []);
+      } catch (err) {
+        console.error('Error fetching reviewers:', err);
+      } finally {
+        setLoadingReviewers(false);
+      }
+    };
+    fetchReviewers();
+  }, []);
+
+  // Get selected reviewer's contact info
+  const selectedReviewerData = useMemo(() => {
+    return reviewers.find(r => r.name === selectedReviewer);
+  }, [reviewers, selectedReviewer]);
   
   // Pending Decisions - matters requiring executive attention
   // Criteria: High severity + $500K+ OR aging 180+ days
@@ -3103,8 +3131,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                 className="p-2 rounded border border-border bg-background text-xs"
               >
                 <option value="">Reviewer...</option>
-                {REVIEWERS.map(r => (
-                  <option key={r} value={r}>{r}</option>
+                {reviewers.map(r => (
+                  <option key={r.id} value={r.name}>{r.name}</option>
                 ))}
               </select>
               <div className="flex items-center gap-1">
@@ -3270,7 +3298,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     );
                   } else {
                     // Send real SMS via edge function with Excel attachment
-                    const reviewerPhone = REVIEWER_PHONES[selectedReviewer];
+                    const reviewerPhone = selectedReviewerData?.phone;
                     if (reviewerPhone) {
                       try {
                         // Generate Excel data for the claims
@@ -3345,7 +3373,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                   
                   // Send email notification if enabled
                   if (sendEmail && !testMode) {
-                    const reviewerEmail = REVIEWER_EMAILS[selectedReviewer];
+                    const reviewerEmail = selectedReviewerData?.email;
                     if (reviewerEmail) {
                       try {
                         // Generate Excel data for email
