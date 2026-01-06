@@ -104,6 +104,7 @@ export interface OpenExposureData {
     totalLowEval: number;
     totalHighEval: number;
     noEvalCount: number;
+    noEvalReserves: number;
     byAge: FinancialsByAge[];
     byTypeGroup: {
       typeGroup: string;
@@ -202,7 +203,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   
   let cp1Totals = { total: 0, age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0 };
   let grandTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
-  let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0 };
+  let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0, noEvalReserves: 0 };
   
   // Type group claim counts for known totals
   const typeGroupCounts = new Map<string, number>();
@@ -239,6 +240,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     financialTotals.totalHighEval += highEval;
     if (lowEval === 0 && highEval === 0) {
       financialTotals.noEvalCount++;
+      financialTotals.noEvalReserves += reserves;
     }
     
     // Update age bucket financials
@@ -434,7 +436,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     cp1Data,
     totals: grandTotals,
     financials: {
-      ...financialTotals,
+      totalOpenReserves: financialTotals.totalOpenReserves,
+      totalLowEval: financialTotals.totalLowEval,
+      totalHighEval: financialTotals.totalHighEval,
+      noEvalCount: financialTotals.noEvalCount,
+      noEvalReserves: financialTotals.noEvalReserves,
       byAge,
       byTypeGroup,
     },
