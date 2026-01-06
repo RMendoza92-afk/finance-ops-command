@@ -78,9 +78,13 @@ type ClaimReview = Tables<"claim_reviews">;
 
 const REVIEWERS = ['Richie Mendoza'];
 
-// Reviewer phone numbers for SMS notifications (add phone numbers here)
+// Reviewer contact info for notifications (add contact details here)
 const REVIEWER_PHONES: Record<string, string> = {
   'Richie Mendoza': '', // Add phone number in format: +1XXXXXXXXXX
+};
+
+const REVIEWER_EMAILS: Record<string, string> = {
+  'Richie Mendoza': '', // Add email address here
 };
 
 import { GlobalFilters } from "@/components/GlobalFilters";
@@ -104,6 +108,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [testMode, setTestMode] = useState(true);
+  const [sendEmail, setSendEmail] = useState(true);
   const [executiveExpanded, setExecutiveExpanded] = useState(true);
   const [showDecisionsDrawer, setShowDecisionsDrawer] = useState(false);
   const [pendingDecisions, setPendingDecisions] = useState<PendingDecision[]>([]);
@@ -3118,10 +3123,16 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             </div>
 
             <div className="mt-2 flex items-center justify-between text-xs">
-              <label className="flex items-center gap-1 cursor-pointer">
-                <Switch checked={testMode} onCheckedChange={setTestMode} className="scale-75" />
-                <span className="text-muted-foreground">SMS Test</span>
-              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <Switch checked={testMode} onCheckedChange={setTestMode} className="scale-75" />
+                  <span className="text-muted-foreground">Test Mode</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <Switch checked={sendEmail} onCheckedChange={setSendEmail} className="scale-75" />
+                  <span className="text-muted-foreground">📧 Email</span>
+                </label>
+              </div>
               {selectedClaimFilter && (
                 <span className="text-muted-foreground">
                   ${(selectedClaimFilter === 'aged-365' ? TEXAS_REAR_END_DATA.byAge[0].reserves / 1000000 :
@@ -3330,6 +3341,77 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                     } else {
                       toast.info('No phone number configured for reviewer - SMS skipped');
                     }
+                  }
+                  
+                  // Send email notification if enabled
+                  if (sendEmail && !testMode) {
+                    const reviewerEmail = REVIEWER_EMAILS[selectedReviewer];
+                    if (reviewerEmail) {
+                      try {
+                        // Generate Excel data for email
+                        const XLSX = await import('xlsx');
+                        const emailExcelData = claimsToInsert.map(c => ({
+                          'Claim ID': c.claim_id,
+                          'Area': c.area,
+                          'Loss Description': c.loss_description,
+                          'Reserves': c.reserves,
+                          'Low Eval': c.low_eval,
+                          'High Eval': c.high_eval,
+                          'Age Bucket': c.age_bucket,
+                          'Assigned To': c.assigned_to,
+                          'Deadline': format(new Date(deadline), 'MMMM d, yyyy'),
+                        }));
+                        
+                        const emailWorksheet = XLSX.utils.json_to_sheet(emailExcelData);
+                        const emailWorkbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(emailWorkbook, emailWorksheet, 'Claims to Review');
+                        const emailExcelBuffer = XLSX.write(emailWorkbook, { bookType: 'xlsx', type: 'base64' });
+                        
+                        const { error: emailError } = await supabase.functions.invoke('send-review-email', {
+                          body: {
+                            to: reviewerEmail,
+                            reviewerName: selectedReviewer,
+                            claimType: filterData.ageBucket,
+                            claimCount: claimsToInsert.length,
+                            region: 'Texas 101-110',
+                            lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                            deadline: format(new Date(deadline), 'MMMM d, yyyy'),
+                            claims: claimsToInsert,
+                            excelBase64: emailExcelBuffer,
+                          }
+                        });
+                        
+                        if (emailError) {
+                          console.error('Email send error:', emailError);
+                          toast.error('Failed to send email notification');
+                        } else {
+                          toast.success(
+                            <div className="space-y-1">
+                              <p className="font-semibold">📧 Email Sent with Excel</p>
+                              <p className="text-xs text-muted-foreground">
+                                Full claim data sent to {selectedReviewer}
+                              </p>
+                            </div>,
+                            { duration: 5000 }
+                          );
+                        }
+                      } catch (emailErr) {
+                        console.error('Email error:', emailErr);
+                        toast.error('Email notification failed');
+                      }
+                    } else {
+                      toast.info('No email configured for reviewer - email skipped');
+                    }
+                  } else if (sendEmail && testMode) {
+                    toast.success(
+                      <div className="space-y-1">
+                        <p className="font-semibold">📧 Email Simulated (Test Mode)</p>
+                        <p className="text-xs text-muted-foreground">
+                          Would send to: {selectedReviewer}
+                        </p>
+                      </div>,
+                      { duration: 5000 }
+                    );
                   }
                   
                   toast.success(`Deployed ${claimsToInsert.length} claims to ${selectedReviewer}`, {
