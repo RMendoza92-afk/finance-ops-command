@@ -2,7 +2,22 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import loyaLogo from '@/assets/fli_logo.jpg';
+import { supabase } from '@/integrations/supabase/client';
 
+// Log download to database (fire and forget)
+const logDownload = async (reportType: string, reportName: string, fileFormat: string, rowCount?: number, metadata?: object) => {
+  try {
+    await supabase.from('report_downloads').insert([{
+      report_type: reportType,
+      report_name: reportName,
+      file_format: fileFormat,
+      row_count: rowCount,
+      metadata: metadata as unknown as null
+    }]);
+  } catch (e) {
+    console.warn('Failed to log download:', e);
+  }
+};
 export interface ManagerTracking {
   name: string;
   value: string | number;
@@ -375,6 +390,10 @@ export function useExportData() {
     // Save
     const filename = sanitize(data.title).replace(/[^a-zA-Z0-9]/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.pdf';
     doc.save(filename);
+    
+    // Log download (fire and forget)
+    logDownload('pdf', data.title, 'pdf', data.rows.length, { hasCharts: !!data.charts, hasInsights: !!data.bulletInsights });
+    
     return filename;
   };
 
@@ -480,6 +499,11 @@ export function useExportData() {
 
     const filename = data.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
     XLSX.writeFile(wb, filename);
+    
+    // Log download (fire and forget)
+    const totalRows = data.rows.length + (data.rawClaimData?.reduce((sum, r) => sum + r.rows.length, 0) || 0);
+    logDownload('excel', data.title, 'xlsx', totalRows, { hasRawData: !!data.rawClaimData });
+    
     return filename;
   };
 
