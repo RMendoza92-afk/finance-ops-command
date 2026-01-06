@@ -136,10 +136,19 @@ export interface RawClaimExport {
   demandType: string;
 }
 
+export interface CP1ByTypeGroup {
+  typeGroup: string;
+  noCP: number;
+  yes: number;
+  total: number;
+  cp1Rate: number;
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
   cp1Data: CP1Data;
+  cp1ByTypeGroup: CP1ByTypeGroup[];
   totals: {
     age365Plus: number;
     age181To365: number;
@@ -249,6 +258,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   
   // CP1 tracking by coverage (for BI/UM/UI detailed breakdown)
   const cp1ByCoverage = new Map<string, { noCP: number; yes: number; reserves: number }>();
+  
+  // CP1 tracking by type group
+  const cp1ByTypeGroup = new Map<string, { noCP: number; yes: number }>();
   
   // CP1 tracking for ALL coverages (for grand total)
   let cp1AllCoverages = { noCP: 0, yes: 0 };
@@ -400,6 +412,17 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       cp1Totals[ageBucket]++;
     } else {
       coverageCP1.noCP++;
+    }
+    
+    // Track CP1 by type group
+    if (!cp1ByTypeGroup.has(typeGroup)) {
+      cp1ByTypeGroup.set(typeGroup, { noCP: 0, yes: 0 });
+    }
+    const typeGroupCP1 = cp1ByTypeGroup.get(typeGroup)!;
+    if (isCP1) {
+      typeGroupCP1.yes++;
+    } else {
+      typeGroupCP1.noCP++;
     }
     
     // Track BI CP1 by age bucket
@@ -619,10 +642,25 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     byAge: texasRearEndByAge
   };
   
+  // Build CP1 by type group array
+  const cp1ByTypeGroupArray: CP1ByTypeGroup[] = [];
+  cp1ByTypeGroup.forEach((data, typeGroup) => {
+    const total = data.noCP + data.yes;
+    cp1ByTypeGroupArray.push({
+      typeGroup,
+      noCP: data.noCP,
+      yes: data.yes,
+      total,
+      cp1Rate: total > 0 ? parseFloat(((data.yes / total) * 100).toFixed(1)) : 0,
+    });
+  });
+  cp1ByTypeGroupArray.sort((a, b) => b.yes - a.yes);
+  
   return {
     litPhases,
     typeGroupSummaries,
     cp1Data,
+    cp1ByTypeGroup: cp1ByTypeGroupArray,
     totals: grandTotals,
     financials: {
       totalOpenReserves: financialTotals.totalOpenReserves,

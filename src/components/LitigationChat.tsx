@@ -308,9 +308,10 @@ export function LitigationChat() {
       totals: openExposureData.totals,
       typeGroupSummaries: openExposureData.typeGroupSummaries,
       cp1Data: openExposureData.cp1Data,
+      cp1ByTypeGroup: openExposureData.cp1ByTypeGroup,
       financials: openExposureData.financials,
       knownTotals: openExposureData.knownTotals,
-      rawClaims: openExposureData.rawClaims?.slice(0, 100) || [], // Send sample of raw claims
+      rawClaims: openExposureData.rawClaims?.slice(0, 200) || [], // Send larger sample for accurate queries
     };
   }, [openExposureData]);
 
