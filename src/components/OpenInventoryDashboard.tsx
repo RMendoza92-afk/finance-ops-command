@@ -1114,6 +1114,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const generateCombinedBoardPackage = useCallback(async () => {
     setGeneratingBoardPackage(true);
     try {
+      // Ensure CSV data is loaded first
+      if (!data?.cp1Data || data.cp1Data.totals.grandTotal === 0) {
+        toast.error('Claims data not loaded. Please wait for data to load and try again.');
+        setGeneratingBoardPackage(false);
+        return;
+      }
+      
       // Ensure we have pending decisions loaded
       if (pendingDecisions.length === 0) {
         await fetchPendingDecisions();
@@ -1206,7 +1213,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     } finally {
       setGeneratingBoardPackage(false);
     }
-  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions]);
+  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
