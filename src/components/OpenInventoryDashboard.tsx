@@ -762,8 +762,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
       
       // Note: These are claim counts, not dollar exposure (we don't have per-claim financials)
-      const cp1ClaimCount = CP1_DATA.totals.yes;
-      const agedBIClaimCount = CP1_DATA.biByAge[0].yes;
+      const cp1ClaimCount = CP1_DATA.totals?.yes ?? 0;
+      const agedBIClaimCount = CP1_DATA.biByAge?.[0]?.yes ?? 0;
 
       // BACKGROUND
       doc.setFillColor(...C.bg);
@@ -812,8 +812,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       y += 6;
 
       const metricBoxW = cw / 4 - 2;
-      const biRate = ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1);
-      const agedBIPct = ((agedBIClaimCount / cp1ClaimCount) * 100).toFixed(0);
+      const biRate = CP1_DATA.biTotal?.total > 0
+        ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)
+        : '0.0';
+      const agedBIPct = cp1ClaimCount > 0 ? ((agedBIClaimCount / cp1ClaimCount) * 100).toFixed(0) : '0';
       const metrics = [
         { label: 'CP1 CLAIMS', value: cp1ClaimCount.toLocaleString(), sub: 'At Policy Limits' },
         { label: 'CP1 RATE', value: CP1_DATA.cp1Rate + '%', sub: 'of Total Inventory' },
