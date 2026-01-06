@@ -573,44 +573,45 @@ export function LitigationChat() {
     const kpiCardH = 38;
     
     const kpis = [
-      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '--', subtext: 'Open Inventory', accent: C.azure },
-      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '--', subtext: formatCurrency(dataContext?.monthToDate?.totalPaid || 0) + ' paid', accent: C.success },
-      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0), subtext: 'Total exposure', accent: C.warning },
-      { label: 'INDEMNITY YTD', value: formatCurrency(dataContext?.totalIndemnityPaid || 0), subtext: 'Payments made', accent: C.danger },
+      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '--', subtext: 'Open Inventory', accent: C.azure, disabled: false },
+      { label: 'MTD CLOSURES', value: '--', subtext: 'Coming Soon', accent: C.steel, disabled: true },
+      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0), subtext: 'Total exposure', accent: C.warning, disabled: false },
+      { label: 'INDEMNITY YTD', value: formatCurrency(dataContext?.totalIndemnityPaid || 0), subtext: 'Payments made', accent: C.danger, disabled: false },
     ];
 
     kpis.forEach((kpi, i) => {
       const xPos = m.l + (i * (kpiCardW + 5));
+      const isDisabled = kpi.disabled;
       
-      // Card with subtle border
-      doc.setFillColor(...C.darkNavy);
+      // Card with subtle border - greyed out if disabled
+      doc.setFillColor(...(isDisabled ? [30, 35, 45] as [number, number, number] : C.darkNavy));
       doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 3, 3, 'F');
-      doc.setDrawColor(...C.steel);
+      doc.setDrawColor(...(isDisabled ? [60, 65, 75] as [number, number, number] : C.steel));
       doc.setLineWidth(0.3);
       doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 3, 3, 'S');
       
-      // Accent bar at top
-      doc.setFillColor(...kpi.accent);
+      // Accent bar at top - muted if disabled
+      doc.setFillColor(...(isDisabled ? [60, 65, 75] as [number, number, number] : kpi.accent));
       doc.roundedRect(xPos, y, kpiCardW, 3, 3, 3, 'F');
-      doc.setFillColor(...C.darkNavy);
+      doc.setFillColor(...(isDisabled ? [30, 35, 45] as [number, number, number] : C.darkNavy));
       doc.rect(xPos, y + 1.5, kpiCardW, 3, 'F');
       
-      // Label
+      // Label - dimmed if disabled
       setIBMPlexSans(doc, 'normal');
       doc.setFontSize(6.5);
-      doc.setTextColor(...C.textSecondary);
+      doc.setTextColor(...(isDisabled ? [80, 85, 95] as [number, number, number] : C.textSecondary));
       doc.text(kpi.label, xPos + kpiCardW / 2, y + 12, { align: 'center' });
       
-      // Value
+      // Value - dimmed if disabled
       setIBMPlexSans(doc, 'bold');
       doc.setFontSize(14);
-      doc.setTextColor(...C.white);
+      doc.setTextColor(...(isDisabled ? [100, 105, 115] as [number, number, number] : C.white));
       doc.text(kpi.value, xPos + kpiCardW / 2, y + 25, { align: 'center' });
       
-      // Subtext
+      // Subtext - dimmed if disabled
       setIBMPlexSans(doc, 'normal');
       doc.setFontSize(6);
-      doc.setTextColor(...C.textSecondary);
+      doc.setTextColor(...(isDisabled ? [80, 85, 95] as [number, number, number] : C.textSecondary));
       doc.text(kpi.subtext, xPos + kpiCardW / 2, y + 33, { align: 'center' });
     });
 
