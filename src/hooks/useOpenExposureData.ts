@@ -90,6 +90,34 @@ export interface KnownTotals {
   closed: number;
 }
 
+export interface TexasRearEndArea {
+  area: string;
+  claims: number;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
+}
+
+export interface TexasRearEndAge {
+  age: string;
+  claims: number;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
+}
+
+export interface TexasRearEndData {
+  lossDescription: string;
+  summary: {
+    totalClaims: number;
+    totalReserves: number;
+    lowEval: number;
+    highEval: number;
+  };
+  byArea: TexasRearEndArea[];
+  byAge: TexasRearEndAge[];
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
@@ -121,6 +149,7 @@ export interface OpenExposureData {
     }[];
   };
   knownTotals: KnownTotals;
+  texasRearEnd: TexasRearEndData;
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -225,6 +254,17 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // Type group claim counts for known totals
   const typeGroupCounts = new Map<string, number>();
   
+  // Texas Rear End tracking (Areas 101-110, Loss Desc contains "R/E")
+  const texasAreas = ['101', '102', '103', '104', '105', '106', '107', '108', '109', '110'];
+  const texasAreaMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
+  const texasAgeMap = {
+    age365Plus: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    age181To365: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    age61To180: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+    ageUnder60: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+  };
+  let texasSummary = { totalClaims: 0, totalReserves: 0, lowEval: 0, highEval: 0 };
+  
   for (const row of rows) {
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
@@ -322,6 +362,37 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       const dt = demandMap.get(demandType)!;
       dt[ageBucket]++;
       dt.total++;
+    }
+    
+    // Track Texas Rear End claims (Areas 101-110, Loss Description contains "R/E")
+    const areaNum = row['Area#']?.trim() || '';
+    const lossDesc = row['Description of Accident']?.trim() || '';
+    const isTexasArea = texasAreas.some(a => areaNum.startsWith(a));
+    const isRearEnd = lossDesc.toUpperCase().includes('R/E');
+    
+    if (isTexasArea && isRearEnd) {
+      // Track by area
+      const areaKey = areaNum.substring(0, 3); // Just the number like "101"
+      if (!texasAreaMap.has(areaKey)) {
+        texasAreaMap.set(areaKey, { claims: 0, reserves: 0, lowEval: 0, highEval: 0 });
+      }
+      const areaData = texasAreaMap.get(areaKey)!;
+      areaData.claims++;
+      areaData.reserves += reserves;
+      areaData.lowEval += lowEval;
+      areaData.highEval += highEval;
+      
+      // Track by age bucket
+      texasAgeMap[ageBucket].claims++;
+      texasAgeMap[ageBucket].reserves += reserves;
+      texasAgeMap[ageBucket].lowEval += lowEval;
+      texasAgeMap[ageBucket].highEval += highEval;
+      
+      // Update summary
+      texasSummary.totalClaims++;
+      texasSummary.totalReserves += reserves;
+      texasSummary.lowEval += lowEval;
+      texasSummary.highEval += highEval;
     }
   }
   
@@ -451,6 +522,39 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     closed: 0, // Not available in raw data
   };
   
+  // Build Texas Rear End data
+  const areaNames: Record<string, string> = {
+    '101': '101 EL PASO', '102': '102 RIO GRANDE/VALL', '103': '103 LAREDO/DEL RIO',
+    '104': '104 CORPUS', '105': '105 SAN ANTONIO', '106': '106 WEST TEXAS',
+    '107': '107 HOUSTON', '108': '108 DFW', '109': '109 DALLAS', '110': '110 AUSTIN'
+  };
+  
+  const texasRearEndByArea: TexasRearEndArea[] = [];
+  texasAreaMap.forEach((data, areaCode) => {
+    texasRearEndByArea.push({
+      area: areaNames[areaCode] || areaCode,
+      claims: data.claims,
+      reserves: data.reserves,
+      lowEval: data.lowEval,
+      highEval: data.highEval
+    });
+  });
+  texasRearEndByArea.sort((a, b) => b.claims - a.claims);
+  
+  const texasRearEndByAge: TexasRearEndAge[] = [
+    { age: '365+ Days', ...texasAgeMap.age365Plus },
+    { age: '181-365 Days', ...texasAgeMap.age181To365 },
+    { age: '61-180 Days', ...texasAgeMap.age61To180 },
+    { age: 'Under 60 Days', ...texasAgeMap.ageUnder60 },
+  ];
+  
+  const texasRearEnd: TexasRearEndData = {
+    lossDescription: 'IV R/E CV',
+    summary: texasSummary,
+    byArea: texasRearEndByArea,
+    byAge: texasRearEndByAge
+  };
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -475,6 +579,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
         })),
     },
     knownTotals,
+    texasRearEnd,
   };
 }
 

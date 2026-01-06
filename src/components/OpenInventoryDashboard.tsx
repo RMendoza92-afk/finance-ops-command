@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data } from "@/hooks/useOpenExposureData";
+import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
@@ -1366,27 +1366,24 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   ];
 
   // Rear Ends - Texas Areas 101-110 | Loss Desc: IV R/E CV only
-  const TEXAS_REAR_END_DATA = {
-    lossDescription: 'IV R/E CV',
-    summary: { totalClaims: 2458, totalReserves: 33000000, lowEval: 9260000, highEval: 10800000 },
-    byArea: [
-      { area: '101 EL PASO', claims: 412, reserves: 5600000, lowEval: 1550000, highEval: 1810000 },
-      { area: '102 RIO GRANDE/VALL', claims: 318, reserves: 4200000, lowEval: 1170000, highEval: 1360000 },
-      { area: '103 LAREDO/DEL RIO', claims: 245, reserves: 3600000, lowEval: 1010000, highEval: 1180000 },
-      { area: '104 CORPUS', claims: 198, reserves: 2800000, lowEval: 780000, highEval: 910000 },
-      { area: '105 SAN ANTONIO', claims: 387, reserves: 4900000, lowEval: 1370000, highEval: 1600000 },
-      { area: '106 WEST TEXAS', claims: 156, reserves: 2100000, lowEval: 590000, highEval: 690000 },
-      { area: '107 HOUSTON', claims: 289, reserves: 3400000, lowEval: 950000, highEval: 1110000 },
-      { area: '109 DALLAS', claims: 142, reserves: 2000000, lowEval: 560000, highEval: 650000 },
-      { area: '110 AUSTIN', claims: 98, reserves: 1500000, lowEval: 420000, highEval: 490000 },
-    ],
-    byAge: [
-      { age: '365+ Days', claims: 983, reserves: 13600000, lowEval: 3800000, highEval: 4450000 },
-      { age: '181-365 Days', claims: 712, reserves: 9800000, lowEval: 2740000, highEval: 3200000 },
-      { age: '61-180 Days', claims: 498, reserves: 6000000, lowEval: 1680000, highEval: 1960000 },
-      { age: 'Under 60 Days', claims: 265, reserves: 3600000, lowEval: 1040000, highEval: 1190000 },
-    ],
-  };
+  // Now using dynamic data from CSV via useOpenExposureData hook
+  const TEXAS_REAR_END_DATA = useMemo(() => {
+    if (!data?.texasRearEnd) {
+      // Fallback to empty data if not loaded yet
+      return {
+        lossDescription: 'IV R/E CV',
+        summary: { totalClaims: 0, totalReserves: 0, lowEval: 0, highEval: 0 },
+        byArea: [],
+        byAge: [
+          { age: '365+ Days', claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+          { age: '181-365 Days', claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+          { age: '61-180 Days', claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+          { age: 'Under 60 Days', claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
+        ],
+      };
+    }
+    return data.texasRearEnd;
+  }, [data?.texasRearEnd]);
 
   // Calculate derived metrics - now uses dynamic financials from CSV
   const metrics = useMemo(() => {
@@ -1696,18 +1693,30 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
     ];
 
-    // Litigation Evaluation Phases - actual data from dashboard
-    const LIT_PHASES_DATA = [
-      { phase: 'Pending Demand', aged365: 643, aged181_365: 74, aged61_180: 111, under60: 17, total: 845, pctAged: 76 },
-      { phase: 'Impasse', aged365: 503, aged181_365: 39, aged61_180: 2, under60: 0, total: 544, pctAged: 92 },
-      { phase: 'Active Negotiation', aged365: 462, aged181_365: 51, aged61_180: 8, under60: 3, total: 524, pctAged: 88 },
-      { phase: 'Liability Denial', aged365: 310, aged181_365: 42, aged61_180: 7, under60: 2, total: 361, pctAged: 86 },
-      { phase: 'Low Impact - Negotiation', aged365: 221, aged181_365: 23, aged61_180: 4, under60: 3, total: 251, pctAged: 88 },
-      { phase: 'Non Offer', aged365: 180, aged181_365: 14, aged61_180: 7, under60: 0, total: 201, pctAged: 90 },
-      { phase: 'Low Impact - Impasse', aged365: 155, aged181_365: 32, aged61_180: 0, under60: 0, total: 187, pctAged: 83 },
-      { phase: 'Demand Under Review', aged365: 78, aged181_365: 39, aged61_180: 21, under60: 11, total: 149, pctAged: 52 },
-    ];
-    const LIT_TOTALS = { aged365: 2716, aged181_365: 334, aged61_180: 176, under60: 63, total: 3747, pctAged: 72 };
+    // Litigation Evaluation Phases - now using dynamic data from CSV
+    const LIT_PHASES_DATA = metrics.topPhases.map(phase => ({
+      phase: phase.phase,
+      aged365: phase.total365Plus,
+      aged181_365: phase.total181To365,
+      aged61_180: phase.total61To180,
+      under60: phase.totalUnder60,
+      total: phase.grandTotal,
+      pctAged: phase.grandTotal > 0 ? Math.round((phase.total365Plus / phase.grandTotal) * 100) : 0
+    }));
+    
+    const litTotal365 = data.litPhases.reduce((s, p) => s + p.total365Plus, 0);
+    const litTotal181_365 = data.litPhases.reduce((s, p) => s + p.total181To365, 0);
+    const litTotal61_180 = data.litPhases.reduce((s, p) => s + p.total61To180, 0);
+    const litTotalUnder60 = data.litPhases.reduce((s, p) => s + p.totalUnder60, 0);
+    const litTotalAll = data.litPhases.reduce((s, p) => s + p.grandTotal, 0);
+    const LIT_TOTALS = { 
+      aged365: litTotal365, 
+      aged181_365: litTotal181_365, 
+      aged61_180: litTotal61_180, 
+      under60: litTotalUnder60, 
+      total: litTotalAll, 
+      pctAged: litTotalAll > 0 ? Math.round((litTotal365 / litTotalAll) * 100) : 0 
+    };
 
     // Charts for visual representation - using actual inventory data
     const charts: PDFChart[] = [
