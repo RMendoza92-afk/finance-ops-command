@@ -12,6 +12,8 @@ import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
 import { DrilldownModal } from "@/components/DrilldownModal";
 import loyaLogo from "@/assets/fli_logo.jpg";
+import { registerIBMPlexSans, setIBMPlexSans } from "@/lib/pdfFonts";
+import { EXECUTIVE_COLORS, getReportContext } from "@/lib/executivePDFFramework";
 
 interface Message {
   role: "user" | "assistant";
@@ -449,23 +451,15 @@ export function LitigationChat() {
 
   const generateResponsePDF = (question: string, responseContent: string) => {
     const doc = new jsPDF();
+    registerIBMPlexSans(doc);
+    
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-    const m = { l: 10, r: 10, t: 10 };
+    const m = { l: 15, r: 15, t: 15, b: 20 };
     const cw = pw - m.l - m.r;
+    const ctx = getReportContext();
 
-    const C = {
-      bg: [12, 12, 12] as [number, number, number],
-      headerBg: [22, 22, 22] as [number, number, number],
-      rowDark: [18, 18, 18] as [number, number, number],
-      rowLight: [24, 24, 24] as [number, number, number],
-      border: [45, 45, 45] as [number, number, number],
-      white: [255, 255, 255] as [number, number, number],
-      offWhite: [240, 240, 240] as [number, number, number],
-      muted: [140, 140, 140] as [number, number, number],
-      gold: [212, 175, 55] as [number, number, number],
-      green: [16, 185, 129] as [number, number, number],
-    };
+    const C = EXECUTIVE_COLORS;
 
     const formatCurrency = (val: number): string => {
       if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
@@ -483,200 +477,267 @@ export function LitigationChat() {
         .replace(/[^\x20-\x7E\n]/g, '');
     };
 
-    doc.setFillColor(...C.bg);
+    // === PAGE 1: EXECUTIVE HEADER ===
+    doc.setFillColor(...C.navy);
     doc.rect(0, 0, pw, ph, 'F');
 
-    doc.setFillColor(...C.headerBg);
-    doc.rect(0, 0, pw, 24, 'F');
-    doc.setFillColor(...C.gold);
-    doc.rect(0, 24, pw, 0.5, 'F');
+    // Header bar with gradient effect
+    doc.setFillColor(...C.darkNavy);
+    doc.rect(0, 0, pw, 38, 'F');
+    
+    // Red accent line
+    doc.setFillColor(...C.azure);
+    doc.rect(0, 38, pw, 2, 'F');
 
+    // Report type badge
+    doc.setFillColor(...C.azure);
+    doc.roundedRect(m.l, 8, 45, 12, 2, 2, 'F');
+    setIBMPlexSans(doc, 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...C.white);
+    doc.text('INTELLIGENCE', m.l + 22.5, 15.5, { align: 'center' });
+
+    // Logo
     try {
-      doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
+      doc.addImage(loyaLogo, 'JPEG', pw - m.r - 24, 6, 22, 22);
     } catch (e) {}
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
+    // Title
+    setIBMPlexSans(doc, 'bold');
+    doc.setFontSize(14);
     doc.setTextColor(...C.white);
-    doc.text('LITIGATION INTELLIGENCE REPORT', m.l + 20, 13);
+    doc.text('LITIGATION ORACLE REPORT', m.l + 50, 16);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(...C.muted);
-    doc.text(new Date().toLocaleDateString(), pw - m.r, 13, { align: 'right' });
+    // Subtitle
+    setIBMPlexSans(doc, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...C.textSecondary);
+    doc.text(`${ctx.reportPeriod} | Week ${ctx.weekNumber} | Q${ctx.quarter}`, m.l + 50, 26);
 
-    let y = 28;
+    // Report ID
+    doc.setFontSize(6);
+    doc.text(ctx.reportId, pw - m.r - 28, 32);
 
-    const kpiBoxH = 22;
-    doc.setFillColor(...C.rowDark);
-    doc.roundedRect(m.l, y, cw, kpiBoxH, 1, 1, 'F');
-    doc.setFillColor(...C.gold);
-    doc.rect(m.l, y, cw, 0.5, 'F');
+    let y = 48;
 
-    const kpiColW = cw / 4;
+    // === KPI CARDS ===
+    const kpiCardW = (cw - 12) / 4;
+    const kpiCardH = 28;
+    
     const kpis = [
-      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '0' },
-      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '0' },
-      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0) },
-      { label: 'INDEMNITY PAID', value: formatCurrency(dataContext?.totalIndemnityPaid || 0) },
+      { label: 'TOTAL MATTERS', value: dataContext?.totalMatters?.toLocaleString() || '0', color: C.azure },
+      { label: 'MTD CLOSURES', value: dataContext?.monthToDate?.closures?.toString() || '0', color: C.success },
+      { label: 'RESERVES', value: formatCurrency(dataContext?.totalReserves || 0), color: C.warning },
+      { label: 'INDEMNITY PAID', value: formatCurrency(dataContext?.totalIndemnityPaid || 0), color: C.danger },
     ];
 
     kpis.forEach((kpi, i) => {
-      const xPos = m.l + (i * kpiColW) + (kpiColW / 2);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(5);
-      doc.setTextColor(...C.muted);
-      doc.text(kpi.label, xPos, y + 8, { align: 'center' });
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...C.gold);
-      doc.text(kpi.value, xPos, y + 16, { align: 'center' });
+      const xPos = m.l + (i * (kpiCardW + 4));
+      
+      // Card background
+      doc.setFillColor(...C.darkNavy);
+      doc.roundedRect(xPos, y, kpiCardW, kpiCardH, 2, 2, 'F');
+      
+      // Left accent bar
+      doc.setFillColor(...kpi.color);
+      doc.rect(xPos, y + 3, 2.5, kpiCardH - 6, 'F');
+      
+      // Label
+      setIBMPlexSans(doc, 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.textSecondary);
+      doc.text(kpi.label, xPos + 8, y + 10);
+      
+      // Value
+      setIBMPlexSans(doc, 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...C.white);
+      doc.text(kpi.value, xPos + 8, y + 21);
     });
 
-    y += kpiBoxH + 4;
+    y += kpiCardH + 10;
 
-    doc.setFillColor(...C.rowDark);
-    doc.roundedRect(m.l, y, cw, 18, 1, 1, 'F');
-    doc.setFillColor(...C.gold);
-    doc.rect(m.l, y, 1.5, 18, 'F');
+    // === EXECUTIVE QUERY SECTION ===
+    doc.setFillColor(...C.darkNavy);
+    doc.roundedRect(m.l, y, cw, 24, 2, 2, 'F');
+    
+    // Gold accent bar
+    doc.setFillColor(...C.warning);
+    doc.rect(m.l, y + 3, 2.5, 18, 'F');
 
-    doc.setFont('helvetica', 'bold');
+    // Query label
+    setIBMPlexSans(doc, 'bold');
     doc.setFontSize(7);
-    doc.setTextColor(...C.gold);
-    doc.text('EXECUTIVE QUERY', m.l + 5, y + 5);
+    doc.setTextColor(...C.warning);
+    doc.text('EXECUTIVE QUERY', m.l + 8, y + 9);
 
-    doc.setFont('helvetica', 'normal');
+    // Query text
+    setIBMPlexSans(doc, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...C.white);
+    const questionLines = doc.splitTextToSize(sanitize(question), cw - 16);
+    doc.text(questionLines.slice(0, 2), m.l + 8, y + 17);
+
+    y += 30;
+
+    // === RESPONSE SECTION HEADER ===
+    doc.setFillColor(...C.steel);
+    doc.rect(m.l, y, cw, 10, 'F');
+    setIBMPlexSans(doc, 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(...C.offWhite);
-    const questionLines = doc.splitTextToSize(sanitize(question), cw - 12);
-    doc.text(questionLines.slice(0, 2), m.l + 5, y + 11);
+    doc.setTextColor(...C.white);
+    doc.text('INTELLIGENCE RESPONSE', m.l + 4, y + 7);
+    y += 14;
 
-    y += 22;
-
-    doc.setFillColor(...C.headerBg);
-    doc.rect(m.l, y, cw, 8, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6);
-    doc.setTextColor(...C.muted);
-    doc.text('INTELLIGENCE RESPONSE', m.l + 3, y + 5);
-    y += 10;
-
+    // === RESPONSE CONTENT ===
     const sanitizedResponse = sanitize(responseContent);
     const lines = sanitizedResponse.split('\n');
-    const lineH = 5;
+    const lineH = 5.5;
+    let isEvenLine = true;
 
-    doc.setFontSize(8);
-
-    lines.forEach((line, idx) => {
-      if (y > ph - 20) {
+    lines.forEach((line) => {
+      if (y > ph - m.b - 10) {
+        // Add page
         doc.addPage();
-        doc.setFillColor(...C.bg);
+        doc.setFillColor(...C.navy);
         doc.rect(0, 0, pw, ph, 'F');
         y = m.t;
       }
 
       const trimmedLine = line.trim();
-      const isEven = idx % 2 === 0;
+      if (!trimmedLine) {
+        y += 3;
+        return;
+      }
 
-      doc.setFillColor(...(isEven ? C.rowDark : C.rowLight));
-      doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
+      // Alternate row backgrounds
+      doc.setFillColor(...(isEvenLine ? C.darkNavy : C.steel));
+      isEvenLine = !isEvenLine;
 
+      // Section headers (lines ending with colon)
+      if (trimmedLine.endsWith(':') && trimmedLine.length < 70) {
+        y += 3;
+        doc.setFillColor(...C.steel);
+        doc.roundedRect(m.l, y - 3.5, cw, lineH + 4, 1, 1, 'F');
+        doc.setFillColor(...C.azure);
+        doc.rect(m.l, y - 3.5, 3, lineH + 4, 'F');
+        setIBMPlexSans(doc, 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...C.white);
+        doc.text(trimmedLine, m.l + 6, y + 1);
+        y += lineH + 5;
+        return;
+      }
+
+      // Bullet points
       if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         const bulletText = trimmedLine.slice(2);
-        const bulletLines = doc.splitTextToSize(bulletText, cw - 15);
-        doc.setTextColor(...C.gold);
-        doc.text('\u2022', m.l + 3, y);
-        doc.setTextColor(...C.offWhite);
-        doc.setFont('helvetica', 'normal');
-        doc.text(bulletLines[0] || '', m.l + 8, y);
-        y += lineH;
-        bulletLines.slice(1).forEach((bl: string) => {
-          if (y > ph - 20) {
+        const bulletLines = doc.splitTextToSize(bulletText, cw - 20);
+        
+        doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
+        doc.rect(m.l, y - 3, cw, (bulletLines.length * lineH) + 2, 'F');
+        
+        // Bullet dot
+        doc.setFillColor(...C.azure);
+        doc.circle(m.l + 6, y - 0.5, 1.2, 'F');
+        
+        setIBMPlexSans(doc, 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...C.white);
+        
+        bulletLines.forEach((bl: string, idx: number) => {
+          if (y > ph - m.b - 10) {
             doc.addPage();
-            doc.setFillColor(...C.bg);
+            doc.setFillColor(...C.navy);
             doc.rect(0, 0, pw, ph, 'F');
             y = m.t;
           }
-          doc.setFillColor(...C.rowLight);
-          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
-          doc.setTextColor(...C.offWhite);
-          doc.text(bl, m.l + 8, y);
+          doc.text(bl, m.l + 12, y);
           y += lineH;
         });
-      } else if (/^\d+\./.test(trimmedLine)) {
-        doc.setTextColor(...C.gold);
-        doc.setFont('helvetica', 'bold');
-        const num = trimmedLine.match(/^\d+\./)?.[0] || '';
-        doc.text(num, m.l + 3, y);
-        doc.setTextColor(...C.offWhite);
-        doc.setFont('helvetica', 'normal');
-        const restText = trimmedLine.slice(num.length).trim();
-        const textLines = doc.splitTextToSize(restText, cw - 15);
-        doc.text(textLines[0] || '', m.l + 12, y);
-        y += lineH;
-        textLines.slice(1).forEach((tl: string) => {
-          if (y > ph - 20) {
-            doc.addPage();
-            doc.setFillColor(...C.bg);
-            doc.rect(0, 0, pw, ph, 'F');
-            y = m.t;
-          }
-          doc.setFillColor(...C.rowLight);
-          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
-          doc.setTextColor(...C.offWhite);
-          doc.text(tl, m.l + 12, y);
-          y += lineH;
-        });
-      } else if (trimmedLine.endsWith(':') && trimmedLine.length < 60) {
-        y += 2;
-        doc.setFillColor(...C.headerBg);
-        doc.rect(m.l, y - 3, cw, lineH + 3, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.gold);
-        doc.text(trimmedLine, m.l + 3, y);
-        doc.setFont('helvetica', 'normal');
-        y += lineH + 2;
-      } else if (trimmedLine) {
-        const textLines = doc.splitTextToSize(trimmedLine, cw - 6);
-        doc.setTextColor(...C.offWhite);
-        doc.text(textLines[0] || '', m.l + 3, y);
-        y += lineH;
-        textLines.slice(1).forEach((tl: string) => {
-          if (y > ph - 20) {
-            doc.addPage();
-            doc.setFillColor(...C.bg);
-            doc.rect(0, 0, pw, ph, 'F');
-            y = m.t;
-          }
-          doc.setFillColor(...C.rowLight);
-          doc.rect(m.l, y - 3, cw, lineH + 2, 'F');
-          doc.setTextColor(...C.offWhite);
-          doc.text(tl, m.l + 3, y);
-          y += lineH;
-        });
-      } else {
-        y += 3;
+        return;
       }
+
+      // Numbered lists
+      if (/^\d+\./.test(trimmedLine)) {
+        const num = trimmedLine.match(/^\d+\./)?.[0] || '';
+        const restText = trimmedLine.slice(num.length).trim();
+        const textLines = doc.splitTextToSize(restText, cw - 22);
+        
+        doc.setFillColor(...(isEvenLine ? C.darkNavy : C.lightGray));
+        doc.rect(m.l, y - 3, cw, (textLines.length * lineH) + 2, 'F');
+        
+        // Number badge
+        doc.setFillColor(...C.azure);
+        doc.circle(m.l + 6, y - 0.5, 3, 'F');
+        setIBMPlexSans(doc, 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(...C.white);
+        doc.text(num.replace('.', ''), m.l + 6, y + 0.5, { align: 'center' });
+        
+        setIBMPlexSans(doc, 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...C.white);
+        
+        textLines.forEach((tl: string, idx: number) => {
+          if (y > ph - m.b - 10) {
+            doc.addPage();
+            doc.setFillColor(...C.navy);
+            doc.rect(0, 0, pw, ph, 'F');
+            y = m.t;
+          }
+          doc.text(tl, m.l + 14, y);
+          y += lineH;
+        });
+        return;
+      }
+
+      // Regular text
+      const textLines = doc.splitTextToSize(trimmedLine, cw - 10);
+      doc.rect(m.l, y - 3, cw, (textLines.length * lineH) + 2, 'F');
+      
+      setIBMPlexSans(doc, 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...C.white);
+      
+      textLines.forEach((tl: string) => {
+        if (y > ph - m.b - 10) {
+          doc.addPage();
+          doc.setFillColor(...C.navy);
+          doc.rect(0, 0, pw, ph, 'F');
+          y = m.t;
+        }
+        doc.text(tl, m.l + 5, y);
+        y += lineH;
+      });
     });
 
+    // === FOOTER ON ALL PAGES ===
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFillColor(...C.headerBg);
-      doc.rect(0, ph - 10, pw, 10, 'F');
-      doc.setFillColor(...C.gold);
-      doc.rect(0, ph - 10, pw, 0.3, 'F');
+      
+      // Footer background
+      doc.setFillColor(...C.darkNavy);
+      doc.rect(0, ph - 14, pw, 14, 'F');
+      
+      // Red accent line
+      doc.setFillColor(...C.azure);
+      doc.rect(0, ph - 14, pw, 0.5, 'F');
+      
+      // Footer text
+      setIBMPlexSans(doc, 'normal');
       doc.setFontSize(6);
-      doc.setTextColor(...C.muted);
-      doc.text('CONFIDENTIAL', m.l, ph - 3);
-      doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
-      doc.text('Page ' + i + ' of ' + pageCount, pw - m.r, ph - 3, { align: 'right' });
+      doc.setTextColor(...C.textSecondary);
+      doc.text('CONFIDENTIAL - INTERNAL USE ONLY', m.l, ph - 5);
+      doc.text('Fred Loya Insurance - Litigation Intelligence', pw / 2, ph - 5, { align: 'center' });
+      doc.text(`Page ${i} of ${pageCount}`, pw - m.r, ph - 5, { align: 'right' });
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    const filename = 'FLI_Intelligence_Report_' + timestamp + '.pdf';
+    const filename = `FLI_Oracle_Report_${timestamp}.pdf`;
     doc.save(filename);
-    toast.success('Executive report downloaded: ' + filename);
+    toast.success(`Executive report downloaded: ${filename}`);
   };
 
   const sendMessage = async (overrideInput?: string) => {
