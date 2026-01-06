@@ -43,8 +43,29 @@ export interface CP1Data {
   byCoverage: {
     coverage: string;
     count: number;
+    noCP: number;
+    yes: number;
+    total: number;
+    cp1Rate: number;
     reserves: number;
   }[];
+  biByAge: {
+    age: string;
+    noCP: number;
+    yes: number;
+    total: number;
+  }[];
+  biTotal: {
+    noCP: number;
+    yes: number;
+    total: number;
+  };
+  totals: {
+    noCP: number;
+    yes: number;
+    grandTotal: number;
+  };
+  cp1Rate: string;
 }
 
 export interface FinancialsByAge {
@@ -55,10 +76,22 @@ export interface FinancialsByAge {
   highEval: number;
 }
 
+export interface KnownTotals {
+  totalOpenClaims: number;
+  totalOpenExposures: number;
+  atr: { claims: number; exposures: number };
+  lit: { claims: number; exposures: number };
+  bi3: { claims: number; exposures: number };
+  earlyBI: { claims: number; exposures: number };
+  flagged: number;
+  newClaims: number;
+  closed: number;
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
-  cp1Data: CP1Data | null;
+  cp1Data: CP1Data;
   totals: {
     age365Plus: number;
     age181To365: number;
@@ -77,6 +110,7 @@ export interface OpenExposureData {
       reserves: number;
     }[];
   };
+  knownTotals: KnownTotals;
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -87,6 +121,7 @@ export interface OpenExposureData {
     previousDate: string;
     currentDate: string;
   };
+  dataDate: string;
 }
 
 interface RawClaimRow {
@@ -108,11 +143,6 @@ interface RawClaimRow {
   'Evaluation Phase': string;
   'Demand Type': string;
   [key: string]: string;
-}
-
-function parseNumber(val: string): number {
-  if (!val || val.trim() === '' || val === '(blank)') return 0;
-  return parseInt(val.replace(/,/g, ''), 10) || 0;
 }
 
 function parseCurrency(val: string): number {
@@ -143,14 +173,24 @@ function getAgeBucketLabel(bucket: string): string {
   }
 }
 
-// Process raw claims data
-function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
+// Process raw claims data - SINGLE SOURCE OF TRUTH
+function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' | 'dataDate'> {
   const phaseMap = new Map<string, Map<string, { age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; total: number }>>();
   const typeGroupMap = new Map<string, { 
     age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number; 
     grandTotal: number; reserves: number; lowEval: number; highEval: number 
   }>();
-  const cp1Map = new Map<string, { count: number; reserves: number }>();
+  
+  // CP1 tracking by coverage
+  const cp1ByCoverage = new Map<string, { noCP: number; yes: number; reserves: number }>();
+  
+  // CP1 BI tracking by age bucket
+  const cp1BiByAge = {
+    age365Plus: { noCP: 0, yes: 0 },
+    age181To365: { noCP: 0, yes: 0 },
+    age61To180: { noCP: 0, yes: 0 },
+    ageUnder60: { noCP: 0, yes: 0 },
+  };
   
   // Financial aggregation by age bucket
   const ageFinancials = {
@@ -164,6 +204,9 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
   let grandTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
   let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0 };
   
+  // Type group claim counts for known totals
+  const typeGroupCounts = new Map<string, number>();
+  
   for (const row of rows) {
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
@@ -171,16 +214,18 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
     const days = parseInt(row['Days'] || '0', 10) || 0;
     const ageBucket = getAgeBucket(days);
+    const coverage = row['Coverage']?.trim() || 'Unknown';
     
     // Parse financial data
     const reserves = parseCurrency(row['Open Reserves'] || '0');
     const lowEval = parseCurrency(row['Low'] || '0');
     const highEval = parseCurrency(row['High'] || '0');
     
+    // CP1 detection - ANY flag
     const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
                   row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
                   row['CP1 Claim Flag']?.toLowerCase() === 'yes';
-    const coverage = row['Coverage']?.trim() || 'Unknown';
+    
     const evalPhase = row['Evaluation Phase']?.trim() || '';
     const demandType = row['Demand Type']?.trim() || '(blank)';
     
@@ -216,17 +261,30 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     tg.lowEval += lowEval;
     tg.highEval += highEval;
     
-    // Track CP1 data
+    // Track type group counts
+    typeGroupCounts.set(typeGroup, (typeGroupCounts.get(typeGroup) || 0) + 1);
+    
+    // Track CP1 by coverage
+    if (!cp1ByCoverage.has(coverage)) {
+      cp1ByCoverage.set(coverage, { noCP: 0, yes: 0, reserves: 0 });
+    }
+    const coverageCP1 = cp1ByCoverage.get(coverage)!;
     if (isCP1) {
+      coverageCP1.yes++;
+      coverageCP1.reserves += reserves;
       cp1Totals.total++;
       cp1Totals[ageBucket]++;
-      
-      if (!cp1Map.has(coverage)) {
-        cp1Map.set(coverage, { count: 0, reserves: 0 });
+    } else {
+      coverageCP1.noCP++;
+    }
+    
+    // Track BI CP1 by age bucket
+    if (coverage === 'BI' || coverage.startsWith('BI')) {
+      if (isCP1) {
+        cp1BiByAge[ageBucket].yes++;
+      } else {
+        cp1BiByAge[ageBucket].noCP++;
       }
-      const cp1Entry = cp1Map.get(coverage)!;
-      cp1Entry.count++;
-      cp1Entry.reserves += reserves;
     }
     
     // Track phases for LIT type group
@@ -282,17 +340,53 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
   // Sort by grandTotal descending
   typeGroupSummaries.sort((a, b) => b.grandTotal - a.grandTotal);
   
-  // Build CP1 data
-  const cp1ByCoverage: CP1Data['byCoverage'] = [];
-  cp1Map.forEach((data, coverage) => {
-    cp1ByCoverage.push({ coverage, ...data });
+  // Build CP1 byCoverage array
+  const cp1CoverageArray: CP1Data['byCoverage'] = [];
+  cp1ByCoverage.forEach((data, coverage) => {
+    const total = data.noCP + data.yes;
+    cp1CoverageArray.push({
+      coverage,
+      count: data.yes,
+      noCP: data.noCP,
+      yes: data.yes,
+      total,
+      cp1Rate: total > 0 ? parseFloat(((data.yes / total) * 100).toFixed(1)) : 0,
+      reserves: data.reserves
+    });
   });
-  cp1ByCoverage.sort((a, b) => b.count - a.count);
+  cp1CoverageArray.sort((a, b) => b.total - a.total);
+  
+  // Build CP1 BI by age
+  const biByAge: CP1Data['biByAge'] = [
+    { age: '365+ Days', noCP: cp1BiByAge.age365Plus.noCP, yes: cp1BiByAge.age365Plus.yes, total: cp1BiByAge.age365Plus.noCP + cp1BiByAge.age365Plus.yes },
+    { age: '181-365 Days', noCP: cp1BiByAge.age181To365.noCP, yes: cp1BiByAge.age181To365.yes, total: cp1BiByAge.age181To365.noCP + cp1BiByAge.age181To365.yes },
+    { age: '61-180 Days', noCP: cp1BiByAge.age61To180.noCP, yes: cp1BiByAge.age61To180.yes, total: cp1BiByAge.age61To180.noCP + cp1BiByAge.age61To180.yes },
+    { age: 'Under 60 Days', noCP: cp1BiByAge.ageUnder60.noCP, yes: cp1BiByAge.ageUnder60.yes, total: cp1BiByAge.ageUnder60.noCP + cp1BiByAge.ageUnder60.yes },
+  ];
+  
+  const biTotal = {
+    noCP: biByAge.reduce((s, b) => s + b.noCP, 0),
+    yes: biByAge.reduce((s, b) => s + b.yes, 0),
+    total: biByAge.reduce((s, b) => s + b.total, 0),
+  };
+  
+  // Calculate CP1 totals
+  const cp1TotalsCalc = {
+    noCP: cp1CoverageArray.reduce((s, c) => s + c.noCP, 0),
+    yes: cp1CoverageArray.reduce((s, c) => s + c.yes, 0),
+    grandTotal: cp1CoverageArray.reduce((s, c) => s + c.total, 0),
+  };
   
   const cp1Data: CP1Data = {
     ...cp1Totals,
-    demandTypes: cp1ByCoverage.slice(0, 10).map(c => ({ type: c.coverage, count: c.count })),
-    byCoverage: cp1ByCoverage
+    demandTypes: cp1CoverageArray.slice(0, 10).map(c => ({ type: c.coverage, count: c.count })),
+    byCoverage: cp1CoverageArray,
+    biByAge,
+    biTotal,
+    totals: cp1TotalsCalc,
+    cp1Rate: cp1TotalsCalc.grandTotal > 0 
+      ? ((cp1TotalsCalc.yes / cp1TotalsCalc.grandTotal) * 100).toFixed(1)
+      : '0.0'
   };
   
   // Build financials by age
@@ -309,6 +403,31 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
     reserves: tg.reserves
   }));
   
+  // Build known totals from actual data
+  const knownTotals: KnownTotals = {
+    totalOpenClaims: grandTotals.grandTotal,
+    totalOpenExposures: grandTotals.grandTotal, // Same as claims from this data
+    atr: { 
+      claims: typeGroupCounts.get('ATR') || 0, 
+      exposures: typeGroupCounts.get('ATR') || 0 
+    },
+    lit: { 
+      claims: typeGroupCounts.get('LIT') || 0, 
+      exposures: typeGroupCounts.get('LIT') || 0 
+    },
+    bi3: { 
+      claims: typeGroupCounts.get('BI3') || 0, 
+      exposures: typeGroupCounts.get('BI3') || 0 
+    },
+    earlyBI: { 
+      claims: typeGroupCounts.get('Early BI') || typeGroupCounts.get('EBI') || 0, 
+      exposures: typeGroupCounts.get('Early BI') || typeGroupCounts.get('EBI') || 0 
+    },
+    flagged: 0, // Not available in raw data
+    newClaims: 0, // Not available in raw data
+    closed: 0, // Not available in raw data
+  };
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -318,20 +437,26 @@ function processRawClaims(rows: RawClaimRow[]): OpenExposureData {
       ...financialTotals,
       byAge,
       byTypeGroup,
-    }
+    },
+    knownTotals,
   };
 }
 
 // Parse the old summary format for delta comparison
-function parseSummaryCSVTotals(csvText: string): { grandTotal: number } {
+function parseSummaryCSVTotals(csvText: string): { grandTotal: number; reserves: number } {
   const lines = csvText.split('\n');
+  let grandTotal = 0;
+  let reserves = 0;
+  
   for (let i = lines.length - 1; i >= 0; i--) {
     const cols = lines[i].split(',');
     if (cols[0]?.trim() === 'Grand Total') {
-      return { grandTotal: parseNumber(cols[7]) };
+      grandTotal = parseInt(cols[7]?.replace(/,/g, '') || '0', 10) || 0;
+      break;
     }
   }
-  return { grandTotal: 0 };
+  
+  return { grandTotal, reserves };
 }
 
 export function useOpenExposureData() {
@@ -367,20 +492,20 @@ export function useOpenExposureData() {
           const firstRow = parsed.data[0];
           console.log('First row keys:', Object.keys(firstRow).slice(0, 15));
           console.log('Sample reserves value:', firstRow['Open Reserves']);
-          console.log('Sample Low value:', firstRow['Low']);
-          console.log('Sample High value:', firstRow['High']);
-          console.log('Sample Type Group:', firstRow['Type Group']);
-          console.log('Sample Days:', firstRow['Days']);
+          console.log('Sample Coverage:', firstRow['Coverage']);
+          console.log('Sample CP1 Flag:', firstRow['Overall CP1 Flag']);
         }
         
         const currentData = processRawClaims(parsed.data);
         
-        console.log('Processed financials:', {
+        console.log('Processed data summary:', {
+          totalClaims: currentData.totals.grandTotal,
           totalReserves: currentData.financials.totalOpenReserves,
           totalLowEval: currentData.financials.totalLowEval,
           totalHighEval: currentData.financials.totalHighEval,
-          claimCount: currentData.totals.grandTotal,
-          byAge: currentData.financials.byAge,
+          cp1Rate: currentData.cp1Data.cp1Rate,
+          cp1Claims: currentData.cp1Data.totals.yes,
+          typeGroups: currentData.typeGroupSummaries.slice(0, 5).map(t => `${t.typeGroup}: ${t.grandTotal}`),
         });
         
         // Parse previous summary for delta
@@ -394,7 +519,7 @@ export function useOpenExposureData() {
           changePercent: prevTotals.grandTotal > 0 
             ? ((currentData.totals.grandTotal - prevTotals.grandTotal) / prevTotals.grandTotal) * 100 
             : 0,
-          reservesChange: 0, // We don't have previous reserves in summary format
+          reservesChange: 0,
           reservesChangePercent: 0,
           previousDate: 'Jan 2, 2026',
           currentDate: 'Jan 5, 2026'
@@ -402,7 +527,8 @@ export function useOpenExposureData() {
         
         setData({
           ...currentData,
-          delta
+          delta,
+          dataDate: 'January 5, 2026'
         });
         setLoading(false);
       } catch (err: any) {
