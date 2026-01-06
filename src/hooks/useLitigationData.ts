@@ -147,6 +147,34 @@ function transformDBRow(row: any): LitigationMatter {
   };
 }
 
+// Multi-pack claim grouping for closed matters
+export interface ClosedMultiPackGroup {
+  baseClaimNumber: string;
+  packSize: number;
+  claims: {
+    claim: string;
+    claimant: string;
+    coverage: string;
+    team: string;
+    totalAmount: number;
+    indemnitiesAmount: number;
+  }[];
+  totalPaid: number;
+  totalIndemnities: number;
+}
+
+export interface ClosedMultiPackSummary {
+  totalMultiPackGroups: number;
+  totalClaimsInPacks: number;
+  byPackSize: {
+    packSize: number;
+    groupCount: number;
+    claimCount: number;
+    totalPaid: number;
+  }[];
+  groups: ClosedMultiPackGroup[];
+}
+
 export function useLitigationData() {
   const [data, setData] = useState<LitigationMatter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +187,7 @@ export function useLitigationData() {
     cwpCount: 0,
     cwnCount: 0,
   });
+  const [multiPackData, setMultiPackData] = useState<ClosedMultiPackSummary | null>(null);
   const [dataSource, setDataSource] = useState<'database' | 'csv'>('database');
 
   const calculateStats = (allData: LitigationMatter[]) => {
@@ -175,6 +204,69 @@ export function useLitigationData() {
       totalNet,
       cwpCount,
       cwnCount,
+    };
+  };
+
+  const calculateMultiPack = (allData: LitigationMatter[]): ClosedMultiPackSummary => {
+    // Group claims by base claim number (first 11 chars)
+    const claimBaseMap = new Map<string, LitigationMatter[]>();
+    
+    for (const matter of allData) {
+      const claimNum = matter.claim || matter.uniqueRecord || '';
+      if (claimNum.length < 11) continue;
+      const base = claimNum.substring(0, 11);
+      if (!claimBaseMap.has(base)) {
+        claimBaseMap.set(base, []);
+      }
+      claimBaseMap.get(base)!.push(matter);
+    }
+    
+    // Build multi-pack groups (2+ claims per base)
+    const groups: ClosedMultiPackGroup[] = [];
+    
+    claimBaseMap.forEach((claims, base) => {
+      if (claims.length >= 2) {
+        groups.push({
+          baseClaimNumber: base,
+          packSize: claims.length,
+          claims: claims.map(c => ({
+            claim: c.claim,
+            claimant: c.claimant,
+            coverage: c.coverage || c.expCategory,
+            team: c.team,
+            totalAmount: c.totalAmount,
+            indemnitiesAmount: c.indemnitiesAmount,
+          })),
+          totalPaid: claims.reduce((s, c) => s + c.totalAmount, 0),
+          totalIndemnities: claims.reduce((s, c) => s + c.indemnitiesAmount, 0),
+        });
+      }
+    });
+    
+    // Sort by pack size then by total paid
+    groups.sort((a, b) => b.packSize - a.packSize || b.totalPaid - a.totalPaid);
+    
+    // Build by-pack-size summary
+    const packSizeMap = new Map<number, { groupCount: number; claimCount: number; totalPaid: number }>();
+    for (const g of groups) {
+      if (!packSizeMap.has(g.packSize)) {
+        packSizeMap.set(g.packSize, { groupCount: 0, claimCount: 0, totalPaid: 0 });
+      }
+      const ps = packSizeMap.get(g.packSize)!;
+      ps.groupCount++;
+      ps.claimCount += g.packSize;
+      ps.totalPaid += g.totalPaid;
+    }
+    
+    const byPackSize = Array.from(packSizeMap.entries())
+      .map(([packSize, data]) => ({ packSize, ...data }))
+      .sort((a, b) => a.packSize - b.packSize);
+    
+    return {
+      totalMultiPackGroups: groups.length,
+      totalClaimsInPacks: groups.reduce((s, g) => s + g.packSize, 0),
+      byPackSize,
+      groups,
     };
   };
 
@@ -227,6 +319,7 @@ export function useLitigationData() {
         console.log('Loaded', dbData.length, 'matters from database');
         setData(dbData);
         setStats(calculateStats(dbData));
+        setMultiPackData(calculateMultiPack(dbData));
         setDataSource('database');
       } else {
         // Fall back to CSV if database is empty
@@ -235,6 +328,7 @@ export function useLitigationData() {
         console.log('Loaded', csvData.length, 'matters from CSV');
         setData(csvData);
         setStats(calculateStats(csvData));
+        setMultiPackData(calculateMultiPack(csvData));
         setDataSource('csv');
       }
       
@@ -248,6 +342,7 @@ export function useLitigationData() {
         console.log('Loaded', csvData.length, 'matters from CSV (fallback)');
         setData(csvData);
         setStats(calculateStats(csvData));
+        setMultiPackData(calculateMultiPack(csvData));
         setDataSource('csv');
         setLoading(false);
       } catch (csvErr) {
@@ -261,7 +356,7 @@ export function useLitigationData() {
     refetch();
   }, []);
 
-  return { data, loading, error, stats, refetch, dataSource };
+  return { data, loading, error, stats, multiPackData, refetch, dataSource };
 }
 
 // Get unique values for filters

@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MessageCircle, Send, FileText, X, Loader2, Minimize2, Maximize2, Sparkles, TrendingUp, AlertTriangle, Users, FileSpreadsheet, GitCompare, LayoutDashboard, DollarSign, Clock, Shield, BarChart3, PieChart, Download } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import { useLitigationData, LitigationMatter } from "@/hooks/useLitigationData";
+import { useLitigationData, LitigationMatter, ClosedMultiPackSummary } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
@@ -225,7 +225,7 @@ export function LitigationChat() {
   const [selectedMatter, setSelectedMatter] = useState<AggregatedMatter | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const { data: litigationData } = useLitigationData();
+  const { data: litigationData, multiPackData: closedMultiPackData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
   const { generatePDF, generateExcel } = useExportData();
 
@@ -444,8 +444,25 @@ export function LitigationChat() {
       financials: openExposureData.financials,
       knownTotals: openExposureData.knownTotals,
       rawClaims: openExposureData.rawClaims?.slice(0, 200) || [], // Send larger sample for accurate queries
+      multiPackData: openExposureData.multiPackData ? {
+        totalMultiPackGroups: openExposureData.multiPackData.totalMultiPackGroups,
+        totalClaimsInPacks: openExposureData.multiPackData.totalClaimsInPacks,
+        byPackSize: openExposureData.multiPackData.byPackSize,
+        topGroups: openExposureData.multiPackData.groups?.slice(0, 20) || [],
+      } : null,
     };
   }, [openExposureData]);
+
+  // Build closed claims multi-pack context
+  const closedMultiPackContext = useMemo(() => {
+    if (!closedMultiPackData) return null;
+    return {
+      totalMultiPackGroups: closedMultiPackData.totalMultiPackGroups,
+      totalClaimsInPacks: closedMultiPackData.totalClaimsInPacks,
+      byPackSize: closedMultiPackData.byPackSize,
+      topGroups: closedMultiPackData.groups?.slice(0, 20) || [],
+    };
+  }, [closedMultiPackData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -993,6 +1010,10 @@ export function LitigationChat() {
           messages: [...messages, userMessage],
           dataContext,
           openExposureContext,
+          multiPackContext: {
+            openClaims: openExposureContext?.multiPackData || null,
+            closedClaims: closedMultiPackContext || null,
+          },
         }),
       });
       
