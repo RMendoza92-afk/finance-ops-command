@@ -2242,9 +2242,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const handleExportLORIntervention = useCallback(async () => {
     const manager = selectedReviewer || 'Richie Mendoza';
     
-    // LOR Offers data
+    // LOR Offers data with granular claim fields
     const lorRawData: RawClaimData = {
-      columns: ['Claim Number', 'Area', 'Offer Amount', 'Extended Date', 'Expires Date', 'Status', 'Days Left', 'Accident Description', 'Outcome Date', 'Notes'],
+      columns: ['Claim Number', 'Area', 'BI Phase', 'Settlement Status', 'Low Eval', 'High Eval', 'Reserves', 'Offer Amount', 'Extended Date', 'Expires Date', 'Status', 'Days Left', 'Accident Description', 'Outcome Date', 'Notes'],
       rows: lorOffers.map(offer => {
         const expireDate = new Date(offer.expires_date);
         const today = new Date();
@@ -2252,6 +2252,11 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         return [
           offer.claim_number,
           offer.area || 'TX',
+          offer.bi_phase || 'Pending Demand',
+          offer.settlement_status || 'in_progress',
+          offer.low_eval || 0,
+          offer.high_eval || 0,
+          offer.reserves || 0,
           offer.offer_amount,
           format(new Date(offer.extended_date), 'MM/dd/yyyy'),
           format(new Date(offer.expires_date), 'MM/dd/yyyy'),
@@ -2266,6 +2271,12 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
     };
 
     // Summary stats
+    const totalReserves = lorOffers.reduce((sum, o) => sum + (o.reserves || 0), 0);
+    const totalLowEval = lorOffers.reduce((sum, o) => sum + (o.low_eval || 0), 0);
+    const totalHighEval = lorOffers.reduce((sum, o) => sum + (o.high_eval || 0), 0);
+    const settledCount = lorOffers.filter(o => o.settlement_status === 'settled').length;
+    const inProgressCount = lorOffers.filter(o => o.settlement_status === 'in_progress').length;
+
     const summaryRawData: RawClaimData = {
       columns: ['Metric', 'Value'],
       rows: [
@@ -2275,6 +2286,11 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         ['Rejected', lorStats.rejected],
         ['Expired', lorStats.expired],
         ['Total Offered', `$${lorStats.totalOffered.toLocaleString()}`],
+        ['Settled Claims', settledCount],
+        ['In Progress', inProgressCount],
+        ['Total Reserves', `$${totalReserves.toLocaleString()}`],
+        ['Total Low Eval', `$${totalLowEval.toLocaleString()}`],
+        ['Total High Eval', `$${totalHighEval.toLocaleString()}`],
       ],
       sheetName: 'Summary',
     };
@@ -2302,11 +2318,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         'Pending': lorStats.pending,
         'Accepted': lorStats.accepted,
         'Rejected': lorStats.rejected,
+        'Settled': settledCount,
+        'In Progress': inProgressCount,
         'Total Offered': `$${lorStats.totalOffered.toLocaleString()}`,
+        'Total Reserves': `$${totalReserves.toLocaleString()}`,
         'TX R/E Claims': TEXAS_REAR_END_DATA.summary.totalClaims,
-        'TX R/E Reserves': formatCurrency(TEXAS_REAR_END_DATA.summary.totalReserves),
       },
-      columns: ['Claim Number', 'Area', 'Offer Amount', 'Extended Date', 'Expires Date', 'Status', 'Days Left'],
+      columns: ['Claim Number', 'Area', 'BI Phase', 'Status', 'Low Eval', 'High Eval', 'Reserves', 'Offer', 'Expires', 'Days'],
       rows: lorOffers.map(offer => {
         const expireDate = new Date(offer.expires_date);
         const today = new Date();
@@ -2314,10 +2332,13 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         return [
           offer.claim_number,
           offer.area || 'TX',
+          offer.bi_phase || 'Pending',
+          offer.settlement_status === 'settled' ? 'Settled' : 'In Progress',
+          `$${(offer.low_eval || 0).toLocaleString()}`,
+          `$${(offer.high_eval || 0).toLocaleString()}`,
+          `$${(offer.reserves || 0).toLocaleString()}`,
           `$${offer.offer_amount.toLocaleString()}`,
-          format(new Date(offer.extended_date), 'MM/dd/yyyy'),
-          format(new Date(offer.expires_date), 'MM/dd/yyyy'),
-          offer.status,
+          format(new Date(offer.expires_date), 'MM/dd'),
           daysLeft.toString(),
         ];
       }),
