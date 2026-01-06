@@ -119,7 +119,7 @@ export interface TexasRearEndData {
   byAge: TexasRearEndAge[];
 }
 
-// Raw claim export format (for CP1 validation)
+// Raw claim export format (for CP1 validation and filtering)
 export interface RawClaimExport {
   claimNumber: string;
   claimant: string;
@@ -134,6 +134,10 @@ export interface RawClaimExport {
   overallCP1: string;
   evaluationPhase: string;
   demandType: string;
+  teamGroup: string;
+  adjuster: string;
+  areaNumber: string;
+  lossDescription: string;
 }
 
 export interface CP1ByTypeGroup {
@@ -340,6 +344,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const demandType = row['Demand Type']?.trim() || '(blank)';
     
     // Add to raw claims export
+    const teamGroup = row['Team Group']?.trim() || '';
+    const adjuster = row['Adjuster Assigned']?.trim() || '';
+    const areaNumber = row['Area#']?.trim() || '';
+    const lossDescription = row['Description of Accident']?.trim() || '';
+    
     rawClaimsExport.push({
       claimNumber: row['Claim#']?.trim() || '',
       claimant: row['Claimant']?.trim() || '',
@@ -354,6 +363,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       overallCP1: row['Overall CP1 Flag']?.trim() || '',
       evaluationPhase: evalPhase,
       demandType,
+      teamGroup,
+      adjuster,
+      areaNumber,
+      lossDescription,
     });
     
     // Update grand totals (claim counts)
