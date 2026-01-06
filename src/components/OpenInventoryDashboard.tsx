@@ -86,6 +86,7 @@ interface Reviewer {
 }
 
 import { GlobalFilters } from "@/components/GlobalFilters";
+import { SOLBreachSummary } from "@/components/SOLBreachSummary";
 
 interface OpenInventoryDashboardProps {
   filters: GlobalFilters;
@@ -2485,6 +2486,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
         </div>
       </div>
+
+      {/* SOL Breach Analysis */}
+      <SOLBreachSummary />
 
       {/* Summary Banner with Financials - Cleaner Layout */}
       <div 
