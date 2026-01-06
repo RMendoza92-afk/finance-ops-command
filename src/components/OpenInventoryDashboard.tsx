@@ -78,6 +78,11 @@ type ClaimReview = Tables<"claim_reviews">;
 
 const REVIEWERS = ['Richie Mendoza'];
 
+// Reviewer phone numbers for SMS notifications (add phone numbers here)
+const REVIEWER_PHONES: Record<string, string> = {
+  'Richie Mendoza': '', // Add phone number in format: +1XXXXXXXXXX
+};
+
 import { GlobalFilters } from "@/components/GlobalFilters";
 
 interface OpenInventoryDashboardProps {
@@ -3252,6 +3257,41 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
                       </div>,
                       { duration: 8000 }
                     );
+                  } else {
+                    // Send real SMS via edge function
+                    const reviewerPhone = REVIEWER_PHONES[selectedReviewer];
+                    if (reviewerPhone) {
+                      try {
+                        const { error: smsError } = await supabase.functions.invoke('send-review-sms', {
+                          body: {
+                            to: reviewerPhone,
+                            claimType: filterData.ageBucket,
+                            claimCount: claimsToInsert.length,
+                            region: 'Texas 101-110',
+                            lossDescription: TEXAS_REAR_END_DATA.lossDescription,
+                          }
+                        });
+                        if (smsError) {
+                          console.error('SMS send error:', smsError);
+                          toast.error('Failed to send SMS notification');
+                        } else {
+                          toast.success(
+                            <div className="space-y-1">
+                              <p className="font-semibold">📱 SMS Sent</p>
+                              <p className="text-xs text-muted-foreground">
+                                Notification sent to {selectedReviewer}
+                              </p>
+                            </div>,
+                            { duration: 5000 }
+                          );
+                        }
+                      } catch (smsErr) {
+                        console.error('SMS error:', smsErr);
+                        toast.error('SMS notification failed');
+                      }
+                    } else {
+                      toast.info('No phone number configured for reviewer - SMS skipped');
+                    }
                   }
                   
                   toast.success(`Deployed ${claimsToInsert.length} claims to ${selectedReviewer}`, {
