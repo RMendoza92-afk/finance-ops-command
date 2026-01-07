@@ -318,6 +318,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('claims')}
           title="Click to view details • Double-click to generate PDF report"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-cyan-400/70 uppercase tracking-wider">Open Exposures</span>
             <Activity className="h-4 w-4 text-cyan-500/50 group-hover:text-cyan-400 transition-colors" />
@@ -337,6 +338,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('reserves')}
           title="Click to view details • Double-click to generate PDF report"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-amber-400/70 uppercase tracking-wider">Total Reserves</span>
             <DollarSign className="h-4 w-4 text-amber-500/50 group-hover:text-amber-400 transition-colors" />
@@ -355,6 +357,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('cp1')}
           title="Click to view details • Double-click to generate PDF report"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-emerald-400/70 uppercase tracking-wider">CP1 Compliance</span>
             <Shield className="h-4 w-4 text-emerald-500/50 group-hover:text-emerald-400 transition-colors" />
@@ -370,6 +373,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('budget')}
           title="Click to view details • Double-click to generate PDF report"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400/70 uppercase tracking-wider">BI Payments YTD</span>
             <Wallet className="h-4 w-4 text-slate-500/50 group-hover:text-cyan-400 transition-colors" />
@@ -390,6 +394,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('noeval')}
           title="Click to view • Double-click for PDF"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-amber-400/70 uppercase tracking-wider">No Evaluation</span>
             <AlertTriangle className="h-4 w-4 text-amber-500 animate-pulse" />
@@ -405,6 +410,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('aged365')}
           title="Click to view • Double-click for PDF"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-red-400/70 uppercase tracking-wider">Aged 365+</span>
             <Clock className="h-4 w-4 text-red-500" />
@@ -420,6 +426,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('decisions')}
           title="Click to view • Double-click for PDF"
         >
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-cyan-400/70 uppercase tracking-wider">Pending Decisions</span>
             <Flag className="h-4 w-4 text-cyan-500" />
@@ -430,6 +437,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
 
         {/* Age Distribution */}
         <div className="hud-card p-5">
+          <div className="hud-corners"><span className="corner-bl" /><span className="corner-br" /></div>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400/70 uppercase tracking-wider">Age Mix</span>
             <PieChartIcon className="h-4 w-4 text-slate-500" />
