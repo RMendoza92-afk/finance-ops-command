@@ -235,226 +235,269 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
     }));
 
   return (
-    <div className="space-y-4">
-      {/* Consolidated Header - Exports, Data Status & Trends */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl border border-slate-700">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Live</span>
-          </div>
-          <span className="text-sm font-semibold text-white">{data.dataDate}</span>
-        </div>
+    <div className="space-y-6">
+      {/* Executive Command Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 shadow-2xl">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/10 via-transparent to-transparent" />
         
-        {/* Delta Indicators */}
-        <div className="flex items-center gap-4">
-          {data.delta && (
-            <>
-              <div className="flex items-center gap-1.5">
-                {data.delta.change >= 0 ? (
-                  <ArrowUpRight className="h-3.5 w-3.5 text-destructive" />
-                ) : (
-                  <ArrowDownRight className="h-3.5 w-3.5 text-emerald-500" />
-                )}
-                <span className={`text-xs font-semibold ${data.delta.change >= 0 ? 'text-destructive' : 'text-emerald-400'}`}>
-                  {formatPct(data.delta.changePercent)} Claims
+        <div className="relative px-6 py-5">
+          {/* Top Row: Date & Export Actions */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                </div>
+                <span className="text-sm font-semibold tracking-wide text-slate-300">
+                  {data.dataDate}
                 </span>
               </div>
-              <div className="w-px h-4 bg-slate-700" />
-              <div className="flex items-center gap-1.5">
-                {data.delta.reservesChangePercent >= 0 ? (
-                  <ArrowUpRight className="h-3.5 w-3.5 text-destructive" />
+            </div>
+            
+            {/* Export Actions */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportPDF}
+                disabled={generatingPDF}
+                className="gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200 h-8 text-xs font-medium"
+              >
+                {generatingPDF ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <ArrowDownRight className="h-3.5 w-3.5 text-emerald-500" />
+                  <FileText className="h-3.5 w-3.5" />
                 )}
-                <span className={`text-xs font-semibold ${data.delta.reservesChangePercent >= 0 ? 'text-destructive' : 'text-emerald-400'}`}>
-                  {formatPct(data.delta.reservesChangePercent)} Reserves
-                </span>
-              </div>
-              <div className="w-px h-4 bg-slate-700" />
-            </>
-          )}
-          
-          {/* Export Buttons */}
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExportPDF}
-              disabled={generatingPDF}
-              className="gap-2 bg-primary/10 border-primary/30 hover:bg-primary/20 h-7 text-xs"
-            >
-              {generatingPDF ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FileText className="h-3.5 w-3.5" />
-              )}
-              C-Suite PDF
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExportExcel}
-              disabled={generatingExcel}
-              className="gap-2 h-7 text-xs"
-            >
-              {generatingExcel ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-              )}
-              Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={onOpenChat} className="gap-2 h-7 text-xs">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Ask Oracle
-            </Button>
+                Board Briefing
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportExcel}
+                disabled={generatingExcel}
+                className="gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200 h-8 text-xs font-medium"
+              >
+                {generatingExcel ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                )}
+                Export Data
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onOpenChat} 
+                className="gap-2 bg-primary/20 border-primary/40 hover:bg-primary/30 text-primary-foreground h-8 text-xs font-medium"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Ask Oracle
+              </Button>
+            </div>
           </div>
+          
+          {/* Delta Indicators - Prominent Display */}
+          {data.delta && (
+            <div className="flex items-center gap-6">
+              {/* Claims Change */}
+              <div className={`flex items-center gap-3 px-5 py-3 rounded-xl ${
+                data.delta.change >= 0 
+                  ? 'bg-red-950/40 border border-red-800/50' 
+                  : 'bg-emerald-950/40 border border-emerald-800/50'
+              }`}>
+                <div className={`p-2 rounded-lg ${
+                  data.delta.change >= 0 ? 'bg-red-900/50' : 'bg-emerald-900/50'
+                }`}>
+                  {data.delta.change >= 0 ? (
+                    <TrendingUp className="h-5 w-5 text-red-400" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-emerald-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Claims MoM</p>
+                  <p className={`text-2xl font-bold tracking-tight ${
+                    data.delta.change >= 0 ? 'text-red-400' : 'text-emerald-400'
+                  }`}>
+                    {formatPct(data.delta.changePercent)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Reserves Change */}
+              <div className={`flex items-center gap-3 px-5 py-3 rounded-xl ${
+                data.delta.reservesChangePercent >= 0 
+                  ? 'bg-red-950/40 border border-red-800/50' 
+                  : 'bg-emerald-950/40 border border-emerald-800/50'
+              }`}>
+                <div className={`p-2 rounded-lg ${
+                  data.delta.reservesChangePercent >= 0 ? 'bg-red-900/50' : 'bg-emerald-900/50'
+                }`}>
+                  {data.delta.reservesChangePercent >= 0 ? (
+                    <TrendingUp className="h-5 w-5 text-red-400" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-emerald-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Reserves MoM</p>
+                  <p className={`text-2xl font-bold tracking-tight ${
+                    data.delta.reservesChangePercent >= 0 ? 'text-red-400' : 'text-emerald-400'
+                  }`}>
+                    {formatPct(data.delta.reservesChangePercent)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Comparison Context */}
+              <div className="ml-auto text-right">
+                <p className="text-xs text-slate-500">vs. {data.delta.previousDate}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* SECTION 1: REAL DATA - Inventory & Claims (Green indicators) */}
+      {/* SECTION 1: Core Inventory Metrics */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       
-      <div className="flex items-center gap-2 pt-2">
-        <div className="w-3 h-3 rounded-full bg-emerald-500" />
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Real-Time Inventory</h3>
+      <div className="flex items-center gap-3 pt-2">
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Portfolio Overview</h3>
+        <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
       </div>
 
       {/* Top Row - 4 Column Power Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Claims */}
-        <div className="bg-card rounded-xl border border-emerald-500/20 p-4 hover:border-emerald-500/50 transition-all cursor-pointer" onClick={() => onDrilldown('claims')}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Claims</span>
-            <Activity className="h-3.5 w-3.5 text-emerald-500" />
+        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('claims')}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open Claims</span>
+            <Activity className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-foreground">{data.totalClaims.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{data.totalClaims.toLocaleString()}</p>
           {data.delta && (
-            <p className={`text-xs mt-1 ${data.delta.change >= 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-              {data.delta.change >= 0 ? '+' : ''}{data.delta.change} MoM
+            <p className={`text-xs font-medium mt-2 ${data.delta.change >= 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+              {data.delta.change >= 0 ? '↑' : '↓'} {Math.abs(data.delta.change)} from prior period
             </p>
           )}
         </div>
 
         {/* Total Reserves */}
-        <div className="bg-gradient-to-br from-emerald-500/10 to-transparent rounded-xl border border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all cursor-pointer" onClick={() => onDrilldown('reserves')}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Reserves</span>
-            <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('reserves')}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Reserves</span>
+            <DollarSign className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatM(data.totalReserves)}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] text-muted-foreground">L: {formatM(data.lowEval)}</span>
-            <span className="text-[10px] text-muted-foreground">•</span>
-            <span className="text-[10px] text-warning">H: {formatM(data.highEval)}</span>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{formatM(data.totalReserves)}</p>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-xs text-muted-foreground">Low: {formatM(data.lowEval)}</span>
+            <span className="text-xs text-muted-foreground">High: {formatM(data.highEval)}</span>
           </div>
         </div>
 
         {/* CP1 Rate */}
-        <div className="bg-gradient-to-br from-emerald-500/10 to-transparent rounded-xl border border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all cursor-pointer" onClick={() => onDrilldown('cp1')}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">CP1 Rate</span>
-            <Shield className="h-3.5 w-3.5 text-emerald-500" />
+        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('cp1')}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">CP1 Compliance</span>
+            <Shield className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{data.cp1Rate}%</p>
-          <p className="text-[10px] text-muted-foreground mt-1">{data.cp1Count.toLocaleString()} within limits</p>
+          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{data.cp1Rate}%</p>
+          <p className="text-xs text-muted-foreground mt-2">{data.cp1Count.toLocaleString()} claims within limits</p>
         </div>
 
-        {/* Claims Payments 2025 (Real) */}
-        <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BI Payments 2025</span>
-            <Wallet className="h-3.5 w-3.5 text-emerald-500" />
+        {/* Claims Payments 2025 */}
+        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">BI Payments YTD</span>
+            <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-foreground">{formatCurrency(biPaymentsYTD)}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Thru Nov • Total: {formatCurrency(totalPaymentsYTD)}
+          <p className="text-3xl font-bold text-foreground tracking-tight">{formatCurrency(biPaymentsYTD)}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Through November • Total: {formatCurrency(totalPaymentsYTD)}
           </p>
         </div>
       </div>
 
       {/* Risk Matrix - 2 Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Left: Risk Indicators */}
-        <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="h-4 w-4 text-warning" />
-            <h3 className="text-sm font-bold uppercase tracking-wide">Risk Indicators</h3>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] ml-auto">
-              REAL
-            </Badge>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Left: Action Items */}
+        <div className="bg-card rounded-xl border p-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requires Attention</h3>
           
           <div className="space-y-3">
             {/* No Eval Alert */}
             <div 
-              className="flex items-center justify-between p-3 bg-warning/10 rounded-lg border border-warning/20 cursor-pointer hover:bg-warning/20 transition-colors"
+              className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50 cursor-pointer hover:border-amber-400 transition-all"
               onClick={() => onDrilldown('noeval')}
             >
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-warning" />
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">No Evaluation</p>
-                  <p className="text-xs text-muted-foreground">{formatM(data.noEvalReserves)} exposure</p>
+                  <p className="text-xs text-muted-foreground">{formatM(data.noEvalReserves)} at risk</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-warning">{data.noEvalCount}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {((data.noEvalCount / data.totalClaims) * 100).toFixed(0)}%
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.noEvalCount}</p>
+                <p className="text-xs text-muted-foreground">
+                  {((data.noEvalCount / data.totalClaims) * 100).toFixed(1)}% of book
                 </p>
               </div>
             </div>
 
             {/* Aged 365+ Alert */}
             <div 
-              className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg border border-destructive/20 cursor-pointer hover:bg-destructive/20 transition-colors"
+              className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800/50 cursor-pointer hover:border-red-400 transition-all"
               onClick={() => onDrilldown('aged365')}
             >
               <div className="flex items-center gap-3">
-                <Clock className="h-4 w-4 text-destructive" />
+                <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
+                  <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Aged 365+</p>
+                  <p className="text-sm font-semibold text-foreground">Aged 365+ Days</p>
                   <p className="text-xs text-muted-foreground">{formatM(data.aged365Reserves)} exposure</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-destructive">{data.aged365Plus}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {((data.aged365Plus / data.totalClaims) * 100).toFixed(0)}%
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{data.aged365Plus}</p>
+                <p className="text-xs text-muted-foreground">
+                  {((data.aged365Plus / data.totalClaims) * 100).toFixed(1)}% of book
                 </p>
               </div>
             </div>
 
             {/* Pending Decisions */}
             <div 
-              className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors"
+              className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50 cursor-pointer hover:border-blue-400 transition-all"
               onClick={() => onDrilldown('decisions')}
             >
               <div className="flex items-center gap-3">
-                <Flag className="h-4 w-4 text-primary" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <Flag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Decisions Pending</p>
+                  <p className="text-sm font-semibold text-foreground">Pending Decisions</p>
                   <p className="text-xs text-muted-foreground">{formatM(data.decisionsExposure)} exposure</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-primary">{data.decisionsCount}</p>
-                <p className="text-[10px] text-muted-foreground">action items</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.decisionsCount}</p>
+                <p className="text-xs text-muted-foreground">awaiting action</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right: Age Distribution Pie + Overspend Summary */}
-        <div className="space-y-3">
-          <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <PieChartIcon className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-bold uppercase tracking-wide">Age Distribution</h3>
-            </div>
+        <div className="space-y-4">
+          <div className="bg-card rounded-xl border p-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Claims by Age</h3>
             
             <div className="flex items-center gap-4">
               <div className="h-24 w-24 flex-shrink-0">
@@ -474,14 +517,14 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-2">
+              <div className="flex-1 grid grid-cols-2 gap-3">
                 {ageData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-[10px] text-muted-foreground">{item.name}d</span>
+                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-muted-foreground">{item.name} days</span>
                     </div>
-                    <span className="text-xs font-semibold">{item.value.toLocaleString()}</span>
+                    <span className="text-sm font-bold">{item.value.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -490,21 +533,18 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
 
           {/* Overspend Quick View */}
           {(overspendByType.anomaly > 0 || overspendByType.issue > 0) && (
-            <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h3 className="text-sm font-bold uppercase tracking-wide">Overspend Summary</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-2 bg-amber-500/10 rounded border border-amber-500/20">
-                  <p className="text-[10px] text-amber-600">Anomalies</p>
-                  <p className="text-lg font-bold">{formatCurrency(overspendByType.anomaly)}</p>
-                  <p className="text-[10px] text-muted-foreground">{overspendByType.anomalyCount} claims</p>
+            <div className="bg-card rounded-xl border p-5">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Payment Exceptions</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Anomalies</p>
+                  <p className="text-xl font-bold text-foreground">{formatCurrency(overspendByType.anomaly)}</p>
+                  <p className="text-xs text-muted-foreground">{overspendByType.anomalyCount} claims</p>
                 </div>
-                <div className="p-2 bg-red-500/10 rounded border border-red-500/20">
-                  <p className="text-[10px] text-red-600">Issues</p>
-                  <p className="text-lg font-bold">{formatCurrency(overspendByType.issue)}</p>
-                  <p className="text-[10px] text-muted-foreground">{overspendByType.issueCount} claims</p>
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800/50">
+                  <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Issues</p>
+                  <p className="text-xl font-bold text-foreground">{formatCurrency(overspendByType.issue)}</p>
+                  <p className="text-xs text-muted-foreground">{overspendByType.issueCount} claims</p>
                 </div>
               </div>
             </div>
@@ -516,9 +556,9 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
       {/* SECTION 2: Accident Year Loss Development (from triangle data) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
 
-      <div className="flex items-center gap-2 pt-4 border-t mt-4">
-        <div className="w-3 h-3 rounded-full bg-emerald-500" />
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Loss Development</h3>
+      <div className="flex items-center gap-3 pt-4 border-t mt-4">
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Loss Development</h3>
+        <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
       </div>
 
       {triangleData.summaryByAY.length > 0 && (
@@ -1009,13 +1049,13 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
       {/* SECTION 6: Claims Frequency Heat Map */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       
-      <div className="flex items-center gap-2 pt-4 border-t mt-4">
-        <div className="w-3 h-3 rounded-full bg-emerald-500" />
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Claims Frequency Heat Map</h3>
+      <div className="flex items-center gap-3 pt-4 border-t mt-4">
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Frequency Analysis</h3>
+        <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
       </div>
 
       {claimsFrequency.length > 0 && (
-        <Card className="border-emerald-500/20">
+        <Card>
           <CardHeader className="py-3">
             <CardDescription>Claims Frequency by State - 2025 YTD Average</CardDescription>
           </CardHeader>
