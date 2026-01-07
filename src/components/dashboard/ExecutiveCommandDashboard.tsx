@@ -418,10 +418,15 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         </div>
 
         {/* Age Distribution */}
-        <div className="metric-card">
+        <div 
+          className="metric-card cursor-pointer group"
+          onClick={() => onDrilldown('age-mix')}
+          onDoubleClick={() => onDoubleClickReport?.('age-mix')}
+          title="Click to view age breakdown • Double-click for PDF"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Age Mix</span>
-            <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+            <PieChartIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           <div className="flex items-center gap-3">
             <div className="h-16 w-16 flex-shrink-0">
@@ -466,7 +471,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
       </div>
 
       {triangleData.summaryByAY.length > 0 && (
-        <Card>
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => onDrilldown('loss-development')}
+          onDoubleClick={() => onDoubleClickReport?.('loss-development')}
+          title="Click for loss development details • Double-click for PDF"
+        >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -477,7 +487,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 <CardDescription>Ultimate Incurred = Paid + Reserves + IBNR by Accident Year</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setShowAYDetails(!showAYDetails)}>
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowAYDetails(!showAYDetails); }}>
                   {showAYDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
               </div>
@@ -575,7 +585,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
       {/* ═══════════════════════════════════════════════════════════════════ */}
 
       {claimsFrequency.length > 0 && (
-        <Card>
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => onDrilldown('claims-frequency')}
+          onDoubleClick={() => onDoubleClickReport?.('claims-frequency')}
+          title="Click for frequency analysis • Double-click for PDF"
+        >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -585,7 +600,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 </CardTitle>
                 <CardDescription>Loya Insurance Group - All Programs (2023-2025)</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <select
                   value={selectedFreqState}
                   onChange={(e) => setSelectedFreqState(e.target.value)}
@@ -702,7 +717,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
       {/* ═══════════════════════════════════════════════════════════════════ */}
 
       {claimsPayments.length > 0 && (
-        <Card>
+        <Card 
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => onDrilldown('claims-payments')}
+          onDoubleClick={() => onDoubleClickReport?.('claims-payments')}
+          title="Click for payments analysis • Double-click for PDF"
+        >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -712,7 +732,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 </CardTitle>
                 <CardDescription>Total All States - YTD & Monthly Trends (2021-2025)</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <select
                   value={selectedPaymentCoverage}
                   onChange={(e) => setSelectedPaymentCoverage(e.target.value)}
@@ -851,7 +871,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
       {/* ═══════════════════════════════════════════════════════════════════ */}
 
       {overLimitPayments.length > 0 && (
-        <Card className="border-destructive/20">
+        <Card 
+          className="border-destructive/20 cursor-pointer hover:border-destructive/50 transition-colors"
+          onClick={() => onDrilldown('over-limit')}
+          onDoubleClick={() => onDoubleClickReport?.('over-limit')}
+          title="Click for over-limit details • Double-click for PDF"
+        >
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -861,7 +886,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 </CardTitle>
                 <CardDescription>2025 YTD Payments Exceeding Policy Limits</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowOverLimitDetails(!showOverLimitDetails)}>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowOverLimitDetails(!showOverLimitDetails); }}>
                 {showOverLimitDetails ? "Collapse" : "Expand"} All
               </Button>
             </div>
