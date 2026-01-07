@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 import { useExportData } from "@/hooks/useExportData";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
-import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity } from "lucide-react";
+import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sheet,
   SheetContent,
@@ -66,6 +67,54 @@ export function ExecutiveCommandDashboardWrapper() {
   const [showAged365Drawer, setShowAged365Drawer] = useState(false);
   const [showBudgetDrawer, setShowBudgetDrawer] = useState(false);
 
+  // Database data states
+  const [claimReviews, setClaimReviews] = useState<any[]>([]);
+  const [lorOffers, setLorOffers] = useState<any[]>([]);
+  const [inventorySnapshot, setInventorySnapshot] = useState<any>(null);
+  const [loadingDrilldown, setLoadingDrilldown] = useState(false);
+
+  // Fetch claim reviews from database
+  const fetchClaimReviews = async (filter?: string) => {
+    setLoadingDrilldown(true);
+    try {
+      let query = supabase.from('claim_reviews').select('*').order('reserves', { ascending: false }).limit(50);
+      if (filter === 'aged365') {
+        query = query.eq('age_bucket', '365+ Days');
+      }
+      const { data: reviews } = await query;
+      setClaimReviews(reviews || []);
+    } catch (err) {
+      console.error('Failed to fetch claim reviews:', err);
+    }
+    setLoadingDrilldown(false);
+  };
+
+  // Fetch LOR offers from database
+  const fetchLorOffers = async () => {
+    setLoadingDrilldown(true);
+    try {
+      const { data: offers } = await supabase.from('lor_offers').select('*').order('offer_amount', { ascending: false }).limit(30);
+      setLorOffers(offers || []);
+    } catch (err) {
+      console.error('Failed to fetch LOR offers:', err);
+    }
+    setLoadingDrilldown(false);
+  };
+
+  // Fetch latest inventory snapshot
+  const fetchInventorySnapshot = async () => {
+    try {
+      const { data: snapshot } = await supabase.from('inventory_snapshots').select('*').order('snapshot_date', { ascending: false }).limit(1).maybeSingle();
+      setInventorySnapshot(snapshot);
+    } catch (err) {
+      console.error('Failed to fetch inventory snapshot:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventorySnapshot();
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -100,12 +149,14 @@ export function ExecutiveCommandDashboardWrapper() {
   const handleDrilldown = (section: string) => {
     switch (section) {
       case 'claims':
+        fetchClaimReviews();
         setShowClaimsDrawer(true);
         break;
       case 'reserves':
         setShowReservesDrawer(true);
         break;
       case 'decisions':
+        fetchLorOffers();
         setShowDecisionsDrawer(true);
         break;
       case 'cp1':
@@ -115,6 +166,7 @@ export function ExecutiveCommandDashboardWrapper() {
         setShowNoEvalDrawer(true);
         break;
       case 'aged365':
+        fetchClaimReviews('aged365');
         setShowAged365Drawer(true);
         break;
       case 'budget':
@@ -205,43 +257,85 @@ export function ExecutiveCommandDashboardWrapper() {
           <div className="mt-6 space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+              <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Claims</p>
                 <p className="text-3xl font-bold text-foreground mt-1">{metrics.totalOpenClaims.toLocaleString()}</p>
               </div>
-              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+              <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Litigation</p>
                 <p className="text-3xl font-bold text-primary mt-1">{typeGroupData.find(t => t.typeGroup === 'LIT')?.grandTotal.toLocaleString() || 0}</p>
               </div>
             </div>
 
             {/* Type Group Breakdown Table */}
-            <div className="rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-bold">Type Group</TableHead>
-                    <TableHead className="text-right font-bold">Claims</TableHead>
-                    <TableHead className="text-right font-bold">Reserves</TableHead>
-                    <TableHead className="text-right font-bold">% of Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {typeGroupData.slice(0, 10).map((tg) => (
-                    <TableRow key={tg.typeGroup} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{tg.typeGroup}</TableCell>
-                      <TableCell className="text-right">{tg.grandTotal.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{formatM(tg.reserves)}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline" className="text-xs">
-                          {((tg.grandTotal / metrics.totalOpenClaims) * 100).toFixed(1)}%
-                        </Badge>
-                      </TableCell>
+            <div>
+              <h4 className="text-sm font-semibold mb-3">By Type Group</h4>
+              <div className="rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-bold">Type Group</TableHead>
+                      <TableHead className="text-right font-bold">Claims</TableHead>
+                      <TableHead className="text-right font-bold">Reserves</TableHead>
+                      <TableHead className="text-right font-bold">%</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {typeGroupData.slice(0, 10).map((tg) => (
+                      <TableRow key={tg.typeGroup} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">{tg.typeGroup}</TableCell>
+                        <TableCell className="text-right">{tg.grandTotal.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatM(tg.reserves)}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="outline" className="text-xs">
+                            {((tg.grandTotal / metrics.totalOpenClaims) * 100).toFixed(1)}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
+
+            {/* Recent Claim Reviews from Database */}
+            {claimReviews.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Recent Claim Reviews</h4>
+                {loadingDrilldown ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">Claim ID</TableHead>
+                          <TableHead className="font-bold">Area</TableHead>
+                          <TableHead className="text-right font-bold">Reserves</TableHead>
+                          <TableHead className="font-bold">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {claimReviews.slice(0, 15).map((review) => (
+                          <TableRow key={review.id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-xs">{review.claim_id}</TableCell>
+                            <TableCell className="text-sm">{review.area}</TableCell>
+                            <TableCell className="text-right font-medium">{formatK(review.reserves)}</TableCell>
+                            <TableCell>
+                              <Badge variant={review.status === 'completed' ? 'default' : review.status === 'flagged' ? 'destructive' : 'secondary'} className="text-xs">
+                                {review.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -531,34 +625,18 @@ export function ExecutiveCommandDashboardWrapper() {
           
           <div className="mt-6 space-y-6">
             {/* Aged Summary */}
-            <div className="p-6 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Aged 365+ Claims</p>
-                  <p className="text-4xl font-bold text-destructive">{EXECUTIVE_METRICS.aging.over365Days.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Reserve Exposure</p>
-                  <p className="text-4xl font-bold text-destructive">{formatM(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl bg-muted/30 border">
+                <p className="text-xs text-muted-foreground">Aged 365+ Claims</p>
+                <p className="text-3xl font-bold text-red-600">{EXECUTIVE_METRICS.aging.over365Days.toLocaleString()}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/30 border">
+                <p className="text-xs text-muted-foreground">Reserve Exposure</p>
+                <p className="text-3xl font-bold text-red-600">{formatM(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
               </div>
             </div>
 
-            {/* Risk Level */}
-            <div className="p-4 rounded-xl border-2 border-destructive/50 bg-destructive/5">
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-destructive mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-destructive">High Priority</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {((EXECUTIVE_METRICS.aging.over365Days / metrics.totalOpenClaims) * 100).toFixed(1)}% of portfolio aged over 1 year.
-                    Escalate for resolution review and closure strategy.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Trend Comparison */}
+            {/* Metrics */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">% of Inventory</p>
@@ -568,6 +646,48 @@ export function ExecutiveCommandDashboardWrapper() {
                 <p className="text-xs text-muted-foreground">Avg Reserve</p>
                 <p className="text-lg font-bold">{formatK(EXECUTIVE_METRICS.aging.over365Reserves / EXECUTIVE_METRICS.aging.over365Days)}</p>
               </div>
+            </div>
+
+            {/* Aged Claims from Database */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Aged Claims Detail</h4>
+              {loadingDrilldown ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : claimReviews.length > 0 ? (
+                <div className="rounded-xl border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-bold">Claim ID</TableHead>
+                        <TableHead className="font-bold">Area</TableHead>
+                        <TableHead className="text-right font-bold">Reserves</TableHead>
+                        <TableHead className="font-bold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {claimReviews.slice(0, 20).map((review) => (
+                        <TableRow key={review.id} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-xs">{review.claim_id}</TableCell>
+                          <TableCell className="text-sm">{review.area}</TableCell>
+                          <TableCell className="text-right font-medium">{formatK(review.reserves)}</TableCell>
+                          <TableCell>
+                            <Badge variant={review.status === 'completed' ? 'default' : review.status === 'flagged' ? 'destructive' : 'secondary'} className="text-xs">
+                              {review.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground border rounded-xl">
+                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No aged claim records available</p>
+                </div>
+              )}
             </div>
           </div>
         </SheetContent>
