@@ -215,7 +215,7 @@ const Index = () => {
             <img src={loyaLogo} alt="Fred Loya Insurance" className="h-8 sm:h-12 w-auto" />
             <div className="hidden sm:block h-10 w-px bg-border" />
             <div>
-              <h1 className="text-sm sm:text-xl font-bold tracking-tight text-foreground">Litigation Command</h1>
+              <h1 className="text-sm sm:text-xl font-bold tracking-tight text-foreground">Discipline Command Center</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {filters.inventoryStatus === 'operations' ? 'Open Inventory' : 
                  filters.inventoryStatus === 'executive' ? 'Executive View' : '2025 EOY Portfolio'}
