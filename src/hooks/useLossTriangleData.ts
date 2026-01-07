@@ -79,8 +79,9 @@ export function useLossTriangleData() {
           const earnedPremium = getLatest("earned_premium");
           const grossPaid = getLatest("gross_paid");
           const salvageSubro = getLatest("salvage_subro");
-          // True net paid = gross paid - salvage/subro recoveries
-          const netPaidLoss = grossPaid > 0 ? grossPaid - salvageSubro : getLatest("net_paid_loss");
+          const storedNetPaid = getLatest("net_paid_loss");
+          // Use stored net_paid_loss if available, otherwise calculate from gross - salvage
+          const netPaidLoss = storedNetPaid > 0 ? storedNetPaid : (grossPaid > 0 ? grossPaid - salvageSubro : 0);
           const claimReserves = getLatest("claim_reserves");
           const bulkIbnr = getLatest("bulk_ibnr");
           const ultimateIncurred = netPaidLoss + claimReserves + bulkIbnr;
