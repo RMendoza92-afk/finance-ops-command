@@ -5,7 +5,7 @@ import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
-import { ExecutiveDashboardV3 } from "@/components/dashboard/ExecutiveDashboardV3";
+import { ExecutiveCommandDashboard } from "@/components/dashboard/ExecutiveCommandDashboard";
 import { ActuarialDashboardV4 } from "@/components/dashboard/ActuarialDashboardV4";
 import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
@@ -2807,7 +2807,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       )}
 
       {dashboardVersion === 'v3' && metrics && (
-        <ExecutiveDashboardV3
+        <ExecutiveCommandDashboard
           data={{
             totalClaims: metrics.totalOpenClaims,
             totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
@@ -2844,6 +2844,7 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             else if (section === 'budget') setShowBudgetDrawer(true);
             else if (section === 'export') generateCombinedBoardPackage();
           }}
+          timestamp={data?.dataDate || timestamp}
         />
       )}
 
