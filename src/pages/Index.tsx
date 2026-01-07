@@ -6,7 +6,9 @@ import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Loader2, LogOut } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -16,6 +18,7 @@ import {
 } from "@/lib/executiveReview";
 
 const Index = () => {
+  const { signOut, user } = useAuth();
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
     const savedPainData = localStorage.getItem('painLevelOverrides');
@@ -28,6 +31,10 @@ const Index = () => {
     return defaultGlobalFilters;
   });
   const { data: litigationData, loading, error, stats, refetch, dataSource } = useLitigationData();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   // Handle pain level data updates from PainLevelUpload
   const handlePainLevelDataApplied = (data: PainLevelRow[]) => {
@@ -223,7 +230,20 @@ const Index = () => {
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <span className="hidden md:block text-xs text-muted-foreground">
+              {user?.email}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleSignOut}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       
