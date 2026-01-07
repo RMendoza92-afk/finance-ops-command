@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +35,7 @@ import {
   exportCP1Drilldown,
   exportBudgetDrilldown,
 } from "@/lib/bloombergExport";
+import { generateClaimsInventoryReport } from "@/lib/executiveVisualReport";
 
 // Financial constants (same as OpenInventoryDashboard)
 const FINANCIAL_DATA = {
@@ -206,6 +208,18 @@ export function ExecutiveCommandDashboardWrapper() {
     }
   };
 
+  // Double-click to generate visual PDF report
+  const handleDoubleClickReport = (section: string) => {
+    toast.success('Generating executive visual report...');
+    
+    generateClaimsInventoryReport({
+      totalClaims: metrics.totalOpenClaims,
+      totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
+      typeGroups: typeGroupData.map(tg => ({ name: tg.typeGroup, claims: tg.grandTotal, reserves: tg.reserves })),
+      ageBreakdown: data.financials.byAge.map(a => ({ bucket: a.age, claims: a.claims, reserves: a.openReserves })),
+    });
+  };
+
   // Type group breakdown for claims drawer
   const typeGroupData = data.typeGroupSummaries || [];
 
@@ -240,9 +254,12 @@ export function ExecutiveCommandDashboardWrapper() {
             reservesChangePercent: data.delta.reservesChangePercent || 0,
             previousDate: data.delta.previousDate,
           } : undefined,
+          typeGroupData: typeGroupData,
+          ageBreakdown: data.financials.byAge,
         }}
         onOpenChat={() => setShowChat(true)}
         onDrilldown={handleDrilldown}
+        onDoubleClickReport={handleDoubleClickReport}
         timestamp={data.dataDate || timestamp}
       />
 
