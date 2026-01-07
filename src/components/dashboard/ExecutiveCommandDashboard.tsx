@@ -236,50 +236,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
 
   return (
     <div className="space-y-4">
-      {/* Header with Export & Oracle buttons */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-emerald-500" />
-          <span className="text-sm font-medium text-muted-foreground">Live Data • {timestamp}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* C-Suite Export Buttons */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExportPDF}
-            disabled={generatingPDF}
-            className="gap-2 bg-primary/10 border-primary/30 hover:bg-primary/20"
-          >
-            {generatingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4" />
-            )}
-            C-Suite PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExportExcel}
-            disabled={generatingExcel}
-            className="gap-2"
-          >
-            {generatingExcel ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="h-4 w-4" />
-            )}
-            Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={onOpenChat} className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Ask Oracle
-          </Button>
-        </div>
-      </div>
-
-      {/* Executive Header Bar */}
+      {/* Consolidated Header - Exports, Data Status & Trends */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl border border-slate-700">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -291,7 +248,9 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
             REAL DATA
           </Badge>
         </div>
-        <div className="flex items-center gap-6">
+        
+        {/* Delta Indicators */}
+        <div className="flex items-center gap-4">
           {data.delta && (
             <>
               <div className="flex items-center gap-1.5">
@@ -315,8 +274,45 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
                   {formatPct(data.delta.reservesChangePercent)} Reserves
                 </span>
               </div>
+              <div className="w-px h-4 bg-slate-700" />
             </>
           )}
+          
+          {/* Export Buttons */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportPDF}
+              disabled={generatingPDF}
+              className="gap-2 bg-primary/10 border-primary/30 hover:bg-primary/20 h-7 text-xs"
+            >
+              {generatingPDF ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileText className="h-3.5 w-3.5" />
+              )}
+              C-Suite PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportExcel}
+              disabled={generatingExcel}
+              className="gap-2 h-7 text-xs"
+            >
+              {generatingExcel ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+              )}
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={onOpenChat} className="gap-2 h-7 text-xs">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Ask Oracle
+            </Button>
+          </div>
         </div>
       </div>
 
