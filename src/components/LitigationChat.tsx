@@ -452,6 +452,12 @@ export function LitigationChat() {
         byPackSize: openExposureData.multiPackData.byPackSize,
         topGroups: openExposureData.multiPackData.groups?.slice(0, 20) || [],
       } : null,
+      // Phase breakdown for population analysis
+      phaseBreakdown: openExposureData.phaseBreakdown || [],
+      // Negotiation recency for pivot analysis
+      negotiationRecency: openExposureData.negotiationRecency || [],
+      // BI Status breakdown
+      biStatusBreakdown: openExposureData.biStatusBreakdown || null,
     };
   }, [openExposureData]);
 

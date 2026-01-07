@@ -146,6 +146,10 @@ export interface RawClaimExport {
   areaNumber: string;
   lossDescription: string;
   exposureCategory: string;
+  biStatus: string;
+  daysSinceNegotiation: number | null;
+  negotiationType: string;
+  negotiationDate: string;
 }
 
 export interface CP1ByTypeGroup {
@@ -191,6 +195,30 @@ export interface MultiPackSummary {
   groups: MultiPackGroup[];
 }
 
+// Phase breakdown for population analysis
+export interface PhaseBreakdown {
+  phase: string;
+  claims: number;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
+  byAge: {
+    age365Plus: number;
+    age181To365: number;
+    age61To180: number;
+    ageUnder60: number;
+  };
+}
+
+// Negotiation recency tracking
+export interface NegotiationRecency {
+  bucket: string; // "0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "No Negotiation"
+  claims: number;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
+}
+
 export interface OpenExposureData {
   litPhases: OpenExposurePhase[];
   typeGroupSummaries: TypeGroupSummary[];
@@ -226,6 +254,16 @@ export interface OpenExposureData {
   texasRearEnd: TexasRearEndData;
   rawClaims: RawClaimExport[]; // Raw data for export/validation
   multiPackData: MultiPackSummary; // Multi-pack claim grouping
+  // Population by phase breakdown
+  phaseBreakdown: PhaseBreakdown[];
+  // Negotiation recency tracking
+  negotiationRecency: NegotiationRecency[];
+  // BI Status breakdown (In Progress vs Settled)
+  biStatusBreakdown: {
+    inProgress: { claims: number; reserves: number };
+    settled: { claims: number; reserves: number };
+    other: { claims: number; reserves: number };
+  };
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -396,6 +434,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     const evalPhase = row['Evaluation Phase']?.trim() || '';
     const demandType = row['Demand Type']?.trim() || '(blank)';
+    const biStatus = row['BI Status']?.trim() || '';
+    const daysSinceNegoStr = row['Days Since Negotiation Date']?.trim() || '';
+    const daysSinceNegotiation = daysSinceNegoStr ? parseInt(daysSinceNegoStr, 10) || null : null;
+    const negotiationType = row['Negotiation Type']?.trim() || '';
+    const negotiationDate = row['Negotiation Date']?.trim() || '';
     
     // Add to raw claims export
     const teamGroup = row['Team Group']?.trim() || '';
@@ -422,6 +465,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       areaNumber,
       lossDescription,
       exposureCategory: row['Exposure Category']?.trim() || '',
+      biStatus,
+      daysSinceNegotiation,
+      negotiationType,
+      negotiationDate,
     });
     
     // Update grand totals (claim counts)
@@ -824,6 +871,77 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     groups: multiPackGroups,
   };
   
+  // ============ PHASE BREAKDOWN ============
+  const phaseAggregation = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number; byAge: { age365Plus: number; age181To365: number; age61To180: number; ageUnder60: number } }>();
+  
+  for (const claim of rawClaimsExport) {
+    const phase = claim.evaluationPhase || '(No Phase)';
+    if (!phaseAggregation.has(phase)) {
+      phaseAggregation.set(phase, { claims: 0, reserves: 0, lowEval: 0, highEval: 0, byAge: { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0 } });
+    }
+    const p = phaseAggregation.get(phase)!;
+    p.claims++;
+    p.reserves += claim.openReserves;
+    p.lowEval += claim.lowEval;
+    p.highEval += claim.highEval;
+    
+    // Map age bucket label back to property name
+    if (claim.ageBucket === '365+ Days') p.byAge.age365Plus++;
+    else if (claim.ageBucket === '181-365 Days') p.byAge.age181To365++;
+    else if (claim.ageBucket === '61-180 Days') p.byAge.age61To180++;
+    else p.byAge.ageUnder60++;
+  }
+  
+  const phaseBreakdown: PhaseBreakdown[] = Array.from(phaseAggregation.entries())
+    .map(([phase, data]) => ({ phase, ...data }))
+    .sort((a, b) => b.claims - a.claims);
+  
+  // ============ NEGOTIATION RECENCY ============
+  const negoRecencyMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
+  const negoBuckets = ['0-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'No Negotiation'];
+  negoBuckets.forEach(b => negoRecencyMap.set(b, { claims: 0, reserves: 0, lowEval: 0, highEval: 0 }));
+  
+  for (const claim of rawClaimsExport) {
+    let bucket = 'No Negotiation';
+    if (claim.daysSinceNegotiation !== null && !isNaN(claim.daysSinceNegotiation)) {
+      if (claim.daysSinceNegotiation <= 30) bucket = '0-30 Days';
+      else if (claim.daysSinceNegotiation <= 60) bucket = '31-60 Days';
+      else if (claim.daysSinceNegotiation <= 90) bucket = '61-90 Days';
+      else bucket = '90+ Days';
+    }
+    const nr = negoRecencyMap.get(bucket)!;
+    nr.claims++;
+    nr.reserves += claim.openReserves;
+    nr.lowEval += claim.lowEval;
+    nr.highEval += claim.highEval;
+  }
+  
+  const negotiationRecency: NegotiationRecency[] = negoBuckets.map(bucket => ({
+    bucket,
+    ...negoRecencyMap.get(bucket)!
+  }));
+  
+  // ============ BI STATUS BREAKDOWN ============
+  const biStatusBreakdown = {
+    inProgress: { claims: 0, reserves: 0 },
+    settled: { claims: 0, reserves: 0 },
+    other: { claims: 0, reserves: 0 },
+  };
+  
+  for (const claim of rawClaimsExport) {
+    const status = claim.biStatus?.toLowerCase() || '';
+    if (status === 'in progress') {
+      biStatusBreakdown.inProgress.claims++;
+      biStatusBreakdown.inProgress.reserves += claim.openReserves;
+    } else if (status === 'settled') {
+      biStatusBreakdown.settled.claims++;
+      biStatusBreakdown.settled.reserves += claim.openReserves;
+    } else {
+      biStatusBreakdown.other.claims++;
+      biStatusBreakdown.other.reserves += claim.openReserves;
+    }
+  }
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -852,6 +970,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     texasRearEnd,
     rawClaims: rawClaimsExport,
     multiPackData,
+    phaseBreakdown,
+    negotiationRecency,
+    biStatusBreakdown,
   };
 }
 
