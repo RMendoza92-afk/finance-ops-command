@@ -44,11 +44,11 @@ export function DashboardLayoutToggle({ version, onVersionChange }: DashboardLay
         </ToggleGroupItem>
         <ToggleGroupItem 
           value="v4" 
-          aria-label="Actuarial view" 
+          aria-label="Loss Development view" 
           className="text-xs px-3 py-1.5 h-7 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md flex items-center gap-1"
         >
           <Calculator className="h-3 w-3" />
-          Actuarial
+          Loss Dev
         </ToggleGroupItem>
       </ToggleGroup>
     </div>
