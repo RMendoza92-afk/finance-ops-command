@@ -3,75 +3,75 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   JARVIS / IRON MAN COMMAND CENTER DESIGN SYSTEM
-   Futuristic HUD aesthetic with holographic elements and arc reactor accents
+   OBSIDIAN EXECUTIVE - Ultra Premium Dark Interface
+   Refined sophistication with warm champagne accents
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* Default: JARVIS Mode - Arc Reactor Blue with Black Chrome */
+/* Default: Obsidian Executive */
 :root {
-  /* Core palette - Deep space black with arc reactor cyan */
-  --background: 220 25% 4%;
-  --foreground: 200 20% 92%;
-  --card: 220 30% 8%;
-  --card-foreground: 200 20% 92%;
-  --popover: 220 30% 6%;
-  --popover-foreground: 200 20% 92%;
+  /* Core - Deep obsidian black */
+  --background: 240 10% 4%;
+  --foreground: 40 15% 95%;
+  --card: 240 8% 7%;
+  --card-foreground: 40 15% 95%;
+  --popover: 240 10% 6%;
+  --popover-foreground: 40 15% 95%;
   
-  /* Primary: Arc Reactor Cyan-Blue */
-  --primary: 195 100% 50%;
-  --primary-foreground: 220 25% 4%;
+  /* Primary: Champagne Gold */
+  --primary: 38 65% 55%;
+  --primary-foreground: 240 10% 4%;
   
-  /* Secondary: Gunmetal Chrome */
-  --secondary: 220 15% 16%;
-  --secondary-foreground: 200 20% 85%;
+  /* Secondary: Warm Gray */
+  --secondary: 240 5% 14%;
+  --secondary-foreground: 40 10% 85%;
   
-  /* Muted: Deep space */
-  --muted: 220 20% 12%;
-  --muted-foreground: 200 15% 55%;
+  /* Muted: Soft charcoal */
+  --muted: 240 6% 11%;
+  --muted-foreground: 40 5% 50%;
   
-  /* Accent: Gold/Orange warning (Iron Man gold) */
-  --accent: 35 100% 55%;
-  --accent-foreground: 220 25% 4%;
+  /* Accent: Rose Gold */
+  --accent: 15 45% 55%;
+  --accent-foreground: 240 10% 4%;
   
-  /* Status colors */
-  --destructive: 0 85% 55%;
+  /* Status colors - muted elegance */
+  --destructive: 0 55% 50%;
   --destructive-foreground: 0 0% 100%;
-  --success: 160 85% 45%;
+  --success: 155 45% 42%;
   --success-foreground: 0 0% 100%;
-  --warning: 35 100% 55%;
-  --warning-foreground: 0 0% 0%;
-  --info: 195 100% 50%;
-  --info-foreground: 220 25% 4%;
+  --warning: 38 65% 55%;
+  --warning-foreground: 240 10% 4%;
+  --info: 200 50% 50%;
+  --info-foreground: 0 0% 100%;
   
-  /* Chrome borders */
-  --border: 220 20% 18%;
-  --input: 220 25% 12%;
-  --ring: 195 100% 50%;
-  --radius: 0.75rem;
+  /* Borders - subtle warmth */
+  --border: 240 5% 16%;
+  --input: 240 8% 10%;
+  --ring: 38 65% 55%;
+  --radius: 0.5rem;
   
   /* Sidebar */
-  --sidebar-background: 220 30% 6%;
-  --sidebar-foreground: 200 20% 90%;
-  --sidebar-primary: 195 100% 50%;
-  --sidebar-primary-foreground: 220 25% 4%;
-  --sidebar-accent: 35 100% 55%;
-  --sidebar-accent-foreground: 220 25% 4%;
-  --sidebar-border: 220 20% 18%;
-  --sidebar-ring: 195 100% 50%;
+  --sidebar-background: 240 10% 5%;
+  --sidebar-foreground: 40 15% 90%;
+  --sidebar-primary: 38 65% 55%;
+  --sidebar-primary-foreground: 240 10% 4%;
+  --sidebar-accent: 15 45% 55%;
+  --sidebar-accent-foreground: 240 10% 4%;
+  --sidebar-border: 240 5% 14%;
+  --sidebar-ring: 38 65% 55%;
   
   /* Table */
-  --table-header: 220 30% 10%;
+  --table-header: 240 8% 8%;
+  --table-row-hover: 240 6% 10%;
   
-  /* HUD effects */
-  --hud-glow: 195 100% 50%;
-  --hud-gold: 35 100% 55%;
-  --hud-red: 0 85% 55%;
-  --arc-reactor: 195 100% 50%;
+  /* Executive accents */
+  --exec-gold: 38 65% 55%;
+  --exec-silver: 220 10% 70%;
+  --exec-bronze: 25 50% 45%;
 }
 
-/* AS/400 Green Screen Terminal Mode - Exact match to classic IBM 3278 */
+/* AS/400 Green Screen Terminal Mode */
 .dark {
   --background: 0 0% 0%;
   --foreground: 120 100% 50%;
@@ -132,16 +132,15 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Rajdhani', 'Orbitron', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
-  /* Jarvis HUD headings */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Orbitron', 'Rajdhani', sans-serif;
-    letter-spacing: 0.05em;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
-  /* Data/numbers use mono */
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
@@ -149,278 +148,109 @@
 
 @layer components {
   /* ═══════════════════════════════════════════════════════════════════════════
-     JARVIS HUD EFFECTS - Iron Man Command Interface
+     OBSIDIAN EXECUTIVE - Premium Card System
      ═══════════════════════════════════════════════════════════════════════════ */
 
-  /* Subtle HUD grid overlay */
-  body::before {
+  /* Executive Card - Clean, sophisticated */
+  .exec-card {
+    @apply relative overflow-hidden transition-all duration-200 rounded-lg;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .exec-card:hover {
+    border-color: hsl(var(--exec-gold) / 0.3);
+    box-shadow: 0 4px 24px -8px hsl(0 0% 0% / 0.5);
+  }
+
+  /* Metric Card - For KPIs */
+  .metric-card {
+    @apply relative overflow-hidden transition-all duration-200 rounded-lg p-5;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(240 8% 5%) 100%);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .metric-card::before {
     content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background: 
-      radial-gradient(ellipse at 50% 0%, hsl(var(--arc-reactor) / 0.03) 0%, transparent 50%),
-      linear-gradient(0deg, transparent 49.9%, hsl(var(--arc-reactor) / 0.015) 50%, transparent 50.1%),
-      linear-gradient(90deg, transparent 49.9%, hsl(var(--arc-reactor) / 0.015) 50%, transparent 50.1%);
-    background-size: 100% 100%, 100px 100px, 100px 100px;
-    z-index: 0;
-  }
-
-  /* Arc reactor glow for primary elements */
-  .arc-glow {
-    box-shadow: 
-      0 0 0 1px hsl(var(--arc-reactor) / 0.3),
-      0 0 20px -5px hsl(var(--arc-reactor) / 0.5),
-      0 0 40px -10px hsl(var(--arc-reactor) / 0.3),
-      inset 0 1px 0 hsl(var(--arc-reactor) / 0.1);
-  }
-
-  /* Gold accent glow (Iron Man gold) */
-  .gold-glow {
-    box-shadow: 
-      0 0 0 1px hsl(var(--hud-gold) / 0.4),
-      0 0 20px -5px hsl(var(--hud-gold) / 0.5),
-      0 0 40px -10px hsl(var(--hud-gold) / 0.3);
-  }
-
-  /* Critical alert glow */
-  .alert-glow {
-    box-shadow: 
-      0 0 0 1px hsl(var(--hud-red) / 0.5),
-      0 0 25px -5px hsl(var(--hud-red) / 0.6),
-      0 0 50px -10px hsl(var(--hud-red) / 0.4);
-  }
-
-  /* HUD Card - Primary interactive element with corner brackets */
-  .hud-card {
-    @apply relative overflow-visible transition-all duration-300 rounded-xl;
-    background: linear-gradient(
-      135deg, 
-      hsl(var(--card)) 0%, 
-      hsl(220 30% 6%) 50%,
-      hsl(var(--card)) 100%
-    );
-    border: 1px solid hsl(var(--arc-reactor) / 0.2);
-  }
-
-  /* Top glow bar */
-  .hud-card::before {
-    content: '';
-    @apply absolute top-0 left-0 w-full h-0.5;
-    background: linear-gradient(
-      90deg, 
-      transparent 0%, 
-      hsl(var(--arc-reactor)) 20%, 
-      hsl(var(--arc-reactor)) 80%, 
-      transparent 100%
-    );
-    opacity: 0.6;
-  }
-
-  /* Animated scan line */
-  .hud-card::after {
-    content: '';
-    @apply absolute left-0 w-full h-8 pointer-events-none;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      hsl(var(--arc-reactor) / 0.15) 50%,
-      transparent 100%
-    );
-    animation: card-scan 4s ease-in-out infinite;
+    @apply absolute top-0 left-0 w-1 h-full;
+    background: hsl(var(--exec-gold));
     opacity: 0;
+    transition: opacity 0.2s ease;
   }
 
-  @keyframes card-scan {
-    0% {
-      top: -32px;
-      opacity: 0;
-    }
-    10% {
-      opacity: 1;
-    }
-    90% {
-      opacity: 1;
-    }
-    100% {
-      top: calc(100% + 32px);
-      opacity: 0;
-    }
-  }
-
-  .hud-card:hover::after {
-    animation-duration: 2s;
-  }
-
-  .hud-card:hover {
-    @apply transform -translate-y-1;
-    border-color: hsl(var(--arc-reactor) / 0.5);
-    box-shadow: 
-      0 0 0 1px hsl(var(--arc-reactor) / 0.3),
-      0 10px 40px -10px hsl(var(--arc-reactor) / 0.3),
-      0 20px 60px -20px hsl(var(--arc-reactor) / 0.2);
-  }
-
-  /* Corner brackets wrapper - add inside hud-card */
-  .hud-corners {
-    @apply absolute inset-0 pointer-events-none;
-  }
-
-  .hud-corners::before,
-  .hud-corners::after,
-  .hud-corners .corner-bl,
-  .hud-corners .corner-br {
-    content: '';
-    @apply absolute w-5 h-5;
-    border-color: hsl(var(--arc-reactor) / 0.6);
-    transition: all 0.3s ease;
-  }
-
-  .hud-corners::before {
-    @apply top-1 left-1 border-l-2 border-t-2 rounded-tl;
-  }
-
-  .hud-corners::after {
-    @apply top-1 right-1 border-r-2 border-t-2 rounded-tr;
-  }
-
-  .hud-corners .corner-bl {
-    @apply bottom-1 left-1 border-l-2 border-b-2 rounded-bl;
-    border-color: hsl(var(--arc-reactor) / 0.6);
-  }
-
-  .hud-corners .corner-br {
-    @apply bottom-1 right-1 border-r-2 border-b-2 rounded-br;
-    border-color: hsl(var(--arc-reactor) / 0.6);
-  }
-
-  .hud-card:hover .hud-corners::before,
-  .hud-card:hover .hud-corners::after,
-  .hud-card:hover .hud-corners .corner-bl,
-  .hud-card:hover .hud-corners .corner-br {
-    @apply w-7 h-7;
-    border-color: hsl(var(--arc-reactor));
-    filter: drop-shadow(0 0 4px hsl(var(--arc-reactor) / 0.8));
-  }
-
-  /* HUD Section divider */
-  .hud-divider {
-    @apply relative flex items-center gap-4 py-4;
-  }
-
-  .hud-divider::before,
-  .hud-divider::after {
-    content: '';
-    @apply flex-1 h-px;
-    background: linear-gradient(90deg, hsl(var(--arc-reactor) / 0.5), transparent);
-  }
-
-  .hud-divider::after {
-    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor) / 0.5));
-  }
-
-  /* HUD Badge - Status indicators */
-  .hud-badge {
-    @apply px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider;
-    background: hsl(var(--arc-reactor) / 0.15);
-    border: 1px solid hsl(var(--arc-reactor) / 0.4);
-    color: hsl(var(--arc-reactor));
-    text-shadow: 0 0 10px hsl(var(--arc-reactor) / 0.5);
-  }
-
-  .hud-badge-warning {
-    background: hsl(var(--hud-gold) / 0.15);
-    border-color: hsl(var(--hud-gold) / 0.5);
-    color: hsl(var(--hud-gold));
-    text-shadow: 0 0 10px hsl(var(--hud-gold) / 0.5);
-  }
-
-  .hud-badge-critical {
-    background: hsl(var(--hud-red) / 0.15);
-    border-color: hsl(var(--hud-red) / 0.5);
-    color: hsl(var(--hud-red));
-    text-shadow: 0 0 10px hsl(var(--hud-red) / 0.5);
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  /* Pulse glow animation */
-  @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 5px hsl(var(--hud-red) / 0.5);
-    }
-    50% {
-      box-shadow: 0 0 20px hsl(var(--hud-red) / 0.8), 0 0 40px hsl(var(--hud-red) / 0.4);
-    }
-  }
-
-  /* Scanning line animation */
-  @keyframes scan-line {
-    0% {
-      transform: translateY(-100%);
-    }
-    100% {
-      transform: translateY(100vh);
-    }
-  }
-
-  .hud-scan::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor)), transparent);
-    animation: scan-line 3s linear infinite;
-    opacity: 0.3;
-  }
-
-  /* Corner brackets for HUD panels */
-  .hud-brackets {
-    @apply relative;
-  }
-
-  .hud-brackets::before,
-  .hud-brackets::after {
-    content: '';
-    @apply absolute w-4 h-4 border-l-2 border-t-2;
-    border-color: hsl(var(--arc-reactor) / 0.6);
-  }
-
-  .hud-brackets::before {
-    @apply top-0 left-0;
-  }
-
-  .hud-brackets::after {
-    @apply bottom-0 right-0 rotate-180;
-  }
-
-  /* KPI card hover effect - upgraded */
-  .kpi-card {
-    @apply relative overflow-hidden transition-all duration-300 rounded-xl;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(220 30% 6%) 100%);
-    border: 1px solid hsl(var(--arc-reactor) / 0.15);
-  }
-
-  .kpi-card::before {
-    content: '';
-    @apply absolute top-0 left-0 w-full h-0.5;
-    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor)), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .kpi-card:hover::before {
+  .metric-card:hover::before {
     opacity: 1;
   }
 
-  .kpi-card:hover {
-    @apply transform -translate-y-1;
-    border-color: hsl(var(--arc-reactor) / 0.4);
-    box-shadow: 0 15px 50px -15px hsl(var(--arc-reactor) / 0.25);
+  .metric-card:hover {
+    border-color: hsl(var(--border));
+    box-shadow: 0 8px 32px -12px hsl(0 0% 0% / 0.6);
+    transform: translateY(-2px);
+  }
+
+  /* Warning variant */
+  .metric-card-warning {
+    border-color: hsl(var(--warning) / 0.2);
+  }
+  .metric-card-warning::before {
+    background: hsl(var(--warning));
+    opacity: 1;
+  }
+
+  /* Critical variant */
+  .metric-card-critical {
+    border-color: hsl(var(--destructive) / 0.2);
+  }
+  .metric-card-critical::before {
+    background: hsl(var(--destructive));
+    opacity: 1;
+  }
+
+  /* Success variant */
+  .metric-card-success {
+    border-color: hsl(var(--success) / 0.2);
+  }
+  .metric-card-success::before {
+    background: hsl(var(--success));
+    opacity: 1;
+  }
+
+  /* Section Header */
+  .section-header {
+    @apply flex items-center gap-4 py-3;
+  }
+
+  .section-header::after {
+    content: '';
+    @apply flex-1 h-px;
+    background: linear-gradient(90deg, hsl(var(--border)), transparent);
+  }
+
+  /* Premium Badge */
+  .exec-badge {
+    @apply px-2.5 py-1 rounded text-xs font-medium;
+    background: hsl(var(--secondary));
+    color: hsl(var(--foreground));
+  }
+
+  .exec-badge-gold {
+    background: hsl(var(--exec-gold) / 0.15);
+    color: hsl(var(--exec-gold));
+  }
+
+  .exec-badge-success {
+    background: hsl(var(--success) / 0.15);
+    color: hsl(var(--success));
+  }
+
+  .exec-badge-warning {
+    background: hsl(var(--warning) / 0.15);
+    color: hsl(var(--warning));
+  }
+
+  .exec-badge-critical {
+    background: hsl(var(--destructive) / 0.15);
+    color: hsl(var(--destructive));
   }
 
   /* Data table styling */
@@ -434,12 +264,12 @@
   }
 
   .data-table th {
-    @apply px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wider text-xs;
-    border-bottom: 2px solid hsl(var(--border));
+    @apply px-4 py-3 text-left font-medium text-muted-foreground uppercase tracking-wide text-xs;
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/50;
+    @apply px-4 py-3 border-b border-border/30;
   }
 
   .data-table tbody tr {
@@ -448,6 +278,68 @@
 
   .data-table tbody tr:hover {
     background: hsl(var(--table-row-hover));
+  }
+
+  /* KPI card - legacy support */
+  .kpi-card {
+    @apply relative overflow-hidden transition-all duration-200 rounded-lg;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .kpi-card:hover {
+    border-color: hsl(var(--exec-gold) / 0.3);
+    box-shadow: 0 8px 32px -12px hsl(0 0% 0% / 0.5);
+  }
+
+  /* HUD card - simplified for this theme */
+  .hud-card {
+    @apply relative overflow-hidden transition-all duration-200 rounded-lg;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(240 8% 5%) 100%);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .hud-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-1 h-full;
+    background: hsl(var(--exec-gold));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .hud-card:hover::before {
+    opacity: 1;
+  }
+
+  .hud-card:hover {
+    border-color: hsl(var(--border));
+    box-shadow: 0 8px 32px -12px hsl(0 0% 0% / 0.6);
+    transform: translateY(-2px);
+  }
+
+  /* Hide corner brackets in this theme */
+  .hud-corners {
+    display: none;
+  }
+
+  /* Section divider - simplified */
+  .hud-divider {
+    @apply flex items-center gap-4 py-3;
+  }
+
+  .hud-divider::before,
+  .hud-divider::after {
+    content: '';
+    @apply flex-1 h-px;
+    background: hsl(var(--border));
+  }
+
+  .hud-divider::after {
+    background: linear-gradient(90deg, hsl(var(--border)), transparent);
+  }
+
+  .hud-divider::before {
+    background: linear-gradient(90deg, transparent, hsl(var(--border)));
   }
 
   /* Status badges */
