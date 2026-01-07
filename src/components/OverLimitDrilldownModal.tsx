@@ -34,10 +34,11 @@ export function OverLimitDrilldownModal({
         'State': c.state,
         'Payment Date': c.payment_date,
         'Coverage': c.coverage || 'BI',
+        'Classification': c.classification || 'Issue',
+        'Root Cause': c.root_cause || '',
         'Policy Limit': c.policy_limit || 0,
         'Payment Amount': c.payment_amount,
         'Over Limit Amount': c.over_limit_amount,
-        'Issue Type': c.issue_type || '',
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -48,21 +49,34 @@ export function OverLimitDrilldownModal({
         { wch: 14 }, // State
         { wch: 12 }, // Payment Date
         { wch: 10 }, // Coverage
+        { wch: 12 }, // Classification
+        { wch: 35 }, // Root Cause
         { wch: 14 }, // Policy Limit
         { wch: 16 }, // Payment Amount
         { wch: 18 }, // Over Limit Amount
-        { wch: 12 }, // Issue Type
       ];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, `${state} Over-Limit Claims`);
       
+      // Calculate classification breakdown
+      const anomalyCount = claims.filter(c => c.classification === 'Anomaly').length;
+      const issueCount = claims.filter(c => c.classification === 'Issue').length;
+      const anomalyTotal = claims.filter(c => c.classification === 'Anomaly').reduce((sum, c) => sum + c.over_limit_amount, 0);
+      const issueTotal = claims.filter(c => c.classification === 'Issue').reduce((sum, c) => sum + c.over_limit_amount, 0);
+
       // Add summary sheet
       const summaryData = [
         { Metric: 'State', Value: state },
         { Metric: 'Total Claims', Value: claims.length },
         { Metric: 'Total Over-Limit', Value: totalOverLimit },
-        { Metric: 'Average Over-Limit', Value: claims.length > 0 ? totalOverLimit / claims.length : 0 },
+        { Metric: '', Value: '' },
+        { Metric: 'CLASSIFICATION BREAKDOWN', Value: '' },
+        { Metric: 'Anomaly Claims', Value: anomalyCount },
+        { Metric: 'Anomaly Over-Limit', Value: anomalyTotal },
+        { Metric: 'Issue Claims', Value: issueCount },
+        { Metric: 'Issue Over-Limit', Value: issueTotal },
+        { Metric: '', Value: '' },
         { Metric: 'Export Date', Value: format(new Date(), 'yyyy-MM-dd HH:mm') },
       ];
       const summaryWs = XLSX.utils.json_to_sheet(summaryData);
@@ -112,7 +126,8 @@ export function OverLimitDrilldownModal({
               <TableRow>
                 <TableHead className="text-xs">Claim #</TableHead>
                 <TableHead className="text-xs">Date</TableHead>
-                <TableHead className="text-xs">Coverage</TableHead>
+                <TableHead className="text-xs">Classification</TableHead>
+                <TableHead className="text-xs">Root Cause</TableHead>
                 <TableHead className="text-xs text-right">Policy Limit</TableHead>
                 <TableHead className="text-xs text-right">Payment</TableHead>
                 <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
@@ -130,7 +145,18 @@ export function OverLimitDrilldownModal({
                       {claim.payment_date}
                     </div>
                   </TableCell>
-                  <TableCell>{claim.coverage || 'BI'}</TableCell>
+                  <TableCell>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      claim.classification === 'Anomaly' 
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
+                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                    }`}>
+                      {claim.classification || 'Issue'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[180px] truncate" title={claim.root_cause || ''}>
+                    {claim.root_cause || '-'}
+                  </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(claim.policy_limit || 0)}
                   </TableCell>

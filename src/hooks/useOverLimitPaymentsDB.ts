@@ -11,6 +11,8 @@ export interface OverLimitPaymentDB {
   payment_date: string;
   coverage: string | null;
   issue_type: string | null;
+  classification: string | null;
+  root_cause: string | null;
 }
 
 export interface StateOverLimitSummary {
