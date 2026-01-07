@@ -72,8 +72,10 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
   const [showFrequencyDetails, setShowFrequencyDetails] = useState(false);
   const [showPaymentsDetails, setShowPaymentsDetails] = useState(false);
   const [showOverLimitDetails, setShowOverLimitDetails] = useState(false);
+  const [showAYDevDetails, setShowAYDevDetails] = useState(false);
   const [selectedFreqState, setSelectedFreqState] = useState<string>("Combined");
   const [selectedPaymentCoverage, setSelectedPaymentCoverage] = useState<string>("BI");
+  const [selectedAYCoverage, setSelectedAYCoverage] = useState<string>("ALL");
   
   // Fetch actuarial data from database
   const { data: actuarialData, loading, error } = useActuarialData(2026);
@@ -85,6 +87,8 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
   const claimsFrequency = actuarialData.claimsFrequency;
   const claimsPayments = actuarialData.claimsPayments;
   const overLimitPayments = actuarialData.overLimitPayments;
+  const overspendSummary = actuarialData.overspendSummary;
+  const accidentYearDev = actuarialData.accidentYearDev;
 
   // Transform loss development for chart
   const lossDevChartData = lossDevelopment.map((ld) => ({
@@ -1053,6 +1057,180 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
             {!showOverLimitDetails && overLimitPayments.length > 10 && (
               <div className="text-center mt-2 text-sm text-muted-foreground">
                 Showing top 10 of {overLimitPayments.length} claims
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Overspend Summary - Anomaly vs Issue */}
+      {overspendSummary.length > 0 && (
+        <Card className="border-amber-500/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Over-Limit Overspend Analysis
+            </CardTitle>
+            <CardDescription>Anomaly (10/10 we'd do same) vs Issue (10/10 we had control)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Summary Totals */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 text-center">
+                <div className="text-xs text-blue-600 dark:text-blue-400">Anomaly Total</div>
+                <div className="text-xl font-bold text-blue-600">
+                  {formatCurrency(overspendSummary.filter(o => o.issueType === 'anomaly').reduce((s, o) => s + o.totalAmount, 0))}
+                </div>
+                <div className="text-xs text-muted-foreground">Out of our control</div>
+              </div>
+              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20 text-center">
+                <div className="text-xs text-red-600 dark:text-red-400">Issue Total</div>
+                <div className="text-xl font-bold text-red-600">
+                  {formatCurrency(overspendSummary.filter(o => o.issueType === 'issue').reduce((s, o) => s + o.totalAmount, 0))}
+                </div>
+                <div className="text-xs text-muted-foreground">We had control</div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg border text-center">
+                <div className="text-xs text-muted-foreground">Grand Total</div>
+                <div className="text-xl font-bold">
+                  {formatCurrency(overspendSummary.reduce((s, o) => s + o.totalAmount, 0))}
+                </div>
+              </div>
+            </div>
+
+            {/* By State Breakdown */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>State</TableHead>
+                  <TableHead className="text-right">Anomaly</TableHead>
+                  <TableHead className="text-right">Issue</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...new Set(overspendSummary.map(o => o.state))].map(state => {
+                  const anomaly = overspendSummary.find(o => o.state === state && o.issueType === 'anomaly')?.totalAmount || 0;
+                  const issue = overspendSummary.find(o => o.state === state && o.issueType === 'issue')?.totalAmount || 0;
+                  return (
+                    <TableRow key={state}>
+                      <TableCell className="font-medium">{state}</TableCell>
+                      <TableCell className="text-right text-blue-600">{anomaly > 0 ? formatCurrency(anomaly) : '—'}</TableCell>
+                      <TableCell className="text-right text-red-600">{issue > 0 ? formatCurrency(issue) : '—'}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(anomaly + issue)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Accident Year Loss Development */}
+      {accidentYearDev.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Accident Year Loss Development
+                </CardTitle>
+                <CardDescription>AY 2024 at 6 Months (as of May 31, 2025) vs Historical</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedAYCoverage}
+                  onChange={(e) => setSelectedAYCoverage(e.target.value)}
+                  className="text-sm border rounded-md px-2 py-1 bg-background"
+                >
+                  {['ALL', 'BI', 'PD', 'CL', 'OTHER'].map(cov => (
+                    <option key={cov} value={cov}>{cov === 'ALL' ? 'All Coverages' : cov}</option>
+                  ))}
+                </select>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowAYDevDetails(!showAYDevDetails)}
+                >
+                  {showAYDevDetails ? "Hide Details" : "Show Details"}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Grand Total Comparison by AY */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {[2024, 2023, 2022, 2021].map(ay => {
+                const grandTotal = accidentYearDev.find(d => 
+                  d.accidentYear === ay && 
+                  d.coverage === selectedAYCoverage && 
+                  d.category === 'Grand Total'
+                );
+                return grandTotal ? (
+                  <div 
+                    key={ay}
+                    className={`p-3 border rounded-lg ${
+                      ay === 2024 ? 'bg-primary/10 border-primary' : 'bg-muted/30'
+                    }`}
+                  >
+                    <div className="text-xs font-medium text-muted-foreground">AY {ay} @ 6mo</div>
+                    <div className={`text-lg font-bold ${grandTotal.incurred < 0 ? 'text-emerald-600' : grandTotal.incurredPctPremium > 5 ? 'text-red-600' : ''}`}>
+                      {grandTotal.incurredPctPremium.toFixed(2)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatCurrency(grandTotal.incurred)} incurred
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatCurrency(grandTotal.earnedPremium)} EP
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+
+            {/* Detailed Category Breakdown for AY 2024 */}
+            {showAYDevDetails && (
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">AY 2024 Category Breakdown - {selectedAYCoverage}</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Features</TableHead>
+                      <TableHead className="text-right">Prior Reserve</TableHead>
+                      <TableHead className="text-right">Net Payment</TableHead>
+                      <TableHead className="text-right">Reserve Bal</TableHead>
+                      <TableHead className="text-right">Incurred</TableHead>
+                      <TableHead className="text-right">% EP</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accidentYearDev
+                      .filter(d => d.accidentYear === 2024 && d.coverage === selectedAYCoverage)
+                      .map(row => (
+                        <TableRow 
+                          key={row.category}
+                          className={row.category === 'Grand Total' ? 'font-bold border-t-2' : ''}
+                        >
+                          <TableCell>{row.category}</TableCell>
+                          <TableCell className="text-right">{row.featureCount.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(row.priorReserve)}</TableCell>
+                          <TableCell className={`text-right ${row.netClaimPayment < 0 ? 'text-emerald-600' : ''}`}>
+                            {formatCurrency(row.netClaimPayment)}
+                          </TableCell>
+                          <TableCell className="text-right">{formatCurrency(row.reserveBalance)}</TableCell>
+                          <TableCell className={`text-right ${row.incurred < 0 ? 'text-emerald-600' : row.incurred > 0 ? 'text-amber-600' : ''}`}>
+                            {formatCurrency(row.incurred)}
+                          </TableCell>
+                          <TableCell className={`text-right ${row.incurredPctPremium < 0 ? 'text-emerald-600' : row.incurredPctPremium > 3 ? 'text-red-600' : ''}`}>
+                            {row.incurredPctPremium.toFixed(2)}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
