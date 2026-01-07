@@ -375,7 +375,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     ageUnder60: { noCP: 0, yes: 0 },
   };
   
-  // Financial aggregation by age bucket
+  // Financial aggregation by age bucket (for BI/UM/UI)
   const ageFinancials = {
     age365Plus: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
     age181To365: { claims: 0, reserves: 0, lowEval: 0, highEval: 0 },
@@ -384,8 +384,18 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
   
   let cp1Totals = { total: 0, age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0 };
+  // grandTotals for BI/UM/UI detailed analysis
   let grandTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0, grandTotal: 0 };
   let financialTotals = { totalOpenReserves: 0, totalLowEval: 0, totalHighEval: 0, noEvalCount: 0, noEvalReserves: 0 };
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // NEW: Track ALL claims/exposures (not just BI/UM/UI) for accurate totals
+  // ═══════════════════════════════════════════════════════════════════
+  const allUniqueClaimNumbers = new Set<string>();
+  let allExposuresCount = 0;
+  let allFlaggedCount = 0;
+  let allNewClaimsCount = 0;
+  const allAgeTotals = { age365Plus: 0, age181To365: 0, age61To180: 0, ageUnder60: 0 };
   
   // Type group claim counts for known totals
   const typeGroupCounts = new Map<string, number>();
@@ -393,6 +403,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // Track unique claims per type group (for Claims column) vs exposures (rows)
   const typeGroupUniqueClaims = new Map<string, Set<string>>();
   const typeGroupExposures = new Map<string, number>();
+  
+  // ALL coverages - track unique claims and exposures per type group
+  const allTypeGroupUniqueClaims = new Map<string, Set<string>>();
+  const allTypeGroupExposures = new Map<string, number>();
   
   // Texas Rear End tracking (State = TEXAS, Loss Desc contains "R/E")
   const texasAreaMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
@@ -411,14 +425,36 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
     
-    const coverage = row['Coverage']?.trim() || 'Unknown';
+    const claimNum = row['Claim#']?.trim() || '';
+    const typeGroup = row['Type Group']?.trim() || 'Unknown';
+    const days = parseInt(row['Days'] || '0', 10) || 0;
+    const ageBucket = getAgeBucket(days);
     
-    // CP1 detection - ANY flag (track for ALL coverages first)
+    // ═══════════════════════════════════════════════════════════════════
+    // COUNT ALL CLAIMS/EXPOSURES FIRST (before coverage filter)
+    // ═══════════════════════════════════════════════════════════════════
+    allUniqueClaimNumbers.add(claimNum);
+    allExposuresCount++;
+    allAgeTotals[ageBucket]++;
+    
+    // Track by type group for ALL coverages
+    if (!allTypeGroupUniqueClaims.has(typeGroup)) {
+      allTypeGroupUniqueClaims.set(typeGroup, new Set());
+    }
+    allTypeGroupUniqueClaims.get(typeGroup)!.add(claimNum);
+    allTypeGroupExposures.set(typeGroup, (allTypeGroupExposures.get(typeGroup) || 0) + 1);
+    
+    // Track flagged claims (CP1 flags)
     const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
                   row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
                   row['CP1 Claim Flag']?.toLowerCase() === 'yes';
+    if (isCP1) {
+      allFlaggedCount++;
+    }
     
-    // Track CP1 for ALL coverages (for grand total - 19,585 total claims)
+    const coverage = row['Coverage']?.trim() || 'Unknown';
+    
+    // Track CP1 for ALL coverages (for grand total)
     if (isCP1) {
       cp1AllCoverages.yes++;
       
@@ -433,12 +469,8 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       cp1AllCoverages.noCP++;
     }
     
-    // FILTER: Only include BI, UM, UI coverages for detailed breakdown
+    // FILTER: Only include BI, UM, UI coverages for detailed financial breakdown
     if (!isIncludedCoverage(coverage)) continue;
-    
-    const typeGroup = row['Type Group']?.trim() || 'Unknown';
-    const days = parseInt(row['Days'] || '0', 10) || 0;
-    const ageBucket = getAgeBucket(days);
     
     // Parse financial data
     const reserves = parseCurrency(row['Open Reserves'] || '0');
@@ -549,8 +581,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     typeGroupCounts.set(typeGroup, (typeGroupCounts.get(typeGroup) || 0) + 1);
     typeGroupExposures.set(typeGroup, (typeGroupExposures.get(typeGroup) || 0) + 1);
     
-    // Track unique claims per type group
-    const claimNum = row['Claim#']?.trim() || '';
+    // Track unique claims per type group (for BI/UM/UI)
     if (!typeGroupUniqueClaims.has(typeGroup)) {
       typeGroupUniqueClaims.set(typeGroup, new Set());
     }
@@ -749,31 +780,30 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     reserves: tg.reserves
   }));
   
-  // Build known totals from actual data - claims = unique claim#, exposures = rows
-  const uniqueClaimsTotal = new Set(rows.filter(r => r['Claim#'] && isIncludedCoverage(r['Coverage']?.trim() || '')).map(r => r['Claim#'])).size;
-  
+  // Build known totals from actual data - ALL claims (not just BI/UM/UI)
+  // This matches the source system totals: 10,074 claims / 19,470 exposures
   const knownTotals: KnownTotals = {
-    totalOpenClaims: uniqueClaimsTotal,
-    totalOpenExposures: grandTotals.grandTotal,
+    totalOpenClaims: allUniqueClaimNumbers.size,
+    totalOpenExposures: allExposuresCount,
     atr: { 
-      claims: typeGroupUniqueClaims.get('ATR')?.size || 0, 
-      exposures: typeGroupExposures.get('ATR') || 0 
+      claims: allTypeGroupUniqueClaims.get('ATR')?.size || 0, 
+      exposures: allTypeGroupExposures.get('ATR') || 0 
     },
     lit: { 
-      claims: typeGroupUniqueClaims.get('LIT')?.size || 0, 
-      exposures: typeGroupExposures.get('LIT') || 0 
+      claims: allTypeGroupUniqueClaims.get('LIT')?.size || 0, 
+      exposures: allTypeGroupExposures.get('LIT') || 0 
     },
     bi3: { 
-      claims: typeGroupUniqueClaims.get('BI3')?.size || 0, 
-      exposures: typeGroupExposures.get('BI3') || 0 
+      claims: allTypeGroupUniqueClaims.get('BI3')?.size || 0, 
+      exposures: allTypeGroupExposures.get('BI3') || 0 
     },
     earlyBI: { 
-      claims: typeGroupUniqueClaims.get('Early BI')?.size || typeGroupUniqueClaims.get('EBI')?.size || 0, 
-      exposures: typeGroupExposures.get('Early BI') || typeGroupExposures.get('EBI') || 0 
+      claims: allTypeGroupUniqueClaims.get('Early BI')?.size || allTypeGroupUniqueClaims.get('EBI')?.size || 0, 
+      exposures: allTypeGroupExposures.get('Early BI') || allTypeGroupExposures.get('EBI') || 0 
     },
-    flagged: 0,
-    newClaims: 0,
-    closed: 0,
+    flagged: allFlaggedCount,
+    newClaims: allNewClaimsCount,
+    closed: 0, // Would need separate data source
   };
   
   // Build Texas Rear End data (by city)
@@ -988,7 +1018,16 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     typeGroupSummaries,
     cp1Data,
     cp1ByTypeGroup: cp1ByTypeGroupArray,
-    totals: grandTotals,
+    // totals now uses ALL claims (not just BI/UM/UI) for accurate counts
+    totals: {
+      ...grandTotals,
+      // Override with ALL claims age breakdown for accurate totals
+      age365Plus: allAgeTotals.age365Plus,
+      age181To365: allAgeTotals.age181To365,
+      age61To180: allAgeTotals.age61To180,
+      ageUnder60: allAgeTotals.ageUnder60,
+      grandTotal: allUniqueClaimNumbers.size, // Unique claims, not exposures
+    },
     financials: {
       totalOpenReserves: financialTotals.totalOpenReserves,
       totalLowEval: financialTotals.totalLowEval,
