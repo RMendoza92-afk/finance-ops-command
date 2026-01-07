@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { useDecisionsPending } from "@/hooks/useDecisionsPending";
-import { useExportData } from "@/hooks/useExportData";
+import { useExportData, type ExportableData } from "@/hooks/useExportData";
 import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
-import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink, Download, BarChart3, PieChart, AlertCircle } from "lucide-react";
+import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, FileSpreadsheet, Wallet, Users, Target, Activity, ExternalLink, Download, BarChart3, PieChart, AlertCircle } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,10 +54,57 @@ const formatCurrency = (value: number) => {
 export function ExecutiveCommandDashboardWrapper() {
   const { data, loading, error } = useOpenExposureData();
   const { data: decisionsData } = useDecisionsPending();
-  const { generateCSuiteBriefing, generateCSuiteExcel } = useExportData();
+  const { generateCSuiteBriefing, generateCSuiteExcel, generatePDF, generateExcel } = useExportData();
   const { data: actuarialData } = useActuarialData(2026);
   const triangleData = useLossTriangleData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+
+  // Over-limit export payload (for the Over-Limit drawer)
+  const overLimitExportData: ExportableData = useMemo(() => {
+    const payments = actuarialData?.overLimitPayments || [];
+    const totalOverLimit = payments.reduce((s: number, p: any) => s + (p.overLimitAmount || 0), 0);
+    const totalPayments = payments.reduce((s: number, p: any) => s + (p.paymentAmount || 0), 0);
+
+    return {
+      title: 'OVER-LIMIT PAYMENTS REPORT',
+      subtitle: 'Executive Tab • Over-Limit Payments Analysis',
+      timestamp,
+      affectsManager: 'Claims + Litigation Leadership',
+      summary: {
+        'Claims Count': payments.length,
+        'Total Payments': totalPayments.toFixed(2),
+        'Total Over-Limit': totalOverLimit.toFixed(2),
+        'Avg Over-Limit': payments.length ? (totalOverLimit / payments.length).toFixed(2) : '0.00',
+      },
+      columns: ['Date', 'Claim #', 'State', 'Policy Limit', 'Payment', 'Over Limit'],
+      rows: payments.map((p: any) => [
+        p.paymentDate,
+        p.claimNumber,
+        p.state,
+        p.policyLimit,
+        p.paymentAmount,
+        p.overLimitAmount,
+      ]),
+    };
+  }, [actuarialData, timestamp]);
+
+  const handleOverLimitExportPDF = async () => {
+    try {
+      await generatePDF(overLimitExportData);
+      toast.success('Over-Limit PDF exported');
+    } catch {
+      toast.error('Failed to export Over-Limit PDF');
+    }
+  };
+
+  const handleOverLimitExportExcel = () => {
+    try {
+      generateExcel(overLimitExportData);
+      toast.success('Over-Limit Excel exported');
+    } catch {
+      toast.error('Failed to export Over-Limit Excel');
+    }
+  };
   
   const [showChat, setShowChat] = useState(false);
   const [showClaimsDrawer, setShowClaimsDrawer] = useState(false);
@@ -1307,13 +1354,26 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showOverLimitDrawer} onOpenChange={setShowOverLimitDrawer}>
         <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/20">
-                <AlertCircle className="h-5 w-5 text-destructive" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/20">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Over-Limit Payments Analysis</SheetTitle>
+                  <SheetDescription>Payments exceeding policy limits</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Over-Limit Payments Analysis</SheetTitle>
-                <SheetDescription>Payments exceeding policy limits</SheetDescription>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleOverLimitExportPDF} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleOverLimitExportExcel} className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Excel
+                </Button>
               </div>
             </div>
           </SheetHeader>
