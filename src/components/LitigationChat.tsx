@@ -40,6 +40,40 @@ interface ReportOption {
   disabled?: boolean;
 }
 
+// Executive Quick Insights - Showcase Questions
+const QUICK_INSIGHTS = [
+  {
+    id: "demand-analysis",
+    label: "💰 Demand vs Authority",
+    query: "Show me claims where plaintiff demand exceeds our settlement authority. What's the gap and what are the highest exposure cases?",
+    gradient: "from-amber-500 to-orange-600",
+  },
+  {
+    id: "reserve-adequacy",
+    label: "📊 Reserve Adequacy",
+    query: "Analyze reserve adequacy across the portfolio. Which claims have reserves that changed significantly from initial? Show the worst reserve deterioration cases.",
+    gradient: "from-red-500 to-pink-600",
+  },
+  {
+    id: "litigation-pipeline",
+    label: "⚖️ Litigation Pipeline",
+    query: "What's in active litigation? Break down by matter status, show cases with cause numbers, and identify any approaching trial dates.",
+    gradient: "from-blue-500 to-indigo-600",
+  },
+  {
+    id: "stalled-negotiations",
+    label: "🕐 Stalled Negotiations",
+    query: "Find claims where negotiation has stalled - show cases with more than 60 days since last negotiation. What's the total exposure at risk?",
+    gradient: "from-purple-500 to-violet-600",
+  },
+  {
+    id: "phase-exposure",
+    label: "🎯 Phase & Exposure",
+    query: "Break down the portfolio by evaluation phase and BI status. What's the exposure concentration by phase? Highlight pre-litigation opportunities.",
+    gradient: "from-emerald-500 to-teal-600",
+  },
+];
+
 const REPORT_CATEGORIES: Record<ReportCategory, { label: string; icon: React.ElementType; reports: ReportOption[] }> = {
   trending: {
     label: "Trending",
@@ -1172,6 +1206,29 @@ export function LitigationChat() {
                       <p className="font-bold text-[#f0f0f0] text-sm tracking-tight">Litigation Oracle</p>
                       <p className="text-[10px] text-[#8c8c8c]">Board-Ready Intelligence Reports</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Quick Insights - Executive Questions */}
+                <div className="bg-[#0c0c0c] rounded-lg p-3 border border-[#d4af37]/30">
+                  <p className="text-[10px] font-bold text-[#d4af37] mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3" />
+                    Quick Insights
+                  </p>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {QUICK_INSIGHTS.map((insight) => (
+                      <button
+                        key={insight.id}
+                        onClick={() => handleQuickAction(insight.query)}
+                        disabled={isLoading || !dataReady}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg bg-gradient-to-r ${insight.gradient} 
+                          text-white font-semibold text-xs shadow-lg hover:shadow-xl hover:scale-[1.02] 
+                          transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                          disabled:hover:scale-100 disabled:hover:shadow-lg`}
+                      >
+                        {insight.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 
