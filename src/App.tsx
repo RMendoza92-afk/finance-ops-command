@@ -12,22 +12,8 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// Protected route wrapper
+// Protected route wrapper - Auth disabled for internal tool
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
   return <>{children}</>;
 }
 
