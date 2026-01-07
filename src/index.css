@@ -499,7 +499,23 @@
   .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }
 
-/* Print Styles - Make Executive Dashboard print-friendly */
+/* NYSE Ticker Animation */
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
