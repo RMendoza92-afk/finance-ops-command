@@ -428,6 +428,43 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         </div>
       )}
 
+      {/* Claims Frequency Quick View */}
+      {latestFreq && (
+        <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-bold uppercase tracking-wide">Claims Frequency</h3>
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] ml-auto">
+              REAL
+            </Badge>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+              <div className="text-xs font-medium text-muted-foreground">Current Frequency</div>
+              <div className="text-lg font-bold">{(latestFreq.frequency * 100).toFixed(3)}%</div>
+              <div className="text-[10px] text-muted-foreground">
+                {latestFreq.month}/{latestFreq.year}
+              </div>
+            </div>
+            <div className="p-3 bg-muted/30 rounded-lg">
+              <div className="text-xs font-medium text-muted-foreground">Reported Claims</div>
+              <div className="text-lg font-bold">{latestFreq.reportedClaims?.toLocaleString() || '-'}</div>
+              <div className="text-[10px] text-muted-foreground">This period</div>
+            </div>
+            <div className="p-3 bg-muted/30 rounded-lg">
+              <div className="text-xs font-medium text-muted-foreground">In Force</div>
+              <div className="text-lg font-bold">{latestFreq.inForce?.toLocaleString() || '-'}</div>
+              <div className="text-[10px] text-muted-foreground">Policies</div>
+            </div>
+            <div className="p-3 bg-muted/30 rounded-lg">
+              <div className="text-xs font-medium text-muted-foreground">State</div>
+              <div className="text-lg font-bold">{latestFreq.state}</div>
+              <div className="text-[10px] text-muted-foreground">Aggregate</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* SECTION 2: MOCKED DATA - High-Level Financials (Amber indicators) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
