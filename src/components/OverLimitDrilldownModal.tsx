@@ -34,6 +34,17 @@ export function OverLimitDrilldownModal({
   const anomalyTotal = claims.filter(c => c.classification === 'Anomaly').reduce((sum, c) => sum + c.over_limit_amount, 0);
   const issueTotal = claims.filter(c => c.classification === 'Issue').reduce((sum, c) => sum + c.over_limit_amount, 0);
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const handleExportExcel = () => {
     try {
       const exportData = claims.map(c => ({
@@ -49,7 +60,7 @@ export function OverLimitDrilldownModal({
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
-      
+
       // Set column widths
       ws['!cols'] = [
         { wch: 18 }, // Claim Number
@@ -84,7 +95,13 @@ export function OverLimitDrilldownModal({
       XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
 
       const filename = `OverLimit_${state.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.xlsx`;
-      XLSX.writeFile(wb, filename);
+
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([out], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      downloadBlob(blob, filename);
+
       toast.success(`Exported ${claims.length} claims to ${filename}`);
     } catch (err) {
       console.error('Export failed:', err);
@@ -123,19 +140,19 @@ export function OverLimitDrilldownModal({
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      
+
       // Two-column summary layout
       const col1X = margin + 15;
       const col2X = pageWidth / 2;
-      
+
       doc.text(`Total Claims: ${claims.length}`, col1X, yPos);
       doc.text(`Total Over-Limit: ${formatCurrency(totalOverLimit)}`, col2X, yPos);
       yPos += 15;
-      
+
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(59, 130, 246); // Blue for Anomaly
       doc.text(`Anomaly: ${anomalyCount} claims (${formatCurrency(anomalyTotal)})`, col1X, yPos);
-      
+
       doc.setTextColor(234, 88, 12); // Orange for Issue
       doc.text(`Issue: ${issueCount} claims (${formatCurrency(issueTotal)})`, col2X, yPos);
       doc.setTextColor(0, 0, 0);
@@ -145,47 +162,47 @@ export function OverLimitDrilldownModal({
       const colWidths = [100, 70, 70, 140, 80, 90, 90];
       const headers = ['Claim #', 'Date', 'Class', 'Root Cause', 'Limit', 'Payment', 'Over Limit'];
       const startX = margin;
-      
+
       doc.setFillColor(51, 51, 51);
       doc.rect(startX, yPos, pageWidth - 2 * margin, 20, 'F');
-      
+
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
-      
+
       let xPos = startX + 5;
       headers.forEach((header, i) => {
         doc.text(header, xPos, yPos + 14);
         xPos += colWidths[i];
       });
-      
+
       doc.setTextColor(0, 0, 0);
       yPos += 25;
 
       // Table Rows
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      
+
       claims.forEach((claim, index) => {
         // Check if we need a new page
         if (yPos > pageHeight - 50) {
           doc.addPage();
           yPos = margin;
-          
+
           // Repeat header on new page
           doc.setFillColor(51, 51, 51);
           doc.rect(startX, yPos, pageWidth - 2 * margin, 20, 'F');
-          
+
           doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(255, 255, 255);
-          
+
           xPos = startX + 5;
           headers.forEach((header, i) => {
             doc.text(header, xPos, yPos + 14);
             xPos += colWidths[i];
           });
-          
+
           doc.setTextColor(0, 0, 0);
           yPos += 25;
           doc.setFontSize(8);
@@ -199,15 +216,15 @@ export function OverLimitDrilldownModal({
         }
 
         xPos = startX + 5;
-        
+
         // Claim Number
         doc.text(claim.claim_number || '', xPos, yPos + 10);
         xPos += colWidths[0];
-        
+
         // Date
         doc.text(claim.payment_date || '', xPos, yPos + 10);
         xPos += colWidths[1];
-        
+
         // Classification with color
         if (claim.classification === 'Anomaly') {
           doc.setTextColor(59, 130, 246);
@@ -217,26 +234,26 @@ export function OverLimitDrilldownModal({
         doc.text(claim.classification || 'Issue', xPos, yPos + 10);
         doc.setTextColor(0, 0, 0);
         xPos += colWidths[2];
-        
+
         // Root Cause (truncated)
         const rootCause = claim.root_cause || '-';
         const truncatedCause = rootCause.length > 22 ? rootCause.substring(0, 22) + '...' : rootCause;
         doc.text(truncatedCause, xPos, yPos + 10);
         xPos += colWidths[3];
-        
+
         // Policy Limit
         doc.text(formatCurrency(claim.policy_limit || 0), xPos, yPos + 10);
         xPos += colWidths[4];
-        
+
         // Payment
         doc.text(formatCurrency(claim.payment_amount), xPos, yPos + 10);
         xPos += colWidths[5];
-        
+
         // Over Limit (red)
         doc.setTextColor(220, 38, 38);
         doc.text(formatCurrency(claim.over_limit_amount), xPos, yPos + 10);
         doc.setTextColor(0, 0, 0);
-        
+
         yPos += 16;
       });
 
@@ -246,7 +263,9 @@ export function OverLimitDrilldownModal({
       doc.text(`Source: over_limit_payments database | ${claims.length} total claims`, margin, pageHeight - 20);
 
       const filename = `OverLimit_${state.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
-      doc.save(filename);
+      const blob = doc.output('blob');
+      downloadBlob(blob, filename);
+
       toast.success(`Exported ${claims.length} claims to ${filename}`);
     } catch (err) {
       console.error('PDF export failed:', err);

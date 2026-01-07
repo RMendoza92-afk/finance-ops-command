@@ -7,16 +7,29 @@ import { supabase } from '@/integrations/supabase/client';
 // Log download to database (fire and forget)
 const logDownload = async (reportType: string, reportName: string, fileFormat: string, rowCount?: number, metadata?: object) => {
   try {
-    await supabase.from('report_downloads').insert([{
-      report_type: reportType,
-      report_name: reportName,
-      file_format: fileFormat,
-      row_count: rowCount,
-      metadata: metadata as unknown as null
-    }]);
+    await supabase.from('report_downloads').insert([
+      {
+        report_type: reportType,
+        report_name: reportName,
+        file_format: fileFormat,
+        row_count: rowCount,
+        metadata: metadata as unknown as null,
+      },
+    ]);
   } catch (e) {
     console.warn('Failed to log download:', e);
   }
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 export interface ManagerTracking {
   name: string;
@@ -389,8 +402,8 @@ export function useExportData() {
 
     // Save
     const filename = sanitize(data.title).replace(/[^a-zA-Z0-9]/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.pdf';
-    doc.save(filename);
-    
+    const pdfBlob = doc.output('blob');
+    downloadBlob(pdfBlob, filename);
     // Log download (fire and forget)
     logDownload('pdf', data.title, 'pdf', data.rows.length, { hasCharts: !!data.charts, hasInsights: !!data.bulletInsights });
     
@@ -498,8 +511,11 @@ export function useExportData() {
     }
 
     const filename = data.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
-    XLSX.writeFile(wb, filename);
-    
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const xlsxBlob = new Blob([out], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    downloadBlob(xlsxBlob, filename);
     // Log download (fire and forget)
     const totalRows = data.rows.length + (data.rawClaimData?.reduce((sum, r) => sum + r.rows.length, 0) || 0);
     logDownload('excel', data.title, 'xlsx', totalRows, { hasRawData: !!data.rawClaimData });
