@@ -513,6 +513,19 @@
   animation: ticker-scroll 30s linear infinite;
 }
 
+/* Match mobile speed to desktop - use same visual velocity */
+@media (max-width: 768px) {
+  .animate-ticker {
+    animation: ticker-scroll 15s linear infinite;
+  }
+}
+
+@media (max-width: 480px) {
+  .animate-ticker {
+    animation: ticker-scroll 10s linear infinite;
+  }
+}
+
 .animate-ticker:hover {
   animation-play-state: paused;
 }
