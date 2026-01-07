@@ -81,6 +81,34 @@ export interface OverLimitPayment {
   paymentAmount: number;
   overLimitAmount: number;
   coverage: string;
+  issueType?: string;
+}
+
+export interface OverspendSummary {
+  state: string;
+  issueType: string;
+  totalAmount: number;
+  claimCount: number;
+  periodYear: number;
+}
+
+export interface AccidentYearDevelopment {
+  accidentYear: number;
+  developmentMonths: number;
+  asOfDate: string | null;
+  coverage: string;
+  category: string;
+  featureCount: number;
+  priorReserve: number;
+  claimPayment: number;
+  salvageSubro: number;
+  netClaimPayment: number;
+  alaePayment: number;
+  reserveBalance: number;
+  netChangeReserve: number;
+  incurred: number;
+  earnedPremium: number;
+  incurredPctPremium: number;
 }
 
 export interface ActuarialData {
@@ -91,6 +119,8 @@ export interface ActuarialData {
   claimsFrequency: ClaimsFrequency[];
   claimsPayments: ClaimsPayment[];
   overLimitPayments: OverLimitPayment[];
+  overspendSummary: OverspendSummary[];
+  accidentYearDev: AccidentYearDevelopment[];
 }
 
 export function useActuarialData(periodYear: number = 2026) {
@@ -102,6 +132,8 @@ export function useActuarialData(periodYear: number = 2026) {
     claimsFrequency: [],
     claimsPayments: [],
     overLimitPayments: [],
+    overspendSummary: [],
+    accidentYearDev: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +145,7 @@ export function useActuarialData(periodYear: number = 2026) {
 
       try {
         // Fetch all data in parallel
-        const [metricsRes, coverageRes, stateRes, lossDevRes, freqRes, paymentsRes, overLimitRes] = await Promise.all([
+        const [metricsRes, coverageRes, stateRes, lossDevRes, freqRes, paymentsRes, overLimitRes, overspendRes, ayDevRes] = await Promise.all([
           supabase
             .from("actuarial_metrics")
             .select("*")
@@ -150,6 +182,15 @@ export function useActuarialData(periodYear: number = 2026) {
             .from("over_limit_payments")
             .select("*")
             .order("over_limit_amount", { ascending: false }),
+          supabase
+            .from("overspend_summary")
+            .select("*")
+            .order("total_amount", { ascending: false }),
+          supabase
+            .from("accident_year_development")
+            .select("*")
+            .order("accident_year", { ascending: false })
+            .order("coverage", { ascending: true }),
         ]);
 
         if (metricsRes.error) throw new Error(metricsRes.error.message);
@@ -159,6 +200,8 @@ export function useActuarialData(periodYear: number = 2026) {
         if (freqRes.error) throw new Error(freqRes.error.message);
         if (paymentsRes.error) throw new Error(paymentsRes.error.message);
         if (overLimitRes.error) throw new Error(overLimitRes.error.message);
+        if (overspendRes.error) throw new Error(overspendRes.error.message);
+        if (ayDevRes.error) throw new Error(ayDevRes.error.message);
 
         // Transform metrics
         const metrics: ActuarialMetrics | null = metricsRes.data
@@ -249,9 +292,39 @@ export function useActuarialData(periodYear: number = 2026) {
           paymentAmount: Number(r.payment_amount) || 0,
           overLimitAmount: Number(r.over_limit_amount) || 0,
           coverage: r.coverage || 'BI',
+          issueType: r.issue_type,
         }));
 
-        setData({ metrics, coverageRates, stateRates, lossDevelopment, claimsFrequency, claimsPayments, overLimitPayments });
+        // Transform overspend summary
+        const overspendSummary: OverspendSummary[] = (overspendRes.data || []).map((r) => ({
+          state: r.state,
+          issueType: r.issue_type,
+          totalAmount: Number(r.total_amount) || 0,
+          claimCount: r.claim_count || 0,
+          periodYear: r.period_year,
+        }));
+
+        // Transform accident year development
+        const accidentYearDev: AccidentYearDevelopment[] = (ayDevRes.data || []).map((r) => ({
+          accidentYear: r.accident_year,
+          developmentMonths: r.development_months,
+          asOfDate: r.as_of_date,
+          coverage: r.coverage,
+          category: r.category,
+          featureCount: r.feature_count || 0,
+          priorReserve: Number(r.prior_reserve) || 0,
+          claimPayment: Number(r.claim_payment) || 0,
+          salvageSubro: Number(r.salvage_subro) || 0,
+          netClaimPayment: Number(r.net_claim_payment) || 0,
+          alaePayment: Number(r.alae_payment) || 0,
+          reserveBalance: Number(r.reserve_balance) || 0,
+          netChangeReserve: Number(r.net_change_reserve) || 0,
+          incurred: Number(r.incurred) || 0,
+          earnedPremium: Number(r.earned_premium) || 0,
+          incurredPctPremium: Number(r.incurred_pct_premium) || 0,
+        }));
+
+        setData({ metrics, coverageRates, stateRates, lossDevelopment, claimsFrequency, claimsPayments, overLimitPayments, overspendSummary, accidentYearDev });
       } catch (err) {
         console.error("Error fetching actuarial data:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch actuarial data");
