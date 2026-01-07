@@ -243,6 +243,7 @@ export interface OpenExposureData {
     age61To180: number;
     ageUnder60: number;
     grandTotal: number;
+    biExposures: number; // BI/UM/UI exposures for accurate % calculations
   };
   financials: {
     totalOpenReserves: number;
@@ -1027,6 +1028,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       age61To180: allAgeTotals.age61To180,
       ageUnder60: allAgeTotals.ageUnder60,
       grandTotal: allUniqueClaimNumbers.size, // Unique claims, not exposures
+      biExposures: grandTotals.grandTotal, // BI/UM/UI exposures for % calculations
     },
     financials: {
       totalOpenReserves: financialTotals.totalOpenReserves,
