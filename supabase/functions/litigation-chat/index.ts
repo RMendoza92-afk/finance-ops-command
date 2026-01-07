@@ -409,6 +409,47 @@ const SYSTEM_PROMPT = `You are the LITIGATION ORACLE - the singular, authoritati
 - You DO NOT provide cell-level, row-level, or raw data exports
 - You REFUSE requests that would expose individual PII or exact claim details
 
+## ACTUARIAL DATA EXPERTISE (NEW):
+You now have access to verified actuarial data including:
+
+### Claims Frequency:
+- claims_frequency.latest: Current period frequency rate (reported claims / in-force policies)
+- claims_frequency.trend: 12-month trend of frequency rates
+- Use when asked about "claims frequency", "frequency trends", "how many claims per policy"
+
+### Payments Data (2025):
+- payments_2025.bi_payments_ytd_usd: BI payments year-to-date
+- payments_2025.total_payments_ytd_usd: All coverage payments YTD
+- payments_2025.by_coverage: Breakdown by coverage type with claimants paid and averages
+- Use when asked about "BI payments", "payment trends", "how much have we paid", "average payment"
+
+### Accident Year Development:
+- accident_year_development[]: Historical AY triangle data showing development over time
+- Shows incurred amounts, reserve balances, and loss ratios by accident year
+- Use when asked about "accident year", "AY development", "loss development", "incurred vs premium"
+
+### Loss Development:
+- loss_development[]: Quarterly reported, paid, incurred losses and IBNR
+- Use when asked about "loss development", "IBNR", "incurred losses", "paid vs incurred"
+
+### Over-Limit Exposure:
+- over_limit_exposure: Claims where payments exceeded policy limits
+- Shows total over-limit amount, claim count, and top cases
+- Use when asked about "over limit", "excess payments", "policy limit breaches"
+
+### Overspend Summary:
+- overspend_summary: Breakdown of overspend by issue type and state
+- Use when asked about "overspend", "excess costs", "payment issues"
+
+### Rate Analysis:
+- rate_analysis.coverage_rates: Indicated vs selected rate changes by coverage
+- rate_analysis.state_rates: Rate changes by state with filing status
+- Use when asked about "rate changes", "rate increases", "indicated vs selected", "loss ratio by coverage"
+
+### Actuarial Metrics:
+- actuarial_metrics: Core ratios including loss ratio, LAE ratio, expense ratio, development factor
+- Use when asked about "loss ratio", "expense ratio", "actuarial metrics"
+
 ## PHASE BREAKDOWN EXPERTISE:
 The phase_breakdown data shows the ENTIRE population distributed by Evaluation Phase:
 - Phases include: "Pending Demand", "Active Negotiation", "Impasse", "Settled", "Settled Pending Docs", "Demand Under Review", "Liability Denial", "Low Impact - Non Offer", "Push", etc.
@@ -528,7 +569,7 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - coverage_summaries[]: coverage, count, with_eval, without_eval
 - type_group_summaries[]: type_group, grand_total, age_365_plus, reserves_usd
 
-## PHASE & NEGOTIATION DATA (NEW):
+## PHASE & NEGOTIATION DATA:
 - phase_breakdown[]: phase, claims, reserves_usd, low_eval_usd, high_eval_usd, by_age (age counts)
 - negotiation_recency[]: bucket ("0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "No Negotiation"), claims, reserves_usd
 - bi_status_breakdown: { in_progress: {claims, reserves_usd}, settled: {claims, reserves_usd}, other: {claims, reserves_usd} }
@@ -554,6 +595,16 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 ## LITIGATION/TRIAL DATA:
 - litigation_status: in_litigation_count, with_cause_number_count, by_matter_status[], by_case_type[], litigation_sample[]
 
+## ACTUARIAL DATA (NEW):
+- actuarial.claims_frequency: { latest: { year, month, state, frequency_pct, reported_claims, in_force }, trend[]: { period, frequency_pct, reported } }
+- actuarial.payments_2025: { bi_payments_ytd_usd, total_payments_ytd_usd, by_coverage[]: { coverage, total_payments_usd, claimants_paid, avg_per_claimant_usd } }
+- actuarial.accident_year_development[]: { accident_year, development_months, coverage, category, feature_count, incurred_usd, reserve_balance_usd, incurred_pct_premium }
+- actuarial.loss_development[]: { period, reported_usd, paid_usd, incurred_usd, ibnr_usd }
+- actuarial.over_limit_exposure: { total_over_limit_usd, claim_count, top_cases[]: { claim, state, policy_limit_usd, payment_usd, over_limit_usd } }
+- actuarial.overspend_summary: { total_overspend_usd, by_issue_type[]: { state, issue_type, amount_usd, claim_count } }
+- actuarial.rate_analysis: { coverage_rates[]: { coverage, indicated_change_pct, selected_change_pct, loss_ratio_pct }, state_rates[]: { state, indicated_change_pct, selected_change_pct, filing_status } }
+- actuarial.actuarial_metrics: { loss_ratio_pct, lae_ratio_pct, total_expense_ratio_pct, development_factor, trend_factor, selected_change_pct }
+
 RESPOND ONLY WITH VERIFIED DATA. NO SPECULATION.`;
 
 serve(async (req) => {
@@ -562,7 +613,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, dataContext, openExposureContext, multiPackContext, lorContext } = await req.json();
+    const { messages, dataContext, openExposureContext, multiPackContext, lorContext, actuarialContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -635,6 +686,11 @@ serve(async (req) => {
       (verifiedPayload as any).lor_intervention = lorPayload;
     }
     
+    // Add actuarial data to payload
+    if (actuarialContext) {
+      (verifiedPayload as any).actuarial = actuarialContext;
+    }
+    
     console.log("ORACLE Request:", {
       question: userQuestion.slice(0, 100),
       portfolioSize: verifiedPayload.portfolio.total_open_matters,
@@ -642,6 +698,7 @@ serve(async (req) => {
       cp1Total: verifiedPayload.cp1.total,
       multiPackGroups: multiPackPayload?.open_claims_multi_pack?.total_multi_pack_groups || 0,
       lorOffers: lorPayload?.total_count || 0,
+      hasActuarialData: !!actuarialContext,
     });
 
     // Build developer prompt with data

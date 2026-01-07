@@ -11,6 +11,7 @@ import { useLitigationData, LitigationMatter, ClosedMultiPackSummary } from "@/h
 import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { useLOROffers } from "@/hooks/useLOROffers";
+import { useActuarialData } from "@/hooks/useActuarialData";
 import { TrendComparisonCard, parseTrendData } from "@/components/TrendComparisonCard";
 import { DrilldownModal } from "@/components/DrilldownModal";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -264,6 +265,7 @@ export function LitigationChat() {
   const { data: openExposureData } = useOpenExposureData();
   const { offers: lorOffers, stats: lorStats } = useLOROffers();
   const { generatePDF, generateExcel } = useExportData();
+  const { data: actuarialData } = useActuarialData(2025);
 
   // Build a lookup map for quick claim resolution
   const claimLookup = useMemo(() => {
@@ -505,6 +507,123 @@ export function LitigationChat() {
       topGroups: closedMultiPackData.groups?.slice(0, 20) || [],
     };
   }, [closedMultiPackData]);
+
+  // Build actuarial data context for Oracle
+  const actuarialContext = useMemo(() => {
+    if (!actuarialData) return null;
+    
+    const { claimsFrequency, claimsPayments, accidentYearDev, lossDevelopment, overLimitPayments, overspendSummary, coverageRates, stateRates, metrics } = actuarialData;
+    
+    // Get latest frequency data
+    const latestFreq = claimsFrequency.length > 0 ? claimsFrequency[claimsFrequency.length - 1] : null;
+    
+    // BI payments for 2025
+    const biPayments2025 = claimsPayments
+      .filter(p => p.coverage === 'BI' && p.periodYear === 2025 && p.isYtd)
+      .reduce((sum, p) => sum + p.totalPayments, 0);
+    
+    // Total payments for 2025
+    const totalPayments2025 = claimsPayments
+      .filter(p => p.periodYear === 2025 && p.isYtd)
+      .reduce((sum, p) => sum + p.totalPayments, 0);
+    
+    // Get recent AY development
+    const recentAYDev = accidentYearDev.slice(0, 20);
+    
+    // Overspend summary
+    const totalOverspend = overspendSummary.reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    return {
+      claims_frequency: {
+        latest: latestFreq ? {
+          year: latestFreq.year,
+          month: latestFreq.month,
+          state: latestFreq.state,
+          frequency_pct: (latestFreq.frequency * 100).toFixed(3),
+          reported_claims: latestFreq.reportedClaims,
+          in_force: latestFreq.inForce,
+        } : null,
+        trend: claimsFrequency.slice(-12).map(f => ({
+          period: `${f.month}/${f.year}`,
+          frequency_pct: (f.frequency * 100).toFixed(3),
+          reported: f.reportedClaims,
+        })),
+      },
+      payments_2025: {
+        bi_payments_ytd_usd: biPayments2025,
+        total_payments_ytd_usd: totalPayments2025,
+        by_coverage: claimsPayments
+          .filter(p => p.periodYear === 2025 && p.isYtd)
+          .map(p => ({
+            coverage: p.coverage,
+            total_payments_usd: p.totalPayments,
+            claimants_paid: p.claimantsPaid,
+            avg_per_claimant_usd: p.avgPaidPerClaimant,
+          })),
+      },
+      accident_year_development: recentAYDev.map(ay => ({
+        accident_year: ay.accidentYear,
+        development_months: ay.developmentMonths,
+        coverage: ay.coverage,
+        category: ay.category,
+        feature_count: ay.featureCount,
+        incurred_usd: ay.incurred,
+        reserve_balance_usd: ay.reserveBalance,
+        incurred_pct_premium: (ay.incurredPctPremium * 100).toFixed(1),
+      })),
+      loss_development: lossDevelopment.map(ld => ({
+        period: `Q${ld.periodQuarter} ${ld.periodYear}`,
+        reported_usd: ld.reportedLosses,
+        paid_usd: ld.paidLosses,
+        incurred_usd: ld.incurredLosses,
+        ibnr_usd: ld.ibnr,
+      })),
+      over_limit_exposure: {
+        total_over_limit_usd: overLimitPayments.reduce((sum, o) => sum + o.overLimitAmount, 0),
+        claim_count: overLimitPayments.length,
+        top_cases: overLimitPayments.slice(0, 10).map(o => ({
+          claim: o.claimNumber,
+          state: o.state,
+          policy_limit_usd: o.policyLimit,
+          payment_usd: o.paymentAmount,
+          over_limit_usd: o.overLimitAmount,
+        })),
+      },
+      overspend_summary: {
+        total_overspend_usd: totalOverspend,
+        by_issue_type: overspendSummary.map(o => ({
+          state: o.state,
+          issue_type: o.issueType,
+          amount_usd: o.totalAmount,
+          claim_count: o.claimCount,
+        })),
+      },
+      rate_analysis: {
+        coverage_rates: coverageRates.map(c => ({
+          coverage: c.coverage,
+          indicated_change_pct: c.indicatedChange,
+          selected_change_pct: c.selectedChange,
+          loss_ratio_pct: c.lossRatio,
+          premium_volume_usd: c.premiumVolume,
+        })),
+        state_rates: stateRates.slice(0, 10).map(s => ({
+          state: s.state,
+          indicated_change_pct: s.indicatedChange,
+          selected_change_pct: s.selectedChange,
+          loss_ratio_pct: s.lossRatio,
+          filing_status: s.filingStatus,
+        })),
+      },
+      actuarial_metrics: metrics ? {
+        loss_ratio_pct: metrics.lossRatio,
+        lae_ratio_pct: metrics.laeRatio,
+        total_expense_ratio_pct: metrics.totalExpenseRatio,
+        development_factor: metrics.developmentFactor,
+        trend_factor: metrics.trendFactor,
+        selected_change_pct: metrics.selectedChange,
+      } : null,
+    };
+  }, [actuarialData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -1060,6 +1179,7 @@ export function LitigationChat() {
             offers: lorOffers,
             stats: lorStats,
           },
+          actuarialContext,
         }),
       });
       
