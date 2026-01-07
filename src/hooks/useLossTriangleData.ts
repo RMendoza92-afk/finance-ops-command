@@ -77,10 +77,15 @@ export function useLossTriangleData() {
           };
 
           const earnedPremium = getLatest("earned_premium");
-          const netPaidLoss = getLatest("net_paid_loss");
+          const grossPaid = getLatest("gross_paid");
+          const salvageSubro = getLatest("salvage_subro");
+          // True net paid = gross paid - salvage/subro recoveries
+          const netPaidLoss = grossPaid > 0 ? grossPaid - salvageSubro : getLatest("net_paid_loss");
           const claimReserves = getLatest("claim_reserves");
           const bulkIbnr = getLatest("bulk_ibnr");
           const ultimateIncurred = netPaidLoss + claimReserves + bulkIbnr;
+          // Calculate loss ratio from ultimate incurred / earned premium
+          const calculatedLossRatio = earnedPremium > 0 ? (ultimateIncurred / earnedPremium) * 100 : 0;
 
           return {
             accidentYear: ay,
@@ -89,11 +94,11 @@ export function useLossTriangleData() {
             netPaidLoss,
             claimReserves,
             bulkIbnr,
-            lossRatio: getLatest("loss_ratio"),
+            lossRatio: calculatedLossRatio || getLatest("loss_ratio"),
             reportedLossRatio: getLatest("reported_loss_ratio"),
-            grossPaid: getLatest("gross_paid"),
+            grossPaid,
             paidAlae: getLatest("paid_alae"),
-            salvageSubro: getLatest("salvage_subro"),
+            salvageSubro,
             dcceReserves: getLatest("dcce_reserves"),
             ultimateIncurred,
             developmentAge: getLatestDevMonth(),
