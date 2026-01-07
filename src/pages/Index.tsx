@@ -6,9 +6,10 @@ import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -19,6 +20,7 @@ import {
 
 const Index = () => {
   const { signOut, user } = useAuth();
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
     const savedPainData = localStorage.getItem('painLevelOverrides');
@@ -231,6 +233,15 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAlertDialogOpen(true)}
+              className="gap-2 h-8 sm:h-9"
+            >
+              <Send className="h-4 w-4" />
+              <span className="hidden sm:inline">Send Alert</span>
+            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -269,6 +280,15 @@ const Index = () => {
 
       {/* AI Chat Assistant */}
       <LitigationChat />
+
+      {/* Global Alert Dialog */}
+      <AlertSendDialog
+        open={alertDialogOpen}
+        onClose={() => setAlertDialogOpen(false)}
+        context={{
+          actionRequired: 'General Dashboard Alert'
+        }}
+      />
     </div>
   );
 };
