@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, FileSpreadsheet } from "lucide-react";
-import { SMSDialog } from "./SMSDialog";
+import { Send } from "lucide-react";
+import { AlertSendDialog } from "./AlertSendDialog";
 
 interface AggregatedMatter {
   id: string;
@@ -84,7 +84,7 @@ function RiskIndicator({ level }: { level: 'GREEN' | 'ORANGE' | 'RED' }) {
 }
 
 export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
-  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   
   if (!matter) return null;
 
@@ -247,18 +247,18 @@ export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
         <DialogFooter className="flex-shrink-0 border-t border-border pt-4 mt-4">
           <Button
             variant="outline"
-            onClick={() => setSmsDialogOpen(true)}
+            onClick={() => setAlertDialogOpen(true)}
             className="gap-2"
           >
-            <MessageSquare className="h-4 w-4" />
-            Send SMS Alert
+            <Send className="h-4 w-4" />
+            Send Alert
           </Button>
         </DialogFooter>
       </DialogContent>
       
-      <SMSDialog
-        open={smsDialogOpen}
-        onClose={() => setSmsDialogOpen(false)}
+      <AlertSendDialog
+        open={alertDialogOpen}
+        onClose={() => setAlertDialogOpen(false)}
         context={{
           matterId: matter.uniqueRecord,
           claimant: matter.claimant,

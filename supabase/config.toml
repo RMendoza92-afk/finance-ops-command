@@ -3,6 +3,12 @@ project_id = "aqfikrtvlpmoyedrzbzf"
 [functions.send-review-sms]
 verify_jwt = false
 
+[functions.send-alert-email]
+verify_jwt = false
+
+[functions.send-review-email]
+verify_jwt = false
+
 [functions.generate-directive-summary]
 verify_jwt = false
 
