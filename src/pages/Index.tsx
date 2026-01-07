@@ -231,17 +231,6 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden md:block text-xs text-muted-foreground">
-              {user?.email}
-            </span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleSignOut}
-              title="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
             <ThemeToggle />
           </div>
         </div>
