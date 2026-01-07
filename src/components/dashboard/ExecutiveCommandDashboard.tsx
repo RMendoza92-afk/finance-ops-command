@@ -102,13 +102,14 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
     { name: '<60', value: data.agedUnder60, color: 'hsl(var(--success))' },
   ];
 
-  // Calculate real metrics from claims payments
+  // Calculate real metrics from claims payments (2025 YTD only)
+  const currentYear = 2025;
   const biPaymentsYTD = claimsPayments
-    .filter(p => p.coverage === 'BI' && p.isYtd)
+    .filter(p => p.coverage === 'BI' && p.isYtd && p.periodYear === currentYear)
     .reduce((sum, p) => sum + p.totalPayments, 0);
   
   const totalPaymentsYTD = claimsPayments
-    .filter(p => p.isYtd)
+    .filter(p => p.isYtd && p.periodYear === currentYear && p.coverage === 'TOTAL')
     .reduce((sum, p) => sum + p.totalPayments, 0);
 
   // Calculate overspend totals
