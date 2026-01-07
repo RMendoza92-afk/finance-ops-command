@@ -84,6 +84,20 @@
   --sidebar-ring: 120 100% 50%;
   --table-header: 120 100% 5%;
   --terminal-mode: 1;
+  cursor: crosshair;
+}
+
+.dark * {
+  cursor: crosshair;
+}
+
+.dark button,
+.dark a,
+.dark [role="button"],
+.dark input,
+.dark select,
+.dark textarea {
+  cursor: crosshair;
 }
 
 @layer base {
