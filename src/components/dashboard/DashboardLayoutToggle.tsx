@@ -1,8 +1,8 @@
 import React from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LayoutGrid, Sparkles } from "lucide-react";
+import { LayoutGrid, Sparkles, Calculator } from "lucide-react";
 
-export type DashboardVersion = 'v1' | 'v2' | 'v3';
+export type DashboardVersion = 'v1' | 'v2' | 'v3' | 'v4';
 
 interface DashboardLayoutToggleProps {
   version: DashboardVersion;
@@ -41,6 +41,14 @@ export function DashboardLayoutToggle({ version, onVersionChange }: DashboardLay
         >
           <Sparkles className="h-3 w-3" />
           Executive
+        </ToggleGroupItem>
+        <ToggleGroupItem 
+          value="v4" 
+          aria-label="Actuarial view" 
+          className="text-xs px-3 py-1.5 h-7 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md flex items-center gap-1"
+        >
+          <Calculator className="h-3 w-3" />
+          Actuarial
         </ToggleGroupItem>
       </ToggleGroup>
     </div>

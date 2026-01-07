@@ -6,6 +6,7 @@ import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
 import { ExecutiveDashboardV3 } from "@/components/dashboard/ExecutiveDashboardV3";
+import { ActuarialDashboardV4 } from "@/components/dashboard/ActuarialDashboardV4";
 import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -2846,7 +2847,14 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         />
       )}
 
-      {/* Standard V1 Layout - EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
+      {dashboardVersion === 'v4' && data && (
+        <ActuarialDashboardV4
+          data={data}
+          onOpenChat={() => setShowChatFromV2V3(true)}
+          timestamp={data?.dataDate || timestamp}
+        />
+      )}
+
       {dashboardVersion === 'v1' && (
       <>
       <div id="executive-command-center" className="print-section bg-card rounded-xl border border-border shadow-xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
