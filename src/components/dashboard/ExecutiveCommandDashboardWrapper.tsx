@@ -298,7 +298,7 @@ export function ExecutiveCommandDashboardWrapper() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-muted/30 border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Claims</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Exposures</p>
                 <p className="text-3xl font-bold text-foreground mt-1">{totalOpenClaims.toLocaleString()}</p>
               </div>
               <div className="p-4 rounded-xl bg-muted/30 border">

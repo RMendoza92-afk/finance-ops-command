@@ -242,9 +242,10 @@ export interface OpenExposureData {
     age181To365: number;
     age61To180: number;
     ageUnder60: number;
-    grandTotal: number;
-    biExposures: number; // BI/UM/UI exposures for accurate % calculations
-    allExposures: number; // ALL exposures (all coverages) for total count
+    grandTotal: number; // ALL exposures (all coverages) - primary inventory count
+    uniqueClaims: number; // Unique claim numbers across all coverages
+    biExposures: number; // BI/UM/UI exposures (for BI financial % calculations)
+    allExposures: number; // Alias of grandTotal for clarity
   };
   financials: {
     totalOpenReserves: number;
@@ -1062,7 +1063,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     typeGroupSummaries,
     cp1Data,
     cp1ByTypeGroup: cp1ByTypeGroupArray,
-    // totals now uses ALL claims (not just BI/UM/UI) for accurate counts
+    // totals now uses ALL exposures (all coverages) for accurate inventory counts
     totals: {
       ...grandTotals,
       // Override with ALL claims age breakdown for accurate totals
@@ -1070,9 +1071,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       age181To365: allAgeTotals.age181To365,
       age61To180: allAgeTotals.age61To180,
       ageUnder60: allAgeTotals.ageUnder60,
-      grandTotal: allUniqueClaimNumbers.size, // Unique claims, not exposures
-      biExposures: grandTotals.grandTotal, // BI/UM/UI exposures for % calculations
-      allExposures: allExposuresCount, // ALL exposures (all coverages)
+      grandTotal: allExposuresCount, // ALL exposures (this is the 19.5k/19.7k number)
+      uniqueClaims: allUniqueClaimNumbers.size,
+      biExposures: grandTotals.grandTotal, // BI/UM/UI exposures
+      allExposures: allExposuresCount,
     },
     financials: {
       totalOpenReserves: financialTotals.totalOpenReserves,
@@ -1211,14 +1213,16 @@ export function useOpenExposureData() {
         
         const currentData = processRawClaims(parsed.data);
         
-        console.log('Processed data summary (BI/UM/UI only):', {
-          totalClaims: currentData.totals.grandTotal,
-          totalReserves: currentData.financials.totalOpenReserves,
-          totalLowEval: currentData.financials.totalLowEval,
-          totalHighEval: currentData.financials.totalHighEval,
+        console.log('Processed data summary:', {
+          totalExposuresAllCoverages: currentData.totals.grandTotal,
+          uniqueClaimsAllCoverages: currentData.totals.uniqueClaims,
+          biExposures: currentData.totals.biExposures,
+          totalReservesBI: currentData.financials.totalOpenReserves,
+          totalLowEvalBI: currentData.financials.totalLowEval,
+          totalHighEvalBI: currentData.financials.totalHighEval,
           cp1Rate: currentData.cp1Data.cp1Rate,
           cp1Claims: currentData.cp1Data.totals.yes,
-          typeGroups: currentData.typeGroupSummaries.slice(0, 5).map(t => `${t.typeGroup}: ${t.grandTotal}`),
+          typeGroupsBI: currentData.typeGroupSummaries.slice(0, 5).map(t => `${t.typeGroup}: ${t.grandTotal}`),
         });
         
         // Current snapshot date (from filename or hardcoded for now)
