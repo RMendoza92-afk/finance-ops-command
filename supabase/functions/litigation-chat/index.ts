@@ -221,6 +221,32 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       reserves_usd: t.reserves || 0,
     })),
     
+    // === PHASE BREAKDOWN - POPULATION BY EVALUATION PHASE ===
+    phase_breakdown: (exp.phaseBreakdown || []).map((p: any) => ({
+      phase: p.phase,
+      claims: p.claims || 0,
+      reserves_usd: p.reserves || 0,
+      low_eval_usd: p.lowEval || 0,
+      high_eval_usd: p.highEval || 0,
+      by_age: p.byAge || {},
+    })),
+    
+    // === NEGOTIATION RECENCY - DAYS SINCE LAST NEGOTIATION ===
+    negotiation_recency: (exp.negotiationRecency || []).map((n: any) => ({
+      bucket: n.bucket,
+      claims: n.claims || 0,
+      reserves_usd: n.reserves || 0,
+      low_eval_usd: n.lowEval || 0,
+      high_eval_usd: n.highEval || 0,
+    })),
+    
+    // === BI STATUS BREAKDOWN (In Progress vs Settled) ===
+    bi_status_breakdown: exp.biStatusBreakdown ? {
+      in_progress: { claims: exp.biStatusBreakdown.inProgress?.claims || 0, reserves_usd: exp.biStatusBreakdown.inProgress?.reserves || 0 },
+      settled: { claims: exp.biStatusBreakdown.settled?.claims || 0, reserves_usd: exp.biStatusBreakdown.settled?.reserves || 0 },
+      other: { claims: exp.biStatusBreakdown.other?.claims || 0, reserves_usd: exp.biStatusBreakdown.other?.reserves || 0 },
+    } : null,
+    
     // Top closures sample (anonymized identifiers allowed)
     top_closures_sample: (ctx.monthToDate?.closedMatters || []).slice(0, 15).map((m: any) => ({
       claim_id: m.claim,
@@ -242,6 +268,8 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
         low_eval_usd: c.lowEval || 0,
         high_eval_usd: c.highEval || 0,
         cp1_status: c.overallCP1,
+        evaluation_phase: c.evaluationPhase,
+        days_since_negotiation: c.daysSinceNegotiation,
       })),
       
     // No evaluation claims sample
@@ -255,6 +283,7 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
         days_open: c.days,
         reserves_usd: c.openReserves || 0,
         age_bucket: c.ageBucket,
+        evaluation_phase: c.evaluationPhase,
       })),
     
     // Claims without evaluation by category
@@ -265,6 +294,25 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       team: m.team,
       reserves_usd: m.reserves || 0,
     })) || [],
+    
+    // Claims by negotiation recency sample (for CSV export context)
+    negotiation_sample: (exp.rawClaims || [])
+      .filter((c: any) => c.daysSinceNegotiation !== null && c.daysSinceNegotiation <= 90)
+      .slice(0, 30)
+      .map((c: any) => ({
+        claim_id: c.claimNumber,
+        claimant: c.claimant,
+        coverage: c.coverage,
+        type_group: c.typeGroup,
+        evaluation_phase: c.evaluationPhase,
+        bi_status: c.biStatus,
+        days_open: c.days,
+        days_since_negotiation: c.daysSinceNegotiation,
+        negotiation_type: c.negotiationType,
+        reserves_usd: c.openReserves || 0,
+        low_eval_usd: c.lowEval || 0,
+        high_eval_usd: c.highEval || 0,
+      })),
     
     // Multi-pack claims data (claims sharing same incident/base claim number)
     multi_pack_claims: multiPackPayload,
@@ -281,6 +329,34 @@ const SYSTEM_PROMPT = `You are the LITIGATION ORACLE - the singular, authoritati
 - You DO NOT speculate, hedge, or qualify beyond the data
 - You DO NOT provide cell-level, row-level, or raw data exports
 - You REFUSE requests that would expose individual PII or exact claim details
+
+## PHASE BREAKDOWN EXPERTISE:
+The phase_breakdown data shows the ENTIRE population distributed by Evaluation Phase:
+- Phases include: "Pending Demand", "Active Negotiation", "Impasse", "Settled", "Settled Pending Docs", "Demand Under Review", "Liability Denial", "Low Impact - Non Offer", "Push", etc.
+- When asked "what % of claims are in X phase" or "population by phase", use phase_breakdown
+- Each phase includes: claims count, reserves, low/high eval, and breakdown by age bucket
+- Present as a table showing phase, claims, % of total, and reserves
+
+## NEGOTIATION RECENCY EXPERTISE:
+The negotiation_recency data shows claims by how recently they had negotiation activity:
+- Buckets: "0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "No Negotiation"
+- Use this when asked about "stale negotiations", "last X days since negotiation", "dormant files"
+- Each bucket includes: claims count, reserves, low/high eval
+- For "last 30 days negotiation" queries, use the "0-30 Days" bucket
+- negotiation_sample[] has claim-level details for the most recent negotiations
+
+## BI STATUS EXPERTISE:
+The bi_status_breakdown shows claims by BI Status (In Progress vs Settled vs Other):
+- in_progress: Active claims being worked
+- settled: Resolved claims pending documentation
+- other: Edge cases
+- Use this when asked about "in progress files" or "settled pending"
+
+## CSV EXPORT CAPABILITY:
+When users ask for CSV exports or downloadable data:
+- For "files in progress", provide the in_progress count and suggest they use the Export button on the dashboard
+- For "claims by phase", show the breakdown table and note CSV available via dashboard
+- Say: "For a full CSV export of [X claims], use the Export button on the Open Inventory dashboard. I can show you the aggregate breakdown here."
 
 ## MULTI-PACK CLAIMS EXPERTISE:
 Multi-pack claims are groups of claims that share the same incident/accident - identified by matching base claim numbers (first 11 characters). Example: claims 39-0000430132 and 39-0000431432 both start with "39-00004301" so they're a "2-pack".
@@ -312,7 +388,7 @@ LOR (Letter of Representation) Intervention is an early settlement program for T
 ## DATA RESTRICTIONS:
 - NEVER output individual claim rows, cells, or raw exports
 - NEVER provide exact claimant names, addresses, or contact info
-- REDIRECT export requests: "For raw data exports, double-click any dashboard card"
+- REDIRECT export requests: "For raw data exports, use the Export button on dashboard cards"
 - You MAY provide claim IDs in top-N samples for action tracking
 
 ## FORMAT STANDARDS:
@@ -344,10 +420,20 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - category_summaries[]: category, count, with_eval, without_eval, total_paid_usd
 - coverage_summaries[]: coverage, count, with_eval, without_eval
 - type_group_summaries[]: type_group, grand_total, age_365_plus, reserves_usd
+
+## PHASE & NEGOTIATION DATA (NEW):
+- phase_breakdown[]: phase, claims, reserves_usd, low_eval_usd, high_eval_usd, by_age (age counts)
+- negotiation_recency[]: bucket ("0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "No Negotiation"), claims, reserves_usd
+- bi_status_breakdown: { in_progress: {claims, reserves_usd}, settled: {claims, reserves_usd}, other: {claims, reserves_usd} }
+- negotiation_sample[]: claim_id, claimant, days_since_negotiation, negotiation_type, evaluation_phase, bi_status (for recent negotiations)
+
+## CP1 & EXPOSURE DATA:
 - cp1_by_coverage[]: coverage, total, yes, cp1_rate_pct
 - financials_by_age[]: age_bucket, claims, open_reserves_usd, low_eval_usd, high_eval_usd
-- top_closures_sample[]: claim_id, amount_paid_usd, team
-- high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status
+- high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status, evaluation_phase, days_since_negotiation
+- no_eval_sample[]: claim_id, coverage, evaluation_phase
+
+## MULTI-PACK & LOR DATA:
 - multi_pack_claims.open_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - multi_pack_claims.closed_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - lor_intervention: pending_count, accepted_count, rejected_count, expired_count, total_offered_usd, offers[]
