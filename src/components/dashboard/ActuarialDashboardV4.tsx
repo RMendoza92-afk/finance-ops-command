@@ -256,6 +256,115 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
         </Button>
       </div>
 
+      {/* Data Source Legend */}
+      <Card className="bg-muted/30 border-dashed">
+        <CardContent className="py-3">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <span className="font-medium text-muted-foreground">Data Sources:</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span>Real Data (Uploaded)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+              <span>Mocked / Sample Data</span>
+            </div>
+            <div className="ml-auto text-muted-foreground italic">
+              Claims Payments, Frequency, Over-Limit, AY Development = Real • Actuarial Metrics, Rates, High-Level Financials = Mocked
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* High-Level Company Financials (MOCKED) */}
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-amber-600" />
+                High-Level Financials
+              </CardTitle>
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
+                MOCKED - Q2 2024
+              </Badge>
+            </div>
+          </div>
+          <CardDescription>
+            Company-level financial summary. <span className="text-amber-600 font-medium">Replace with actual data when available.</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-bold">Metric</TableHead>
+                  <TableHead className="text-right">VISION</TableHead>
+                  <TableHead className="text-right">LCIC</TableHead>
+                  <TableHead className="text-right">YAIC</TableHead>
+                  <TableHead className="text-right">LIC</TableHead>
+                  <TableHead className="text-right font-bold">Totals</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Gross Written Premium</TableCell>
+                  <TableCell className="text-right">{formatCurrency(31250320)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(211059611)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(56174060)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(521185190)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatCurrency(819669180)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Surplus 6-30-24</TableCell>
+                  <TableCell className="text-right">{formatCurrency(16957403)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(42657450)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(15890304)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(166336418)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatCurrency(166336419)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Net Income (Loss)</TableCell>
+                  <TableCell className="text-right text-emerald-600">{formatCurrency(424495)}</TableCell>
+                  <TableCell className="text-right text-destructive">({formatCurrency(548806)})</TableCell>
+                  <TableCell className="text-right text-destructive">({formatCurrency(2278026)})</TableCell>
+                  <TableCell className="text-right text-destructive">({formatCurrency(9720758)})</TableCell>
+                  <TableCell className="text-right font-bold text-destructive">({formatCurrency(12123095)})</TableCell>
+                </TableRow>
+                <TableRow className="border-t-2">
+                  <TableCell className="font-medium">Premium to Surplus Ratio</TableCell>
+                  <TableCell className="text-right">184%</TableCell>
+                  <TableCell className="text-right text-amber-600">495%</TableCell>
+                  <TableCell className="text-right">354%</TableCell>
+                  <TableCell className="text-right">313%</TableCell>
+                  <TableCell className="text-right font-bold text-amber-600">493%</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">RBC Authorized Control</TableCell>
+                  <TableCell className="text-right">{formatCurrency(2232486)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(13642422)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(5243168)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(62224387)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatCurrency(62224387)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">RBC Ratio</TableCell>
+                  <TableCell className="text-right text-emerald-600">760%</TableCell>
+                  <TableCell className="text-right">313%</TableCell>
+                  <TableCell className="text-right">303%</TableCell>
+                  <TableCell className="text-right">267%</TableCell>
+                  <TableCell className="text-right font-bold">267%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
+            <strong>Data Needed:</strong> Q3-Q4 2024 financials, 2025 YTD figures, and updated RBC calculations
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Primary KPIs - Loss & LAE */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
