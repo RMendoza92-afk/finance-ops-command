@@ -5,10 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle,
-  CheckCircle2, Target, BarChart3, PieChart as PieChartIcon,
+  CheckCircle2, BarChart3, PieChart as PieChartIcon,
   ArrowUpRight, ArrowDownRight, Activity, Zap, Shield, Flag,
-  MessageSquare, Database, Calculator, Percent, FileText,
-  Building2, Info, Wallet
+  Database, Wallet
 } from "lucide-react";
 import {
   Table,
@@ -466,165 +465,94 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* SECTION 2: MOCKED DATA - High-Level Financials (Amber indicators) */}
+      {/* SECTION 2: State Claims Heat Map */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       
       <div className="flex items-center gap-2 pt-4 border-t mt-4">
-        <div className="w-3 h-3 rounded-full bg-amber-500" />
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Company Financials</h3>
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
-          MOCKED - {COMPANY_FINANCIALS.period}
+        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Claims Frequency Heat Map</h3>
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
+          REAL DATA
         </Badge>
-        <Info className="h-4 w-4 text-amber-500 ml-1" />
       </div>
 
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-gradient-to-br from-amber-500/10 to-transparent rounded-xl border border-amber-500/30 p-4">
-          <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Gross Written Premium</div>
-          <p className="text-xl font-bold text-foreground">{formatCurrency(COMPANY_FINANCIALS.totals.gwp)}</p>
-          <p className="text-[10px] text-muted-foreground">All entities</p>
-        </div>
-        <div className="bg-card rounded-xl border border-amber-500/20 p-4">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Surplus</div>
-          <p className="text-xl font-bold text-foreground">{formatCurrency(COMPANY_FINANCIALS.totals.surplus)}</p>
-          <p className="text-[10px] text-muted-foreground">6-30-24</p>
-        </div>
-        <div className="bg-card rounded-xl border border-amber-500/20 p-4">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Net Income</div>
-          <p className="text-xl font-bold text-destructive">({formatCurrency(Math.abs(COMPANY_FINANCIALS.totals.netIncome))})</p>
-          <p className="text-[10px] text-muted-foreground">YTD Loss</p>
-        </div>
-        <div className="bg-card rounded-xl border border-amber-500/20 p-4">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Premium/Surplus</div>
-          <p className="text-xl font-bold text-amber-600">{COMPANY_FINANCIALS.totals.ptsRatio}%</p>
-          <p className="text-[10px] text-muted-foreground">Target: &lt;300%</p>
-        </div>
-        <div className="bg-card rounded-xl border border-amber-500/20 p-4">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">RBC Ratio</div>
-          <p className="text-xl font-bold text-foreground">{COMPANY_FINANCIALS.totals.rbcRatio}%</p>
-          <p className="text-[10px] text-muted-foreground">Min: 200%</p>
-        </div>
-      </div>
+      {/* State Claims Frequency Heat Map */}
+      {claimsFrequency.length > 0 && (
+        <Card className="border-emerald-500/20">
+          <CardHeader className="py-3">
+            <CardDescription>Claims Frequency by State - 2025 YTD Average</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              // Calculate 2025 average frequency by state
+              const stateFreqs = claimsFrequency
+                .filter(f => f.year === 2025 && f.state !== 'Combined')
+                .reduce((acc, f) => {
+                  if (!acc[f.state]) {
+                    acc[f.state] = { total: 0, count: 0 };
+                  }
+                  acc[f.state].total += f.frequency;
+                  acc[f.state].count += 1;
+                  return acc;
+                }, {} as Record<string, { total: number; count: number }>);
 
-      {/* Entity Breakdown Table */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardHeader className="py-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-amber-600" />
-              Entity Breakdown
-            </CardTitle>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowFinancialDetails(!showFinancialDetails)}
-              className="h-7 text-xs"
-            >
-              {showFinancialDetails ? 'Hide' : 'Show'} Details
-            </Button>
-          </div>
-        </CardHeader>
-        {showFinancialDetails && (
-          <CardContent className="pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Entity</TableHead>
-                  <TableHead className="text-right">GWP</TableHead>
-                  <TableHead className="text-right">Surplus</TableHead>
-                  <TableHead className="text-right">Net Income</TableHead>
-                  <TableHead className="text-right">P/S Ratio</TableHead>
-                  <TableHead className="text-right">RBC</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {COMPANY_FINANCIALS.companies.map(co => (
-                  <TableRow key={co.name}>
-                    <TableCell className="font-medium">{co.name}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(co.gwp)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(co.surplus)}</TableCell>
-                    <TableCell className={`text-right ${co.netIncome < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                      {co.netIncome < 0 ? `(${formatCurrency(Math.abs(co.netIncome))})` : formatCurrency(co.netIncome)}
-                    </TableCell>
-                    <TableCell className={`text-right ${co.ptsRatio > 400 ? 'text-amber-600' : ''}`}>
-                      {co.ptsRatio}%
-                    </TableCell>
-                    <TableCell className={`text-right ${co.rbcRatio < 300 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {co.rbcRatio}%
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="font-bold border-t-2">
-                  <TableCell>TOTALS</TableCell>
-                  <TableCell className="text-right">{formatCurrency(COMPANY_FINANCIALS.totals.gwp)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(COMPANY_FINANCIALS.totals.surplus)}</TableCell>
-                  <TableCell className="text-right text-destructive">
-                    ({formatCurrency(Math.abs(COMPANY_FINANCIALS.totals.netIncome))})
-                  </TableCell>
-                  <TableCell className="text-right text-amber-600">{COMPANY_FINANCIALS.totals.ptsRatio}%</TableCell>
-                  <TableCell className="text-right">{COMPANY_FINANCIALS.totals.rbcRatio}%</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-            <div className="mt-3 p-2 bg-amber-500/10 rounded border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-              <strong>Data Needed:</strong> Q3-Q4 2024 financials, 2025 YTD figures, and updated RBC calculations
+              const stateData = Object.entries(stateFreqs)
+                .map(([state, data]) => ({
+                  state,
+                  avgFreq: data.total / data.count,
+                }))
+                .sort((a, b) => b.avgFreq - a.avgFreq);
+
+              const maxFreq = Math.max(...stateData.map(s => s.avgFreq));
+              const minFreq = Math.min(...stateData.map(s => s.avgFreq));
+
+              const getHeatColor = (freq: number) => {
+                const normalized = maxFreq === minFreq ? 0.5 : (freq - minFreq) / (maxFreq - minFreq);
+                if (normalized > 0.75) return 'bg-red-500/80 text-white';
+                if (normalized > 0.5) return 'bg-orange-500/70 text-white';
+                if (normalized > 0.25) return 'bg-amber-500/60 text-foreground';
+                return 'bg-emerald-500/50 text-foreground';
+              };
+
+              return (
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                  {stateData.map(({ state, avgFreq }) => (
+                    <div
+                      key={state}
+                      className={`p-3 rounded-lg text-center transition-all hover:scale-105 cursor-pointer ${getHeatColor(avgFreq)}`}
+                      onClick={() => onDrilldown(`frequency-${state}`)}
+                    >
+                      <div className="text-xs font-bold uppercase">{state}</div>
+                      <div className="text-lg font-bold">{(avgFreq * 100).toFixed(2)}%</div>
+                      <div className="text-[10px] opacity-80">avg freq</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+            
+            {/* Heat Map Legend */}
+            <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-emerald-500/50" />
+                <span className="text-xs text-muted-foreground">Low Risk</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-amber-500/60" />
+                <span className="text-xs text-muted-foreground">Medium</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-orange-500/70" />
+                <span className="text-xs text-muted-foreground">Elevated</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-500/80" />
+                <span className="text-xs text-muted-foreground">High Risk</span>
+              </div>
             </div>
           </CardContent>
-        )}
-      </Card>
-
-      {/* Mocked Actuarial Metrics */}
-      {metrics && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/20 text-center">
-            <div className="text-[10px] text-amber-600 uppercase">Loss Ratio</div>
-            <div className="text-lg font-bold">{formatPercent(metrics.lossRatio)}</div>
-            <div className="text-[10px] text-muted-foreground">Target: {formatPercent(metrics.targetLossRatio)}</div>
-          </div>
-          <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/20 text-center">
-            <div className="text-[10px] text-amber-600 uppercase">Expense Ratio</div>
-            <div className="text-lg font-bold">{formatPercent(metrics.totalExpenseRatio)}</div>
-          </div>
-          <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/20 text-center">
-            <div className="text-[10px] text-amber-600 uppercase">Combined Ratio</div>
-            <div className="text-lg font-bold">{((metrics.lossRatio + metrics.totalExpenseRatio) * 100).toFixed(1)}%</div>
-          </div>
-          <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/20 text-center">
-            <div className="text-[10px] text-amber-600 uppercase">Dev Factor</div>
-            <div className="text-lg font-bold">{metrics.developmentFactor.toFixed(3)}</div>
-          </div>
-          <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/20 text-center">
-            <div className="text-[10px] text-amber-600 uppercase">Credibility</div>
-            <div className="text-lg font-bold">{(metrics.credibility * 100).toFixed(0)}%</div>
-          </div>
-        </div>
+        </Card>
       )}
-
-      {/* Bottom Quick Actions */}
-      <div className="grid grid-cols-3 gap-3 pt-2">
-        <button 
-          onClick={onOpenChat}
-          className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30 rounded-xl border border-purple-500/30 transition-all"
-        >
-          <Target className="h-4 w-4 text-purple-500" />
-          <span className="text-sm font-semibold text-foreground">AI Insights</span>
-        </button>
-        <button 
-          onClick={() => onDrilldown('litigation')}
-          className="flex items-center justify-center gap-2 p-3 bg-card hover:bg-muted rounded-xl border transition-all"
-        >
-          <Activity className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">Litigation ({data.litCount})</span>
-        </button>
-        <button 
-          onClick={() => onDrilldown('export')}
-          className="flex items-center justify-center gap-2 p-3 bg-card hover:bg-muted rounded-xl border transition-all"
-        >
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">Export Report</span>
-        </button>
-      </div>
     </div>
   );
 }
