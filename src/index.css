@@ -194,9 +194,9 @@
       0 0 50px -10px hsl(var(--hud-red) / 0.4);
   }
 
-  /* HUD Card - Primary interactive element */
+  /* HUD Card - Primary interactive element with corner brackets */
   .hud-card {
-    @apply relative overflow-hidden transition-all duration-300 rounded-xl;
+    @apply relative overflow-visible transition-all duration-300 rounded-xl;
     background: linear-gradient(
       135deg, 
       hsl(var(--card)) 0%, 
@@ -206,6 +206,7 @@
     border: 1px solid hsl(var(--arc-reactor) / 0.2);
   }
 
+  /* Top glow bar */
   .hud-card::before {
     content: '';
     @apply absolute top-0 left-0 w-full h-0.5;
@@ -219,14 +220,39 @@
     opacity: 0.6;
   }
 
+  /* Animated scan line */
   .hud-card::after {
     content: '';
-    @apply absolute bottom-0 right-0 w-16 h-16;
-    background: radial-gradient(
-      circle at 100% 100%,
-      hsl(var(--arc-reactor) / 0.1) 0%,
-      transparent 70%
+    @apply absolute left-0 w-full h-8 pointer-events-none;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      hsl(var(--arc-reactor) / 0.15) 50%,
+      transparent 100%
     );
+    animation: card-scan 4s ease-in-out infinite;
+    opacity: 0;
+  }
+
+  @keyframes card-scan {
+    0% {
+      top: -32px;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      top: calc(100% + 32px);
+      opacity: 0;
+    }
+  }
+
+  .hud-card:hover::after {
+    animation-duration: 2s;
   }
 
   .hud-card:hover {
@@ -236,6 +262,48 @@
       0 0 0 1px hsl(var(--arc-reactor) / 0.3),
       0 10px 40px -10px hsl(var(--arc-reactor) / 0.3),
       0 20px 60px -20px hsl(var(--arc-reactor) / 0.2);
+  }
+
+  /* Corner brackets wrapper - add inside hud-card */
+  .hud-corners {
+    @apply absolute inset-0 pointer-events-none;
+  }
+
+  .hud-corners::before,
+  .hud-corners::after,
+  .hud-corners .corner-bl,
+  .hud-corners .corner-br {
+    content: '';
+    @apply absolute w-5 h-5;
+    border-color: hsl(var(--arc-reactor) / 0.6);
+    transition: all 0.3s ease;
+  }
+
+  .hud-corners::before {
+    @apply top-1 left-1 border-l-2 border-t-2 rounded-tl;
+  }
+
+  .hud-corners::after {
+    @apply top-1 right-1 border-r-2 border-t-2 rounded-tr;
+  }
+
+  .hud-corners .corner-bl {
+    @apply bottom-1 left-1 border-l-2 border-b-2 rounded-bl;
+    border-color: hsl(var(--arc-reactor) / 0.6);
+  }
+
+  .hud-corners .corner-br {
+    @apply bottom-1 right-1 border-r-2 border-b-2 rounded-br;
+    border-color: hsl(var(--arc-reactor) / 0.6);
+  }
+
+  .hud-card:hover .hud-corners::before,
+  .hud-card:hover .hud-corners::after,
+  .hud-card:hover .hud-corners .corner-bl,
+  .hud-card:hover .hud-corners .corner-br {
+    @apply w-7 h-7;
+    border-color: hsl(var(--arc-reactor));
+    filter: drop-shadow(0 0 4px hsl(var(--arc-reactor) / 0.8));
   }
 
   /* HUD Section divider */
