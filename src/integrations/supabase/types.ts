@@ -557,6 +557,36 @@ export type Database = {
         }
         Relationships: []
       }
+      loss_development_triangles: {
+        Row: {
+          accident_year: number
+          amount: number | null
+          created_at: string
+          development_months: number
+          id: string
+          metric_type: string
+          updated_at: string
+        }
+        Insert: {
+          accident_year: number
+          amount?: number | null
+          created_at?: string
+          development_months: number
+          id?: string
+          metric_type: string
+          updated_at?: string
+        }
+        Update: {
+          accident_year?: number
+          amount?: number | null
+          created_at?: string
+          development_months?: number
+          id?: string
+          metric_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       open_exposure: {
         Row: {
           created_at: string
