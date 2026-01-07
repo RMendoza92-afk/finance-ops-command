@@ -62,12 +62,35 @@ export interface ClaimsFrequency {
   frequency: number;
 }
 
+export interface ClaimsPayment {
+  coverage: string;
+  periodYear: number;
+  periodMonth: number | null;
+  isYtd: boolean;
+  totalPayments: number;
+  claimantsPaid: number;
+  avgPaidPerClaimant: number;
+}
+
+export interface OverLimitPayment {
+  id: string;
+  paymentDate: string;
+  claimNumber: string;
+  state: string;
+  policyLimit: number;
+  paymentAmount: number;
+  overLimitAmount: number;
+  coverage: string;
+}
+
 export interface ActuarialData {
   metrics: ActuarialMetrics | null;
   coverageRates: CoverageRateChange[];
   stateRates: StateRateChange[];
   lossDevelopment: LossDevelopment[];
   claimsFrequency: ClaimsFrequency[];
+  claimsPayments: ClaimsPayment[];
+  overLimitPayments: OverLimitPayment[];
 }
 
 export function useActuarialData(periodYear: number = 2026) {
@@ -77,6 +100,8 @@ export function useActuarialData(periodYear: number = 2026) {
     stateRates: [],
     lossDevelopment: [],
     claimsFrequency: [],
+    claimsPayments: [],
+    overLimitPayments: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +113,7 @@ export function useActuarialData(periodYear: number = 2026) {
 
       try {
         // Fetch all data in parallel
-        const [metricsRes, coverageRes, stateRes, lossDevRes, freqRes] = await Promise.all([
+        const [metricsRes, coverageRes, stateRes, lossDevRes, freqRes, paymentsRes, overLimitRes] = await Promise.all([
           supabase
             .from("actuarial_metrics")
             .select("*")
@@ -116,6 +141,15 @@ export function useActuarialData(periodYear: number = 2026) {
             .select("*")
             .order("year", { ascending: true })
             .order("month", { ascending: true }),
+          supabase
+            .from("claims_payments")
+            .select("*")
+            .order("period_year", { ascending: true })
+            .order("period_month", { ascending: true }),
+          supabase
+            .from("over_limit_payments")
+            .select("*")
+            .order("over_limit_amount", { ascending: false }),
         ]);
 
         if (metricsRes.error) throw new Error(metricsRes.error.message);
@@ -123,6 +157,8 @@ export function useActuarialData(periodYear: number = 2026) {
         if (stateRes.error) throw new Error(stateRes.error.message);
         if (lossDevRes.error) throw new Error(lossDevRes.error.message);
         if (freqRes.error) throw new Error(freqRes.error.message);
+        if (paymentsRes.error) throw new Error(paymentsRes.error.message);
+        if (overLimitRes.error) throw new Error(overLimitRes.error.message);
 
         // Transform metrics
         const metrics: ActuarialMetrics | null = metricsRes.data
@@ -192,7 +228,30 @@ export function useActuarialData(periodYear: number = 2026) {
           frequency: Number(r.frequency) || 0,
         }));
 
-        setData({ metrics, coverageRates, stateRates, lossDevelopment, claimsFrequency });
+        // Transform claims payments
+        const claimsPayments: ClaimsPayment[] = (paymentsRes.data || []).map((r) => ({
+          coverage: r.coverage,
+          periodYear: r.period_year,
+          periodMonth: r.period_month,
+          isYtd: r.is_ytd,
+          totalPayments: Number(r.total_payments) || 0,
+          claimantsPaid: r.claimants_paid || 0,
+          avgPaidPerClaimant: Number(r.avg_paid_per_claimant) || 0,
+        }));
+
+        // Transform over limit payments
+        const overLimitPayments: OverLimitPayment[] = (overLimitRes.data || []).map((r) => ({
+          id: r.id,
+          paymentDate: r.payment_date,
+          claimNumber: r.claim_number,
+          state: r.state,
+          policyLimit: Number(r.policy_limit) || 0,
+          paymentAmount: Number(r.payment_amount) || 0,
+          overLimitAmount: Number(r.over_limit_amount) || 0,
+          coverage: r.coverage || 'BI',
+        }));
+
+        setData({ metrics, coverageRates, stateRates, lossDevelopment, claimsFrequency, claimsPayments, overLimitPayments });
       } catch (err) {
         console.error("Error fetching actuarial data:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch actuarial data");

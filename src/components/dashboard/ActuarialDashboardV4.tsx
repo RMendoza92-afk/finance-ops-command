@@ -70,7 +70,10 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
   const [showStateDetails, setShowStateDetails] = useState(false);
   const [showCoverageDetails, setShowCoverageDetails] = useState(false);
   const [showFrequencyDetails, setShowFrequencyDetails] = useState(false);
+  const [showPaymentsDetails, setShowPaymentsDetails] = useState(false);
+  const [showOverLimitDetails, setShowOverLimitDetails] = useState(false);
   const [selectedFreqState, setSelectedFreqState] = useState<string>("Combined");
+  const [selectedPaymentCoverage, setSelectedPaymentCoverage] = useState<string>("BI");
   
   // Fetch actuarial data from database
   const { data: actuarialData, loading, error } = useActuarialData(2026);
@@ -80,6 +83,8 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
   const stateRates = actuarialData.stateRates;
   const lossDevelopment = actuarialData.lossDevelopment;
   const claimsFrequency = actuarialData.claimsFrequency;
+  const claimsPayments = actuarialData.claimsPayments;
+  const overLimitPayments = actuarialData.overLimitPayments;
 
   // Transform loss development for chart
   const lossDevChartData = lossDevelopment.map((ld) => ({
@@ -782,6 +787,272 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
                     })}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Claims Payments by Coverage */}
+      {claimsPayments.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  Claims Payments by Coverage
+                </CardTitle>
+                <CardDescription>Total All States - YTD & Monthly Trends (2021-2025)</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedPaymentCoverage}
+                  onChange={(e) => setSelectedPaymentCoverage(e.target.value)}
+                  className="text-sm border rounded-md px-2 py-1 bg-background"
+                >
+                  {['BI', 'PD', 'UM', 'CL', 'OC', 'UI', 'MP', 'PP', 'UP', 'RN', 'TL', 'DW', 'TOTAL'].map(cov => (
+                    <option key={cov} value={cov}>{cov}</option>
+                  ))}
+                </select>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowPaymentsDetails(!showPaymentsDetails)}
+                >
+                  {showPaymentsDetails ? "Hide Table" : "Show Table"}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* YTD Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+              {[2021, 2022, 2023, 2024, 2025].map(year => {
+                const ytdData = claimsPayments.find(p => 
+                  p.coverage === selectedPaymentCoverage && 
+                  p.periodYear === year && 
+                  p.isYtd
+                );
+                const prevYtd = claimsPayments.find(p => 
+                  p.coverage === selectedPaymentCoverage && 
+                  p.periodYear === year - 1 && 
+                  p.isYtd
+                );
+                const yoyChange = prevYtd && prevYtd.totalPayments > 0
+                  ? ((ytdData?.totalPayments || 0) - prevYtd.totalPayments) / prevYtd.totalPayments * 100
+                  : 0;
+                
+                return ytdData ? (
+                  <div 
+                    key={year}
+                    className={`p-3 border rounded-lg ${
+                      year === 2025 ? 'bg-primary/10 border-primary' : 'bg-muted/30'
+                    }`}
+                  >
+                    <div className="text-xs font-medium text-muted-foreground">{year} YTD</div>
+                    <div className="text-lg font-bold">{formatCurrency(ytdData.totalPayments)}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1">
+                      {yoyChange > 0 ? (
+                        <TrendingUp className="h-3 w-3 text-amber-500" />
+                      ) : yoyChange < 0 ? (
+                        <TrendingDown className="h-3 w-3 text-emerald-500" />
+                      ) : null}
+                      <span className={yoyChange > 0 ? "text-amber-600" : "text-emerald-600"}>
+                        {yoyChange !== 0 ? `${yoyChange >= 0 ? '+' : ''}${yoyChange.toFixed(0)}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {ytdData.claimantsPaid.toLocaleString()} claimants
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+
+            {/* Monthly 2025 Chart */}
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={
+                  claimsPayments
+                    .filter(p => p.coverage === selectedPaymentCoverage && p.periodYear === 2025 && !p.isYtd && p.periodMonth)
+                    .map(p => ({
+                      month: new Date(2000, (p.periodMonth || 1) - 1).toLocaleString('default', { month: 'short' }),
+                      payments: p.totalPayments,
+                      claimants: p.claimantsPaid,
+                      avgPaid: p.avgPaidPerClaimant,
+                    }))
+                }>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v/1000000}M`} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v/1000}K`} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: any, name: string) => {
+                      if (name === 'payments') return [formatCurrency(value), 'Total Payments'];
+                      if (name === 'avgPaid') return [formatCurrency(value), 'Avg per Claimant'];
+                      return [value.toLocaleString(), 'Claimants'];
+                    }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="payments" name="Total Payments" fill="#3B82F6" />
+                  <Line yAxisId="right" type="monotone" dataKey="avgPaid" name="Avg per Claimant" stroke="#F59E0B" strokeWidth={2} dot />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Detailed Table */}
+            {showPaymentsDetails && (
+              <div className="border-t pt-4 mt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Coverage</TableHead>
+                      <TableHead className="text-right">2021 YTD</TableHead>
+                      <TableHead className="text-right">2022 YTD</TableHead>
+                      <TableHead className="text-right">2023 YTD</TableHead>
+                      <TableHead className="text-right">2024 YTD</TableHead>
+                      <TableHead className="text-right">2025 YTD</TableHead>
+                      <TableHead className="text-right">YoY Change</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {['BI', 'PD', 'CL', 'UM', 'OC', 'UI', 'UP', 'RN', 'MP', 'PP', 'TL', 'DW', 'TOTAL'].map(cov => {
+                      const getYtd = (year: number) => claimsPayments.find(p => 
+                        p.coverage === cov && p.periodYear === year && p.isYtd
+                      )?.totalPayments || 0;
+                      
+                      const ytd2024 = getYtd(2024);
+                      const ytd2025 = getYtd(2025);
+                      const yoyChange = ytd2024 > 0 ? ((ytd2025 - ytd2024) / ytd2024) * 100 : 0;
+
+                      return (
+                        <TableRow 
+                          key={cov}
+                          className={`cursor-pointer ${selectedPaymentCoverage === cov ? 'bg-primary/5' : ''} ${cov === 'TOTAL' ? 'font-bold border-t-2' : ''}`}
+                          onClick={() => setSelectedPaymentCoverage(cov)}
+                        >
+                          <TableCell className="font-medium">{cov}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(getYtd(2021))}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(getYtd(2022))}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(getYtd(2023))}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(getYtd(2024))}</TableCell>
+                          <TableCell className="text-right font-semibold">{formatCurrency(ytd2025)}</TableCell>
+                          <TableCell className={`text-right ${yoyChange > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {yoyChange !== 0 ? `${yoyChange >= 0 ? '+' : ''}${yoyChange.toFixed(1)}%` : '—'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Over Limit Payments */}
+      {overLimitPayments.length > 0 && (
+        <Card className="border-red-500/20">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  Over-Limit Payments Tracker
+                </CardTitle>
+                <CardDescription>2025 YTD Payments Exceeding Policy Limits</CardDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowOverLimitDetails(!showOverLimitDetails)}
+              >
+                {showOverLimitDetails ? "Collapse" : "Expand"} All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                <div className="text-xs text-red-600 dark:text-red-400">Total Over-Limit</div>
+                <div className="text-xl font-bold text-red-600">
+                  {formatCurrency(overLimitPayments.reduce((s, p) => s + p.overLimitAmount, 0))}
+                </div>
+              </div>
+              <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <div className="text-xs text-amber-600 dark:text-amber-400">Total Payments</div>
+                <div className="text-xl font-bold text-amber-600">
+                  {formatCurrency(overLimitPayments.reduce((s, p) => s + p.paymentAmount, 0))}
+                </div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg border">
+                <div className="text-xs text-muted-foreground">Claims Count</div>
+                <div className="text-xl font-bold">{overLimitPayments.length}</div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg border">
+                <div className="text-xs text-muted-foreground">Avg Over-Limit</div>
+                <div className="text-xl font-bold">
+                  {formatCurrency(overLimitPayments.reduce((s, p) => s + p.overLimitAmount, 0) / overLimitPayments.length)}
+                </div>
+              </div>
+            </div>
+
+            {/* By State Summary */}
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+              {Object.entries(
+                overLimitPayments.reduce((acc, p) => {
+                  acc[p.state] = (acc[p.state] || 0) + p.overLimitAmount;
+                  return acc;
+                }, {} as Record<string, number>)
+              )
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .map(([state, amount]) => (
+                  <div key={state} className="p-2 bg-muted/30 rounded-lg text-center">
+                    <div className="text-xs font-medium">{state}</div>
+                    <div className="text-sm font-bold text-red-600">{formatCurrency(amount)}</div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Top Claims Table */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Claim #</TableHead>
+                  <TableHead>State</TableHead>
+                  <TableHead className="text-right">Limit</TableHead>
+                  <TableHead className="text-right">Payment</TableHead>
+                  <TableHead className="text-right">Over Limit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {overLimitPayments.slice(0, showOverLimitDetails ? 50 : 10).map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{new Date(row.paymentDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-xs">{row.claimNumber}</TableCell>
+                    <TableCell>{row.state}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.policyLimit)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.paymentAmount)}</TableCell>
+                    <TableCell className="text-right font-bold text-red-600">
+                      {formatCurrency(row.overLimitAmount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {!showOverLimitDetails && overLimitPayments.length > 10 && (
+              <div className="text-center mt-2 text-sm text-muted-foreground">
+                Showing top 10 of {overLimitPayments.length} claims
               </div>
             )}
           </CardContent>
