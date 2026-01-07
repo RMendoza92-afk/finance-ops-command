@@ -42,48 +42,54 @@ export function useReservesRolling() {
 
         const weeks: WeeklyReserveData[] = [];
         
+        const parseCurrency = (val: string | number | undefined): number => {
+          if (val === undefined || val === null) return 0;
+          const str = String(val).replace(/[$,\s]/g, '');
+          if (str.startsWith('(') && str.endsWith(')')) {
+            return -parseFloat(str.slice(1, -1)) || 0;
+          }
+          return parseFloat(str) || 0;
+        };
+
         // Parse weekly data - looking for rows with date patterns like "December 31, 2025"
+        // Structure: Row with date in col 2, then "Reserves" row, "Features" row, change rows
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (!row || row.length < 5) continue;
           
-          const dateCell = String(row[1] || '');
-          // Match date patterns like "December 31, 2025"
+          // Check column 2 for date (column index 2)
+          const dateCell = String(row[2] || '');
           const dateMatch = dateCell.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}/);
           
           if (dateMatch) {
-            // Next row should be "Reserves"
-            const reservesRow = rows[i + 1];
-            const featuresRow = rows[i + 2];
-            const changeRow = rows[i + 3];
-            const featureChangeRow = rows[i + 4];
+            // This row has the date AND has column headers: LBI, DCCE, etc.
+            // The actual data is in the SAME row structure
+            // Check if this row itself has "Reserves" label in column 2
+            const reservesRowLabel = String(row[2] || '');
             
-            if (reservesRow && String(reservesRow[1]).includes('Reserves')) {
-              const parseCurrency = (val: string | number | undefined): number => {
-                if (val === undefined || val === null) return 0;
-                const str = String(val).replace(/[$,\s]/g, '');
-                if (str.startsWith('(') && str.endsWith(')')) {
-                  return -parseFloat(str.slice(1, -1)) || 0;
-                }
-                return parseFloat(str) || 0;
-              };
-
-              const totalReserves = parseCurrency(reservesRow[16]); // TOTAL column
-              const totalFeatures = parseCurrency(featuresRow?.[16]) || 0;
-              const weeklyChange = parseCurrency(changeRow?.[16]) || 0;
-              const weeklyFeatureChange = parseCurrency(featureChangeRow?.[16]) || 0;
+            // Actually the structure is: date row, then reserves row below it
+            // Look at the next row for "Reserves"
+            const nextRow = rows[i + 1];
+            if (nextRow && String(nextRow[2] || '').includes('Reserves')) {
+              // nextRow has the reserves data
+              // Columns: 3=LBI, 4=DCCE, 5=LPD, 6=OTC, 7=COL, 8=UMBI, ... 17=TOTAL
+              const totalReserves = parseCurrency(nextRow[17]);
+              
+              const featuresRow = rows[i + 2];
+              const changeRow = rows[i + 3];
+              const featureChangeRow = rows[i + 4];
               
               weeks.push({
                 date: dateMatch[0],
                 totalReserves,
-                totalFeatures,
-                weeklyChange,
-                weeklyFeatureChange,
-                lbiReserves: parseCurrency(reservesRow[2]), // LBI
-                dcceReserves: parseCurrency(reservesRow[3]), // DCCE
-                lpdReserves: parseCurrency(reservesRow[4]), // LPD
-                colReserves: parseCurrency(reservesRow[6]), // COL
-                umbiReserves: parseCurrency(reservesRow[7]), // UMBI
+                totalFeatures: parseCurrency(featuresRow?.[17]) || 0,
+                weeklyChange: parseCurrency(changeRow?.[17]) || 0,
+                weeklyFeatureChange: parseCurrency(featureChangeRow?.[17]) || 0,
+                lbiReserves: parseCurrency(nextRow[3]),
+                dcceReserves: parseCurrency(nextRow[4]),
+                lpdReserves: parseCurrency(nextRow[5]),
+                colReserves: parseCurrency(nextRow[7]),
+                umbiReserves: parseCurrency(nextRow[8]),
               });
             }
           }
@@ -92,30 +98,22 @@ export function useReservesRolling() {
         // Sort by date (newest first)
         weeks.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        // Calculate summary metrics from header row
-        // The file header contains: from End of Prior Month, from Dec 2024, from Dec 2023
-        const headerRow = rows[0];
-        const changeRow = rows.find(r => String(r?.[1] || '').includes('Change in Reserves'));
-        
-        const monthlyChange = changeRow ? parseCurrencySimple(changeRow[18]) : 
-                             (weeks[0]?.weeklyChange || 0) * 4; // Approximate
-        const yearlyChange = changeRow ? parseCurrencySimple(changeRow[19]) : -88728584;
-        
         const latestTotal = weeks[0]?.totalReserves || 324655559;
 
         console.log('Reserves Rolling Data:', {
           weeksLoaded: weeks.length,
           latestTotal,
           latestDate: weeks[0]?.date,
+          firstWeek: weeks[0],
         });
 
         setData({
-          weeks: weeks.slice(0, 12), // Last 12 weeks
+          weeks: weeks.slice(0, 12),
           latestTotal,
           latestDate: weeks[0]?.date || 'December 31, 2025',
-          monthlyChange: -1521644, // From file header
+          monthlyChange: -1521644,
           monthlyChangePercent: -0.47,
-          yearlyChange: -88728584, // From file header (-21%)
+          yearlyChange: -88728584,
           yearlyChangePercent: -21.5,
         });
         setLoading(false);
@@ -124,15 +122,6 @@ export function useReservesRolling() {
         setError(err instanceof Error ? err.message : 'Failed to load reserves data');
         setLoading(false);
       }
-    }
-
-    function parseCurrencySimple(val: string | number | undefined): number {
-      if (val === undefined || val === null) return 0;
-      const str = String(val).replace(/[$,\s]/g, '');
-      if (str.startsWith('(') && str.endsWith(')')) {
-        return -parseFloat(str.slice(1, -1)) || 0;
-      }
-      return parseFloat(str) || 0;
     }
 
     loadData();
