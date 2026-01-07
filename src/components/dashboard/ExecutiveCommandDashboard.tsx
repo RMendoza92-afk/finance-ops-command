@@ -239,25 +239,31 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
     }));
 
   return (
-    <div className="space-y-6">
-      {/* Executive Command Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 shadow-2xl">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/10 via-transparent to-transparent" />
+    <div className="space-y-6 relative">
+      {/* JARVIS Command Header */}
+      <div className="hud-card relative overflow-hidden shadow-2xl">
+        {/* Arc reactor ambient glow */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-[radial-gradient(ellipse_at_center,_hsl(var(--arc-reactor)/0.15)_0%,_transparent_70%)]" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[radial-gradient(ellipse_at_center,_hsl(var(--hud-gold)/0.1)_0%,_transparent_70%)]" />
         
         <div className="relative px-6 py-5">
-          {/* Top Row: Date & Export Actions */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Top Row: Status & Export Actions */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2.5">
+              {/* System Status Indicator */}
+              <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-black/30 border border-cyan-500/20">
                 <div className="relative">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                  <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping opacity-75" />
                 </div>
-                <span className="text-sm font-semibold tracking-wide text-slate-300">
-                  {data.dataDate}
+                <span className="text-sm font-bold tracking-widest text-cyan-400 uppercase font-mono">
+                  SYSTEM ONLINE
                 </span>
               </div>
+              <div className="h-4 w-px bg-cyan-500/30" />
+              <span className="text-sm font-medium tracking-wide text-slate-400">
+                {data.dataDate}
+              </span>
             </div>
             
             {/* Export Actions */}
@@ -267,7 +273,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 size="sm" 
                 onClick={handleExportPDF}
                 disabled={generatingPDF}
-                className="gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200 h-8 text-xs font-medium"
+                className="gap-2 bg-black/40 border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/60 text-cyan-400 h-9 text-xs font-bold uppercase tracking-wider"
               >
                 {generatingPDF ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -281,7 +287,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 size="sm" 
                 onClick={handleExportExcel}
                 disabled={generatingExcel}
-                className="gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200 h-8 text-xs font-medium"
+                className="gap-2 bg-black/40 border-amber-500/30 hover:bg-amber-500/10 hover:border-amber-500/60 text-amber-400 h-9 text-xs font-bold uppercase tracking-wider"
               >
                 {generatingExcel ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -292,66 +298,6 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
               </Button>
             </div>
           </div>
-          
-          {/* Delta Indicators - Prominent Display */}
-          {data.delta && (
-            <div className="flex items-center gap-6">
-              {/* Claims Change */}
-              <div className={`flex items-center gap-3 px-5 py-3 rounded-xl ${
-                data.delta.change >= 0 
-                  ? 'bg-red-950/40 border border-red-800/50' 
-                  : 'bg-emerald-950/40 border border-emerald-800/50'
-              }`}>
-                <div className={`p-2 rounded-lg ${
-                  data.delta.change >= 0 ? 'bg-red-900/50' : 'bg-emerald-900/50'
-                }`}>
-                  {data.delta.change >= 0 ? (
-                    <TrendingUp className="h-5 w-5 text-red-400" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-emerald-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Claims MoM</p>
-                  <p className={`text-2xl font-bold tracking-tight ${
-                    data.delta.change >= 0 ? 'text-red-400' : 'text-emerald-400'
-                  }`}>
-                    {formatPct(data.delta.changePercent)}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Reserves Change */}
-              <div className={`flex items-center gap-3 px-5 py-3 rounded-xl ${
-                data.delta.reservesChangePercent >= 0 
-                  ? 'bg-red-950/40 border border-red-800/50' 
-                  : 'bg-emerald-950/40 border border-emerald-800/50'
-              }`}>
-                <div className={`p-2 rounded-lg ${
-                  data.delta.reservesChangePercent >= 0 ? 'bg-red-900/50' : 'bg-emerald-900/50'
-                }`}>
-                  {data.delta.reservesChangePercent >= 0 ? (
-                    <TrendingUp className="h-5 w-5 text-red-400" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-emerald-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Reserves MoM</p>
-                  <p className={`text-2xl font-bold tracking-tight ${
-                    data.delta.reservesChangePercent >= 0 ? 'text-red-400' : 'text-emerald-400'
-                  }`}>
-                    {formatPct(data.delta.reservesChangePercent)}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Comparison Context */}
-              <div className="ml-auto text-right">
-                <p className="text-xs text-slate-500">vs. {data.delta.previousDate}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -359,135 +305,134 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
       {/* SECTION 1: Core Inventory Metrics */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       
-      <div className="flex items-center gap-3 pt-2">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Portfolio Overview</h3>
-        <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+      <div className="hud-divider">
+        <span className="text-xs font-bold text-cyan-400 uppercase tracking-[0.3em] px-4">Portfolio Overview</span>
       </div>
 
       {/* Top Row - 4 Column Power Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Exposures */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          className="hud-card p-5 cursor-pointer group" 
           onClick={() => onDrilldown('claims')}
           onDoubleClick={() => onDoubleClickReport?.('claims')}
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open Exposures</span>
-            <Activity className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-xs font-bold text-cyan-400/70 uppercase tracking-wider">Open Exposures</span>
+            <Activity className="h-4 w-4 text-cyan-500/50 group-hover:text-cyan-400 transition-colors" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{data.totalClaims.toLocaleString()}</p>
+          <p className="text-4xl font-black text-cyan-400 tracking-tight font-mono">{data.totalClaims.toLocaleString()}</p>
           {data.delta && (
-            <p className={`text-xs font-medium mt-2 ${data.delta.change >= 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-              {data.delta.change >= 0 ? '↑' : '↓'} {Math.abs(data.delta.change)} from prior period
+            <p className={`text-xs font-bold mt-2 tracking-wide ${data.delta.change >= 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {data.delta.change >= 0 ? '▲' : '▼'} {Math.abs(data.delta.change)} from prior
             </p>
           )}
         </div>
 
         {/* Total Reserves */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          className="hud-card p-5 cursor-pointer group" 
           onClick={() => onDrilldown('reserves')}
           onDoubleClick={() => onDoubleClickReport?.('reserves')}
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Reserves</span>
-            <DollarSign className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-xs font-bold text-amber-400/70 uppercase tracking-wider">Total Reserves</span>
+            <DollarSign className="h-4 w-4 text-amber-500/50 group-hover:text-amber-400 transition-colors" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{formatM(data.totalReserves)}</p>
+          <p className="text-4xl font-black text-amber-400 tracking-tight font-mono">{formatM(data.totalReserves)}</p>
           <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-muted-foreground">Low: {formatM(data.lowEval)}</span>
-            <span className="text-xs text-muted-foreground">High: {formatM(data.highEval)}</span>
+            <span className="text-xs text-slate-500 font-mono">L: {formatM(data.lowEval)}</span>
+            <span className="text-xs text-slate-500 font-mono">H: {formatM(data.highEval)}</span>
           </div>
         </div>
 
         {/* CP1 Rate */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          className="hud-card p-5 cursor-pointer group" 
           onClick={() => onDrilldown('cp1')}
           onDoubleClick={() => onDoubleClickReport?.('cp1')}
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">CP1 Compliance</span>
-            <Shield className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-xs font-bold text-emerald-400/70 uppercase tracking-wider">CP1 Compliance</span>
+            <Shield className="h-4 w-4 text-emerald-500/50 group-hover:text-emerald-400 transition-colors" />
           </div>
-          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{data.cp1Rate}%</p>
-          <p className="text-xs text-muted-foreground mt-2">{data.cp1Count.toLocaleString()} claims within limits</p>
+          <p className="text-4xl font-black text-emerald-400 tracking-tight font-mono">{data.cp1Rate}%</p>
+          <p className="text-xs text-slate-500 mt-2 font-mono">{data.cp1Count.toLocaleString()} within limits</p>
         </div>
 
         {/* Claims Payments 2025 */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          className="hud-card p-5 cursor-pointer group"
           onClick={() => onDrilldown('budget')}
           onDoubleClick={() => onDoubleClickReport?.('budget')}
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">BI Payments YTD</span>
-            <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-xs font-bold text-slate-400/70 uppercase tracking-wider">BI Payments YTD</span>
+            <Wallet className="h-4 w-4 text-slate-500/50 group-hover:text-cyan-400 transition-colors" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{formatCurrency(biPaymentsYTD)}</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            Through November • Total: {formatCurrency(totalPaymentsYTD)}
+          <p className="text-4xl font-black text-foreground tracking-tight font-mono">{formatCurrency(biPaymentsYTD)}</p>
+          <p className="text-xs text-slate-500 mt-2 font-mono">
+            Nov '25 • Total: {formatCurrency(totalPaymentsYTD)}
           </p>
         </div>
       </div>
 
       {/* Risk Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* No Eval */}
+        {/* No Eval - Warning */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          className="hud-card p-5 cursor-pointer group border-amber-500/20 hover:border-amber-500/50"
           onClick={() => onDrilldown('noeval')}
           onDoubleClick={() => onDoubleClickReport?.('noeval')}
           title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">No Evaluation</span>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-xs font-bold text-amber-400/70 uppercase tracking-wider">No Evaluation</span>
+            <AlertTriangle className="h-4 w-4 text-amber-500 animate-pulse" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{data.noEvalCount}</p>
-          <p className="text-xs text-muted-foreground mt-2">{formatM(data.noEvalReserves)} exposure</p>
+          <p className="text-4xl font-black text-amber-400 tracking-tight font-mono">{data.noEvalCount.toLocaleString()}</p>
+          <p className="text-xs text-slate-500 mt-2 font-mono">{formatM(data.noEvalReserves)} exposure</p>
         </div>
 
-        {/* Aged 365+ */}
+        {/* Aged 365+ - Critical */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          className="hud-card p-5 cursor-pointer group border-red-500/20 hover:border-red-500/50"
           onClick={() => onDrilldown('aged365')}
           onDoubleClick={() => onDoubleClickReport?.('aged365')}
           title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Aged 365+</span>
+            <span className="text-xs font-bold text-red-400/70 uppercase tracking-wider">Aged 365+</span>
             <Clock className="h-4 w-4 text-red-500" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{data.aged365Plus}</p>
-          <p className="text-xs text-muted-foreground mt-2">{formatM(data.aged365Reserves)} exposure</p>
+          <p className="text-4xl font-black text-red-400 tracking-tight font-mono">{data.aged365Plus.toLocaleString()}</p>
+          <p className="text-xs text-slate-500 mt-2 font-mono">{formatM(data.aged365Reserves)} exposure</p>
         </div>
 
         {/* Pending Decisions */}
         <div 
-          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          className="hud-card p-5 cursor-pointer group"
           onClick={() => onDrilldown('decisions')}
           onDoubleClick={() => onDoubleClickReport?.('decisions')}
           title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending Decisions</span>
-            <Flag className="h-4 w-4 text-blue-500" />
+            <span className="text-xs font-bold text-cyan-400/70 uppercase tracking-wider">Pending Decisions</span>
+            <Flag className="h-4 w-4 text-cyan-500" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight">{data.decisionsCount}</p>
-          <p className="text-xs text-muted-foreground mt-2">{formatM(data.decisionsExposure)} exposure</p>
+          <p className="text-4xl font-black text-cyan-400 tracking-tight font-mono">{data.decisionsCount.toLocaleString()}</p>
+          <p className="text-xs text-slate-500 mt-2 font-mono">{formatM(data.decisionsExposure)} exposure</p>
         </div>
 
         {/* Age Distribution */}
-        <div className="bg-card rounded-xl border p-5">
+        <div className="hud-card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Age Mix</span>
-            <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-bold text-slate-400/70 uppercase tracking-wider">Age Mix</span>
+            <PieChartIcon className="h-4 w-4 text-slate-500" />
           </div>
           <div className="flex items-center gap-3">
             <div className="h-16 w-16 flex-shrink-0">
@@ -512,9 +457,9 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-muted-foreground">{item.name}</span>
+                    <span className="text-slate-400 font-mono">{item.name}</span>
                   </div>
-                  <span className="font-semibold">{item.value.toLocaleString()}</span>
+                  <span className="font-bold text-foreground font-mono">{item.value.toLocaleString()}</span>
                 </div>
               ))}
             </div>
