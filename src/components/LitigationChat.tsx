@@ -1116,10 +1116,7 @@ export function LitigationChat() {
         }
       }
       
-      if (assistantContent.trim()) {
-        generateResponsePDF(userMessage.content, assistantContent);
-        toast.info("PDF report downloaded automatically");
-      }
+      // PDF is now optional - user can click "Export PDF" button on each response
       
     } catch (error) {
       console.error("Chat error:", error);
@@ -1292,45 +1289,149 @@ export function LitigationChat() {
                 key={i}
                 className={`mb-4 ${msg.role === "user" ? "text-right" : "text-left"}`}
               >
-                <div
-                  className={`inline-block max-w-[90%] px-4 py-3 rounded-lg text-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground border border-border"
-                  }`}
-                >
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {msg.content.split('\n').map((line, lineIdx) => (
-                      <p key={lineIdx} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
-                        {renderLineWithClickableClaims(line, msg.role === 'assistant' ? handleClaimClick : undefined)}
-                      </p>
-                    ))}
-                  </div>
-                  
-                  {/* Render trend comparison cards for assistant messages */}
-                  {msg.role === "assistant" && (() => {
-                    const trendData = parseTrendData(msg.content);
-                    if (!trendData) return null;
-                    return (
-                      <div className="mt-3 space-y-2">
-                        {trendData.weekOverWeek && trendData.weekOverWeek.length > 0 && (
-                          <TrendComparisonCard
-                            title="Week-over-Week"
-                            period="vs last week"
-                            metrics={trendData.weekOverWeek}
-                          />
-                        )}
-                        {trendData.monthOverMonth && trendData.monthOverMonth.length > 0 && (
-                          <TrendComparisonCard
-                            title="Month-over-Month"
-                            period="vs last month"
-                            metrics={trendData.monthOverMonth}
-                          />
-                        )}
+                {msg.role === "assistant" ? (
+                  <div className="inline-block max-w-[95%] text-left">
+                    {/* Assistant Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center">
+                        <Sparkles className="h-3 w-3 text-[#0c0c0c]" />
                       </div>
-                    );
-                  })()}
-                </div>
+                      <span className="text-xs font-semibold text-[#d4af37]">Oracle Response</span>
+                    </div>
+                    
+                    {/* Styled Response Card */}
+                    <div className="bg-gradient-to-br from-[#1a1a1a] to-[#121212] rounded-xl border border-[#2d2d2d] overflow-hidden shadow-lg">
+                      {/* Response Content */}
+                      <div className="p-4 text-sm">
+                        <div className="space-y-2">
+                          {msg.content.split('\n').map((line, lineIdx) => {
+                            const trimmed = line.trim();
+                            if (!trimmed) return <div key={lineIdx} className="h-1.5" />;
+                            
+                            // Section headers (lines ending with colon or all caps)
+                            if ((trimmed.endsWith(':') && trimmed.length < 60) || /^[A-Z][A-Z\s&]+$/.test(trimmed)) {
+                              return (
+                                <div key={lineIdx} className="mt-3 first:mt-0">
+                                  <h4 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider border-b border-[#d4af37]/20 pb-1">
+                                    {trimmed.replace(/:$/, '')}
+                                  </h4>
+                                </div>
+                              );
+                            }
+                            
+                            // Markdown headers
+                            if (line.startsWith('###')) {
+                              return <h5 key={lineIdx} className="text-sm font-bold text-[#f0f0f0] mt-2">{trimmed.replace(/^#+\s*/, '')}</h5>;
+                            }
+                            if (line.startsWith('##')) {
+                              return <h4 key={lineIdx} className="text-base font-bold text-[#d4af37] mt-3">{trimmed.replace(/^#+\s*/, '')}</h4>;
+                            }
+                            if (line.startsWith('#')) {
+                              return <h3 key={lineIdx} className="text-lg font-bold text-[#d4af37] mt-3">{trimmed.replace(/^#+\s*/, '')}</h3>;
+                            }
+                            
+                            // Bullet points
+                            if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                              return (
+                                <div key={lineIdx} className="flex gap-2 pl-2">
+                                  <span className="text-[#d4af37] mt-0.5">•</span>
+                                  <span className="text-[#e0e0e0] leading-relaxed">{renderLineWithClickableClaims(trimmed.slice(2), handleClaimClick)}</span>
+                                </div>
+                              );
+                            }
+                            
+                            // Numbered items
+                            if (/^\d+\./.test(trimmed)) {
+                              const num = trimmed.match(/^\d+/)?.[0] || '';
+                              const rest = trimmed.replace(/^\d+\.\s*/, '');
+                              return (
+                                <div key={lineIdx} className="flex gap-2 pl-2">
+                                  <span className="text-[#d4af37] font-bold min-w-[1.5rem]">{num}.</span>
+                                  <span className="text-[#e0e0e0] leading-relaxed">{renderLineWithClickableClaims(rest, handleClaimClick)}</span>
+                                </div>
+                              );
+                            }
+                            
+                            // Key-value pairs (bold key)
+                            if (trimmed.includes(':') && trimmed.indexOf(':') < 35 && !trimmed.endsWith(':')) {
+                              const colonIdx = trimmed.indexOf(':');
+                              const key = trimmed.slice(0, colonIdx);
+                              const value = trimmed.slice(colonIdx + 1).trim();
+                              return (
+                                <div key={lineIdx} className="flex flex-wrap gap-1">
+                                  <span className="text-[#8c8c8c] font-medium">{key}:</span>
+                                  <span className="text-[#f0f0f0] font-semibold">{renderLineWithClickableClaims(value, handleClaimClick)}</span>
+                                </div>
+                              );
+                            }
+                            
+                            // Table rows
+                            if (trimmed.startsWith('|')) {
+                              return (
+                                <code key={lineIdx} className="block text-xs bg-[#0c0c0c] text-[#8c8c8c] px-2 py-1 rounded font-mono">
+                                  {trimmed}
+                                </code>
+                              );
+                            }
+                            
+                            // Regular text
+                            return (
+                              <p key={lineIdx} className="text-[#c0c0c0] leading-relaxed">
+                                {renderLineWithClickableClaims(trimmed, handleClaimClick)}
+                              </p>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Trend Cards */}
+                      {(() => {
+                        const trendData = parseTrendData(msg.content);
+                        if (!trendData) return null;
+                        return (
+                          <div className="px-4 pb-4 space-y-2">
+                            {trendData.weekOverWeek && trendData.weekOverWeek.length > 0 && (
+                              <TrendComparisonCard
+                                title="Week-over-Week"
+                                period="vs last week"
+                                metrics={trendData.weekOverWeek}
+                              />
+                            )}
+                            {trendData.monthOverMonth && trendData.monthOverMonth.length > 0 && (
+                              <TrendComparisonCard
+                                title="Month-over-Month"
+                                period="vs last month"
+                                metrics={trendData.monthOverMonth}
+                              />
+                            )}
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* Action Bar */}
+                      <div className="bg-[#0c0c0c] border-t border-[#2d2d2d] px-3 py-2 flex items-center justify-between">
+                        <span className="text-[10px] text-[#6c6c6c]">Response #{Math.ceil((i + 1) / 2)}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const userMsg = messages.slice(0, i).reverse().find(m => m.role === 'user');
+                            generateResponsePDF(userMsg?.content || 'Query', msg.content);
+                            toast.success("PDF report downloaded");
+                          }}
+                          className="h-7 text-xs gap-1.5 text-[#d4af37] hover:text-[#f0f0f0] hover:bg-[#1a1a1a]"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Export PDF
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="inline-block max-w-[85%] px-4 py-2.5 rounded-2xl text-sm bg-primary text-primary-foreground rounded-br-sm">
+                    {msg.content}
+                  </div>
+                )}
               </div>
             ))}
             
@@ -1362,7 +1463,7 @@ export function LitigationChat() {
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground mt-2 text-center">
-              PDF report auto-downloads with each response • Double-click dashboard cards for raw exports
+              Click "Export PDF" on any response for a board-ready report
             </p>
           </div>
         </CardContent>
