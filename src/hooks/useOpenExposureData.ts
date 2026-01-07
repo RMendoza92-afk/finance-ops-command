@@ -150,6 +150,19 @@ export interface RawClaimExport {
   daysSinceNegotiation: number | null;
   negotiationType: string;
   negotiationDate: string;
+  // NEW: Demand/settlement data
+  negotiationAmount: number;
+  authAmount: number;
+  totalPaid: number;
+  netTotalIncurred: number;
+  reserveChangePercent: number;
+  // NEW: Litigation/trial data
+  inLitigation: boolean;
+  causeNumber: string;
+  caseType: string;
+  matterStatus: string;
+  settledDate: string;
+  daysSinceSettled: number | null;
 }
 
 export interface CP1ByTypeGroup {
@@ -440,6 +453,22 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const negotiationType = row['Negotiation Type']?.trim() || '';
     const negotiationDate = row['Negotiation Date']?.trim() || '';
     
+    // NEW: Parse demand/settlement and litigation fields
+    const negotiationAmount = parseCurrency(row['Negotiation Amount'] || '0');
+    const authAmount = parseCurrency(row['Auth'] || '0');
+    const totalPaid = parseCurrency(row['Total Paid'] || '0');
+    const netTotalIncurred = parseCurrency(row['Net Total Incurred'] || '0');
+    const reserveChangePercentStr = row['% Reserve Change from Initial Reserve']?.trim() || '';
+    const reserveChangePercent = reserveChangePercentStr ? parseFloat(reserveChangePercentStr.replace(/[%,]/g, '')) || 0 : 0;
+    const inLitigationStr = row['In Litigation Indicator']?.trim().toLowerCase() || '';
+    const inLitigation = inLitigationStr === 'in litigation' || inLitigationStr === 'yes';
+    const causeNumber = row['Cause Number']?.trim() || '';
+    const caseType = row['Case Type']?.trim() || '';
+    const matterStatus = row['Matter Status']?.trim() || '';
+    const settledDate = row['Settled Date']?.trim() || '';
+    const daysSinceSettledStr = row['Days Since Settled?']?.trim() || '';
+    const daysSinceSettled = daysSinceSettledStr ? parseInt(daysSinceSettledStr, 10) || null : null;
+    
     // Add to raw claims export
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
@@ -469,6 +498,18 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       daysSinceNegotiation,
       negotiationType,
       negotiationDate,
+      // NEW fields
+      negotiationAmount,
+      authAmount,
+      totalPaid,
+      netTotalIncurred,
+      reserveChangePercent,
+      inLitigation,
+      causeNumber,
+      caseType,
+      matterStatus,
+      settledDate,
+      daysSinceSettled,
     });
     
     // Update grand totals (claim counts)
