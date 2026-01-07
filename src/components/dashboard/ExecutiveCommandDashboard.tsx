@@ -247,15 +247,15 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
           <p className="text-[10px] text-muted-foreground mt-1">{data.cp1Count.toLocaleString()} within limits</p>
         </div>
 
-        {/* Claims Payments YTD (Real) */}
+        {/* Claims Payments 2025 (Real) */}
         <div className="bg-card rounded-xl border border-emerald-500/20 p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BI Payments YTD</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BI Payments 2025</span>
             <Wallet className="h-3.5 w-3.5 text-emerald-500" />
           </div>
           <p className="text-2xl font-bold text-foreground">{formatCurrency(biPaymentsYTD)}</p>
           <p className="text-[10px] text-muted-foreground mt-1">
-            Total: {formatCurrency(totalPaymentsYTD)}
+            Thru Nov • Total: {formatCurrency(totalPaymentsYTD)}
           </p>
         </div>
       </div>
