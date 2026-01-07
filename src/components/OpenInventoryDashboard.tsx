@@ -6,7 +6,6 @@ import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
 import { ExecutiveCommandDashboard } from "@/components/dashboard/ExecutiveCommandDashboard";
-import { LossDevExecutiveDashboard } from "@/components/dashboard/LossDevExecutiveDashboard";
 import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -2780,32 +2779,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       </div>
 
       {/* Alternative Layout Views */}
-      {dashboardVersion === 'v2' && metrics && (
-        <SimpleDashboardV2
-          data={{
-            totalClaims: metrics.totalOpenClaims,
-            totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
-            lowEval: FINANCIAL_DATA.totals.totalLowEval,
-            highEval: FINANCIAL_DATA.totals.totalHighEval,
-            noEvalCount: FINANCIAL_DATA.totals.noEvalCount,
-            noEvalReserves: FINANCIAL_DATA.totals.noEvalReserves || 0,
-            aged365Plus: EXECUTIVE_METRICS.aging.over365Days,
-            aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
-            aged181to365: data?.totals.age181To365 || 0,
-            cp1Count: CP1_DATA.totals.yes,
-            cp1Rate: CP1_DATA.cp1Rate,
-            decisionsCount: decisionsData?.totalCount || 0,
-            dataDate: data?.dataDate || timestamp,
-            delta: data?.delta ? {
-              change: data.delta.change,
-              changePercent: data.delta.changePercent,
-              previousDate: data.delta.previousDate,
-            } : undefined,
-          }}
-          onOpenChat={() => setShowChatFromV2V3(true)}
-        />
-      )}
-
       {dashboardVersion === 'v3' && metrics && (
         <ExecutiveCommandDashboard
           data={{
@@ -2845,13 +2818,6 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             else if (section === 'export') generateCombinedBoardPackage();
           }}
           timestamp={data?.dataDate || timestamp}
-        />
-      )}
-
-      {dashboardVersion === 'v4' && (
-        <LossDevExecutiveDashboard
-          onOpenChat={() => setShowChatFromV2V3(true)}
-          timestamp={timestamp}
         />
       )}
 
