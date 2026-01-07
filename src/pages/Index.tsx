@@ -196,16 +196,9 @@ const Index = () => {
   }, [filters, litigationData]);
 
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading litigation data...</p>
-        </div>
-      </div>
-    );
-  }
+  // Don't block the entire app while litigation data loads;
+  // only dashboards that rely on it should treat it as optional.
+  const showLitigationLoading = loading;
 
   if (error) {
     return (
@@ -258,6 +251,13 @@ const Index = () => {
           activeFilterCount={activeFilterCount}
           filterOptions={filterOptions}
         />
+
+        {showLitigationLoading && filters.inventoryStatus !== 'executive' && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Loading litigation dataset…
+          </div>
+        )}
 
         {/* Content */}
         {filters.inventoryStatus === 'operations' ? (

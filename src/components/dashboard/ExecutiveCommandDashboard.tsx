@@ -366,7 +366,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
 
       {/* Top Row - 4 Column Power Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Total Claims */}
+        {/* Total Exposures */}
         <div 
           className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
           onClick={() => onDrilldown('claims')}
@@ -374,7 +374,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open Claims</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open Exposures</span>
             <Activity className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           <p className="text-3xl font-bold text-foreground tracking-tight">{data.totalClaims.toLocaleString()}</p>
