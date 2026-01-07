@@ -8,7 +8,7 @@ import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } 
 import { LitigationChat } from "@/components/LitigationChat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
-import { useAuth } from "@/hooks/useAuth";
+import { SalesTickerBanner } from "@/components/SalesTickerBanner";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -20,7 +20,6 @@ import {
 } from "@/lib/executiveReview";
 
 const Index = () => {
-  const { signOut, user } = useAuth();
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
@@ -34,10 +33,6 @@ const Index = () => {
     return defaultGlobalFilters;
   });
   const { data: litigationData, loading, error, stats, refetch, dataSource } = useLitigationData();
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   // Handle pain level data updates from PainLevelUpload
   const handlePainLevelDataApplied = (data: PainLevelRow[]) => {
@@ -241,6 +236,9 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* NYSE-Style Sales Ticker Banner */}
+      <SalesTickerBanner />
       
       <main className="px-3 sm:px-6 py-3 sm:py-6">
         {/* Global Filters - Mobile Collapsible */}
