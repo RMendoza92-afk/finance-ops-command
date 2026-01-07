@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBILimits";
-import { overLimitPayments2025, getOverLimitByState, overLimitTotals } from "@/data/overLimitPayments2025";
+import { useOverLimitPaymentsDB } from "@/hooks/useOverLimitPaymentsDB";
 import { useLitigationData } from "@/hooks/useLitigationData";
 import { 
-  DollarSign, 
   TrendingUp, 
   AlertTriangle, 
-  CheckCircle2, 
   MapPin,
   ChevronDown,
   ChevronUp,
@@ -14,7 +12,8 @@ import {
   FileSpreadsheet,
   Calendar,
   Eye,
-  Activity
+  Activity,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +29,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OverLimitDrilldownModal } from "./OverLimitDrilldownModal";
 
 function formatCurrency(value: number): string {
   if (value >= 1000000) {
@@ -48,10 +48,15 @@ function formatCurrencyFull(value: number): string {
 export function OverspendTracker() {
   const { limits, loading: limitsLoading } = useStateBILimits();
   const { data: litigationData, loading: dataLoading } = useLitigationData();
+  const { byState: dbStateMetrics, totals: dbTotals, loading: dbLoading, getClaimsByState, data: dbData } = useOverLimitPaymentsDB();
   const [showDetails, setShowDetails] = useState(false);
   const [showClaims, setShowClaims] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ytd");
   const { generatePDF, generateExcel } = useExportData();
+  
+  // Drill-down state
+  const [drilldownState, setDrilldownState] = useState<string | null>(null);
+  const [drilldownOpen, setDrilldownOpen] = useState(false);
 
   // Calculate CWP threshold metrics from litigation data
   const cwpMetrics = useMemo(() => {
@@ -59,24 +64,31 @@ export function OverspendTracker() {
     return calculateOverspendMetrics(litigationData, limits);
   }, [litigationData, limits]);
 
-  // Use actual YTD 2025 over-limit data
-  const stateMetrics = useMemo(() => {
-    return getOverLimitByState(overLimitPayments2025);
-  }, []);
+  // Use DB data for YTD over-limit
+  const stateMetrics = dbStateMetrics;
 
-  // Combined totals
+  // Combined totals using DB data
   const combinedTotals = useMemo(() => {
     const cwpOver = cwpMetrics?.overLimitAmount || 0;
-    const ytdOver = overLimitTotals.totalOverLimit;
+    const ytdOver = dbTotals.totalOverLimit;
     return {
       totalOverLimit: cwpOver + ytdOver,
       cwpOverLimit: cwpOver,
       ytdOverLimit: ytdOver,
       cwpCount: cwpMetrics?.overLimitClosures || 0,
-      ytdCount: overLimitTotals.claimCount,
-      totalCount: (cwpMetrics?.overLimitClosures || 0) + overLimitTotals.claimCount,
+      ytdCount: dbTotals.claimCount,
+      totalCount: (cwpMetrics?.overLimitClosures || 0) + dbTotals.claimCount,
     };
-  }, [cwpMetrics]);
+  }, [cwpMetrics, dbTotals]);
+
+  // Handle drill-down click
+  const handleStateDrilldown = (state: string) => {
+    setDrilldownState(state);
+    setDrilldownOpen(true);
+  };
+
+  const drilldownClaims = drilldownState ? getClaimsByState(drilldownState) : [];
+  const drilldownTotal = drilldownClaims.reduce((sum, c) => sum + c.over_limit_amount, 0);
 
   // Prepare export data - Standardized Executive Format
   const getExportData = (): ExportableData => {
@@ -136,17 +148,17 @@ export function OverspendTracker() {
             ['Total Over Limit Amount', formatCurrencyFull(cwpMetrics?.overLimitAmount || 0)],
           ],
         },
-        // YTD 2026 claims detail
+        // YTD 2025 claims detail from DB
         {
-          sheetName: 'YTD 2026 Over-Limit Claims',
+          sheetName: 'YTD 2025 Over-Limit Claims',
           columns: ['Date', 'Claim', 'State', 'Coverage Limit', 'Payment', 'Over Limit'],
-          rows: overLimitPayments2025.map(p => [
-            p.date,
-            p.claim,
+          rows: dbData.map(p => [
+            p.payment_date,
+            p.claim_number,
             p.state,
-            formatCurrencyFull(p.coverageLimit),
-            formatCurrencyFull(p.payment),
-            formatCurrencyFull(p.overLimit),
+            formatCurrencyFull(p.policy_limit || 0),
+            formatCurrencyFull(p.payment_amount),
+            formatCurrencyFull(p.over_limit_amount),
           ]),
         },
         // YTD by state summary
@@ -185,7 +197,7 @@ export function OverspendTracker() {
     }
   };
 
-  if (limitsLoading || dataLoading) {
+  if (limitsLoading || dataLoading || dbLoading) {
     return (
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="animate-pulse space-y-4">
@@ -290,7 +302,7 @@ export function OverspendTracker() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-3">
             <TabsTrigger value="ytd" className="text-xs">
-              YTD 2025 Over-Limit ({overLimitTotals.claimCount})
+              YTD 2025 Over-Limit ({dbTotals.claimCount})
             </TabsTrigger>
             <TabsTrigger value="cwp" className="text-xs">
               CWP Threshold ({cwpMetrics?.overLimitClosures || 0})
@@ -299,6 +311,9 @@ export function OverspendTracker() {
 
           {/* YTD 2025 Tab */}
           <TabsContent value="ytd" className="space-y-3">
+            <p className="text-xs text-muted-foreground italic mb-2">
+              Click any state row to drill down and export claims data
+            </p>
             <div className="border border-border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
@@ -308,11 +323,16 @@ export function OverspendTracker() {
                     <TableHead className="text-xs text-right">Total Payment</TableHead>
                     <TableHead className="text-xs text-right text-destructive">Over Limit</TableHead>
                     <TableHead className="text-xs text-right">Avg Over-Limit</TableHead>
+                    <TableHead className="text-xs w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stateMetrics.map((state) => (
-                    <TableRow key={state.state} className="text-xs">
+                    <TableRow 
+                      key={state.state} 
+                      className="text-xs cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleStateDrilldown(state.state)}
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -327,18 +347,22 @@ export function OverspendTracker() {
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(state.totalOverLimit / state.count)}
                       </TableCell>
+                      <TableCell>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/50 font-semibold text-xs">
                     <TableCell>TOTAL</TableCell>
-                    <TableCell className="text-right">{overLimitTotals.claimCount}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(overLimitTotals.totalPayments)}</TableCell>
+                    <TableCell className="text-right">{dbTotals.claimCount}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(dbTotals.totalPayments)}</TableCell>
                     <TableCell className="text-right text-destructive">
-                      {formatCurrency(overLimitTotals.totalOverLimit)}
+                      {formatCurrency(dbTotals.totalOverLimit)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {formatCurrency(overLimitTotals.totalOverLimit / overLimitTotals.claimCount)}
+                      {dbTotals.claimCount > 0 ? formatCurrency(dbTotals.totalOverLimit / dbTotals.claimCount) : '-'}
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -351,7 +375,7 @@ export function OverspendTracker() {
               className="text-xs w-full"
             >
               <Eye className="h-3 w-3 mr-1" />
-              {showClaims ? 'Hide' : 'View'} All {overLimitTotals.claimCount} Claims
+              {showClaims ? 'Hide' : 'View'} All {dbTotals.claimCount} Claims
             </Button>
 
             {showClaims && (
@@ -368,20 +392,20 @@ export function OverspendTracker() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {overLimitPayments2025.map((p, idx) => (
-                      <TableRow key={`${p.claim}-${idx}`} className="text-xs">
+                    {dbData.map((p, idx) => (
+                      <TableRow key={p.id || idx} className="text-xs">
                         <TableCell className="font-mono text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {p.date}
+                            {p.payment_date}
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono font-medium">{p.claim}</TableCell>
+                        <TableCell className="font-mono font-medium">{p.claim_number}</TableCell>
                         <TableCell>{p.state}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(p.coverageLimit)}</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(p.payment)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(p.policy_limit || 0)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(p.payment_amount)}</TableCell>
                         <TableCell className="text-right text-destructive font-medium">
-                          {formatCurrency(p.overLimit)}
+                          {formatCurrency(p.over_limit_amount)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -442,13 +466,22 @@ export function OverspendTracker() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                <Activity className="h-8 w-8 mx-auto mb-2 text-green-500" />
                 No CWP threshold violations detected
               </div>
             )}
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Drill-down Modal */}
+      <OverLimitDrilldownModal
+        open={drilldownOpen}
+        onOpenChange={setDrilldownOpen}
+        state={drilldownState || ''}
+        claims={drilldownClaims}
+        totalOverLimit={drilldownTotal}
+      />
     </div>
   );
 }
