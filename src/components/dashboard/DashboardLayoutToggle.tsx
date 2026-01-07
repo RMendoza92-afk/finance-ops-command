@@ -21,11 +21,11 @@ export function DashboardLayoutToggle({ version, onVersionChange }: DashboardLay
       >
         <ToggleGroupItem 
           value="v1" 
-          aria-label="Standard view" 
+          aria-label="Operations view" 
           className="text-xs px-3 py-1.5 h-7 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md flex items-center gap-1"
         >
           <LayoutGrid className="h-3 w-3" />
-          Standard
+          Operations
         </ToggleGroupItem>
         <ToggleGroupItem 
           value="v3" 
