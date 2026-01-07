@@ -19,6 +19,7 @@ export interface LOROfferDB {
   high_eval: number | null;
   low_eval: number | null;
   reserves: number | null;
+  days_old: number | null;
 }
 
 export interface LOROfferStats {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -24,10 +24,12 @@ const BI_PHASES = [
 export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [claimFound, setClaimFound] = useState(false);
   const [formData, setFormData] = useState({
     claimNumber: '',
     accidentDescription: '',
-    area: 'Houston',
+    area: '',
     offerAmount: '7500',
     extendedDate: new Date().toISOString().split('T')[0],
     biPhase: 'Pending Demand',
@@ -35,12 +37,73 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
     highEval: '',
     lowEval: '',
     reserves: '',
+    daysOld: '',
   });
 
   const calculateExpiresDate = (extendedDate: string) => {
     const date = new Date(extendedDate);
     date.setDate(date.getDate() + 14);
     return date.toISOString().split('T')[0];
+  };
+
+  const lookupClaim = async () => {
+    const claimNumber = formData.claimNumber.trim();
+    if (!claimNumber) {
+      toast({ title: 'Enter claim number', description: 'Enter a claim number to look up', variant: 'destructive' });
+      return;
+    }
+
+    setLookupLoading(true);
+    setClaimFound(false);
+
+    // Look up in claim_reviews table
+    const { data, error } = await supabase
+      .from('claim_reviews')
+      .select('claim_id, loss_description, area, age_bucket, reserves, low_eval, high_eval')
+      .eq('claim_id', claimNumber)
+      .maybeSingle();
+
+    setLookupLoading(false);
+
+    if (error) {
+      console.error('Lookup error:', error);
+      toast({ title: 'Lookup failed', description: 'Could not search claim database', variant: 'destructive' });
+      return;
+    }
+
+    if (!data) {
+      toast({ title: 'Claim not found', description: `No claim found with ID ${claimNumber}`, variant: 'destructive' });
+      return;
+    }
+
+    // Parse age bucket to estimate days old
+    let daysOld = 0;
+    const ageBucket = data.age_bucket || '';
+    if (ageBucket.includes('365+') || ageBucket.includes('365 plus')) {
+      daysOld = 400; // Average for 365+ claims
+    } else if (ageBucket.includes('181') || ageBucket.includes('180')) {
+      daysOld = 270; // Average for 181-365 days
+    } else if (ageBucket.includes('61') || ageBucket.includes('60')) {
+      daysOld = 120; // Average for 61-180 days
+    } else if (ageBucket.includes('Under') || ageBucket.includes('under') || ageBucket.includes('<60')) {
+      daysOld = 30; // Average for <60 days
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      accidentDescription: data.loss_description || '',
+      area: data.area || '',
+      reserves: data.reserves?.toString() || '',
+      lowEval: data.low_eval?.toString() || '',
+      highEval: data.high_eval?.toString() || '',
+      daysOld: daysOld.toString(),
+    }));
+
+    setClaimFound(true);
+    toast({ 
+      title: 'Claim found', 
+      description: `Populated data from ${claimNumber} - ${data.age_bucket}` 
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +121,7 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
     const { error } = await supabase.from('lor_offers').insert({
       claim_number: formData.claimNumber.trim(),
       accident_description: formData.accidentDescription.trim() || null,
-      area: formData.area,
+      area: formData.area || null,
       offer_amount: parseFloat(formData.offerAmount),
       extended_date: formData.extendedDate,
       expires_date: expiresDate,
@@ -68,6 +131,7 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
       high_eval: formData.highEval ? parseFloat(formData.highEval) : 0,
       low_eval: formData.lowEval ? parseFloat(formData.lowEval) : 0,
       reserves: formData.reserves ? parseFloat(formData.reserves) : 0,
+      days_old: formData.daysOld ? parseInt(formData.daysOld) : null,
     });
 
     setLoading(false);
@@ -82,7 +146,7 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
     setFormData({
       claimNumber: '',
       accidentDescription: '',
-      area: 'Houston',
+      area: '',
       offerAmount: '7500',
       extendedDate: new Date().toISOString().split('T')[0],
       biPhase: 'Pending Demand',
@@ -90,9 +154,16 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
       highEval: '',
       lowEval: '',
       reserves: '',
+      daysOld: '',
     });
+    setClaimFound(false);
     setOpen(false);
     onOfferAdded();
+  };
+
+  const handleClaimNumberChange = (value: string) => {
+    setFormData(prev => ({ ...prev, claimNumber: value }));
+    setClaimFound(false);
   };
 
   return (
@@ -108,15 +179,44 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
           <DialogTitle>Add LOR Intervention Offer</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="claimNumber">Claim Number *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="claimNumber">Claim Number *</Label>
+            <div className="flex gap-2">
               <Input
                 id="claimNumber"
                 placeholder="65-0000558113"
                 value={formData.claimNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, claimNumber: e.target.value }))}
-                className="font-mono"
+                onChange={(e) => handleClaimNumberChange(e.target.value)}
+                className={`font-mono flex-1 ${claimFound ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : ''}`}
+              />
+              <Button 
+                type="button" 
+                variant="secondary" 
+                size="sm"
+                onClick={lookupClaim}
+                disabled={lookupLoading || !formData.claimNumber.trim()}
+                className="shrink-0"
+              >
+                {lookupLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <><Search className="h-4 w-4 mr-1" /> Look Up</>
+                )}
+              </Button>
+            </div>
+            {claimFound && (
+              <p className="text-[10px] text-green-600">✓ Claim data populated from inventory</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="accidentDescription">Accident Description</Label>
+              <Input
+                id="accidentDescription"
+                placeholder="Lane Change / Side Swipe"
+                value={formData.accidentDescription}
+                onChange={(e) => setFormData(prev => ({ ...prev, accidentDescription: e.target.value }))}
               />
             </div>
 
@@ -131,17 +231,19 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="accidentDescription">Accident Description</Label>
-            <Input
-              id="accidentDescription"
-              placeholder="Lane Change / Side Swipe"
-              value={formData.accidentDescription}
-              onChange={(e) => setFormData(prev => ({ ...prev, accidentDescription: e.target.value }))}
-            />
-          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="daysOld">Days Old</Label>
+              <Input
+                id="daysOld"
+                type="number"
+                placeholder="120"
+                value={formData.daysOld}
+                onChange={(e) => setFormData(prev => ({ ...prev, daysOld: e.target.value }))}
+                className={claimFound && formData.daysOld ? 'border-green-500' : ''}
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="biPhase">BI Phase</Label>
               <Select 
@@ -160,7 +262,7 @@ export function LOROfferDialog({ onOfferAdded }: LOROfferDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="settlementStatus">Settlement Status</Label>
+              <Label htmlFor="settlementStatus">Status</Label>
               <Select 
                 value={formData.settlementStatus} 
                 onValueChange={(value) => setFormData(prev => ({ ...prev, settlementStatus: value }))}

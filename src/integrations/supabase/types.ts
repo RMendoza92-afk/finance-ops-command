@@ -204,6 +204,7 @@ export type Database = {
           bi_phase: string | null
           claim_number: string
           created_at: string
+          days_old: number | null
           expires_date: string
           extended_date: string
           high_eval: number | null
@@ -223,6 +224,7 @@ export type Database = {
           bi_phase?: string | null
           claim_number: string
           created_at?: string
+          days_old?: number | null
           expires_date: string
           extended_date: string
           high_eval?: number | null
@@ -242,6 +244,7 @@ export type Database = {
           bi_phase?: string | null
           claim_number?: string
           created_at?: string
+          days_old?: number | null
           expires_date?: string
           extended_date?: string
           high_eval?: number | null
