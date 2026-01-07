@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle,
   BarChart3, PieChart as PieChartIcon,
   ArrowUpRight, ArrowDownRight, Activity, Zap, Shield, Flag,
-  Database, Wallet, ChevronDown, ChevronUp, AlertCircle, MessageSquare,
+  Database, Wallet, ChevronDown, ChevronUp, AlertCircle,
   FileText, FileSpreadsheet, Loader2
 } from "lucide-react";
 import {
@@ -26,6 +26,7 @@ import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { useExportData } from "@/hooks/useExportData";
 import { toast } from "sonner";
+import { generateClaimsInventoryReport, generateCostCurveReport } from "@/lib/executiveVisualReport";
 
 interface ExecutiveCommandDashboardProps {
   data: {
@@ -57,9 +58,12 @@ interface ExecutiveCommandDashboardProps {
       previousDate: string;
     };
     trendData?: Array<{ month: string; claims: number; reserves: number }>;
+    typeGroupData?: Array<{ typeGroup: string; grandTotal: number; reserves: number }>;
+    ageBreakdown?: Array<{ age: string; claims: number; openReserves: number }>;
   };
   onOpenChat: () => void;
   onDrilldown: (section: string) => void;
+  onDoubleClickReport?: (section: string) => void;
   timestamp: string;
 }
 
@@ -71,7 +75,7 @@ const formatCurrency = (value: number) => {
 };
 const formatPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
-export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, timestamp }: ExecutiveCommandDashboardProps) {
+export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDoubleClickReport, timestamp }: ExecutiveCommandDashboardProps) {
   // Export functionality
   const { generateCSuiteBriefing, generateCSuiteExcel } = useExportData();
   const [generatingPDF, setGeneratingPDF] = useState(false);
@@ -363,7 +367,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
       {/* Top Row - 4 Column Power Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Claims */}
-        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('claims')}>
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          onClick={() => onDrilldown('claims')}
+          onDoubleClick={() => onDoubleClickReport?.('claims')}
+          title="Click to view details • Double-click to generate PDF report"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open Claims</span>
             <Activity className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -377,7 +386,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         </div>
 
         {/* Total Reserves */}
-        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('reserves')}>
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          onClick={() => onDrilldown('reserves')}
+          onDoubleClick={() => onDoubleClickReport?.('reserves')}
+          title="Click to view details • Double-click to generate PDF report"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Reserves</span>
             <DollarSign className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -390,7 +404,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         </div>
 
         {/* CP1 Rate */}
-        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" onClick={() => onDrilldown('cp1')}>
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group" 
+          onClick={() => onDrilldown('cp1')}
+          onDoubleClick={() => onDoubleClickReport?.('cp1')}
+          title="Click to view details • Double-click to generate PDF report"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">CP1 Compliance</span>
             <Shield className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -400,7 +419,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         </div>
 
         {/* Claims Payments 2025 */}
-        <div className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all group">
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          onClick={() => onDrilldown('budget')}
+          onDoubleClick={() => onDoubleClickReport?.('budget')}
+          title="Click to view details • Double-click to generate PDF report"
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">BI Payments YTD</span>
             <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -418,6 +442,8 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         <div 
           className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
           onClick={() => onDrilldown('noeval')}
+          onDoubleClick={() => onDoubleClickReport?.('noeval')}
+          title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">No Evaluation</span>
@@ -431,6 +457,8 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         <div 
           className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
           onClick={() => onDrilldown('aged365')}
+          onDoubleClick={() => onDoubleClickReport?.('aged365')}
+          title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Aged 365+</span>
@@ -444,6 +472,8 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         <div 
           className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
           onClick={() => onDrilldown('decisions')}
+          onDoubleClick={() => onDoubleClickReport?.('decisions')}
+          title="Click to view • Double-click for PDF"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending Decisions</span>
