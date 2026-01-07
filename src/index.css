@@ -2,48 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Command Center Design System - Black, White, Grey, Red, Green */
+/* ═══════════════════════════════════════════════════════════════════════════
+   JARVIS / IRON MAN COMMAND CENTER DESIGN SYSTEM
+   Futuristic HUD aesthetic with holographic elements and arc reactor accents
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* Default: Fred Loya Insurance Branding - Black, Red, Grey */
+/* Default: JARVIS Mode - Arc Reactor Blue with Black Chrome */
 :root {
-  --background: 0 0% 5%;
-  --foreground: 0 0% 95%;
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 95%;
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 95%;
-  --primary: 0 85% 50%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 18%;
-  --secondary-foreground: 0 0% 95%;
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 60%;
-  --accent: 0 70% 45%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
+  /* Core palette - Deep space black with arc reactor cyan */
+  --background: 220 25% 4%;
+  --foreground: 200 20% 92%;
+  --card: 220 30% 8%;
+  --card-foreground: 200 20% 92%;
+  --popover: 220 30% 6%;
+  --popover-foreground: 200 20% 92%;
+  
+  /* Primary: Arc Reactor Cyan-Blue */
+  --primary: 195 100% 50%;
+  --primary-foreground: 220 25% 4%;
+  
+  /* Secondary: Gunmetal Chrome */
+  --secondary: 220 15% 16%;
+  --secondary-foreground: 200 20% 85%;
+  
+  /* Muted: Deep space */
+  --muted: 220 20% 12%;
+  --muted-foreground: 200 15% 55%;
+  
+  /* Accent: Gold/Orange warning (Iron Man gold) */
+  --accent: 35 100% 55%;
+  --accent-foreground: 220 25% 4%;
+  
+  /* Status colors */
+  --destructive: 0 85% 55%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 71% 45%;
+  --success: 160 85% 45%;
   --success-foreground: 0 0% 100%;
-  --warning: 38 92% 50%;
+  --warning: 35 100% 55%;
   --warning-foreground: 0 0% 0%;
-  --info: 0 0% 70%;
-  --info-foreground: 0 0% 5%;
-  --border: 0 0% 20%;
-  --input: 0 0% 15%;
-  --ring: 0 85% 50%;
-  --radius: 0.5rem;
-  --sidebar-background: 0 0% 8%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-primary: 0 85% 50%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 60% 40%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 0 85% 50%;
-  --table-header: 0 0% 12%;
-  --terminal-mode: 0;
+  --info: 195 100% 50%;
+  --info-foreground: 220 25% 4%;
+  
+  /* Chrome borders */
+  --border: 220 20% 18%;
+  --input: 220 25% 12%;
+  --ring: 195 100% 50%;
+  --radius: 0.75rem;
+  
+  /* Sidebar */
+  --sidebar-background: 220 30% 6%;
+  --sidebar-foreground: 200 20% 90%;
+  --sidebar-primary: 195 100% 50%;
+  --sidebar-primary-foreground: 220 25% 4%;
+  --sidebar-accent: 35 100% 55%;
+  --sidebar-accent-foreground: 220 25% 4%;
+  --sidebar-border: 220 20% 18%;
+  --sidebar-ring: 195 100% 50%;
+  
+  /* Table */
+  --table-header: 220 30% 10%;
+  
+  /* HUD effects */
+  --hud-glow: 195 100% 50%;
+  --hud-gold: 35 100% 55%;
+  --hud-red: 0 85% 55%;
+  --arc-reactor: 195 100% 50%;
 }
 
 /* AS/400 Green Screen Terminal Mode - Exact match to classic IBM 3278 */
@@ -107,25 +132,28 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Rajdhani', 'Orbitron', system-ui, sans-serif;
   }
 
-  /* Loya mode uses sans-serif, terminal mode uses monospace */
-  :root body {
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  }
-  
-  .dark body {
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  /* Jarvis HUD headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    letter-spacing: 0.05em;
   }
 
+  /* Data/numbers use mono */
   .font-mono {
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
 }
 
 @layer components {
-  /* AS/400 CRT scanline effect */
-  .dark body::after {
+  /* ═══════════════════════════════════════════════════════════════════════════
+     JARVIS HUD EFFECTS - Iron Man Command Interface
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Subtle HUD grid overlay */
+  body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -133,37 +161,186 @@
     width: 100%;
     height: 100%;
     pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.15) 2px,
-      rgba(0, 0, 0, 0.15) 4px
+    background: 
+      radial-gradient(ellipse at 50% 0%, hsl(var(--arc-reactor) / 0.03) 0%, transparent 50%),
+      linear-gradient(0deg, transparent 49.9%, hsl(var(--arc-reactor) / 0.015) 50%, transparent 50.1%),
+      linear-gradient(90deg, transparent 49.9%, hsl(var(--arc-reactor) / 0.015) 50%, transparent 50.1%);
+    background-size: 100% 100%, 100px 100px, 100px 100px;
+    z-index: 0;
+  }
+
+  /* Arc reactor glow for primary elements */
+  .arc-glow {
+    box-shadow: 
+      0 0 0 1px hsl(var(--arc-reactor) / 0.3),
+      0 0 20px -5px hsl(var(--arc-reactor) / 0.5),
+      0 0 40px -10px hsl(var(--arc-reactor) / 0.3),
+      inset 0 1px 0 hsl(var(--arc-reactor) / 0.1);
+  }
+
+  /* Gold accent glow (Iron Man gold) */
+  .gold-glow {
+    box-shadow: 
+      0 0 0 1px hsl(var(--hud-gold) / 0.4),
+      0 0 20px -5px hsl(var(--hud-gold) / 0.5),
+      0 0 40px -10px hsl(var(--hud-gold) / 0.3);
+  }
+
+  /* Critical alert glow */
+  .alert-glow {
+    box-shadow: 
+      0 0 0 1px hsl(var(--hud-red) / 0.5),
+      0 0 25px -5px hsl(var(--hud-red) / 0.6),
+      0 0 50px -10px hsl(var(--hud-red) / 0.4);
+  }
+
+  /* HUD Card - Primary interactive element */
+  .hud-card {
+    @apply relative overflow-hidden transition-all duration-300 rounded-xl;
+    background: linear-gradient(
+      135deg, 
+      hsl(var(--card)) 0%, 
+      hsl(220 30% 6%) 50%,
+      hsl(var(--card)) 100%
     );
-    z-index: 9999;
+    border: 1px solid hsl(var(--arc-reactor) / 0.2);
   }
 
-  /* Phosphor text glow in dark mode */
-  .dark {
-    text-shadow: 0 0 2px hsl(120 100% 55% / 0.5);
+  .hud-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-0.5;
+    background: linear-gradient(
+      90deg, 
+      transparent 0%, 
+      hsl(var(--arc-reactor)) 20%, 
+      hsl(var(--arc-reactor)) 80%, 
+      transparent 100%
+    );
+    opacity: 0.6;
   }
 
-  /* Glowing border effect for active elements */
-  .glow-border {
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3),
-                0 0 20px -5px hsl(var(--primary) / 0.4);
+  .hud-card::after {
+    content: '';
+    @apply absolute bottom-0 right-0 w-16 h-16;
+    background: radial-gradient(
+      circle at 100% 100%,
+      hsl(var(--arc-reactor) / 0.1) 0%,
+      transparent 70%
+    );
   }
 
-  /* KPI card hover effect */
+  .hud-card:hover {
+    @apply transform -translate-y-1;
+    border-color: hsl(var(--arc-reactor) / 0.5);
+    box-shadow: 
+      0 0 0 1px hsl(var(--arc-reactor) / 0.3),
+      0 10px 40px -10px hsl(var(--arc-reactor) / 0.3),
+      0 20px 60px -20px hsl(var(--arc-reactor) / 0.2);
+  }
+
+  /* HUD Section divider */
+  .hud-divider {
+    @apply relative flex items-center gap-4 py-4;
+  }
+
+  .hud-divider::before,
+  .hud-divider::after {
+    content: '';
+    @apply flex-1 h-px;
+    background: linear-gradient(90deg, hsl(var(--arc-reactor) / 0.5), transparent);
+  }
+
+  .hud-divider::after {
+    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor) / 0.5));
+  }
+
+  /* HUD Badge - Status indicators */
+  .hud-badge {
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider;
+    background: hsl(var(--arc-reactor) / 0.15);
+    border: 1px solid hsl(var(--arc-reactor) / 0.4);
+    color: hsl(var(--arc-reactor));
+    text-shadow: 0 0 10px hsl(var(--arc-reactor) / 0.5);
+  }
+
+  .hud-badge-warning {
+    background: hsl(var(--hud-gold) / 0.15);
+    border-color: hsl(var(--hud-gold) / 0.5);
+    color: hsl(var(--hud-gold));
+    text-shadow: 0 0 10px hsl(var(--hud-gold) / 0.5);
+  }
+
+  .hud-badge-critical {
+    background: hsl(var(--hud-red) / 0.15);
+    border-color: hsl(var(--hud-red) / 0.5);
+    color: hsl(var(--hud-red));
+    text-shadow: 0 0 10px hsl(var(--hud-red) / 0.5);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Pulse glow animation */
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px hsl(var(--hud-red) / 0.5);
+    }
+    50% {
+      box-shadow: 0 0 20px hsl(var(--hud-red) / 0.8), 0 0 40px hsl(var(--hud-red) / 0.4);
+    }
+  }
+
+  /* Scanning line animation */
+  @keyframes scan-line {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100vh);
+    }
+  }
+
+  .hud-scan::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor)), transparent);
+    animation: scan-line 3s linear infinite;
+    opacity: 0.3;
+  }
+
+  /* Corner brackets for HUD panels */
+  .hud-brackets {
+    @apply relative;
+  }
+
+  .hud-brackets::before,
+  .hud-brackets::after {
+    content: '';
+    @apply absolute w-4 h-4 border-l-2 border-t-2;
+    border-color: hsl(var(--arc-reactor) / 0.6);
+  }
+
+  .hud-brackets::before {
+    @apply top-0 left-0;
+  }
+
+  .hud-brackets::after {
+    @apply bottom-0 right-0 rotate-180;
+  }
+
+  /* KPI card hover effect - upgraded */
   .kpi-card {
-    @apply relative overflow-hidden transition-all duration-300;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
+    @apply relative overflow-hidden transition-all duration-300 rounded-xl;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(220 30% 6%) 100%);
+    border: 1px solid hsl(var(--arc-reactor) / 0.15);
   }
 
   .kpi-card::before {
     content: '';
-    @apply absolute top-0 left-0 w-full h-1;
-    background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
+    @apply absolute top-0 left-0 w-full h-0.5;
+    background: linear-gradient(90deg, transparent, hsl(var(--arc-reactor)), transparent);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -173,8 +350,9 @@
   }
 
   .kpi-card:hover {
-    @apply transform -translate-y-0.5;
-    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.15);
+    @apply transform -translate-y-1;
+    border-color: hsl(var(--arc-reactor) / 0.4);
+    box-shadow: 0 15px 50px -15px hsl(var(--arc-reactor) / 0.25);
   }
 
   /* Data table styling */
