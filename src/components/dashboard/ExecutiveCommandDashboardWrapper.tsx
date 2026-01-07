@@ -37,29 +37,6 @@ import {
 } from "@/lib/bloombergExport";
 import { generateClaimsInventoryReport } from "@/lib/executiveVisualReport";
 
-// Financial constants (same as OpenInventoryDashboard)
-const FINANCIAL_DATA = {
-  totals: {
-    totalOpenReserves: 258000000,
-    totalLowEval: 63300000,
-    totalHighEval: 71000000,
-    noEvalCount: 13640,
-    noEvalReserves: 156400000,
-  }
-};
-
-const EXECUTIVE_METRICS = {
-  aging: {
-    over365Days: 5173,
-    over365Reserves: 78100000,
-  }
-};
-
-const CP1_DATA = {
-  totals: { yes: 6523 },
-  cp1Rate: '33.3%',
-};
-
 const formatM = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
 const formatK = (val: number) => `$${(val / 1000).toFixed(0)}K`;
 
@@ -142,11 +119,35 @@ export function ExecutiveCommandDashboardWrapper() {
     );
   }
 
-  const metrics = {
-    totalOpenClaims: data.totals.grandTotal,
-  };
+  // Extract real data from the hook - SINGLE SOURCE OF TRUTH
+  const totalOpenClaims = data.totals.grandTotal;
+  const totalReserves = data.financials.totalOpenReserves;
+  const totalLowEval = data.financials.totalLowEval;
+  const totalHighEval = data.financials.totalHighEval;
+  const noEvalCount = data.financials.noEvalCount;
+  const noEvalReserves = data.financials.noEvalReserves;
+  
+  // Age breakdown from real data
+  const aged365Plus = data.totals.age365Plus;
+  const aged365Reserves = data.financials.byAge.find(a => a.age === '365+ Days')?.openReserves || 0;
+  const aged181to365 = data.totals.age181To365 || 0;
+  const aged181Reserves = data.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0;
+  const aged61to180 = data.totals.age61To180 || 0;
+  const agedUnder60 = data.totals.ageUnder60 || 0;
+  
+  // CP1 from real data
+  const cp1Count = data.cp1Data.totals.yes;
+  const cp1Rate = data.cp1Data.cp1Rate;
+  
+  // Decisions from real hook data
+  const pendingDecisionsCount = decisionsData?.totalCount || 0;
+  const pendingDecisionsReserves = decisionsData?.totalReserves || 0;
+  
+  // Type group data
+  const typeGroupData = data.typeGroupSummaries || [];
+  const litCount = typeGroupData.find(t => t.typeGroup === 'LIT')?.grandTotal || 0;
 
-  // Budget metrics calculation
+  // Budget metrics calculation (still using placeholder for spend tracking)
   const budgetMetrics = {
     coverageBreakdown: {
       bi: {
@@ -185,19 +186,19 @@ export function ExecutiveCommandDashboardWrapper() {
         break;
       case 'export':
         const exportData = {
-          totalClaims: metrics.totalOpenClaims,
-          totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
-          cp1Rate: CP1_DATA.cp1Rate,
-          cp1Count: CP1_DATA.totals.yes,
-          aged365Plus: EXECUTIVE_METRICS.aging.over365Days,
-          aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
-          aged181to365: data.totals.age181To365 || 0,
-          noEvalCount: FINANCIAL_DATA.totals.noEvalCount,
-          noEvalReserves: FINANCIAL_DATA.totals.noEvalReserves,
-          decisionsCount: decisionsData?.totalCount || 0,
-          decisionsExposure: decisionsData?.totalReserves || 0,
-          lowEval: FINANCIAL_DATA.totals.totalLowEval,
-          highEval: FINANCIAL_DATA.totals.totalHighEval,
+          totalClaims: totalOpenClaims,
+          totalReserves,
+          cp1Rate,
+          cp1Count,
+          aged365Plus,
+          aged365Reserves,
+          aged181to365,
+          noEvalCount,
+          noEvalReserves,
+          decisionsCount: pendingDecisionsCount,
+          decisionsExposure: pendingDecisionsReserves,
+          lowEval: totalLowEval,
+          highEval: totalHighEval,
           biSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
           dataDate: data.dataDate || timestamp,
@@ -213,37 +214,34 @@ export function ExecutiveCommandDashboardWrapper() {
     toast.success('Generating executive visual report...');
     
     generateClaimsInventoryReport({
-      totalClaims: metrics.totalOpenClaims,
-      totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
+      totalClaims: totalOpenClaims,
+      totalReserves,
       typeGroups: typeGroupData.map(tg => ({ name: tg.typeGroup, claims: tg.grandTotal, reserves: tg.reserves })),
       ageBreakdown: data.financials.byAge.map(a => ({ bucket: a.age, claims: a.claims, reserves: a.openReserves })),
     });
   };
 
-  // Type group breakdown for claims drawer
-  const typeGroupData = data.typeGroupSummaries || [];
-
   return (
     <>
       <ExecutiveCommandDashboard
         data={{
-          totalClaims: metrics.totalOpenClaims,
-          totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
-          lowEval: FINANCIAL_DATA.totals.totalLowEval,
-          highEval: FINANCIAL_DATA.totals.totalHighEval,
-          noEvalCount: FINANCIAL_DATA.totals.noEvalCount,
-          noEvalReserves: FINANCIAL_DATA.totals.noEvalReserves,
-          aged365Plus: EXECUTIVE_METRICS.aging.over365Days,
-          aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
-          aged181to365: data.totals.age181To365 || 0,
-          aged181Reserves: data.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0,
-          aged61to180: data.totals.age61To180 || 0,
-          agedUnder60: data.totals.ageUnder60 || 0,
-          cp1Count: CP1_DATA.totals.yes,
-          cp1Rate: CP1_DATA.cp1Rate,
-          decisionsCount: decisionsData?.totalCount || 0,
-          decisionsExposure: decisionsData?.totalReserves || 0,
-          litCount: data.typeGroupSummaries.find(t => t.typeGroup === 'LIT')?.grandTotal || 0,
+          totalClaims: totalOpenClaims,
+          totalReserves,
+          lowEval: totalLowEval,
+          highEval: totalHighEval,
+          noEvalCount,
+          noEvalReserves,
+          aged365Plus,
+          aged365Reserves,
+          aged181to365,
+          aged181Reserves,
+          aged61to180,
+          agedUnder60,
+          cp1Count,
+          cp1Rate,
+          decisionsCount: pendingDecisionsCount,
+          decisionsExposure: pendingDecisionsReserves,
+          litCount,
           biLitSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biLitSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
           dataDate: data.dataDate || timestamp,
@@ -283,8 +281,8 @@ export function ExecutiveCommandDashboardWrapper() {
                 variant="outline"
                 size="sm"
                 onClick={() => exportClaimsDrilldown(
-                  metrics.totalOpenClaims,
-                  FINANCIAL_DATA.totals.totalOpenReserves,
+                  totalOpenClaims,
+                  totalReserves,
                   typeGroupData,
                   claimReviews
                 )}
@@ -301,11 +299,11 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Claims</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{metrics.totalOpenClaims.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{totalOpenClaims.toLocaleString()}</p>
               </div>
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Litigation</p>
-                <p className="text-3xl font-bold text-primary mt-1">{typeGroupData.find(t => t.typeGroup === 'LIT')?.grandTotal.toLocaleString() || 0}</p>
+                <p className="text-3xl font-bold text-primary mt-1">{litCount.toLocaleString()}</p>
               </div>
             </div>
 
@@ -330,7 +328,7 @@ export function ExecutiveCommandDashboardWrapper() {
                         <TableCell className="text-right">{formatM(tg.reserves)}</TableCell>
                         <TableCell className="text-right">
                           <Badge variant="outline" className="text-xs">
-                            {((tg.grandTotal / metrics.totalOpenClaims) * 100).toFixed(1)}%
+                            {((tg.grandTotal / totalOpenClaims) * 100).toFixed(1)}%
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -402,10 +400,10 @@ export function ExecutiveCommandDashboardWrapper() {
                 variant="outline"
                 size="sm"
                 onClick={() => exportReservesDrilldown(
-                  FINANCIAL_DATA.totals.totalOpenReserves,
-                  FINANCIAL_DATA.totals.totalLowEval,
-                  FINANCIAL_DATA.totals.totalHighEval,
-                  FINANCIAL_DATA.totals.noEvalReserves,
+                  totalReserves,
+                  totalLowEval,
+                  totalHighEval,
+                  noEvalReserves,
                   data.financials.byAge
                 )}
                 className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
@@ -421,15 +419,15 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="grid grid-cols-3 gap-3">
               <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
                 <p className="text-xs text-muted-foreground">Total Reserves</p>
-                <p className="text-2xl font-bold text-emerald-500">{formatM(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
+                <p className="text-2xl font-bold text-emerald-500">{formatM(totalReserves)}</p>
               </div>
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Low Eval</p>
-                <p className="text-2xl font-bold">{formatM(FINANCIAL_DATA.totals.totalLowEval)}</p>
+                <p className="text-2xl font-bold">{formatM(totalLowEval)}</p>
               </div>
               <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
                 <p className="text-xs text-warning">High Eval</p>
-                <p className="text-2xl font-bold text-warning">{formatM(FINANCIAL_DATA.totals.totalHighEval)}</p>
+                <p className="text-2xl font-bold text-warning">{formatM(totalHighEval)}</p>
               </div>
             </div>
 
@@ -440,23 +438,23 @@ export function ExecutiveCommandDashboardWrapper() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Low Eval Coverage</span>
-                    <span>{((FINANCIAL_DATA.totals.totalLowEval / FINANCIAL_DATA.totals.totalOpenReserves) * 100).toFixed(1)}%</span>
+                    <span>{totalReserves > 0 ? ((totalLowEval / totalReserves) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <Progress value={(FINANCIAL_DATA.totals.totalLowEval / FINANCIAL_DATA.totals.totalOpenReserves) * 100} className="h-2" />
+                  <Progress value={totalReserves > 0 ? (totalLowEval / totalReserves) * 100 : 0} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>High Eval Exposure</span>
-                    <span>{((FINANCIAL_DATA.totals.totalHighEval / FINANCIAL_DATA.totals.totalOpenReserves) * 100).toFixed(1)}%</span>
+                    <span>{totalReserves > 0 ? ((totalHighEval / totalReserves) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <Progress value={(FINANCIAL_DATA.totals.totalHighEval / FINANCIAL_DATA.totals.totalOpenReserves) * 100} className="h-2 bg-warning/20" />
+                  <Progress value={totalReserves > 0 ? (totalHighEval / totalReserves) * 100 : 0} className="h-2 bg-warning/20" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-destructive font-medium">No Evaluation</span>
-                    <span className="text-destructive">{((FINANCIAL_DATA.totals.noEvalReserves / FINANCIAL_DATA.totals.totalOpenReserves) * 100).toFixed(1)}%</span>
+                    <span className="text-destructive">{totalReserves > 0 ? ((noEvalReserves / totalReserves) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <Progress value={(FINANCIAL_DATA.totals.noEvalReserves / FINANCIAL_DATA.totals.totalOpenReserves) * 100} className="h-2 bg-destructive/20" />
+                  <Progress value={totalReserves > 0 ? (noEvalReserves / totalReserves) * 100 : 0} className="h-2 bg-destructive/20" />
                 </div>
               </div>
             </div>
@@ -498,16 +496,16 @@ export function ExecutiveCommandDashboardWrapper() {
                   <Flag className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <SheetTitle className="text-xl">Decisions Pending</SheetTitle>
-                  <SheetDescription>Claims requiring executive action</SheetDescription>
+                  <SheetTitle className="text-xl">Pending Decisions</SheetTitle>
+                  <SheetDescription>Claims requiring action</SheetDescription>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => exportDecisionsDrilldown(
-                  decisionsData?.totalCount || 0,
-                  decisionsData?.totalReserves || 0,
+                  pendingDecisionsCount,
+                  pendingDecisionsReserves,
                   decisionsData?.claims || []
                 )}
                 className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
@@ -522,47 +520,80 @@ export function ExecutiveCommandDashboardWrapper() {
             {/* Summary */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-                <p className="text-xs text-muted-foreground">Pending Decisions</p>
-                <p className="text-3xl font-bold text-primary">{decisionsData?.totalCount || 0}</p>
+                <p className="text-xs text-muted-foreground">Claims Pending</p>
+                <p className="text-3xl font-bold text-primary">{pendingDecisionsCount.toLocaleString()}</p>
               </div>
-              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+              <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Total Exposure</p>
-                <p className="text-3xl font-bold text-destructive">{formatM(decisionsData?.totalReserves || 0)}</p>
+                <p className="text-3xl font-bold">{formatM(pendingDecisionsReserves)}</p>
               </div>
             </div>
 
-            {/* Claims List */}
-            {decisionsData?.claims && decisionsData.claims.length > 0 ? (
-              <div className="rounded-xl border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="font-bold">Claim</TableHead>
-                      <TableHead className="font-bold">Team</TableHead>
-                      <TableHead className="text-right font-bold">Reserves</TableHead>
-                      <TableHead className="text-right font-bold">Pain Level</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {decisionsData.claims.slice(0, 20).map((claim, idx) => (
-                      <TableRow key={idx} className="hover:bg-muted/30">
-                        <TableCell className="font-medium font-mono text-xs">{claim.claimNumber}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs">{claim.team}</Badge></TableCell>
-                        <TableCell className="text-right">{formatK(claim.reserves)}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={claim.painLevel.includes('5+') || claim.painLevel === 'Limits' ? 'destructive' : 'outline'} className="text-xs">
-                            {claim.painLevel}
-                          </Badge>
-                        </TableCell>
+            {/* Claims requiring decisions */}
+            {decisionsData?.claims && decisionsData.claims.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Top Claims by Exposure</h4>
+                <div className="rounded-xl border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-bold">Claim</TableHead>
+                        <TableHead className="font-bold">State</TableHead>
+                        <TableHead className="text-right font-bold">Reserves</TableHead>
+                        <TableHead className="font-bold">Reason</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {decisionsData.claims.slice(0, 15).map((claim, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-xs">{claim.claimNumber}</TableCell>
+                          <TableCell className="text-sm">{claim.state}</TableCell>
+                          <TableCell className="text-right font-medium">{formatK(claim.reserves)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{claim.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground border rounded-xl">
-                <Flag className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No pending decisions data available</p>
+            )}
+
+            {/* LOR Offers from Database */}
+            {lorOffers.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Active LOR Offers</h4>
+                {loadingDrilldown ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">Claim</TableHead>
+                          <TableHead className="text-right font-bold">Offer</TableHead>
+                          <TableHead className="font-bold">Expires</TableHead>
+                          <TableHead className="font-bold">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lorOffers.slice(0, 10).map((offer) => (
+                          <TableRow key={offer.id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-xs">{offer.claim_number}</TableCell>
+                            <TableCell className="text-right font-medium">{formatK(offer.offer_amount)}</TableCell>
+                            <TableCell className="text-sm">{format(new Date(offer.expires_date), 'MMM d')}</TableCell>
+                            <TableCell>
+                              <Badge variant={offer.status === 'accepted' ? 'default' : offer.status === 'expired' ? 'destructive' : 'secondary'} className="text-xs">
+                                {offer.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -588,7 +619,7 @@ export function ExecutiveCommandDashboardWrapper() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => exportCP1Drilldown(CP1_DATA.totals.yes, CP1_DATA.cp1Rate)}
+                onClick={() => exportCP1Drilldown(cp1Count, cp1Rate)}
                 className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
               >
                 <Download className="h-4 w-4" />
@@ -602,8 +633,8 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="p-6 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">Current CP1 Rate</p>
-                <p className="text-5xl font-bold text-emerald-500">{CP1_DATA.cp1Rate}</p>
-                <p className="text-sm text-muted-foreground mt-2">{CP1_DATA.totals.yes.toLocaleString()} claims within limits</p>
+                <p className="text-5xl font-bold text-emerald-500">{cp1Rate}</p>
+                <p className="text-sm text-muted-foreground mt-2">{cp1Count.toLocaleString()} claims within limits</p>
               </div>
             </div>
 
@@ -614,14 +645,14 @@ export function ExecutiveCommandDashboardWrapper() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Current Rate</span>
-                    <span className="font-medium text-emerald-500">{CP1_DATA.cp1Rate}</span>
+                    <span className="font-medium text-emerald-500">{cp1Rate}</span>
                   </div>
-                  <Progress value={parseFloat(CP1_DATA.cp1Rate)} className="h-3" />
+                  <Progress value={parseFloat(cp1Rate)} className="h-3" />
                 </div>
                 <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
                   <span className="text-sm">Target: 35%</span>
-                  <Badge variant={parseFloat(CP1_DATA.cp1Rate) >= 35 ? "default" : "secondary"}>
-                    {parseFloat(CP1_DATA.cp1Rate) >= 35 ? 'On Track' : `${(35 - parseFloat(CP1_DATA.cp1Rate)).toFixed(1)}% to go`}
+                  <Badge variant={parseFloat(cp1Rate) >= 35 ? "default" : "secondary"}>
+                    {parseFloat(cp1Rate) >= 35 ? 'On Track' : `${(35 - parseFloat(cp1Rate)).toFixed(1)}% to go`}
                   </Badge>
                 </div>
               </div>
@@ -650,9 +681,9 @@ export function ExecutiveCommandDashboardWrapper() {
                 variant="outline"
                 size="sm"
                 onClick={() => exportNoEvalDrilldown(
-                  FINANCIAL_DATA.totals.noEvalCount,
-                  FINANCIAL_DATA.totals.noEvalReserves,
-                  metrics.totalOpenClaims
+                  noEvalCount,
+                  noEvalReserves,
+                  totalOpenClaims
                 )}
                 className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
               >
@@ -668,11 +699,11 @@ export function ExecutiveCommandDashboardWrapper() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Claims Without Eval</p>
-                  <p className="text-4xl font-bold text-warning">{FINANCIAL_DATA.totals.noEvalCount.toLocaleString()}</p>
+                  <p className="text-4xl font-bold text-warning">{noEvalCount.toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Exposure at Risk</p>
-                  <p className="text-4xl font-bold text-warning">{formatM(FINANCIAL_DATA.totals.noEvalReserves)}</p>
+                  <p className="text-4xl font-bold text-warning">{formatM(noEvalReserves)}</p>
                 </div>
               </div>
             </div>
@@ -684,7 +715,7 @@ export function ExecutiveCommandDashboardWrapper() {
                 <div>
                   <h4 className="font-semibold text-warning">Action Required</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100).toFixed(0)}% of claims lack proper evaluation. 
+                    {totalOpenClaims > 0 ? ((noEvalCount / totalOpenClaims) * 100).toFixed(0) : 0}% of claims lack proper evaluation. 
                     Target completion within 48 hours to minimize exposure risk.
                   </p>
                 </div>
@@ -695,11 +726,11 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">% of Inventory</p>
-                <p className="text-lg font-bold">{((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100).toFixed(1)}%</p>
+                <p className="text-lg font-bold">{totalOpenClaims > 0 ? ((noEvalCount / totalOpenClaims) * 100).toFixed(1) : 0}%</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Avg per Claim</p>
-                <p className="text-lg font-bold">{formatK(FINANCIAL_DATA.totals.noEvalReserves / FINANCIAL_DATA.totals.noEvalCount)}</p>
+                <p className="text-lg font-bold">{noEvalCount > 0 ? formatK(noEvalReserves / noEvalCount) : '$0'}</p>
               </div>
             </div>
           </div>
@@ -719,16 +750,16 @@ export function ExecutiveCommandDashboardWrapper() {
                 </div>
                 <div>
                   <SheetTitle className="text-xl">Aged Claims (365+ Days)</SheetTitle>
-                  <SheetDescription>Claims exceeding one year</SheetDescription>
+                  <SheetDescription>High-priority aged inventory</SheetDescription>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => exportAgedDrilldown(
-                  EXECUTIVE_METRICS.aging.over365Days,
-                  EXECUTIVE_METRICS.aging.over365Reserves,
-                  metrics.totalOpenClaims,
+                  aged365Plus,
+                  aged365Reserves,
+                  totalOpenClaims,
                   claimReviews
                 )}
                 className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
@@ -744,11 +775,11 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Aged 365+ Claims</p>
-                <p className="text-3xl font-bold text-red-600">{EXECUTIVE_METRICS.aging.over365Days.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-red-600">{aged365Plus.toLocaleString()}</p>
               </div>
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Reserve Exposure</p>
-                <p className="text-3xl font-bold text-red-600">{formatM(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
+                <p className="text-3xl font-bold text-red-600">{formatM(aged365Reserves)}</p>
               </div>
             </div>
 
@@ -756,11 +787,11 @@ export function ExecutiveCommandDashboardWrapper() {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">% of Inventory</p>
-                <p className="text-lg font-bold">{((EXECUTIVE_METRICS.aging.over365Days / metrics.totalOpenClaims) * 100).toFixed(1)}%</p>
+                <p className="text-lg font-bold">{totalOpenClaims > 0 ? ((aged365Plus / totalOpenClaims) * 100).toFixed(1) : 0}%</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Avg Reserve</p>
-                <p className="text-lg font-bold">{formatK(EXECUTIVE_METRICS.aging.over365Reserves / EXECUTIVE_METRICS.aging.over365Days)}</p>
+                <p className="text-lg font-bold">{aged365Plus > 0 ? formatK(aged365Reserves / aged365Plus) : '$0'}</p>
               </div>
             </div>
 
