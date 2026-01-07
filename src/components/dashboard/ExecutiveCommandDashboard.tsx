@@ -421,134 +421,83 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
         </div>
       </div>
 
-      {/* Risk Matrix - 2 Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left: Action Items */}
-        <div className="bg-card rounded-xl border p-5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requires Attention</h3>
-          
-          <div className="space-y-3">
-            {/* No Eval Alert */}
-            <div 
-              className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50 cursor-pointer hover:border-amber-400 transition-all"
-              onClick={() => onDrilldown('noeval')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">No Evaluation</p>
-                  <p className="text-xs text-muted-foreground">{formatM(data.noEvalReserves)} at risk</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.noEvalCount}</p>
-                <p className="text-xs text-muted-foreground">
-                  {((data.noEvalCount / data.totalClaims) * 100).toFixed(1)}% of book
-                </p>
-              </div>
-            </div>
-
-            {/* Aged 365+ Alert */}
-            <div 
-              className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800/50 cursor-pointer hover:border-red-400 transition-all"
-              onClick={() => onDrilldown('aged365')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
-                  <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Aged 365+ Days</p>
-                  <p className="text-xs text-muted-foreground">{formatM(data.aged365Reserves)} exposure</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{data.aged365Plus}</p>
-                <p className="text-xs text-muted-foreground">
-                  {((data.aged365Plus / data.totalClaims) * 100).toFixed(1)}% of book
-                </p>
-              </div>
-            </div>
-
-            {/* Pending Decisions */}
-            <div 
-              className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50 cursor-pointer hover:border-blue-400 transition-all"
-              onClick={() => onDrilldown('decisions')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                  <Flag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Pending Decisions</p>
-                  <p className="text-xs text-muted-foreground">{formatM(data.decisionsExposure)} exposure</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.decisionsCount}</p>
-                <p className="text-xs text-muted-foreground">awaiting action</p>
-              </div>
-            </div>
+      {/* Risk Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* No Eval */}
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          onClick={() => onDrilldown('noeval')}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">No Evaluation</span>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
           </div>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{data.noEvalCount}</p>
+          <p className="text-xs text-muted-foreground mt-2">{formatM(data.noEvalReserves)} exposure</p>
         </div>
 
-        {/* Right: Age Distribution Pie + Overspend Summary */}
-        <div className="space-y-4">
-          <div className="bg-card rounded-xl border p-5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Claims by Age</h3>
-            
-            <div className="flex items-center gap-4">
-              <div className="h-24 w-24 flex-shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={ageData}
-                      innerRadius={25}
-                      outerRadius={40}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {ageData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 grid grid-cols-2 gap-3">
-                {ageData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs text-muted-foreground">{item.name} days</span>
-                    </div>
-                    <span className="text-sm font-bold">{item.value.toLocaleString()}</span>
+        {/* Aged 365+ */}
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          onClick={() => onDrilldown('aged365')}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Aged 365+</span>
+            <Clock className="h-4 w-4 text-red-500" />
+          </div>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{data.aged365Plus}</p>
+          <p className="text-xs text-muted-foreground mt-2">{formatM(data.aged365Reserves)} exposure</p>
+        </div>
+
+        {/* Pending Decisions */}
+        <div 
+          className="bg-card rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group"
+          onClick={() => onDrilldown('decisions')}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending Decisions</span>
+            <Flag className="h-4 w-4 text-blue-500" />
+          </div>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{data.decisionsCount}</p>
+          <p className="text-xs text-muted-foreground mt-2">{formatM(data.decisionsExposure)} exposure</p>
+        </div>
+
+        {/* Age Distribution */}
+        <div className="bg-card rounded-xl border p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Age Mix</span>
+            <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-16 w-16 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={ageData}
+                    innerRadius={18}
+                    outerRadius={30}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {ageData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-1">
+              {ageData.slice(0, 2).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-muted-foreground">{item.name}</span>
                   </div>
-                ))}
-              </div>
+                  <span className="font-semibold">{item.value.toLocaleString()}</span>
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Overspend Quick View */}
-          {(overspendByType.anomaly > 0 || overspendByType.issue > 0) && (
-            <div className="bg-card rounded-xl border p-5">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Payment Exceptions</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Anomalies</p>
-                  <p className="text-xl font-bold text-foreground">{formatCurrency(overspendByType.anomaly)}</p>
-                  <p className="text-xs text-muted-foreground">{overspendByType.anomalyCount} claims</p>
-                </div>
-                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800/50">
-                  <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Issues</p>
-                  <p className="text-xl font-bold text-foreground">{formatCurrency(overspendByType.issue)}</p>
-                  <p className="text-xs text-muted-foreground">{overspendByType.issueCount} claims</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
