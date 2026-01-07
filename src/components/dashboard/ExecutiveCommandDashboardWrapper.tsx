@@ -3,8 +3,10 @@ import { format } from "date-fns";
 import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 import { useExportData } from "@/hooks/useExportData";
+import { useActuarialData } from "@/hooks/useActuarialData";
+import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
-import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink, Download } from "lucide-react";
+import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink, Download, BarChart3, PieChart, AlertCircle } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,14 +38,25 @@ import {
   exportBudgetDrilldown,
 } from "@/lib/bloombergExport";
 import { generateClaimsInventoryReport } from "@/lib/executiveVisualReport";
+import {
+  LineChart, Line, BarChart, Bar, ComposedChart, 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from "recharts";
 
 const formatM = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
 const formatK = (val: number) => `$${(val / 1000).toFixed(0)}K`;
+const formatCurrency = (value: number) => {
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+  return `$${value.toFixed(0)}`;
+};
 
 export function ExecutiveCommandDashboardWrapper() {
   const { data, loading, error } = useOpenExposureData();
   const { data: decisionsData } = useDecisionsPending();
   const { generateCSuiteBriefing, generateCSuiteExcel } = useExportData();
+  const { data: actuarialData } = useActuarialData(2026);
+  const triangleData = useLossTriangleData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
   
   const [showChat, setShowChat] = useState(false);
@@ -54,6 +67,14 @@ export function ExecutiveCommandDashboardWrapper() {
   const [showNoEvalDrawer, setShowNoEvalDrawer] = useState(false);
   const [showAged365Drawer, setShowAged365Drawer] = useState(false);
   const [showBudgetDrawer, setShowBudgetDrawer] = useState(false);
+  
+  // NEW: Drill-down states for additional sections
+  const [showLossDevDrawer, setShowLossDevDrawer] = useState(false);
+  const [showFrequencyDrawer, setShowFrequencyDrawer] = useState(false);
+  const [showPaymentsDrawer, setShowPaymentsDrawer] = useState(false);
+  const [showOverLimitDrawer, setShowOverLimitDrawer] = useState(false);
+  const [showAgeMixDrawer, setShowAgeMixDrawer] = useState(false);
+  const [selectedFreqState, setSelectedFreqState] = useState<string | null>(null);
 
   // Database data states
   const [claimReviews, setClaimReviews] = useState<any[]>([]);
@@ -159,6 +180,14 @@ export function ExecutiveCommandDashboardWrapper() {
 
   // Drilldown handler
   const handleDrilldown = (section: string) => {
+    // Handle frequency state drilldown
+    if (section.startsWith('frequency-')) {
+      const state = section.replace('frequency-', '');
+      setSelectedFreqState(state);
+      setShowFrequencyDrawer(true);
+      return;
+    }
+    
     switch (section) {
       case 'claims':
         fetchClaimReviews();
@@ -183,6 +212,23 @@ export function ExecutiveCommandDashboardWrapper() {
         break;
       case 'budget':
         setShowBudgetDrawer(true);
+        break;
+      // NEW: Additional drill-down sections
+      case 'loss-development':
+        setShowLossDevDrawer(true);
+        break;
+      case 'claims-frequency':
+        setSelectedFreqState(null);
+        setShowFrequencyDrawer(true);
+        break;
+      case 'claims-payments':
+        setShowPaymentsDrawer(true);
+        break;
+      case 'over-limit':
+        setShowOverLimitDrawer(true);
+        break;
+      case 'age-mix':
+        setShowAgeMixDrawer(true);
         break;
       case 'export':
         const exportData = {
@@ -914,6 +960,551 @@ export function ExecutiveCommandDashboardWrapper() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* LOSS DEVELOPMENT DRILLDOWN */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Sheet open={showLossDevDrawer} onOpenChange={setShowLossDevDrawer}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <Activity className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">Loss Development Analysis</SheetTitle>
+                <SheetDescription>Accident year incurred development</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {/* AY Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {triangleData.summaryByAY.slice(0, 3).map((ay) => (
+                <div
+                  key={ay.accidentYear}
+                  className={`p-4 rounded-xl border ${
+                    ay.accidentYear === 2025 ? 'bg-primary/10 border-primary' : 'bg-muted/30'
+                  }`}
+                >
+                  <div className="text-xs font-medium text-muted-foreground">AY {ay.accidentYear}</div>
+                  <div className="text-2xl font-bold">{ay.lossRatio.toFixed(1)}%</div>
+                  <div className="text-sm text-muted-foreground">{formatCurrency(ay.ultimateIncurred)}</div>
+                  <Badge variant="outline" className="mt-2 text-xs">{ay.developmentAge} mo dev</Badge>
+                </div>
+              ))}
+            </div>
+
+            {/* Development Chart */}
+            <div className="p-4 rounded-xl border bg-card">
+              <h4 className="font-semibold mb-4">Incurred Development by AY</h4>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={triangleData.summaryByAY.filter(ay => ay.accidentYear >= 2020).map(ay => ({
+                    year: `AY ${ay.accidentYear}`,
+                    paid: ay.netPaidLoss,
+                    reserves: ay.claimReserves,
+                    ibnr: ay.bulkIbnr,
+                    incurred: ay.ultimateIncurred,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v / 1000000}M`} />
+                    <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
+                    <Legend />
+                    <Bar dataKey="paid" name="Paid" stackId="a" fill="#10B981" />
+                    <Bar dataKey="reserves" name="Reserves" stackId="a" fill="#F59E0B" />
+                    <Bar dataKey="ibnr" name="IBNR" stackId="a" fill="#8B5CF6" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Detail Table */}
+            <div className="rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-bold">AY</TableHead>
+                    <TableHead className="text-right font-bold">Earned Prem</TableHead>
+                    <TableHead className="text-right font-bold">Net Paid</TableHead>
+                    <TableHead className="text-right font-bold">Reserves</TableHead>
+                    <TableHead className="text-right font-bold">IBNR</TableHead>
+                    <TableHead className="text-right font-bold">Incurred</TableHead>
+                    <TableHead className="text-right font-bold">Loss Ratio</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {triangleData.summaryByAY.map((row) => (
+                    <TableRow key={row.accidentYear}>
+                      <TableCell className="font-medium">{row.accidentYear}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.earnedPremium)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.netPaidLoss)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.claimReserves)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.bulkIbnr)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(row.ultimateIncurred)}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={row.lossRatio > 75 ? "destructive" : row.lossRatio > 70 ? "secondary" : "default"}>
+                          {row.lossRatio.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* CLAIMS FREQUENCY DRILLDOWN */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Sheet open={showFrequencyDrawer} onOpenChange={setShowFrequencyDrawer}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20">
+                <BarChart3 className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">
+                  Claims Frequency {selectedFreqState ? `- ${selectedFreqState}` : 'Analysis'}
+                </SheetTitle>
+                <SheetDescription>State-level frequency trends</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {/* State Frequency Summary */}
+            {(() => {
+              const claimsFrequency = actuarialData.claimsFrequency;
+              const states = [...new Set(claimsFrequency.map(f => f.state))].filter(s => s !== 'Combined');
+              
+              const stateAverages = states.map(state => {
+                const stateData = claimsFrequency.filter(f => f.state === state);
+                const data2024 = stateData.filter(f => f.year === 2024);
+                const data2025 = stateData.filter(f => f.year === 2025);
+                return {
+                  state,
+                  avg2024: data2024.length > 0 ? data2024.reduce((s, f) => s + f.frequency, 0) / data2024.length : 0,
+                  avg2025: data2025.length > 0 ? data2025.reduce((s, f) => s + f.frequency, 0) / data2025.length : 0,
+                };
+              }).sort((a, b) => b.avg2025 - a.avg2025);
+
+              const filteredData = selectedFreqState 
+                ? stateAverages.filter(s => s.state === selectedFreqState)
+                : stateAverages;
+
+              return (
+                <>
+                  {/* State Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {(selectedFreqState ? filteredData : stateAverages.slice(0, 4)).map((state) => {
+                      const yoyChange = state.avg2024 > 0 ? ((state.avg2025 - state.avg2024) / state.avg2024 * 100) : 0;
+                      const getColor = () => {
+                        const freqPct = state.avg2025 * 100;
+                        if (freqPct >= 220) return 'bg-red-500/20 border-red-500/30 text-red-500';
+                        if (freqPct >= 180) return 'bg-orange-500/20 border-orange-500/30 text-orange-500';
+                        if (freqPct >= 160) return 'bg-amber-500/20 border-amber-500/30 text-amber-600';
+                        return 'bg-emerald-500/20 border-emerald-500/30 text-emerald-500';
+                      };
+                      return (
+                        <div key={state.state} className={`p-4 rounded-xl border ${getColor()}`}>
+                          <div className="text-xs font-medium text-muted-foreground">{state.state}</div>
+                          <div className="text-2xl font-bold">{(state.avg2025 * 100).toFixed(1)}%</div>
+                          <div className="flex items-center gap-1 text-xs mt-1">
+                            {yoyChange < 0 ? (
+                              <TrendingDown className="h-3 w-3" />
+                            ) : (
+                              <TrendingUp className="h-3 w-3" />
+                            )}
+                            <span>{yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}% YoY</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Frequency Chart */}
+                  <div className="p-4 rounded-xl border bg-card">
+                    <h4 className="font-semibold mb-4">Frequency Trend</h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={stateAverages.slice(0, 10)}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="state" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
+                          <Tooltip formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, '']} />
+                          <Legend />
+                          <Bar dataKey="avg2024" name="2024 Avg" fill="#94A3B8" />
+                          <Bar dataKey="avg2025" name="2025 Avg" fill="#F59E0B" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Full Table */}
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">State</TableHead>
+                          <TableHead className="text-right font-bold">2024 Avg</TableHead>
+                          <TableHead className="text-right font-bold">2025 Avg</TableHead>
+                          <TableHead className="text-right font-bold">YoY Change</TableHead>
+                          <TableHead className="text-right font-bold">Risk Level</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stateAverages.map((row) => {
+                          const yoyChange = row.avg2024 > 0 ? ((row.avg2025 - row.avg2024) / row.avg2024 * 100) : 0;
+                          const freqPct = row.avg2025 * 100;
+                          const riskLevel = freqPct >= 220 ? 'High' : freqPct >= 180 ? 'Elevated' : freqPct >= 160 ? 'Medium' : 'Low';
+                          const riskVariant = freqPct >= 220 ? 'destructive' : freqPct >= 180 ? 'secondary' : 'default';
+                          return (
+                            <TableRow key={row.state} className={selectedFreqState === row.state ? 'bg-primary/5' : ''}>
+                              <TableCell className="font-medium">{row.state}</TableCell>
+                              <TableCell className="text-right">{(row.avg2024 * 100).toFixed(1)}%</TableCell>
+                              <TableCell className="text-right font-semibold">{(row.avg2025 * 100).toFixed(1)}%</TableCell>
+                              <TableCell className={`text-right ${yoyChange < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}%
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant={riskVariant as any}>{riskLevel}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* CLAIMS PAYMENTS DRILLDOWN */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Sheet open={showPaymentsDrawer} onOpenChange={setShowPaymentsDrawer}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <DollarSign className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">Claims Payments Analysis</SheetTitle>
+                <SheetDescription>Coverage-level payment trends</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {(() => {
+              const claimsPayments = actuarialData.claimsPayments;
+              const coverages = ['BI', 'PD', 'UM', 'CL', 'TOTAL'];
+              
+              const paymentSummary = coverages.map(cov => {
+                const getYtd = (year: number) => 
+                  claimsPayments.find(p => p.coverage === cov && p.periodYear === year && p.isYtd)?.totalPayments || 0;
+                const ytd2024 = getYtd(2024);
+                const ytd2025 = getYtd(2025);
+                const yoyChange = ytd2024 > 0 ? ((ytd2025 - ytd2024) / ytd2024) * 100 : 0;
+                return { coverage: cov, ytd2023: getYtd(2023), ytd2024, ytd2025, yoyChange };
+              });
+
+              return (
+                <>
+                  {/* Coverage Summary Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {paymentSummary.map((cov) => (
+                      <div
+                        key={cov.coverage}
+                        className={`p-4 rounded-xl border ${cov.coverage === 'TOTAL' ? 'bg-primary/10 border-primary col-span-2 md:col-span-1' : 'bg-muted/30'}`}
+                      >
+                        <div className="text-xs font-medium text-muted-foreground">{cov.coverage}</div>
+                        <div className="text-xl font-bold">{formatCurrency(cov.ytd2025)}</div>
+                        <div className="flex items-center gap-1 text-xs mt-1">
+                          {cov.yoyChange > 0 ? (
+                            <TrendingUp className="h-3 w-3 text-amber-500" />
+                          ) : (
+                            <TrendingDown className="h-3 w-3 text-emerald-500" />
+                          )}
+                          <span className={cov.yoyChange > 0 ? "text-amber-600" : "text-emerald-600"}>
+                            {cov.yoyChange !== 0 ? `${cov.yoyChange >= 0 ? '+' : ''}${cov.yoyChange.toFixed(0)}%` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Payments Chart */}
+                  <div className="p-4 rounded-xl border bg-card">
+                    <h4 className="font-semibold mb-4">YTD Payments by Coverage</h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={paymentSummary.filter(p => p.coverage !== 'TOTAL')}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="coverage" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v / 1000000}M`} />
+                          <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
+                          <Legend />
+                          <Bar dataKey="ytd2023" name="2023 YTD" fill="#94A3B8" />
+                          <Bar dataKey="ytd2024" name="2024 YTD" fill="#F59E0B" />
+                          <Bar dataKey="ytd2025" name="2025 YTD" fill="#10B981" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Detail Table */}
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">Coverage</TableHead>
+                          <TableHead className="text-right font-bold">2023 YTD</TableHead>
+                          <TableHead className="text-right font-bold">2024 YTD</TableHead>
+                          <TableHead className="text-right font-bold">2025 YTD</TableHead>
+                          <TableHead className="text-right font-bold">YoY Change</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paymentSummary.map((row) => (
+                          <TableRow key={row.coverage} className={row.coverage === 'TOTAL' ? 'font-bold border-t-2' : ''}>
+                            <TableCell className="font-medium">{row.coverage}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(row.ytd2023)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(row.ytd2024)}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatCurrency(row.ytd2025)}</TableCell>
+                            <TableCell className={`text-right ${row.yoyChange > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                              {row.yoyChange !== 0 ? `${row.yoyChange >= 0 ? '+' : ''}${row.yoyChange.toFixed(1)}%` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* OVER-LIMIT PAYMENTS DRILLDOWN */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Sheet open={showOverLimitDrawer} onOpenChange={setShowOverLimitDrawer}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-destructive/20">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">Over-Limit Payments Analysis</SheetTitle>
+                <SheetDescription>Payments exceeding policy limits</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {(() => {
+              const overLimitPayments = actuarialData.overLimitPayments;
+              const totalOverLimit = overLimitPayments.reduce((s, p) => s + p.overLimitAmount, 0);
+              const totalPayments = overLimitPayments.reduce((s, p) => s + p.paymentAmount, 0);
+              
+              // Group by state
+              const byState = overLimitPayments.reduce((acc, p) => {
+                acc[p.state] = (acc[p.state] || 0) + p.overLimitAmount;
+                return acc;
+              }, {} as Record<string, number>);
+              
+              const stateData = Object.entries(byState)
+                .sort((a, b) => b[1] - a[1])
+                .map(([state, amount]) => ({ state, amount }));
+
+              return (
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                      <div className="text-xs text-destructive">Total Over-Limit</div>
+                      <div className="text-2xl font-bold text-destructive">{formatCurrency(totalOverLimit)}</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <div className="text-xs text-amber-600">Total Payments</div>
+                      <div className="text-2xl font-bold text-amber-600">{formatCurrency(totalPayments)}</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/30 border">
+                      <div className="text-xs text-muted-foreground">Claims Count</div>
+                      <div className="text-2xl font-bold">{overLimitPayments.length}</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/30 border">
+                      <div className="text-xs text-muted-foreground">Avg Over-Limit</div>
+                      <div className="text-2xl font-bold">
+                        {overLimitPayments.length > 0 ? formatCurrency(totalOverLimit / overLimitPayments.length) : '$0'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* By State Chart */}
+                  <div className="p-4 rounded-xl border bg-card">
+                    <h4 className="font-semibold mb-4">Over-Limit by State</h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={stateData.slice(0, 10)} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
+                          <YAxis type="category" dataKey="state" tick={{ fontSize: 11 }} width={60} />
+                          <Tooltip formatter={(value: number) => [formatCurrency(value), 'Over-Limit']} />
+                          <Bar dataKey="amount" fill="#EF4444" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Detail Table */}
+                  <div className="rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">Date</TableHead>
+                          <TableHead className="font-bold">Claim #</TableHead>
+                          <TableHead className="font-bold">State</TableHead>
+                          <TableHead className="text-right font-bold">Policy Limit</TableHead>
+                          <TableHead className="text-right font-bold">Payment</TableHead>
+                          <TableHead className="text-right font-bold">Over Limit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {overLimitPayments.slice(0, 15).map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>{row.paymentDate}</TableCell>
+                            <TableCell className="font-mono text-xs">{row.claimNumber}</TableCell>
+                            <TableCell>{row.state}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(row.policyLimit)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(row.paymentAmount)}</TableCell>
+                            <TableCell className="text-right text-destructive font-semibold">
+                              {formatCurrency(row.overLimitAmount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {overLimitPayments.length > 15 && (
+                      <p className="text-xs text-muted-foreground p-3 text-center border-t">
+                        Showing 15 of {overLimitPayments.length} claims
+                      </p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* AGE MIX DRILLDOWN */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Sheet open={showAgeMixDrawer} onOpenChange={setShowAgeMixDrawer}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <PieChart className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">Age Distribution Analysis</SheetTitle>
+                <SheetDescription>Claims aging breakdown</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-6">
+            {/* Age Summary Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                <div className="text-xs text-destructive">365+ Days</div>
+                <div className="text-3xl font-bold text-destructive">{aged365Plus.toLocaleString()}</div>
+                <div className="text-sm text-muted-foreground mt-1">{formatM(aged365Reserves)}</div>
+              </div>
+              <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
+                <div className="text-xs text-warning">181-365 Days</div>
+                <div className="text-3xl font-bold text-warning">{aged181to365.toLocaleString()}</div>
+                <div className="text-sm text-muted-foreground mt-1">{formatM(aged181Reserves)}</div>
+              </div>
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="text-xs text-amber-600">61-180 Days</div>
+                <div className="text-3xl font-bold text-amber-600">{aged61to180.toLocaleString()}</div>
+              </div>
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="text-xs text-emerald-600">&lt;60 Days</div>
+                <div className="text-3xl font-bold text-emerald-600">{agedUnder60.toLocaleString()}</div>
+              </div>
+            </div>
+
+            {/* Age Distribution Visual */}
+            <div className="p-4 rounded-xl border bg-card">
+              <h4 className="font-semibold mb-4">Age Distribution</h4>
+              <div className="space-y-3">
+                {[
+                  { label: '365+ Days', count: aged365Plus, color: 'bg-destructive' },
+                  { label: '181-365 Days', count: aged181to365, color: 'bg-warning' },
+                  { label: '61-180 Days', count: aged61to180, color: 'bg-amber-500' },
+                  { label: '<60 Days', count: agedUnder60, color: 'bg-emerald-500' },
+                ].map((age) => {
+                  const pct = totalOpenClaims > 0 ? (age.count / totalOpenClaims) * 100 : 0;
+                  return (
+                    <div key={age.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{age.label}</span>
+                        <span className="font-medium">{age.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                      </div>
+                      <div className="h-3 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full ${age.color} rounded-full`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reserves by Age */}
+            <div className="rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-bold">Age Bucket</TableHead>
+                    <TableHead className="text-right font-bold">Claims</TableHead>
+                    <TableHead className="text-right font-bold">% of Total</TableHead>
+                    <TableHead className="text-right font-bold">Reserves</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.financials.byAge.map((age) => (
+                    <TableRow key={age.age}>
+                      <TableCell className="font-medium">{age.age}</TableCell>
+                      <TableCell className="text-right">{age.claims.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        {totalOpenClaims > 0 ? ((age.claims / totalOpenClaims) * 100).toFixed(1) : 0}%
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{formatM(age.openReserves)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </SheetContent>

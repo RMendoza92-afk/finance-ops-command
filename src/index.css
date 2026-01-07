@@ -183,9 +183,55 @@
   }
 
   .metric-card:hover {
-    border-color: hsl(var(--border));
-    box-shadow: 0 8px 32px -12px hsl(0 0% 0% / 0.6);
+    border-color: hsl(var(--exec-gold) / 0.4);
+    box-shadow: 0 8px 32px -12px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(var(--exec-gold) / 0.1);
     transform: translateY(-2px);
+  }
+
+  /* Drill-down indicator for clickable cards */
+  .metric-card.cursor-pointer::after {
+    content: '→';
+    @apply absolute bottom-2 right-3 text-xs opacity-0 transition-all duration-200;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .metric-card.cursor-pointer:hover::after {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  /* Drill-down Card - For clickable sections */
+  .drilldown-card {
+    @apply relative overflow-hidden transition-all duration-300 rounded-xl cursor-pointer;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .drilldown-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, transparent 50%);
+  }
+
+  .drilldown-card:hover::before {
+    opacity: 1;
+  }
+
+  .drilldown-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 12px 40px -16px hsl(0 0% 0% / 0.7), 0 0 0 1px hsl(var(--primary) / 0.15);
+    transform: translateY(-3px);
+  }
+
+  .drilldown-card::after {
+    content: 'Click to drill down';
+    @apply absolute bottom-3 right-4 text-xs font-medium px-2 py-1 rounded opacity-0 transition-all duration-200;
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+  }
+
+  .drilldown-card:hover::after {
+    opacity: 1;
   }
 
   /* Warning variant */
