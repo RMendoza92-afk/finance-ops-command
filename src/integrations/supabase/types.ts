@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      actuarial_metrics: {
+        Row: {
+          contingencies: number | null
+          created_at: string
+          credibility: number | null
+          development_factor: number | null
+          fixed_expense_ratio: number | null
+          id: string
+          indicated_level_effect: number | null
+          investment_income: number | null
+          lae_amount: number | null
+          lae_ratio: number | null
+          loss_ratio: number | null
+          period_quarter: number
+          period_year: number
+          prior_year_loss: number | null
+          projected_loss: number | null
+          selected_change: number | null
+          selected_profit: number | null
+          target_expense_ratio: number | null
+          target_loss_ratio: number | null
+          total_expense_ratio: number | null
+          trend_factor: number | null
+          ultimate_loss: number | null
+          updated_at: string
+          variable_expense_ratio: number | null
+        }
+        Insert: {
+          contingencies?: number | null
+          created_at?: string
+          credibility?: number | null
+          development_factor?: number | null
+          fixed_expense_ratio?: number | null
+          id?: string
+          indicated_level_effect?: number | null
+          investment_income?: number | null
+          lae_amount?: number | null
+          lae_ratio?: number | null
+          loss_ratio?: number | null
+          period_quarter: number
+          period_year: number
+          prior_year_loss?: number | null
+          projected_loss?: number | null
+          selected_change?: number | null
+          selected_profit?: number | null
+          target_expense_ratio?: number | null
+          target_loss_ratio?: number | null
+          total_expense_ratio?: number | null
+          trend_factor?: number | null
+          ultimate_loss?: number | null
+          updated_at?: string
+          variable_expense_ratio?: number | null
+        }
+        Update: {
+          contingencies?: number | null
+          created_at?: string
+          credibility?: number | null
+          development_factor?: number | null
+          fixed_expense_ratio?: number | null
+          id?: string
+          indicated_level_effect?: number | null
+          investment_income?: number | null
+          lae_amount?: number | null
+          lae_ratio?: number | null
+          loss_ratio?: number | null
+          period_quarter?: number
+          period_year?: number
+          prior_year_loss?: number | null
+          projected_loss?: number | null
+          selected_change?: number | null
+          selected_profit?: number | null
+          target_expense_ratio?: number | null
+          target_loss_ratio?: number | null
+          total_expense_ratio?: number | null
+          trend_factor?: number | null
+          ultimate_loss?: number | null
+          updated_at?: string
+          variable_expense_ratio?: number | null
+        }
+        Relationships: []
+      }
       claim_reviews: {
         Row: {
           age_bucket: string
@@ -64,6 +145,45 @@ export type Database = {
           notes?: string | null
           reserves?: number
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coverage_rate_changes: {
+        Row: {
+          coverage: string
+          created_at: string
+          id: string
+          indicated_change: number | null
+          loss_ratio: number | null
+          period_year: number
+          premium_volume: number | null
+          selected_change: number | null
+          trend: string | null
+          updated_at: string
+        }
+        Insert: {
+          coverage: string
+          created_at?: string
+          id?: string
+          indicated_change?: number | null
+          loss_ratio?: number | null
+          period_year: number
+          premium_volume?: number | null
+          selected_change?: number | null
+          trend?: string | null
+          updated_at?: string
+        }
+        Update: {
+          coverage?: string
+          created_at?: string
+          id?: string
+          indicated_change?: number | null
+          loss_ratio?: number | null
+          period_year?: number
+          premium_volume?: number | null
+          selected_change?: number | null
+          trend?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -260,6 +380,42 @@ export type Database = {
         }
         Relationships: []
       }
+      loss_development: {
+        Row: {
+          created_at: string
+          ibnr: number | null
+          id: string
+          incurred_losses: number | null
+          paid_losses: number | null
+          period_quarter: number
+          period_year: number
+          reported_losses: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ibnr?: number | null
+          id?: string
+          incurred_losses?: number | null
+          paid_losses?: number | null
+          period_quarter: number
+          period_year: number
+          reported_losses?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ibnr?: number | null
+          id?: string
+          incurred_losses?: number | null
+          paid_losses?: number | null
+          period_quarter?: number
+          period_year?: number
+          reported_losses?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       open_exposure: {
         Row: {
           created_at: string
@@ -431,6 +587,48 @@ export type Database = {
           notes?: string | null
           state?: string
           trigger_80_pct?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      state_rate_changes: {
+        Row: {
+          created_at: string
+          effective_date: string | null
+          filing_status: string | null
+          id: string
+          indicated_change: number | null
+          loss_ratio: number | null
+          period_year: number
+          policy_volume: number | null
+          selected_change: number | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_date?: string | null
+          filing_status?: string | null
+          id?: string
+          indicated_change?: number | null
+          loss_ratio?: number | null
+          period_year: number
+          policy_volume?: number | null
+          selected_change?: number | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_date?: string | null
+          filing_status?: string | null
+          id?: string
+          indicated_change?: number | null
+          loss_ratio?: number | null
+          period_year?: number
+          policy_volume?: number | null
+          selected_change?: number | null
+          state?: string
           updated_at?: string
         }
         Relationships: []
