@@ -46,43 +46,43 @@
   --terminal-mode: 0;
 }
 
-/* AS/400 Green Screen Terminal Mode */
+/* AS/400 Green Screen Terminal Mode - Exact match to classic IBM 3278 */
 .dark {
-  --background: 120 100% 2%;
-  --foreground: 120 100% 55%;
-  --card: 120 100% 4%;
-  --card-foreground: 120 100% 55%;
-  --popover: 120 100% 4%;
-  --popover-foreground: 120 100% 55%;
-  --primary: 120 100% 45%;
-  --primary-foreground: 120 100% 2%;
+  --background: 0 0% 0%;
+  --foreground: 120 100% 50%;
+  --card: 0 0% 0%;
+  --card-foreground: 120 100% 50%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 120 100% 50%;
+  --primary: 120 100% 50%;
+  --primary-foreground: 0 0% 0%;
   --secondary: 120 100% 8%;
-  --secondary-foreground: 120 100% 55%;
-  --muted: 120 100% 8%;
-  --muted-foreground: 120 60% 40%;
-  --accent: 120 100% 35%;
-  --accent-foreground: 120 100% 2%;
+  --secondary-foreground: 120 100% 50%;
+  --muted: 120 100% 5%;
+  --muted-foreground: 120 100% 35%;
+  --accent: 120 100% 50%;
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 100% 50%;
   --destructive-foreground: 0 0% 0%;
   --success: 120 100% 50%;
-  --success-foreground: 120 100% 2%;
+  --success-foreground: 0 0% 0%;
   --warning: 60 100% 50%;
   --warning-foreground: 0 0% 0%;
-  --info: 120 80% 45%;
-  --info-foreground: 120 100% 2%;
-  --border: 120 100% 20%;
-  --input: 120 100% 15%;
-  --ring: 120 100% 45%;
+  --info: 120 100% 50%;
+  --info-foreground: 0 0% 0%;
+  --border: 120 100% 25%;
+  --input: 120 100% 8%;
+  --ring: 120 100% 50%;
   --radius: 0rem;
-  --sidebar-background: 120 100% 3%;
-  --sidebar-foreground: 120 100% 55%;
-  --sidebar-primary: 120 100% 45%;
-  --sidebar-primary-foreground: 120 100% 2%;
+  --sidebar-background: 0 0% 0%;
+  --sidebar-foreground: 120 100% 50%;
+  --sidebar-primary: 120 100% 50%;
+  --sidebar-primary-foreground: 0 0% 0%;
   --sidebar-accent: 120 100% 8%;
-  --sidebar-accent-foreground: 120 100% 55%;
-  --sidebar-border: 120 100% 20%;
-  --sidebar-ring: 120 100% 45%;
-  --table-header: 120 100% 6%;
+  --sidebar-accent-foreground: 120 100% 50%;
+  --sidebar-border: 120 100% 25%;
+  --sidebar-ring: 120 100% 50%;
+  --table-header: 120 100% 5%;
   --terminal-mode: 1;
 }
 
