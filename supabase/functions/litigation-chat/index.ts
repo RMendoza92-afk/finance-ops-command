@@ -316,6 +316,85 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
     
     // Multi-pack claims data (claims sharing same incident/base claim number)
     multi_pack_claims: multiPackPayload,
+    
+    // === DEMAND & SETTLEMENT ANALYSIS ===
+    demand_settlement_summary: (() => {
+      const claims = exp.rawClaims || [];
+      const withDemand = claims.filter((c: any) => c.negotiationAmount > 0);
+      const totalDemandAmount = withDemand.reduce((sum: number, c: any) => sum + (c.negotiationAmount || 0), 0);
+      const totalAuthAmount = claims.reduce((sum: number, c: any) => sum + (c.authAmount || 0), 0);
+      const totalPaidAmount = claims.reduce((sum: number, c: any) => sum + (c.totalPaid || 0), 0);
+      
+      return {
+        claims_with_demand: withDemand.length,
+        total_demand_amount_usd: totalDemandAmount,
+        avg_demand_usd: withDemand.length > 0 ? Math.round(totalDemandAmount / withDemand.length) : 0,
+        total_auth_amount_usd: totalAuthAmount,
+        total_paid_amount_usd: totalPaidAmount,
+        demand_to_paid_ratio: totalDemandAmount > 0 ? (totalPaidAmount / totalDemandAmount * 100).toFixed(1) : '0',
+      };
+    })(),
+    
+    // === RESERVE ADEQUACY ANALYSIS ===
+    reserve_adequacy: (() => {
+      const claims = exp.rawClaims || [];
+      const withReserveChange = claims.filter((c: any) => c.reserveChangePercent !== 0);
+      const overReserved = claims.filter((c: any) => c.reserveChangePercent < -20);
+      const underReserved = claims.filter((c: any) => c.reserveChangePercent > 50);
+      const avgReserveChange = withReserveChange.length > 0 
+        ? withReserveChange.reduce((sum: number, c: any) => sum + (c.reserveChangePercent || 0), 0) / withReserveChange.length 
+        : 0;
+      
+      return {
+        claims_with_reserve_change: withReserveChange.length,
+        avg_reserve_change_pct: avgReserveChange.toFixed(1),
+        over_reserved_count: overReserved.length,
+        under_reserved_count: underReserved.length,
+        over_reserved_sample: overReserved.slice(0, 10).map((c: any) => ({
+          claim_id: c.claimNumber,
+          reserve_change_pct: c.reserveChangePercent,
+          reserves_usd: c.openReserves,
+        })),
+        under_reserved_sample: underReserved.slice(0, 10).map((c: any) => ({
+          claim_id: c.claimNumber,
+          reserve_change_pct: c.reserveChangePercent,
+          reserves_usd: c.openReserves,
+        })),
+      };
+    })(),
+    
+    // === LITIGATION / TRIAL STATUS ===
+    litigation_status: (() => {
+      const claims = exp.rawClaims || [];
+      const inLit = claims.filter((c: any) => c.inLitigation);
+      const withCauseNumber = claims.filter((c: any) => c.causeNumber && c.causeNumber.trim() !== '');
+      const byMatterStatus: Record<string, number> = {};
+      const byCaseType: Record<string, number> = {};
+      
+      claims.forEach((c: any) => {
+        if (c.matterStatus) {
+          byMatterStatus[c.matterStatus] = (byMatterStatus[c.matterStatus] || 0) + 1;
+        }
+        if (c.caseType) {
+          byCaseType[c.caseType] = (byCaseType[c.caseType] || 0) + 1;
+        }
+      });
+      
+      return {
+        in_litigation_count: inLit.length,
+        with_cause_number_count: withCauseNumber.length,
+        by_matter_status: Object.entries(byMatterStatus).map(([status, count]) => ({ status, count })),
+        by_case_type: Object.entries(byCaseType).map(([type, count]) => ({ type, count })),
+        litigation_sample: inLit.slice(0, 15).map((c: any) => ({
+          claim_id: c.claimNumber,
+          cause_number: c.causeNumber,
+          case_type: c.caseType,
+          matter_status: c.matterStatus,
+          days_open: c.days,
+          reserves_usd: c.openReserves,
+        })),
+      };
+    })(),
   };
 
   return verified;
@@ -372,6 +451,34 @@ LOR (Letter of Representation) Intervention is an early settlement program for T
 - Track pending offers, acceptances, rejections, and expirations
 - When asked about LOR intervention, use the lor_intervention data
 - Report: pending offers, acceptance rate, total offered, offers by status
+
+## DEMAND & SETTLEMENT EXPERTISE:
+The demand_settlement_summary provides negotiation/demand tracking:
+- claims_with_demand: Number of claims that have received a demand/negotiation amount
+- total_demand_amount_usd: Sum of all negotiation amounts (demands from claimants)
+- avg_demand_usd: Average demand amount per claim
+- total_auth_amount_usd: Sum of all authority amounts (what we approved to pay)
+- total_paid_amount_usd: Total actually paid
+- demand_to_paid_ratio: How much of demands are actually being paid
+Use this when asked about "demand amounts", "what are claimants asking for", "negotiation amounts", "authority usage"
+
+## RESERVE ADEQUACY EXPERTISE:
+The reserve_adequacy data tracks how reserves compare to outcomes:
+- avg_reserve_change_pct: Average % change from initial reserve to current
+- over_reserved_count: Claims where reserves dropped >20% (we over-estimated)
+- under_reserved_count: Claims where reserves increased >50% (we under-estimated)
+- Use this when asked about "reserve adequacy", "are we over/under reserved", "reserve accuracy"
+- Positive % = reserve increased (under-reserved initially)
+- Negative % = reserve decreased (over-reserved initially)
+
+## LITIGATION/TRIAL STATUS EXPERTISE:
+The litigation_status data tracks claims in active litigation:
+- in_litigation_count: Claims flagged as "In Litigation"
+- with_cause_number_count: Claims with a court case number assigned
+- by_matter_status[]: Breakdown by matter status (e.g., "In litigation", pending, closed)
+- by_case_type[]: Breakdown by case type
+- litigation_sample[]: Top litigation claims with cause numbers
+Use this when asked about "in suit", "trial", "court cases", "cause numbers", "litigation files"
 
 ## CONFIDENCE PROTOCOL:
 - State facts with declarative authority: "There are X claims" not "approximately X"
@@ -437,6 +544,15 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - multi_pack_claims.open_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - multi_pack_claims.closed_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - lor_intervention: pending_count, accepted_count, rejected_count, expired_count, total_offered_usd, offers[]
+
+## DEMAND & SETTLEMENT DATA:
+- demand_settlement_summary: claims_with_demand, total_demand_amount_usd, avg_demand_usd, total_auth_amount_usd, total_paid_amount_usd, demand_to_paid_ratio
+
+## RESERVE ADEQUACY DATA:
+- reserve_adequacy: claims_with_reserve_change, avg_reserve_change_pct, over_reserved_count, under_reserved_count, over_reserved_sample[], under_reserved_sample[]
+
+## LITIGATION/TRIAL DATA:
+- litigation_status: in_litigation_count, with_cause_number_count, by_matter_status[], by_case_type[], litigation_sample[]
 
 RESPOND ONLY WITH VERIFIED DATA. NO SPECULATION.`;
 
