@@ -244,9 +244,6 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Live</span>
           </div>
           <span className="text-sm font-semibold text-white">{data.dataDate}</span>
-          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
-            REAL DATA
-          </Badge>
         </div>
         
         {/* Delta Indicators */}
@@ -536,9 +533,6 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
                 <CardDescription>Ultimate Incurred = Paid + Reserves + IBNR by Accident Year</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
-                  REAL DATA
-                </Badge>
                 <Button variant="ghost" size="sm" onClick={() => setShowAYDetails(!showAYDetails)}>
                   {showAYDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
@@ -1018,9 +1012,6 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
       <div className="flex items-center gap-2 pt-4 border-t mt-4">
         <div className="w-3 h-3 rounded-full bg-emerald-500" />
         <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Claims Frequency Heat Map</h3>
-        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
-          REAL DATA
-        </Badge>
       </div>
 
       {claimsFrequency.length > 0 && (
