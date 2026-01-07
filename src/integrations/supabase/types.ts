@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      claims_frequency: {
+        Row: {
+          created_at: string
+          frequency: number | null
+          id: string
+          in_force: number | null
+          month: number
+          reported_claims: number | null
+          state: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          frequency?: number | null
+          id?: string
+          in_force?: number | null
+          month: number
+          reported_claims?: number | null
+          state: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          frequency?: number | null
+          id?: string
+          in_force?: number | null
+          month?: number
+          reported_claims?: number | null
+          state?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       coverage_rate_changes: {
         Row: {
           coverage: string
