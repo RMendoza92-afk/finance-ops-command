@@ -185,6 +185,45 @@ export type Database = {
         }
         Relationships: []
       }
+      claims_payments: {
+        Row: {
+          avg_paid_per_claimant: number | null
+          claimants_paid: number | null
+          coverage: string
+          created_at: string
+          id: string
+          is_ytd: boolean | null
+          period_month: number | null
+          period_year: number
+          total_payments: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_paid_per_claimant?: number | null
+          claimants_paid?: number | null
+          coverage: string
+          created_at?: string
+          id?: string
+          is_ytd?: boolean | null
+          period_month?: number | null
+          period_year: number
+          total_payments?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_paid_per_claimant?: number | null
+          claimants_paid?: number | null
+          coverage?: string
+          created_at?: string
+          id?: string
+          is_ytd?: boolean | null
+          period_month?: number | null
+          period_year?: number
+          total_payments?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coverage_rate_changes: {
         Row: {
           coverage: string
@@ -495,6 +534,45 @@ export type Database = {
             referencedColumns: ["matter_id"]
           },
         ]
+      }
+      over_limit_payments: {
+        Row: {
+          claim_number: string
+          coverage: string | null
+          created_at: string
+          id: string
+          over_limit_amount: number
+          payment_amount: number
+          payment_date: string
+          policy_limit: number | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          claim_number: string
+          coverage?: string | null
+          created_at?: string
+          id?: string
+          over_limit_amount: number
+          payment_amount: number
+          payment_date: string
+          policy_limit?: number | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          claim_number?: string
+          coverage?: string | null
+          created_at?: string
+          id?: string
+          over_limit_amount?: number
+          payment_amount?: number
+          payment_date?: string
+          policy_limit?: number | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       pain_levels: {
         Row: {
