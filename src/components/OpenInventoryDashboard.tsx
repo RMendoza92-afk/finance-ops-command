@@ -2653,8 +2653,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
               </div>
             </div>
-            {/* Layout Toggle */}
-            <DashboardLayoutToggle version={dashboardVersion} onVersionChange={setDashboardVersion} />
           </div>
           
           {/* Actions Row - Stacked on mobile */}
