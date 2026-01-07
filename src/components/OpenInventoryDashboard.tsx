@@ -4,6 +4,9 @@ import { useExportData, ExportableData, ManagerTracking, RawClaimData, Dashboard
 import { KPICard } from "@/components/KPICard";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
+import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
+import { ExecutiveDashboardV3 } from "@/components/dashboard/ExecutiveDashboardV3";
+import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -304,6 +307,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [loadingReviewers, setLoadingReviewers] = useState(true);
   const [showMultiPackDrawer, setShowMultiPackDrawer] = useState(false);
   const [selectedPackSize, setSelectedPackSize] = useState<number | null>(null);
+  const [dashboardVersion, setDashboardVersion] = useState<DashboardVersion>('v1');
+  const [showChatFromV2V3, setShowChatFromV2V3] = useState(false);
 
   // Fetch reviewers from database
   useEffect(() => {
@@ -2635,14 +2640,18 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
       <div className="bg-gradient-to-r from-secondary via-secondary/80 to-muted rounded-xl p-4 sm:p-6 border border-border shadow-lg">
         <div className="flex flex-col gap-4">
           {/* Header Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-            <div className="p-2 sm:p-3 bg-primary/20 rounded-xl border border-primary/30 w-fit">
-              <FileStack className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5">
+            <div className="flex items-center gap-3 sm:gap-5">
+              <div className="p-2 sm:p-3 bg-primary/20 rounded-xl border border-primary/30 w-fit">
+                <FileStack className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
+              </div>
+              <div className="border-l-2 border-primary pl-3 sm:pl-5">
+                <h2 className="text-base sm:text-xl font-bold text-foreground tracking-wide">OPEN INVENTORY COMMAND</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
+              </div>
             </div>
-            <div className="border-l-2 border-primary pl-3 sm:pl-5">
-              <h2 className="text-base sm:text-xl font-bold text-foreground tracking-wide">OPEN INVENTORY COMMAND</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
-            </div>
+            {/* Layout Toggle */}
+            <DashboardLayoutToggle version={dashboardVersion} onVersionChange={setDashboardVersion} />
           </div>
           
           {/* Actions Row - Stacked on mobile */}
@@ -2769,7 +2778,77 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         </div>
       </div>
 
-      {/* EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
+      {/* Alternative Layout Views */}
+      {dashboardVersion === 'v2' && metrics && (
+        <SimpleDashboardV2
+          data={{
+            totalClaims: metrics.totalOpenClaims,
+            totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
+            lowEval: FINANCIAL_DATA.totals.totalLowEval,
+            highEval: FINANCIAL_DATA.totals.totalHighEval,
+            noEvalCount: FINANCIAL_DATA.totals.noEvalCount,
+            noEvalReserves: FINANCIAL_DATA.totals.noEvalReserves || 0,
+            aged365Plus: EXECUTIVE_METRICS.aging.over365Days,
+            aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
+            aged181to365: data?.totals.age181To365 || 0,
+            cp1Count: CP1_DATA.totals.yes,
+            cp1Rate: CP1_DATA.cp1Rate,
+            decisionsCount: decisionsData?.totalCount || 0,
+            dataDate: data?.dataDate || timestamp,
+            delta: data?.delta ? {
+              change: data.delta.change,
+              changePercent: data.delta.changePercent,
+              previousDate: data.delta.previousDate,
+            } : undefined,
+          }}
+          onOpenChat={() => setShowChatFromV2V3(true)}
+        />
+      )}
+
+      {dashboardVersion === 'v3' && metrics && (
+        <ExecutiveDashboardV3
+          data={{
+            totalClaims: metrics.totalOpenClaims,
+            totalReserves: FINANCIAL_DATA.totals.totalOpenReserves,
+            lowEval: FINANCIAL_DATA.totals.totalLowEval,
+            highEval: FINANCIAL_DATA.totals.totalHighEval,
+            noEvalCount: FINANCIAL_DATA.totals.noEvalCount,
+            noEvalReserves: FINANCIAL_DATA.totals.noEvalReserves || 0,
+            aged365Plus: EXECUTIVE_METRICS.aging.over365Days,
+            aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
+            aged181to365: data?.totals.age181To365 || 0,
+            aged181Reserves: data?.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0,
+            aged61to180: data?.totals.age61To180 || 0,
+            agedUnder60: data?.totals.ageUnder60 || 0,
+            cp1Count: CP1_DATA.totals.yes,
+            cp1Rate: CP1_DATA.cp1Rate,
+            decisionsCount: decisionsData?.totalCount || 0,
+            decisionsExposure: decisionsData?.totalReserves || 0,
+            litCount: data?.typeGroupSummaries.find(t => t.typeGroup === 'LIT')?.grandTotal || 0,
+            biLitSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
+            biLitSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
+            dataDate: data?.dataDate || timestamp,
+            delta: data?.delta ? {
+              change: data.delta.change,
+              changePercent: data.delta.changePercent,
+              reservesChange: data.delta.reservesChange || 0,
+              reservesChangePercent: data.delta.reservesChangePercent || 0,
+              previousDate: data.delta.previousDate,
+            } : undefined,
+          }}
+          onOpenChat={() => setShowChatFromV2V3(true)}
+          onDrilldown={(section) => {
+            if (section === 'decisions') setShowDecisionsDrawer(true);
+            else if (section === 'cp1') setShowCP1Drawer(true);
+            else if (section === 'budget') setShowBudgetDrawer(true);
+            else if (section === 'export') generateCombinedBoardPackage();
+          }}
+        />
+      )}
+
+      {/* Standard V1 Layout - EXECUTIVE COMMAND CENTER - Key Metrics for C-Suite */}
+      {dashboardVersion === 'v1' && (
+      <>
       <div id="executive-command-center" className="print-section bg-card rounded-xl border border-border shadow-xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-5 border-b border-border gap-3">
@@ -3747,6 +3826,8 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
             ))}
         </div>
       </div>
+      </>
+      )}
 
       {/* Pending Decisions Drilldown Sheet - Pain Level > 5, No Eval */}
       <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
