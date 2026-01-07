@@ -715,7 +715,7 @@ export function ExecutiveCommandDashboardWrapper() {
                 <div>
                   <h4 className="font-semibold text-warning">Action Required</h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {totalOpenClaims > 0 ? ((noEvalCount / totalOpenClaims) * 100).toFixed(0) : 0}% of claims lack proper evaluation. 
+                    {data.totals.biExposures > 0 ? ((noEvalCount / data.totals.biExposures) * 100).toFixed(0) : 0}% of BI exposures lack proper evaluation. 
                     Target completion within 48 hours to minimize exposure risk.
                   </p>
                 </div>
@@ -725,8 +725,8 @@ export function ExecutiveCommandDashboardWrapper() {
             {/* Metrics */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-muted/30 border">
-                <p className="text-xs text-muted-foreground">% of Inventory</p>
-                <p className="text-lg font-bold">{totalOpenClaims > 0 ? ((noEvalCount / totalOpenClaims) * 100).toFixed(1) : 0}%</p>
+                <p className="text-xs text-muted-foreground">% of BI Inventory</p>
+                <p className="text-lg font-bold">{data.totals.biExposures > 0 ? ((noEvalCount / data.totals.biExposures) * 100).toFixed(1) : 0}%</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Avg per Claim</p>
