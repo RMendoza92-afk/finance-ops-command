@@ -97,9 +97,10 @@ import { LOROfferDialog } from "@/components/LOROfferDialog";
 
 interface OpenInventoryDashboardProps {
   filters: GlobalFilters;
+  defaultView?: 'operations' | 'executive';
 }
 
-export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps) {
+export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: OpenInventoryDashboardProps) {
   const { data: rawData, loading, error } = useOpenExposureData();
   const { data: solData } = useSOLBreachAnalysis();
   const { data: decisionsData } = useDecisionsPending();
@@ -307,7 +308,9 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
   const [loadingReviewers, setLoadingReviewers] = useState(true);
   const [showMultiPackDrawer, setShowMultiPackDrawer] = useState(false);
   const [selectedPackSize, setSelectedPackSize] = useState<number | null>(null);
-  const [dashboardVersion, setDashboardVersion] = useState<DashboardVersion>('v1');
+  const [dashboardVersion, setDashboardVersion] = useState<DashboardVersion>(() => 
+    defaultView === 'executive' ? 'v3' : 'v1'
+  );
   const [showChatFromV2V3, setShowChatFromV2V3] = useState(false);
 
   // Fetch reviewers from database

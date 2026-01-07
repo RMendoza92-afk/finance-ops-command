@@ -228,7 +228,8 @@ const Index = () => {
             <div>
               <h1 className="text-sm sm:text-xl font-bold tracking-tight text-foreground">Litigation Command</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {filters.inventoryStatus === 'open' ? 'Open Inventory' : '2026 Portfolio'}
+                {filters.inventoryStatus === 'operations' ? 'Open Inventory' : 
+                 filters.inventoryStatus === 'executive' ? 'Executive View' : '2025 EOY Portfolio'}
               </p>
             </div>
           </div>
@@ -258,8 +259,10 @@ const Index = () => {
         />
 
         {/* Content */}
-        {filters.inventoryStatus === 'open' ? (
+        {filters.inventoryStatus === 'operations' ? (
           <OpenInventoryDashboard filters={filters} />
+        ) : filters.inventoryStatus === 'executive' ? (
+          <OpenInventoryDashboard filters={filters} defaultView="executive" />
         ) : (
           <div className="space-y-6">
             <ExecutiveDashboard 

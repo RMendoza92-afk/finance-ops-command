@@ -6,7 +6,7 @@ export interface PainLevelRow {
 }
 
 export interface GlobalFilters {
-  inventoryStatus: 'closed' | 'open';
+  inventoryStatus: 'eoy' | 'operations' | 'executive';
   department: string;
   team: string;
   adjuster: string;
@@ -19,7 +19,7 @@ export interface GlobalFilters {
 }
 
 export const defaultGlobalFilters: GlobalFilters = {
-  inventoryStatus: 'closed',
+  inventoryStatus: 'operations',
   department: 'all',
   team: 'all',
   adjuster: 'all',
@@ -52,27 +52,37 @@ export function GlobalFilterPanel({
   return (
     <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
       <div className="flex items-center justify-center">
-        {/* Inventory Status Toggle */}
+        {/* View Toggle */}
         <div className="flex rounded-lg overflow-hidden border border-border">
           <button
-            onClick={() => onFilterChange('inventoryStatus', 'closed')}
+            onClick={() => onFilterChange('inventoryStatus', 'eoy')}
             className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
-              filters.inventoryStatus === 'closed'
+              filters.inventoryStatus === 'eoy'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
             }`}
           >
-            Closed Inventory
+            2025 EOY
           </button>
           <button
-            onClick={() => onFilterChange('inventoryStatus', 'open')}
+            onClick={() => onFilterChange('inventoryStatus', 'operations')}
             className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
-              filters.inventoryStatus === 'open'
+              filters.inventoryStatus === 'operations'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
             }`}
           >
-            Open Inventory
+            Operations
+          </button>
+          <button
+            onClick={() => onFilterChange('inventoryStatus', 'executive')}
+            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
+              filters.inventoryStatus === 'executive'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Executive
           </button>
         </div>
       </div>
