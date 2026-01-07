@@ -83,21 +83,17 @@ export function OverspendTracker() {
 
   // Handle drill-down click
   const handleStateDrilldown = (state: string) => {
-    console.log('Drilldown clicked for state:', state);
-    console.log('All states in data:', dbData.map(d => d.state));
     setDrilldownState(state);
     setDrilldownOpen(true);
   };
 
   const drilldownClaims = useMemo(() => {
     if (!drilldownState) return [];
-    const claims = getClaimsByState(drilldownState);
-    console.log('Claims for', drilldownState, ':', claims.length);
-    return claims;
-  }, [drilldownState, dbData]);
-  
-  const drilldownTotal = useMemo(() => 
-    drilldownClaims.reduce((sum, c) => sum + c.over_limit_amount, 0),
+    return getClaimsByState(drilldownState);
+  }, [drilldownState, dbData, getClaimsByState]);
+
+  const drilldownTotal = useMemo(
+    () => drilldownClaims.reduce((sum, c) => sum + c.over_limit_amount, 0),
     [drilldownClaims]
   );
 
