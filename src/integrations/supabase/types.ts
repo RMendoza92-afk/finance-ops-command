@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      accident_year_development: {
+        Row: {
+          accident_year: number
+          alae_payment: number | null
+          as_of_date: string | null
+          category: string
+          claim_payment: number | null
+          coverage: string
+          created_at: string
+          development_months: number
+          earned_premium: number | null
+          feature_count: number | null
+          id: string
+          incurred: number | null
+          incurred_pct_premium: number | null
+          net_change_reserve: number | null
+          net_claim_payment: number | null
+          prior_reserve: number | null
+          reserve_balance: number | null
+          salvage_subro: number | null
+          updated_at: string
+        }
+        Insert: {
+          accident_year: number
+          alae_payment?: number | null
+          as_of_date?: string | null
+          category: string
+          claim_payment?: number | null
+          coverage?: string
+          created_at?: string
+          development_months: number
+          earned_premium?: number | null
+          feature_count?: number | null
+          id?: string
+          incurred?: number | null
+          incurred_pct_premium?: number | null
+          net_change_reserve?: number | null
+          net_claim_payment?: number | null
+          prior_reserve?: number | null
+          reserve_balance?: number | null
+          salvage_subro?: number | null
+          updated_at?: string
+        }
+        Update: {
+          accident_year?: number
+          alae_payment?: number | null
+          as_of_date?: string | null
+          category?: string
+          claim_payment?: number | null
+          coverage?: string
+          created_at?: string
+          development_months?: number
+          earned_premium?: number | null
+          feature_count?: number | null
+          id?: string
+          incurred?: number | null
+          incurred_pct_premium?: number | null
+          net_change_reserve?: number | null
+          net_claim_payment?: number | null
+          prior_reserve?: number | null
+          reserve_balance?: number | null
+          salvage_subro?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       actuarial_metrics: {
         Row: {
           contingencies: number | null
@@ -541,6 +607,7 @@ export type Database = {
           coverage: string | null
           created_at: string
           id: string
+          issue_type: string | null
           over_limit_amount: number
           payment_amount: number
           payment_date: string
@@ -553,6 +620,7 @@ export type Database = {
           coverage?: string | null
           created_at?: string
           id?: string
+          issue_type?: string | null
           over_limit_amount: number
           payment_amount: number
           payment_date: string
@@ -565,11 +633,45 @@ export type Database = {
           coverage?: string | null
           created_at?: string
           id?: string
+          issue_type?: string | null
           over_limit_amount?: number
           payment_amount?: number
           payment_date?: string
           policy_limit?: number | null
           state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      overspend_summary: {
+        Row: {
+          claim_count: number | null
+          created_at: string
+          id: string
+          issue_type: string
+          period_year: number
+          state: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          claim_count?: number | null
+          created_at?: string
+          id?: string
+          issue_type: string
+          period_year?: number
+          state: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          claim_count?: number | null
+          created_at?: string
+          id?: string
+          issue_type?: string
+          period_year?: number
+          state?: string
+          total_amount?: number
           updated_at?: string
         }
         Relationships: []
