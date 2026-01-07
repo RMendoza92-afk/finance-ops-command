@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useLitigationData, getFilterOptions } from "@/hooks/useLitigationData";
 import { ExecutiveDashboard } from "@/components/ExecutiveDashboard";
 import { OpenInventoryDashboard } from "@/components/OpenInventoryDashboard";
+import { ExecutiveCommandDashboardWrapper } from "@/components/dashboard/ExecutiveCommandDashboardWrapper";
 import { OverspendTracker } from "@/components/OverspendTracker";
 import { GlobalFilterPanel, GlobalFilters, defaultGlobalFilters, PainLevelRow } from "@/components/GlobalFilters";
 import { LitigationChat } from "@/components/LitigationChat";
@@ -262,7 +263,7 @@ const Index = () => {
         {filters.inventoryStatus === 'operations' ? (
           <OpenInventoryDashboard filters={filters} />
         ) : filters.inventoryStatus === 'executive' ? (
-          <OpenInventoryDashboard filters={filters} defaultView="executive" />
+          <ExecutiveCommandDashboardWrapper />
         ) : (
           <div className="space-y-6">
             <ExecutiveDashboard 
