@@ -508,7 +508,7 @@
 .ticker-track {
   display: flex;
   width: fit-content;
-  animation: ticker-scroll 25s linear infinite;
+  animation: ticker-scroll 45s linear infinite;
 }
 
 .ticker-track:hover {
