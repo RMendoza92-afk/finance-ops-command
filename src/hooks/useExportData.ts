@@ -964,6 +964,301 @@ export function useExportData() {
     return filename;
   };
 
+  // ============================================================
+  // C-SUITE EXECUTIVE BRIEFING - Supreme Level PDF
+  // Single page, mission-critical metrics only
+  // ============================================================
+  const generateCSuiteBriefing = async (data: {
+    totalClaims: number;
+    totalReserves: number;
+    cp1Rate: string;
+    aged365Plus: number;
+    aged365Reserves: number;
+    noEvalCount: number;
+    noEvalReserves: number;
+    decisionsCount: number;
+    decisionsExposure: number;
+    biSpend2026: number;
+    biSpend2025: number;
+    dataDate: string;
+    delta?: { change: number; changePercent: number; reservesChange: number; reservesChangePercent: number };
+  }) => {
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const m = { l: 12, r: 12, t: 12 };
+    const cw = pw - m.l - m.r;
+
+    const C = {
+      bg: [8, 8, 12] as [number, number, number],
+      headerBg: [18, 18, 24] as [number, number, number],
+      card: [22, 22, 28] as [number, number, number],
+      white: [255, 255, 255] as [number, number, number],
+      offWhite: [235, 235, 240] as [number, number, number],
+      muted: [130, 130, 145] as [number, number, number],
+      green: [16, 185, 129] as [number, number, number],
+      red: [220, 38, 38] as [number, number, number],
+      amber: [245, 158, 11] as [number, number, number],
+      gold: [212, 175, 55] as [number, number, number],
+    };
+
+    // Background
+    doc.setFillColor(...C.bg);
+    doc.rect(0, 0, pw, ph, 'F');
+
+    // Header
+    doc.setFillColor(...C.headerBg);
+    doc.rect(0, 0, pw, 28, 'F');
+    doc.setFillColor(...C.gold);
+    doc.rect(0, 28, pw, 0.8, 'F');
+
+    try {
+      const logoBase64 = await loadImageAsBase64(loyaLogo);
+      doc.addImage(logoBase64, 'JPEG', m.l + 2, 6, 16, 16);
+    } catch {
+      // Skip logo
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...C.white);
+    doc.text('C-SUITE BRIEFING', m.l + 24, 15);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...C.muted);
+    doc.text('Claims Portfolio Executive Summary', m.l + 24, 22);
+
+    doc.setFontSize(7);
+    doc.setTextColor(...C.gold);
+    doc.text('CONFIDENTIAL', pw - m.r, 12, { align: 'right' });
+    doc.setTextColor(...C.muted);
+    doc.text(format(new Date(), 'MMMM d, yyyy'), pw - m.r, 18, { align: 'right' });
+    doc.text('Data: ' + sanitize(data.dataDate), pw - m.r, 24, { align: 'right' });
+
+    let y = 38;
+
+    // STATUS BANNER
+    const hasRisk = data.noEvalCount > 100 || data.aged365Plus > 200 || data.decisionsCount > 5;
+    const bannerColor = hasRisk ? C.amber : C.green;
+    const statusText = hasRisk ? 'ATTENTION REQUIRED' : 'PORTFOLIO STABLE';
+    
+    doc.setFillColor(...bannerColor);
+    doc.roundedRect(m.l, y, cw, 14, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...C.bg);
+    doc.text(statusText, pw / 2, y + 9, { align: 'center' });
+    y += 20;
+
+    // PRIMARY METRICS - 2x2 Grid
+    const metrics = [
+      { label: 'OPEN CLAIMS', value: fmtNum(data.totalClaims), delta: data.delta ? (data.delta.change >= 0 ? '+' : '') + data.delta.change : null, deltaGood: data.delta?.change < 0 },
+      { label: 'TOTAL RESERVES', value: fmtCurrency(data.totalReserves, true), delta: data.delta ? fmtCurrency(data.delta.reservesChange, true) : null, deltaGood: data.delta?.reservesChange < 0 },
+      { label: 'CP1 RATE', value: data.cp1Rate + '%', delta: null, deltaGood: parseFloat(data.cp1Rate) < 28 },
+      { label: 'DECISIONS PENDING', value: String(data.decisionsCount), delta: fmtCurrency(data.decisionsExposure, true), deltaGood: data.decisionsCount < 5 },
+    ];
+
+    const cardW = (cw - 6) / 2;
+    const cardH = 32;
+
+    metrics.forEach((metric, idx) => {
+      const row = Math.floor(idx / 2);
+      const col = idx % 2;
+      const x = m.l + col * (cardW + 6);
+      const yPos = y + row * (cardH + 6);
+
+      doc.setFillColor(...C.card);
+      doc.roundedRect(x, yPos, cardW, cardH, 2, 2, 'F');
+      
+      // Gold accent
+      doc.setFillColor(...C.gold);
+      doc.rect(x, yPos, 2.5, cardH, 'F');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.muted);
+      doc.text(metric.label, x + 8, yPos + 10);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(...C.white);
+      doc.text(metric.value, x + 8, yPos + 24);
+
+      if (metric.delta) {
+        doc.setFontSize(8);
+        doc.setTextColor(...(metric.deltaGood ? C.green : C.red));
+        doc.text(metric.delta, x + cardW - 6, yPos + 24, { align: 'right' });
+      }
+    });
+
+    y += 2 * (cardH + 6) + 8;
+
+    // RISK INDICATORS
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...C.gold);
+    doc.text('RISK INDICATORS', m.l, y);
+    y += 6;
+
+    const risks = [
+      { label: 'No Evaluation', value: fmtNum(data.noEvalCount), exposure: fmtCurrency(data.noEvalReserves, true), level: data.noEvalCount > 100 ? 'high' : 'normal' },
+      { label: 'Aged 365+', value: fmtNum(data.aged365Plus), exposure: fmtCurrency(data.aged365Reserves, true), level: data.aged365Plus > 200 ? 'high' : 'normal' },
+      { label: 'BI Spend YoY', value: fmtCurrency(data.biSpend2026 - data.biSpend2025, true), exposure: '2026 vs 2025', level: data.biSpend2026 > data.biSpend2025 ? 'elevated' : 'normal' },
+    ];
+
+    const riskRowH = 18;
+    risks.forEach((risk, idx) => {
+      const bgColor = risk.level === 'high' ? [40, 20, 20] as [number, number, number] : 
+                      risk.level === 'elevated' ? [40, 35, 20] as [number, number, number] : C.card;
+      doc.setFillColor(...bgColor);
+      doc.rect(m.l, y, cw, riskRowH, 'F');
+      
+      // Status indicator
+      const indicatorColor = risk.level === 'high' ? C.red : risk.level === 'elevated' ? C.amber : C.green;
+      doc.setFillColor(...indicatorColor);
+      doc.circle(m.l + 8, y + riskRowH / 2, 2.5, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...C.white);
+      doc.text(risk.label, m.l + 16, y + 7);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.muted);
+      doc.text(risk.exposure, m.l + 16, y + 14);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...indicatorColor);
+      doc.text(risk.value, pw - m.r - 6, y + 11, { align: 'right' });
+
+      y += riskRowH + 2;
+    });
+
+    y += 8;
+
+    // EXECUTIVE ACTION ITEMS
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...C.gold);
+    doc.text('RECOMMENDED ACTIONS', m.l, y);
+    y += 6;
+
+    const actions: string[] = [];
+    if (data.noEvalCount > 100) actions.push('• Clear ' + data.noEvalCount + ' pending evaluations within 48 hours');
+    if (data.aged365Plus > 200) actions.push('• Escalate ' + data.aged365Plus + ' aged claims for resolution review');
+    if (data.decisionsCount > 0) actions.push('• Review ' + data.decisionsCount + ' pending decisions (' + fmtCurrency(data.decisionsExposure, true) + ' exposure)');
+    if (data.biSpend2026 > data.biSpend2025) actions.push('• Monitor BI spend trajectory - up ' + fmtCurrency(data.biSpend2026 - data.biSpend2025, true) + ' YoY');
+    if (actions.length === 0) actions.push('• Continue standard monitoring cadence');
+
+    doc.setFillColor(...C.card);
+    doc.roundedRect(m.l, y, cw, actions.length * 8 + 6, 2, 2, 'F');
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...C.offWhite);
+    
+    actions.forEach((action, idx) => {
+      doc.text(sanitize(action), m.l + 6, y + 8 + idx * 8);
+    });
+
+    // Footer
+    doc.setFillColor(...C.headerBg);
+    doc.rect(0, ph - 12, pw, 12, 'F');
+    doc.setFillColor(...C.gold);
+    doc.rect(0, ph - 12, pw, 0.3, 'F');
+    doc.setFontSize(6);
+    doc.setTextColor(...C.muted);
+    doc.text('CONFIDENTIAL - C-SUITE ONLY', m.l, ph - 5);
+    doc.text('Fred Loya Insurance | Executive Briefing', pw / 2, ph - 5, { align: 'center' });
+    doc.text('Page 1 of 1', pw - m.r, ph - 5, { align: 'right' });
+
+    const filename = 'CSuite_Briefing_' + format(new Date(), 'yyyyMMdd_HHmm') + '.pdf';
+    doc.save(filename);
+    
+    logDownload('pdf', 'C-Suite Briefing', 'pdf', 1, { level: 'executive' });
+    
+    return filename;
+  };
+
+  // ============================================================
+  // C-SUITE EXECUTIVE EXCEL - High-Level Data Export
+  // ============================================================
+  const generateCSuiteExcel = (data: {
+    totalClaims: number;
+    totalReserves: number;
+    cp1Rate: string;
+    cp1Count: number;
+    aged365Plus: number;
+    aged365Reserves: number;
+    aged181to365: number;
+    noEvalCount: number;
+    noEvalReserves: number;
+    decisionsCount: number;
+    decisionsExposure: number;
+    lowEval: number;
+    highEval: number;
+    biSpend2026: number;
+    biSpend2025: number;
+    dataDate: string;
+  }) => {
+    const wb = XLSX.utils.book_new();
+
+    // Executive Summary Sheet
+    const summaryRows: (string | number)[][] = [
+      ['C-SUITE PORTFOLIO BRIEFING'],
+      ['Fred Loya Insurance - Claims Executive Summary'],
+      [],
+      ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
+      ['Data As Of:', data.dataDate],
+      [],
+      ['═══════════════════════════════════════════════════'],
+      ['KEY PERFORMANCE INDICATORS'],
+      ['═══════════════════════════════════════════════════'],
+      [],
+      ['Metric', 'Value', 'Context'],
+      ['Total Open Claims', data.totalClaims, 'Active claims in inventory'],
+      ['Total Reserves', fmtCurrency(data.totalReserves, false), 'Gross reserves exposure'],
+      ['Low Evaluation', fmtCurrency(data.lowEval, false), 'Conservative estimate'],
+      ['High Evaluation', fmtCurrency(data.highEval, false), 'Upper bound estimate'],
+      ['CP1 Rate', data.cp1Rate + '%', data.cp1Count + ' claims within policy limits'],
+      [],
+      ['═══════════════════════════════════════════════════'],
+      ['RISK INDICATORS'],
+      ['═══════════════════════════════════════════════════'],
+      [],
+      ['Risk Area', 'Count', 'Exposure', 'Status'],
+      ['No Evaluation', data.noEvalCount, fmtCurrency(data.noEvalReserves, false), data.noEvalCount > 100 ? 'ATTENTION' : 'Normal'],
+      ['Aged 365+ Days', data.aged365Plus, fmtCurrency(data.aged365Reserves, false), data.aged365Plus > 200 ? 'ELEVATED' : 'Normal'],
+      ['Aged 181-365 Days', data.aged181to365, '-', 'Monitoring'],
+      ['Pending Decisions', data.decisionsCount, fmtCurrency(data.decisionsExposure, false), data.decisionsCount > 5 ? 'REVIEW' : 'Normal'],
+      [],
+      ['═══════════════════════════════════════════════════'],
+      ['FINANCIAL TREND'],
+      ['═══════════════════════════════════════════════════'],
+      [],
+      ['Coverage', '2025', '2026 YTD', 'Change'],
+      ['BI Claims Spend', fmtCurrency(data.biSpend2025, false), fmtCurrency(data.biSpend2026, false), fmtCurrency(data.biSpend2026 - data.biSpend2025, false)],
+      [],
+      ['═══════════════════════════════════════════════════'],
+      ['CONFIDENTIAL - EXECUTIVE USE ONLY'],
+      ['═══════════════════════════════════════════════════'],
+    ];
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 30 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Executive Summary');
+
+    const filename = 'CSuite_Portfolio_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
+    XLSX.writeFile(wb, filename);
+    
+    logDownload('excel', 'C-Suite Portfolio', 'xlsx', 1, { level: 'executive' });
+    
+    return filename;
+  };
+
   return {
     generatePDF,
     generateExcel,
@@ -971,5 +1266,7 @@ export function useExportData() {
     generateFullExcel,
     generateExecutivePDF,
     generateExecutivePackage,
+    generateCSuiteBriefing,
+    generateCSuiteExcel,
   };
 }

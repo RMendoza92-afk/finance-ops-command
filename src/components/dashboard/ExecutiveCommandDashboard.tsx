@@ -6,7 +6,8 @@ import {
   TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle,
   BarChart3, PieChart as PieChartIcon,
   ArrowUpRight, ArrowDownRight, Activity, Zap, Shield, Flag,
-  Database, Wallet, ChevronDown, ChevronUp, AlertCircle, MessageSquare
+  Database, Wallet, ChevronDown, ChevronUp, AlertCircle, MessageSquare,
+  FileText, FileSpreadsheet, Loader2
 } from "lucide-react";
 import {
   Table,
@@ -23,6 +24,8 @@ import {
 } from "recharts";
 import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
+import { useExportData } from "@/hooks/useExportData";
+import { toast } from "sonner";
 
 interface ExecutiveCommandDashboardProps {
   data: {
@@ -69,6 +72,11 @@ const formatCurrency = (value: number) => {
 const formatPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
 export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, timestamp }: ExecutiveCommandDashboardProps) {
+  // Export functionality
+  const { generateCSuiteBriefing, generateCSuiteExcel } = useExportData();
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [generatingExcel, setGeneratingExcel] = useState(false);
+
   // Loss Dev section states
   const [showAYDetails, setShowAYDetails] = useState(false);
   const [showFrequencyDetails, setShowFrequencyDetails] = useState(false);
@@ -85,6 +93,64 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
   const claimsFrequency = actuarialData.claimsFrequency;
   const overspendSummary = actuarialData.overspendSummary;
   const overLimitPayments = actuarialData.overLimitPayments;
+
+  // Export handlers
+  const handleExportPDF = async () => {
+    setGeneratingPDF(true);
+    try {
+      await generateCSuiteBriefing({
+        totalClaims: data.totalClaims,
+        totalReserves: data.totalReserves,
+        cp1Rate: data.cp1Rate,
+        aged365Plus: data.aged365Plus,
+        aged365Reserves: data.aged365Reserves,
+        noEvalCount: data.noEvalCount,
+        noEvalReserves: data.noEvalReserves,
+        decisionsCount: data.decisionsCount,
+        decisionsExposure: data.decisionsExposure,
+        biSpend2026: data.biLitSpend2026,
+        biSpend2025: data.biLitSpend2025,
+        dataDate: data.dataDate,
+        delta: data.delta,
+      });
+      toast.success('C-Suite Briefing PDF generated');
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    setGeneratingExcel(true);
+    try {
+      generateCSuiteExcel({
+        totalClaims: data.totalClaims,
+        totalReserves: data.totalReserves,
+        cp1Rate: data.cp1Rate,
+        cp1Count: data.cp1Count,
+        aged365Plus: data.aged365Plus,
+        aged365Reserves: data.aged365Reserves,
+        aged181to365: data.aged181to365,
+        noEvalCount: data.noEvalCount,
+        noEvalReserves: data.noEvalReserves,
+        decisionsCount: data.decisionsCount,
+        decisionsExposure: data.decisionsExposure,
+        lowEval: data.lowEval,
+        highEval: data.highEval,
+        biSpend2026: data.biLitSpend2026,
+        biSpend2025: data.biLitSpend2025,
+        dataDate: data.dataDate,
+      });
+      toast.success('C-Suite Portfolio Excel generated');
+    } catch (err) {
+      console.error('Excel generation error:', err);
+      toast.error('Failed to generate Excel');
+    } finally {
+      setGeneratingExcel(false);
+    }
+  };
 
   // Pie chart data for age distribution
   const ageData = [
@@ -170,16 +236,47 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
 
   return (
     <div className="space-y-4">
-      {/* Header with Ask Oracle button */}
-      <div className="flex items-center justify-between">
+      {/* Header with Export & Oracle buttons */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Database className="h-5 w-5 text-emerald-500" />
           <span className="text-sm font-medium text-muted-foreground">Live Data • {timestamp}</span>
         </div>
-        <Button variant="outline" size="sm" onClick={onOpenChat} className="gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Ask Oracle
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* C-Suite Export Buttons */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportPDF}
+            disabled={generatingPDF}
+            className="gap-2 bg-primary/10 border-primary/30 hover:bg-primary/20"
+          >
+            {generatingPDF ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+            C-Suite PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportExcel}
+            disabled={generatingExcel}
+            className="gap-2"
+          >
+            {generatingExcel ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={onOpenChat} className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Ask Oracle
+          </Button>
+        </div>
       </div>
 
       {/* Executive Header Bar */}
