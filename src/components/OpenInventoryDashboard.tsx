@@ -6,7 +6,7 @@ import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
 import { ExecutiveCommandDashboard } from "@/components/dashboard/ExecutiveCommandDashboard";
-import { ActuarialDashboardV4 } from "@/components/dashboard/ActuarialDashboardV4";
+import { LossDevExecutiveDashboard } from "@/components/dashboard/LossDevExecutiveDashboard";
 import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -2848,11 +2848,10 @@ export function OpenInventoryDashboard({ filters }: OpenInventoryDashboardProps)
         />
       )}
 
-      {dashboardVersion === 'v4' && data && (
-        <ActuarialDashboardV4
-          data={data}
+      {dashboardVersion === 'v4' && (
+        <LossDevExecutiveDashboard
           onOpenChat={() => setShowChatFromV2V3(true)}
-          timestamp={data?.dataDate || timestamp}
+          timestamp={timestamp}
         />
       )}
 
