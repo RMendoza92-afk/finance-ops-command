@@ -53,11 +53,21 @@ export interface LossDevelopment {
   ibnr: number;
 }
 
+export interface ClaimsFrequency {
+  year: number;
+  month: number;
+  state: string;
+  reportedClaims: number;
+  inForce: number;
+  frequency: number;
+}
+
 export interface ActuarialData {
   metrics: ActuarialMetrics | null;
   coverageRates: CoverageRateChange[];
   stateRates: StateRateChange[];
   lossDevelopment: LossDevelopment[];
+  claimsFrequency: ClaimsFrequency[];
 }
 
 export function useActuarialData(periodYear: number = 2026) {
@@ -66,6 +76,7 @@ export function useActuarialData(periodYear: number = 2026) {
     coverageRates: [],
     stateRates: [],
     lossDevelopment: [],
+    claimsFrequency: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +88,7 @@ export function useActuarialData(periodYear: number = 2026) {
 
       try {
         // Fetch all data in parallel
-        const [metricsRes, coverageRes, stateRes, lossDevRes] = await Promise.all([
+        const [metricsRes, coverageRes, stateRes, lossDevRes, freqRes] = await Promise.all([
           supabase
             .from("actuarial_metrics")
             .select("*")
@@ -100,12 +111,18 @@ export function useActuarialData(periodYear: number = 2026) {
             .select("*")
             .order("period_year", { ascending: true })
             .order("period_quarter", { ascending: true }),
+          supabase
+            .from("claims_frequency")
+            .select("*")
+            .order("year", { ascending: true })
+            .order("month", { ascending: true }),
         ]);
 
         if (metricsRes.error) throw new Error(metricsRes.error.message);
         if (coverageRes.error) throw new Error(coverageRes.error.message);
         if (stateRes.error) throw new Error(stateRes.error.message);
         if (lossDevRes.error) throw new Error(lossDevRes.error.message);
+        if (freqRes.error) throw new Error(freqRes.error.message);
 
         // Transform metrics
         const metrics: ActuarialMetrics | null = metricsRes.data
@@ -165,7 +182,17 @@ export function useActuarialData(periodYear: number = 2026) {
           ibnr: Number(r.ibnr) || 0,
         }));
 
-        setData({ metrics, coverageRates, stateRates, lossDevelopment });
+        // Transform claims frequency
+        const claimsFrequency: ClaimsFrequency[] = (freqRes.data || []).map((r) => ({
+          year: r.year,
+          month: r.month,
+          state: r.state,
+          reportedClaims: r.reported_claims || 0,
+          inForce: r.in_force || 0,
+          frequency: Number(r.frequency) || 0,
+        }));
+
+        setData({ metrics, coverageRates, stateRates, lossDevelopment, claimsFrequency });
       } catch (err) {
         console.error("Error fetching actuarial data:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch actuarial data");

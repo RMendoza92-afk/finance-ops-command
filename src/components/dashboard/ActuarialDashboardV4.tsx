@@ -69,6 +69,8 @@ const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialDashboardV4Props) {
   const [showStateDetails, setShowStateDetails] = useState(false);
   const [showCoverageDetails, setShowCoverageDetails] = useState(false);
+  const [showFrequencyDetails, setShowFrequencyDetails] = useState(false);
+  const [selectedFreqState, setSelectedFreqState] = useState<string>("Combined");
   
   // Fetch actuarial data from database
   const { data: actuarialData, loading, error } = useActuarialData(2026);
@@ -77,6 +79,7 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
   const coverageRates = actuarialData.coverageRates;
   const stateRates = actuarialData.stateRates;
   const lossDevelopment = actuarialData.lossDevelopment;
+  const claimsFrequency = actuarialData.claimsFrequency;
 
   // Transform loss development for chart
   const lossDevChartData = lossDevelopment.map((ld) => ({
@@ -96,6 +99,58 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
     lossRatio: cr.lossRatio,
     trend: cr.trend,
   }));
+
+  // Get unique states from frequency data
+  const frequencyStates = [...new Set(claimsFrequency.map(f => f.state))].sort();
+  
+  // Filter frequency data for selected state and transform for chart
+  const frequencyChartData = claimsFrequency
+    .filter(f => f.state === selectedFreqState)
+    .reduce((acc, f) => {
+      const monthName = new Date(2000, f.month - 1).toLocaleString('default', { month: 'short' });
+      const existing = acc.find(a => a.month === monthName);
+      if (existing) {
+        if (f.year === 2023) {
+          existing.freq2023 = f.frequency;
+          existing.inForce2023 = f.inForce;
+        } else if (f.year === 2024) {
+          existing.freq2024 = f.frequency;
+          existing.inForce2024 = f.inForce;
+        } else if (f.year === 2025) {
+          existing.freq2025 = f.frequency;
+          existing.inForce2025 = f.inForce;
+        }
+      } else {
+        acc.push({
+          month: monthName,
+          freq2023: f.year === 2023 ? f.frequency : 0,
+          freq2024: f.year === 2024 ? f.frequency : 0,
+          freq2025: f.year === 2025 ? f.frequency : 0,
+          inForce2023: f.year === 2023 ? f.inForce : 0,
+          inForce2024: f.year === 2024 ? f.inForce : 0,
+          inForce2025: f.year === 2025 ? f.inForce : 0,
+        });
+      }
+      return acc;
+    }, [] as { month: string; freq2023: number; freq2024: number; freq2025: number; inForce2023: number; inForce2024: number; inForce2025: number }[]);
+
+  // Calculate state frequency averages
+  const stateFreqAverages = frequencyStates
+    .filter(s => s !== 'Combined')
+    .map(state => {
+      const stateData = claimsFrequency.filter(f => f.state === state);
+      const data2023 = stateData.filter(f => f.year === 2023);
+      const data2024 = stateData.filter(f => f.year === 2024);
+      const data2025 = stateData.filter(f => f.year === 2025);
+      return {
+        state,
+        avg2023: data2023.length > 0 ? data2023.reduce((s, f) => s + f.frequency, 0) / data2023.length : 0,
+        avg2024: data2024.length > 0 ? data2024.reduce((s, f) => s + f.frequency, 0) / data2024.length : 0,
+        avg2025: data2025.length > 0 ? data2025.reduce((s, f) => s + f.frequency, 0) / data2025.length : 0,
+        totalInForce2025: data2025.length > 0 ? data2025[data2025.length - 1]?.inForce || 0 : 0,
+      };
+    })
+    .sort((a, b) => b.totalInForce2025 - a.totalInForce2025);
 
   if (loading) {
     return (
@@ -596,6 +651,139 @@ export function ActuarialDashboardV4({ data, onOpenChat, timestamp }: ActuarialD
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Claims Frequency by State */}
+      {claimsFrequency.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Claims Frequency by State
+                </CardTitle>
+                <CardDescription>Loya Insurance Group - All Programs (2023-2025)</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedFreqState}
+                  onChange={(e) => setSelectedFreqState(e.target.value)}
+                  className="text-sm border rounded-md px-2 py-1 bg-background"
+                >
+                  {frequencyStates.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowFrequencyDetails(!showFrequencyDetails)}
+                >
+                  {showFrequencyDetails ? "Hide Table" : "Show Table"}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Frequency Trend Chart */}
+            <div className="h-64 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={frequencyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: any) => [`${Number(value).toFixed(1)}%`, '']}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="freq2023" name="2023" stroke="#94A3B8" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="freq2024" name="2024" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="freq2025" name="2025" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* State Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-4">
+              {stateFreqAverages.slice(0, 6).map((state) => (
+                <div 
+                  key={state.state}
+                  className={`p-2 border rounded-lg cursor-pointer transition-all ${
+                    selectedFreqState === state.state 
+                      ? 'bg-primary/10 border-primary' 
+                      : 'bg-muted/30 hover:bg-muted/50'
+                  }`}
+                  onClick={() => setSelectedFreqState(state.state)}
+                >
+                  <div className="text-xs font-medium truncate">{state.state}</div>
+                  <div className="text-lg font-bold">{state.avg2025.toFixed(1)}%</div>
+                  <div className="flex items-center gap-1 text-xs">
+                    {state.avg2025 < state.avg2024 ? (
+                      <>
+                        <TrendingDown className="h-3 w-3 text-emerald-500" />
+                        <span className="text-emerald-600">
+                          {((state.avg2024 - state.avg2025) / state.avg2024 * 100).toFixed(0)}% ↓
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-3 w-3 text-amber-500" />
+                        <span className="text-amber-600">
+                          {((state.avg2025 - state.avg2024) / state.avg2024 * 100).toFixed(0)}% ↑
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Detailed Table */}
+            {showFrequencyDetails && (
+              <div className="border-t pt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>State</TableHead>
+                      <TableHead className="text-right">2023 Avg</TableHead>
+                      <TableHead className="text-right">2024 Avg</TableHead>
+                      <TableHead className="text-right">2025 Avg</TableHead>
+                      <TableHead className="text-right">YoY Change</TableHead>
+                      <TableHead className="text-right">In Force (Dec '25)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stateFreqAverages.map((row) => {
+                      const yoyChange = row.avg2024 > 0 ? ((row.avg2025 - row.avg2024) / row.avg2024 * 100) : 0;
+                      return (
+                        <TableRow 
+                          key={row.state}
+                          className={`cursor-pointer ${selectedFreqState === row.state ? 'bg-primary/5' : ''}`}
+                          onClick={() => setSelectedFreqState(row.state)}
+                        >
+                          <TableCell className="font-medium">{row.state}</TableCell>
+                          <TableCell className="text-right">{row.avg2023.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right">{row.avg2024.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right font-semibold">{row.avg2025.toFixed(1)}%</TableCell>
+                          <TableCell className={`text-right ${yoyChange < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}%
+                          </TableCell>
+                          <TableCell className="text-right">{row.totalInForce2025.toLocaleString()}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
