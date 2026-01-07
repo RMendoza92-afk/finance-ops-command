@@ -987,12 +987,13 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
               const maxFreq = Math.max(...stateData.map(s => s.avgFreq));
               const minFreq = Math.min(...stateData.map(s => s.avgFreq));
 
+              // Use absolute frequency thresholds (freq is already a decimal, e.g., 2.78 = 278%)
               const getHeatColor = (freq: number) => {
-                const normalized = maxFreq === minFreq ? 0.5 : (freq - minFreq) / (maxFreq - minFreq);
-                if (normalized > 0.75) return 'bg-red-500/80 text-white';
-                if (normalized > 0.5) return 'bg-orange-500/70 text-white';
-                if (normalized > 0.25) return 'bg-amber-500/60 text-foreground';
-                return 'bg-emerald-500/50 text-foreground';
+                const freqPct = freq * 100; // Convert to percentage for clearer thresholds
+                if (freqPct >= 220) return 'bg-red-500/80 text-white';      // High Risk: >= 220%
+                if (freqPct >= 180) return 'bg-orange-500/70 text-white';   // Elevated: 180-219%
+                if (freqPct >= 160) return 'bg-amber-500/60 text-foreground'; // Medium: 160-179%
+                return 'bg-emerald-500/50 text-foreground';                  // Low Risk: < 160%
               };
 
               return (
