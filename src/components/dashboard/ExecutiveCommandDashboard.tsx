@@ -286,15 +286,6 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, times
                 )}
                 Export Data
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onOpenChat} 
-                className="gap-2 bg-primary/20 border-primary/40 hover:bg-primary/30 text-primary-foreground h-8 text-xs font-medium"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                Ask Oracle
-              </Button>
             </div>
           </div>
           
