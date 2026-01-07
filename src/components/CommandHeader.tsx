@@ -25,11 +25,8 @@ export function CommandHeader({ activeView, onViewChange }: CommandHeaderProps) 
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">
-                Litigation & Discipline
+                Discipline Command Center
               </h1>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">
-                Command Center 2025
-              </p>
             </div>
           </div>
         </div>
