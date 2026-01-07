@@ -634,6 +634,7 @@ export type Database = {
       over_limit_payments: {
         Row: {
           claim_number: string
+          classification: string | null
           coverage: string | null
           created_at: string
           id: string
@@ -642,11 +643,13 @@ export type Database = {
           payment_amount: number
           payment_date: string
           policy_limit: number | null
+          root_cause: string | null
           state: string
           updated_at: string
         }
         Insert: {
           claim_number: string
+          classification?: string | null
           coverage?: string | null
           created_at?: string
           id?: string
@@ -655,11 +658,13 @@ export type Database = {
           payment_amount: number
           payment_date: string
           policy_limit?: number | null
+          root_cause?: string | null
           state: string
           updated_at?: string
         }
         Update: {
           claim_number?: string
+          classification?: string | null
           coverage?: string | null
           created_at?: string
           id?: string
@@ -668,6 +673,7 @@ export type Database = {
           payment_amount?: number
           payment_date?: string
           policy_limit?: number | null
+          root_cause?: string | null
           state?: string
           updated_at?: string
         }
