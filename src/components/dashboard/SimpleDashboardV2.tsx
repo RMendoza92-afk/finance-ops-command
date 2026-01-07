@@ -157,8 +157,8 @@ export function SimpleDashboardV2({ data, onOpenChat }: SimpleDashboardV2Props) 
                   <span className="text-lg">✋</span>
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Decisions Needed</p>
-                  <p className="text-sm text-muted-foreground">High priority claims</p>
+                  <p className="font-medium text-foreground">Pending Decisions</p>
+                  <p className="text-sm text-muted-foreground">High reserve, no evaluation</p>
                 </div>
               </div>
               <span className="text-2xl font-bold text-primary">{data.decisionsCount}</span>
