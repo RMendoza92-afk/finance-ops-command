@@ -4,7 +4,7 @@ import { useOpenExposureData } from "@/hooks/useOpenExposureData";
 import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 import { useExportData } from "@/hooks/useExportData";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
-import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink } from "lucide-react";
+import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, Wallet, Users, Target, Activity, ExternalLink, Download } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  exportClaimsDrilldown,
+  exportReservesDrilldown,
+  exportDecisionsDrilldown,
+  exportAgedDrilldown,
+  exportNoEvalDrilldown,
+  exportCP1Drilldown,
+  exportBudgetDrilldown,
+} from "@/lib/bloombergExport";
 
 // Financial constants (same as OpenInventoryDashboard)
 const FINANCIAL_DATA = {
@@ -243,14 +252,30 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showClaimsDrawer} onOpenChange={setShowClaimsDrawer}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Activity className="h-5 w-5 text-emerald-500" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <Activity className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Claims Inventory Breakdown</SheetTitle>
+                  <SheetDescription>By type group and phase</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Claims Inventory Breakdown</SheetTitle>
-                <SheetDescription>By type group and phase</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportClaimsDrilldown(
+                  metrics.totalOpenClaims,
+                  FINANCIAL_DATA.totals.totalOpenReserves,
+                  typeGroupData,
+                  claimReviews
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -346,14 +371,31 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showReservesDrawer} onOpenChange={setShowReservesDrawer}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <DollarSign className="h-5 w-5 text-emerald-500" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Reserves Analysis</SheetTitle>
+                  <SheetDescription>Portfolio reserve distribution</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Reserves Analysis</SheetTitle>
-                <SheetDescription>Portfolio reserve distribution</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportReservesDrilldown(
+                  FINANCIAL_DATA.totals.totalOpenReserves,
+                  FINANCIAL_DATA.totals.totalLowEval,
+                  FINANCIAL_DATA.totals.totalHighEval,
+                  FINANCIAL_DATA.totals.noEvalReserves,
+                  data.financials.byAge
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -433,14 +475,29 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <Flag className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/20">
+                  <Flag className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Decisions Pending</SheetTitle>
+                  <SheetDescription>Claims requiring executive action</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Decisions Pending</SheetTitle>
-                <SheetDescription>Claims requiring executive action</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportDecisionsDrilldown(
+                  decisionsData?.totalCount || 0,
+                  decisionsData?.totalReserves || 0,
+                  decisionsData?.claims || []
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -501,14 +558,25 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showCP1Drawer} onOpenChange={setShowCP1Drawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Shield className="h-5 w-5 text-emerald-500" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <Shield className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">CP1 Analysis</SheetTitle>
+                  <SheetDescription>Claims within policy limits</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">CP1 Analysis</SheetTitle>
-                <SheetDescription>Claims within policy limits</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportCP1Drilldown(CP1_DATA.totals.yes, CP1_DATA.cp1Rate)}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -551,14 +619,29 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showNoEvalDrawer} onOpenChange={setShowNoEvalDrawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/20">
-                <AlertTriangle className="h-5 w-5 text-warning" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/20">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">No Evaluation Claims</SheetTitle>
+                  <SheetDescription>Claims without damage assessment</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">No Evaluation Claims</SheetTitle>
-                <SheetDescription>Claims without damage assessment</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportNoEvalDrilldown(
+                  FINANCIAL_DATA.totals.noEvalCount,
+                  FINANCIAL_DATA.totals.noEvalReserves,
+                  metrics.totalOpenClaims
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -612,14 +695,30 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showAged365Drawer} onOpenChange={setShowAged365Drawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/20">
-                <Clock className="h-5 w-5 text-destructive" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/20">
+                  <Clock className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Aged Claims (365+ Days)</SheetTitle>
+                  <SheetDescription>Claims exceeding one year</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Aged Claims (365+ Days)</SheetTitle>
-                <SheetDescription>Claims exceeding one year</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportAgedDrilldown(
+                  EXECUTIVE_METRICS.aging.over365Days,
+                  EXECUTIVE_METRICS.aging.over365Reserves,
+                  metrics.totalOpenClaims,
+                  claimReviews
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
@@ -699,14 +798,28 @@ export function ExecutiveCommandDashboardWrapper() {
       <Sheet open={showBudgetDrawer} onOpenChange={setShowBudgetDrawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <Wallet className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/20">
+                  <Wallet className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <SheetTitle className="text-xl">Budget & Spend Analysis</SheetTitle>
+                  <SheetDescription>BI Litigation expenditure tracking</SheetDescription>
+                </div>
               </div>
-              <div>
-                <SheetTitle className="text-xl">Budget & Spend Analysis</SheetTitle>
-                <SheetDescription>BI Litigation expenditure tracking</SheetDescription>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportBudgetDrilldown(
+                  budgetMetrics.coverageBreakdown.bi.ytd2026,
+                  budgetMetrics.coverageBreakdown.bi.ytd2025
+                )}
+                className="gap-2 bg-zinc-900 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
             </div>
           </SheetHeader>
           
