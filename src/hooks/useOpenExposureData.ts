@@ -244,6 +244,7 @@ export interface OpenExposureData {
     ageUnder60: number;
     grandTotal: number;
     biExposures: number; // BI/UM/UI exposures for accurate % calculations
+    allExposures: number; // ALL exposures (all coverages) for total count
   };
   financials: {
     totalOpenReserves: number;
@@ -266,7 +267,8 @@ export interface OpenExposureData {
   };
   knownTotals: KnownTotals;
   texasRearEnd: TexasRearEndData;
-  rawClaims: RawClaimExport[]; // Raw data for export/validation
+  rawClaims: RawClaimExport[]; // BI/UM/UI claims for financial analysis
+  allRawClaims: RawClaimExport[]; // ALL claims (all coverages) for drilldowns
   multiPackData: MultiPackSummary; // Multi-pack claim grouping
   // Population by phase breakdown
   phaseBreakdown: PhaseBreakdown[];
@@ -419,8 +421,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
   let texasSummary = { totalClaims: 0, totalReserves: 0, lowEval: 0, highEval: 0 };
   
-  // Raw claims for export/validation
+  // Raw claims for export/validation (BI/UM/UI only)
   const rawClaimsExport: RawClaimExport[] = [];
+  // ALL raw claims for drilldowns (all coverages)
+  const allRawClaimsExport: RawClaimExport[] = [];
   
   for (const row of rows) {
     // Skip header row or empty rows
@@ -455,25 +459,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     const coverage = row['Coverage']?.trim() || 'Unknown';
     
-    // Track CP1 for ALL coverages (for grand total)
-    if (isCP1) {
-      cp1AllCoverages.yes++;
-      
-      // Track CP1 by BI Status
-      const biStatus = row['BI Status']?.trim().toLowerCase() || '';
-      if (biStatus === 'in progress') {
-        cp1ByStatus.inProgress++;
-      } else if (biStatus === 'settled') {
-        cp1ByStatus.settled++;
-      }
-    } else {
-      cp1AllCoverages.noCP++;
-    }
-    
-    // FILTER: Only include BI, UM, UI coverages for detailed financial breakdown
-    if (!isIncludedCoverage(coverage)) continue;
-    
-    // Parse financial data
+    // Parse financial data for ALL claims (needed for allRawClaimsExport)
     const reserves = parseCurrency(row['Open Reserves'] || '0');
     const lowEval = parseCurrency(row['Low'] || '0');
     const highEval = parseCurrency(row['High'] || '0');
@@ -486,7 +472,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const negotiationType = row['Negotiation Type']?.trim() || '';
     const negotiationDate = row['Negotiation Date']?.trim() || '';
     
-    // NEW: Parse demand/settlement and litigation fields
+    // Parse demand/settlement and litigation fields
     const negotiationAmount = parseCurrency(row['Negotiation Amount'] || '0');
     const authAmount = parseCurrency(row['Auth'] || '0');
     const totalPaid = parseCurrency(row['Total Paid'] || '0');
@@ -502,12 +488,69 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const daysSinceSettledStr = row['Days Since Settled?']?.trim() || '';
     const daysSinceSettled = daysSinceSettledStr ? parseInt(daysSinceSettledStr, 10) || null : null;
     
-    // Add to raw claims export
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
     const areaNumber = row['Area#']?.trim() || '';
     const lossDescription = row['Description of Accident']?.trim() || '';
     
+    // ═══════════════════════════════════════════════════════════════════
+    // Add ALL claims to allRawClaimsExport BEFORE the coverage filter
+    // ═══════════════════════════════════════════════════════════════════
+    allRawClaimsExport.push({
+      claimNumber: row['Claim#']?.trim() || '',
+      claimant: row['Claimant']?.trim() || '',
+      coverage,
+      days,
+      ageBucket: getAgeBucketLabel(ageBucket),
+      typeGroup,
+      openReserves: reserves,
+      lowEval,
+      highEval,
+      cp1Flag: isCP1 ? 'Yes' : 'No',
+      overallCP1: row['Overall CP1 Flag']?.trim() || '',
+      evaluationPhase: evalPhase,
+      demandType,
+      teamGroup,
+      adjuster,
+      areaNumber,
+      lossDescription,
+      exposureCategory: row['Exposure Category']?.trim() || '',
+      biStatus,
+      daysSinceNegotiation,
+      negotiationType,
+      negotiationDate,
+      negotiationAmount,
+      authAmount,
+      totalPaid,
+      netTotalIncurred,
+      reserveChangePercent,
+      inLitigation,
+      causeNumber,
+      caseType,
+      matterStatus,
+      settledDate,
+      daysSinceSettled,
+    });
+    
+    // Track CP1 for ALL coverages (for grand total)
+    if (isCP1) {
+      cp1AllCoverages.yes++;
+      
+      // Track CP1 by BI Status
+      const biStatusLower = biStatus.toLowerCase();
+      if (biStatusLower === 'in progress') {
+        cp1ByStatus.inProgress++;
+      } else if (biStatusLower === 'settled') {
+        cp1ByStatus.settled++;
+      }
+    } else {
+      cp1AllCoverages.noCP++;
+    }
+    
+    // FILTER: Only include BI, UM, UI coverages for detailed financial breakdown
+    if (!isIncludedCoverage(coverage)) continue;
+    
+    // Add BI/UM/UI claims to rawClaimsExport for financial analysis
     rawClaimsExport.push({
       claimNumber: row['Claim#']?.trim() || '',
       claimant: row['Claimant']?.trim() || '',
@@ -1029,6 +1072,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       ageUnder60: allAgeTotals.ageUnder60,
       grandTotal: allUniqueClaimNumbers.size, // Unique claims, not exposures
       biExposures: grandTotals.grandTotal, // BI/UM/UI exposures for % calculations
+      allExposures: allExposuresCount, // ALL exposures (all coverages)
     },
     financials: {
       totalOpenReserves: financialTotals.totalOpenReserves,
@@ -1051,6 +1095,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     knownTotals,
     texasRearEnd,
     rawClaims: rawClaimsExport,
+    allRawClaims: allRawClaimsExport,
     multiPackData,
     phaseBreakdown,
     negotiationRecency,
