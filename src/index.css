@@ -499,7 +499,22 @@
   .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }
 
-/* NYSE Ticker Animation */
+/* NYSE Ticker Animation - Continuous right to left */
+.ticker-wrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
+.ticker-track {
+  display: flex;
+  width: fit-content;
+  animation: ticker-scroll 25s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
 @keyframes ticker-scroll {
   0% {
     transform: translateX(0);
@@ -507,14 +522,6 @@
   100% {
     transform: translateX(-33.333%);
   }
-}
-
-.animate-ticker {
-  animation: ticker-scroll 20s linear infinite;
-}
-
-.animate-ticker:hover {
-  animation-play-state: paused;
 }
 @media print {
   * {
