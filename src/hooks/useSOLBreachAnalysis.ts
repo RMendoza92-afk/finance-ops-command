@@ -70,6 +70,8 @@ interface SOLBreachClaim {
   solYears: number;
   daysUntilExpiry: number;
   category: 'breached' | 'approaching';
+  teamGroup: string;
+  teamNumber: string;
 }
 
 export interface SOLBreachData {
@@ -135,6 +137,12 @@ export function useSOLBreachAnalysis() {
         const approachingClaims: SOLBreachClaim[] = [];
         const byState: Record<string, { count: number; reserves: number }> = {};
         
+        // Helper to extract team number
+        const extractTeamNumber = (teamGroup: string): string => {
+          const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
+          return m?.[1] || '';
+        };
+
         for (const row of rows) {
           // Handle different possible column name formats
           const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
@@ -146,6 +154,8 @@ export function useSOLBreachAnalysis() {
           const expCreateDateStr = row['Exp. Create Date']?.trim() || '';
           const reserves = parseCurrency(row['Open Reserves'] || '0');
           const claimNumber = row['Claim#'] || '';
+          const teamGroup = row['Team Group']?.trim() || '';
+          const teamNumber = extractTeamNumber(teamGroup);
           
           // Get SOL for state
           const solYears = STATE_SOL[state];
@@ -170,6 +180,8 @@ export function useSOLBreachAnalysis() {
               solYears,
               daysUntilExpiry,
               category: 'breached',
+              teamGroup,
+              teamNumber,
             };
             
             breachedClaims.push(breach);
@@ -193,6 +205,8 @@ export function useSOLBreachAnalysis() {
               solYears,
               daysUntilExpiry,
               category: 'approaching',
+              teamGroup,
+              teamNumber,
             };
             
             approachingClaims.push(approaching);
@@ -260,12 +274,14 @@ export function useSOLBreachAnalysis() {
         ['BREACHED CLAIMS - PAST STATUTE OF LIMITATIONS'],
         ['Generated: 2026-01-06'],
         [''],
-        ['Claim #', 'State', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Past Due', 'Open Reserves'],
+        ['Claim #', 'State', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Past Due', 'Open Reserves'],
       ];
       data.breachedClaims.forEach(c => {
         breachedRows.push([
           c.claimNumber,
           c.state,
+          c.teamGroup,
+          c.teamNumber,
           c.biStatus,
           c.expCreateDate,
           c.solYears,
@@ -275,7 +291,7 @@ export function useSOLBreachAnalysis() {
         ]);
       });
       const breachedWs = XLSX.utils.aoa_to_sheet(breachedRows);
-      breachedWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
+      breachedWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, breachedWs, 'Breached Claims');
     }
 
@@ -285,12 +301,14 @@ export function useSOLBreachAnalysis() {
         ['APPROACHING CLAIMS - WITHIN 90 DAYS OF SOL'],
         ['Generated: 2026-01-06'],
         [''],
-        ['Claim #', 'State', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Until Expiry', 'Open Reserves'],
+        ['Claim #', 'State', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Until Expiry', 'Open Reserves'],
       ];
       data.approachingClaims.forEach(c => {
         approachingRows.push([
           c.claimNumber,
           c.state,
+          c.teamGroup,
+          c.teamNumber,
           c.biStatus,
           c.expCreateDate,
           c.solYears,
@@ -300,7 +318,7 @@ export function useSOLBreachAnalysis() {
         ]);
       });
       const approachingWs = XLSX.utils.aoa_to_sheet(approachingRows);
-      approachingWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      approachingWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, approachingWs, 'Approaching Claims');
     }
 

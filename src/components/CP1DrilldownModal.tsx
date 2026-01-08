@@ -27,6 +27,7 @@ interface CP1Claim {
   matter_lead: string | null;
   location: string | null;
   filing_date: string | null;
+  team: string | null;
 }
 
 interface ClaimWithReview extends CP1Claim {
@@ -65,7 +66,7 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
       // Fetch claims from litigation_matters where type matches coverage
       const { data, error: fetchError } = await supabase
         .from('litigation_matters')
-        .select('matter_id, claimant, type, status, days_open, total_amount, severity, matter_lead, location, filing_date')
+        .select('matter_id, claimant, type, status, days_open, total_amount, severity, matter_lead, location, filing_date, team')
         .eq('type', coverage)
         .eq('status', 'Open')
         .order('days_open', { ascending: false })
@@ -307,12 +308,18 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
+                  const extractTeamNumber = (team: string | null): string => {
+                    const m = String(team || '').match(/\b(\d{1,3})\b/);
+                    return m?.[1] || '';
+                  };
                   const exportData = claimsWithReview.map(c => ({
                     'Matter ID': c.matter_id,
                     'Review Level': c.executiveReview.level,
                     'Score': c.executiveReview.score,
                     'Claimant': c.claimant || '',
                     'Lead': c.matter_lead || '',
+                    'Team': c.team || '',
+                    'Team #': extractTeamNumber(c.team),
                     'Location': c.location || '',
                     'Days Open': c.days_open || 0,
                     'Claim Age (Years)': c.claimAge,
@@ -329,7 +336,7 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
                   // Set column widths
                   ws['!cols'] = [
                     { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 25 }, 
-                    { wch: 18 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
+                    { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
                     { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 50 }
                   ];
                   
@@ -365,12 +372,18 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
             actionRequired: `${stats.criticalCount} CRITICAL, ${stats.requiredCount} REQUIRED reviews`,
           }}
           onExportExcel={() => {
+            const extractTeamNumber = (team: string | null): string => {
+              const m = String(team || '').match(/\b(\d{1,3})\b/);
+              return m?.[1] || '';
+            };
             const exportData = claimsWithReview.map(c => ({
               'Matter ID': c.matter_id,
               'Review Level': c.executiveReview.level,
               'Score': c.executiveReview.score,
               'Claimant': c.claimant || '',
               'Lead': c.matter_lead || '',
+              'Team': c.team || '',
+              'Team #': extractTeamNumber(c.team),
               'Location': c.location || '',
               'Days Open': c.days_open || 0,
               'Exposure': c.total_amount || 0,
