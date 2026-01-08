@@ -131,8 +131,9 @@ export function SOLBreachSummary() {
                   <tr>
                     <th className="text-left p-2 font-semibold">Claim #</th>
                     <th className="text-left p-2 font-semibold">State</th>
+                    <th className="text-left p-2 font-semibold">Type Group</th>
+                    <th className="text-left p-2 font-semibold">Exp. Category</th>
                     <th className="text-left p-2 font-semibold">BI Status</th>
-                    <th className="text-left p-2 font-semibold">Create Date</th>
                     <th className="text-left p-2 font-semibold">SOL (Yrs)</th>
                     <th className="text-right p-2 font-semibold">Days Past</th>
                     <th className="text-right p-2 font-semibold">Reserves</th>
@@ -143,8 +144,9 @@ export function SOLBreachSummary() {
                     <tr key={i} className="border-t border-border hover:bg-muted/50">
                       <td className="p-2 font-mono">{claim.claimNumber}</td>
                       <td className="p-2">{claim.state}</td>
+                      <td className="p-2">{claim.typeGroup}</td>
+                      <td className="p-2">{claim.exposureCategory}</td>
                       <td className="p-2">{claim.biStatus}</td>
-                      <td className="p-2">{claim.expCreateDate}</td>
                       <td className="p-2">{claim.solYears}</td>
                       <td className="p-2 text-right text-destructive font-medium">{Math.abs(claim.daysUntilExpiry)}</td>
                       <td className="p-2 text-right font-medium">{formatCurrency(claim.reserves)}</td>
@@ -172,8 +174,9 @@ export function SOLBreachSummary() {
                   <tr>
                     <th className="text-left p-2 font-semibold">Claim #</th>
                     <th className="text-left p-2 font-semibold">State</th>
+                    <th className="text-left p-2 font-semibold">Type Group</th>
+                    <th className="text-left p-2 font-semibold">Exp. Category</th>
                     <th className="text-left p-2 font-semibold">BI Status</th>
-                    <th className="text-left p-2 font-semibold">Create Date</th>
                     <th className="text-left p-2 font-semibold">SOL (Yrs)</th>
                     <th className="text-right p-2 font-semibold">Days Left</th>
                     <th className="text-right p-2 font-semibold">Reserves</th>
@@ -184,8 +187,9 @@ export function SOLBreachSummary() {
                     <tr key={i} className="border-t border-border hover:bg-muted/50">
                       <td className="p-2 font-mono">{claim.claimNumber}</td>
                       <td className="p-2">{claim.state}</td>
+                      <td className="p-2">{claim.typeGroup}</td>
+                      <td className="p-2">{claim.exposureCategory}</td>
                       <td className="p-2">{claim.biStatus}</td>
-                      <td className="p-2">{claim.expCreateDate}</td>
                       <td className="p-2">{claim.solYears}</td>
                       <td className="p-2 text-right text-warning font-medium">{claim.daysUntilExpiry}</td>
                       <td className="p-2 text-right font-medium">{formatCurrency(claim.reserves)}</td>
