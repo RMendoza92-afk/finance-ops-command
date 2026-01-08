@@ -111,6 +111,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         totalClaims: data.totalClaims,
         totalReserves: data.totalReserves,
         cp1Rate: data.cp1Rate,
+        cp1Count: data.cp1Count,
         aged365Plus: data.aged365Plus,
         aged365Reserves: data.aged365Reserves,
         noEvalCount: data.noEvalCount,
@@ -121,6 +122,10 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         biSpend2025: data.biLitSpend2025,
         dataDate: data.dataDate,
         delta: data.delta,
+        fatalityCount: data.fatalityCount,
+        fatalityReserves: data.fatalityReserves,
+        surgeryCount: data.surgeryCount,
+        hospitalizationCount: data.hospitalizationCount,
       });
       toast.success('C-Suite Briefing PDF generated');
     } catch (err) {
