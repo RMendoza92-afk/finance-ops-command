@@ -1377,124 +1377,102 @@ export function useExportData() {
     // SHEET 1: EXECUTIVE DASHBOARD
     // ═══════════════════════════════════════════════════════════════
     const dashboardRows: (string | number)[][] = [
-      ['C-SUITE PORTFOLIO BRIEFING'],
-      ['Fred Loya Insurance - Executive Summary'],
+      ['┌─────────────────────────────────────────────────────────────────────────────┐'],
+      ['│  C-SUITE PORTFOLIO BRIEFING                                                │'],
+      ['│  Fred Loya Insurance                                                       │'],
+      ['│  ' + format(new Date(), 'MMMM d, yyyy') + '  |  Data: ' + data.dataDate + '  |  CONFIDENTIAL            │'],
+      ['└─────────────────────────────────────────────────────────────────────────────┘'],
       [''],
-      ['Report Generated', format(new Date(), 'MMMM d, yyyy h:mm a')],
-      ['Data As Of', data.dataDate],
-      ['Classification', 'CONFIDENTIAL - C-SUITE ONLY'],
+      ['PORTFOLIO SNAPSHOT'],
+      ['Metric', 'Value', 'Status'],
+      ['Total Claims', data.totalClaims.toLocaleString(), ''],
+      ['Reserves', fmtCurrency(data.totalReserves, false), ''],
+      ['Evaluation Range', fmtCurrency(data.lowEval, false) + ' - ' + fmtCurrency(data.highEval, false), ''],
+      ['CP1 Rate', data.cp1Rate + '% (' + (data.cp1Count || 0).toLocaleString() + ' claims)', parseFloat(data.cp1Rate) >= 30 ? 'OK' : 'LOW'],
       [''],
+      ['RISK AREAS'],
+      ['Category', 'Count', 'Exposure', 'Alert'],
+      ['Fatality', data.fatalityCount || 0, fmtCurrency(data.fatalityReserves || 0, false), (data.fatalityCount || 0) > 0 ? 'CRITICAL' : '-'],
+      ['Surgery', data.surgeryCount || 0, '-', (data.surgeryCount || 0) > 50 ? 'ELEVATED' : '-'],
+      ['Hospitalization', data.hospitalizationCount || 0, '-', (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : '-'],
+      ['No Evaluation', data.noEvalCount.toLocaleString(), fmtCurrency(data.noEvalReserves, false), data.noEvalCount > 2000 ? 'HIGH' : '-'],
+      ['Aged 365+', data.aged365Plus.toLocaleString(), fmtCurrency(data.aged365Reserves, false), data.aged365Plus > 1500 ? 'HIGH' : '-'],
+      ['Pending Decisions', data.decisionsCount, fmtCurrency(data.decisionsExposure, false), data.decisionsCount > 100 ? 'REVIEW' : '-'],
       [''],
-      ['KEY PERFORMANCE INDICATORS'],
+      ['SPEND TREND'],
+      ['Period', 'Amount'],
+      ['2025 Full Year', fmtCurrency(data.biSpend2025, false)],
+      ['2026 YTD', fmtCurrency(data.biSpend2026, false)],
+      ['2026 Projected', fmtCurrency(data.biSpend2026 * 12, false)],
       [''],
-      ['METRIC', 'VALUE', 'CONTEXT', 'STATUS'],
-      ['Total Open Claims', data.totalClaims, 'Active claims in inventory', '●'],
-      ['Total Reserves', fmtCurrency(data.totalReserves, false), 'Gross exposure at risk', '●'],
-      ['Low Evaluation', fmtCurrency(data.lowEval, false), 'Conservative estimate', '●'],
-      ['High Evaluation', fmtCurrency(data.highEval, false), 'Upper bound estimate', data.highEval > data.lowEval * 1.2 ? '⚠' : '●'],
-      ['CP1 Rate', data.cp1Rate + '%', (data.cp1Count || 0).toLocaleString() + ' claims', parseFloat(data.cp1Rate) >= 30 ? '●' : '⚠'],
-      [''],
-      [''],
-      ['RISK MATRIX'],
-      [''],
-      ['RISK AREA', 'COUNT', 'EXPOSURE', '% OF TOTAL', 'ALERT LEVEL'],
-      ['FATALITY', data.fatalityCount || 0, fmtCurrency(data.fatalityReserves || 0, false), data.totalClaims > 0 ? (((data.fatalityCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.fatalityCount || 0) > 0 ? 'CRITICAL' : 'NONE'],
-      ['Surgery Claims', data.surgeryCount || 0, '-', data.totalClaims > 0 ? (((data.surgeryCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.surgeryCount || 0) > 50 ? 'ELEVATED' : 'NORMAL'],
-      ['Hospitalization', data.hospitalizationCount || 0, '-', data.totalClaims > 0 ? (((data.hospitalizationCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : 'NORMAL'],
-      ['No Evaluation', data.noEvalCount, fmtCurrency(data.noEvalReserves, false), ((data.noEvalCount / data.totalClaims) * 100).toFixed(1) + '%', data.noEvalCount > 5000 ? 'CRITICAL' : data.noEvalCount > 2000 ? 'ELEVATED' : 'NORMAL'],
-      ['Aged 365+ Days', data.aged365Plus, fmtCurrency(data.aged365Reserves, false), ((data.aged365Plus / data.totalClaims) * 100).toFixed(1) + '%', data.aged365Plus > 3000 ? 'CRITICAL' : data.aged365Plus > 1500 ? 'ELEVATED' : 'NORMAL'],
-      ['Aged 181-365 Days', data.aged181to365, '-', ((data.aged181to365 / data.totalClaims) * 100).toFixed(1) + '%', 'MONITORING'],
-      ['Pending Decisions', data.decisionsCount, fmtCurrency(data.decisionsExposure, false), '-', data.decisionsCount > 100 ? 'REVIEW' : 'NORMAL'],
-      [''],
-      [''],
-      ['FINANCIAL TRAJECTORY'],
-      [''],
-      ['COVERAGE', '2025 FULL YEAR', '2026 YTD', 'YOY CHANGE', 'TREND'],
-      ['BI Litigation Spend', fmtCurrency(data.biSpend2025, false), fmtCurrency(data.biSpend2026, false), fmtCurrency(data.biSpend2026 * 12 - data.biSpend2025, false) + ' (proj)', data.biSpend2026 * 12 > data.biSpend2025 ? 'UP' : 'DOWN'],
-      [''],
-      [''],
-      ['EXECUTIVE ACTION ITEMS'],
-      [''],
-      ['PRIORITY', 'ACTION'],
+      ['ACTION ITEMS'],
     ];
 
-    // Add dynamic action items
-    if ((data.fatalityCount || 0) > 0) dashboardRows.push(['CRITICAL', 'FATALITY ALERT: ' + (data.fatalityCount || 0) + ' fatality claims (' + fmtCurrency(data.fatalityReserves || 0, false) + ' exposure) require immediate executive review']);
-    if (data.noEvalCount > 2000) dashboardRows.push(['HIGH', 'Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations within 48-72 hours']);
-    if (data.aged365Plus > 1500) dashboardRows.push(['HIGH', 'Review ' + data.aged365Plus.toLocaleString() + ' aged claims for resolution strategy']);
-    if (data.decisionsCount > 0) dashboardRows.push(['MEDIUM', data.decisionsCount + ' claims requiring executive decision (' + fmtCurrency(data.decisionsExposure, false) + ' exposure)']);
-    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['MEDIUM', 'CP1 rate at ' + data.cp1Rate + '% - target 35%+ through early settlement']);
-    if (dashboardRows[dashboardRows.length - 1][0] !== 'CRITICAL' && dashboardRows[dashboardRows.length - 1][0] !== 'HIGH' && dashboardRows[dashboardRows.length - 1][0] !== 'MEDIUM') {
-      dashboardRows.push(['NORMAL', 'Continue standard portfolio monitoring cadence']);
-    }
-
+    if ((data.fatalityCount || 0) > 0) dashboardRows.push(['CRITICAL: ' + (data.fatalityCount || 0) + ' fatality claims require immediate review']);
+    if (data.noEvalCount > 2000) dashboardRows.push(['HIGH: Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations']);
+    if (data.aged365Plus > 1500) dashboardRows.push(['HIGH: Review ' + data.aged365Plus.toLocaleString() + ' aged claims']);
+    if (data.decisionsCount > 0) dashboardRows.push(['MEDIUM: ' + data.decisionsCount + ' claims pending decision']);
+    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['MEDIUM: CP1 rate below target (' + data.cp1Rate + '% vs 35%)']);
+    
     dashboardRows.push(['']);
-    dashboardRows.push(['']);
-    dashboardRows.push(['Report prepared for C-Suite distribution. Contains confidential business data.']);
+    dashboardRows.push(['─────────────────────────────────────────────────────────────────────────────']);
+    dashboardRows.push(['Confidential - C-Suite Distribution Only']);
 
     const dashSheet = XLSX.utils.aoa_to_sheet(dashboardRows);
-    dashSheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, dashSheet, 'Executive Dashboard');
+    dashSheet['!cols'] = [{ wch: 25 }, { wch: 22 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, dashSheet, 'Executive Summary');
 
-    // ═══════════════════════════════════════════════════════════════
     // SHEET 2: RISK DETAIL
-    // ═══════════════════════════════════════════════════════════════
     const riskRows: (string | number)[][] = [
-      ['RISK ANALYSIS DETAIL'],
+      ['RISK ANALYSIS'],
+      [format(new Date(), 'MMMM d, yyyy')],
       [''],
-      ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
+      ['Category', 'Metric', 'Value', 'Threshold', 'Status'],
+      ['Fatality', 'Count', data.fatalityCount || 0, 0, (data.fatalityCount || 0) > 0 ? 'CRITICAL' : 'OK'],
+      ['Fatality', 'Exposure', fmtCurrency(data.fatalityReserves || 0, false), '-', '-'],
+      ['Severity', 'Surgery', data.surgeryCount || 0, 50, (data.surgeryCount || 0) > 50 ? 'ELEVATED' : 'OK'],
+      ['Severity', 'Hospitalization', data.hospitalizationCount || 0, 100, (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : 'OK'],
       [''],
-      ['CATEGORY', 'METRIC', 'VALUE', 'BENCHMARK', 'VARIANCE', 'STATUS'],
-      ['FATALITY', 'Count', data.fatalityCount || 0, 0, data.fatalityCount || 0, (data.fatalityCount || 0) > 0 ? 'CRITICAL' : 'NONE'],
-      ['FATALITY', 'Exposure', data.fatalityReserves || 0, '-', '-', '-'],
-      ['Severity', 'Surgery Claims', data.surgeryCount || 0, '-', '-', (data.surgeryCount || 0) > 50 ? 'ELEVATED' : 'NORMAL'],
-      ['Severity', 'Hospitalization', data.hospitalizationCount || 0, '-', '-', (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : 'NORMAL'],
+      ['Evaluation', 'No Eval Count', data.noEvalCount.toLocaleString(), '2,000', data.noEvalCount > 2000 ? 'HIGH' : 'OK'],
+      ['Evaluation', 'No Eval Exposure', fmtCurrency(data.noEvalReserves, false), '-', '-'],
       [''],
-      ['No Evaluation', 'Count', data.noEvalCount, 2000, data.noEvalCount - 2000, data.noEvalCount > 2000 ? 'ABOVE THRESHOLD' : 'OK'],
-      ['No Evaluation', 'Exposure', data.noEvalReserves, '-', '-', '-'],
-      ['No Evaluation', '% of Portfolio', ((data.noEvalCount / data.totalClaims) * 100).toFixed(2) + '%', '10%', '-', '-'],
+      ['Aging', '365+ Days', data.aged365Plus.toLocaleString(), '1,500', data.aged365Plus > 1500 ? 'HIGH' : 'OK'],
+      ['Aging', '365+ Exposure', fmtCurrency(data.aged365Reserves, false), '-', '-'],
+      ['Aging', '181-365 Days', data.aged181to365.toLocaleString(), '-', 'MONITORING'],
       [''],
-      ['Aged Claims', '365+ Days', data.aged365Plus, 1500, data.aged365Plus - 1500, data.aged365Plus > 1500 ? 'ABOVE THRESHOLD' : 'OK'],
-      ['Aged Claims', '365+ Reserves', data.aged365Reserves, '-', '-', '-'],
-      ['Aged Claims', '181-365 Days', data.aged181to365, '-', '-', 'MONITORING'],
+      ['CP1', 'Rate', data.cp1Rate + '%', '35%', parseFloat(data.cp1Rate) >= 35 ? 'ON TARGET' : 'BELOW'],
+      ['CP1', 'Count', (data.cp1Count || 0).toLocaleString(), '-', '-'],
       [''],
-      ['CP1 Performance', 'Rate', data.cp1Rate + '%', '35%', (parseFloat(data.cp1Rate) - 35).toFixed(1) + '%', parseFloat(data.cp1Rate) >= 35 ? 'ON TARGET' : 'BELOW TARGET'],
-      ['CP1 Performance', 'Count', data.cp1Count || 0, '-', '-', '-'],
-      [''],
-      ['Pending Actions', 'Decisions', data.decisionsCount, 50, data.decisionsCount - 50, data.decisionsCount > 50 ? 'ELEVATED' : 'NORMAL'],
-      ['Pending Actions', 'Exposure', data.decisionsExposure, '-', '-', '-'],
+      ['Decisions', 'Pending', data.decisionsCount, 50, data.decisionsCount > 50 ? 'ELEVATED' : 'OK'],
+      ['Decisions', 'Exposure', fmtCurrency(data.decisionsExposure, false), '-', '-'],
     ];
 
     const riskSheet = XLSX.utils.aoa_to_sheet(riskRows);
-    riskSheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, riskSheet, 'Risk Analysis');
+    riskSheet['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, riskSheet, 'Risk Detail');
 
-    // ═══════════════════════════════════════════════════════════════
-    // SHEET 3: TREND DATA
-    // ═══════════════════════════════════════════════════════════════
+    // SHEET 3: FINANCIALS
     const trendRows: (string | number)[][] = [
-      ['FINANCIAL TREND ANALYSIS'],
+      ['FINANCIAL SUMMARY'],
+      [format(new Date(), 'MMMM d, yyyy')],
       [''],
-      ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
-      [''],
-      ['RESERVE DISTRIBUTION'],
+      ['RESERVES'],
       ['Category', 'Amount', '% of Total'],
-      ['Total Reserves', data.totalReserves, '100%'],
-      ['Low Evaluation', data.lowEval, ((data.lowEval / data.totalReserves) * 100).toFixed(1) + '%'],
-      ['High Evaluation', data.highEval, ((data.highEval / data.totalReserves) * 100).toFixed(1) + '%'],
-      ['No Evaluation', data.noEvalReserves, ((data.noEvalReserves / data.totalReserves) * 100).toFixed(1) + '%'],
+      ['Total', fmtCurrency(data.totalReserves, false), '100%'],
+      ['Low Evaluation', fmtCurrency(data.lowEval, false), ((data.lowEval / data.totalReserves) * 100).toFixed(1) + '%'],
+      ['High Evaluation', fmtCurrency(data.highEval, false), ((data.highEval / data.totalReserves) * 100).toFixed(1) + '%'],
+      ['No Evaluation', fmtCurrency(data.noEvalReserves, false), ((data.noEvalReserves / data.totalReserves) * 100).toFixed(1) + '%'],
       [''],
-      ['BI LITIGATION SPEND'],
-      ['Period', 'Amount', 'Notes'],
-      ['2025 Full Year', data.biSpend2025, 'Actual'],
-      ['2026 YTD', data.biSpend2026, 'January'],
-      ['2026 Projected', data.biSpend2026 * 12, 'Annualized estimate'],
-      ['YoY Change', data.biSpend2026 * 12 - data.biSpend2025, data.biSpend2026 * 12 > data.biSpend2025 ? 'INCREASING' : 'DECREASING'],
+      ['BI LITIGATION'],
+      ['Period', 'Amount', 'Note'],
+      ['2025 Actual', fmtCurrency(data.biSpend2025, false), ''],
+      ['2026 YTD', fmtCurrency(data.biSpend2026, false), 'January'],
+      ['2026 Projected', fmtCurrency(data.biSpend2026 * 12, false), 'Annualized'],
     ];
 
     const trendSheet = XLSX.utils.aoa_to_sheet(trendRows);
-    trendSheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(wb, trendSheet, 'Trend Analysis');
+    trendSheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, trendSheet, 'Financials');
 
     const filename = 'CSuite_Portfolio_Briefing_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
     XLSX.writeFile(wb, filename);
