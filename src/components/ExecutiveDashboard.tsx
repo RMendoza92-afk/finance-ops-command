@@ -1078,6 +1078,51 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           </div>
         </div>
 
+        {/* Scoring Criteria Explanation */}
+        <div className="mb-4 p-3 bg-muted/30 border border-border rounded-lg">
+          <p className="text-xs font-semibold text-foreground mb-2">📊 Hybrid Scoring Criteria</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px] sm:text-xs">
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-destructive">+40pts</span>
+              <p className="text-muted-foreground">Claim age 7+ years</p>
+            </div>
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-amber-600">+25pts</span>
+              <p className="text-muted-foreground">Claim age 5-6 years</p>
+            </div>
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-amber-600">+20pts</span>
+              <p className="text-muted-foreground">Late stage + $0 expert</p>
+            </div>
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-amber-600">+20pts</span>
+              <p className="text-muted-foreground">Pain escalated 4+ levels</p>
+            </div>
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-amber-500">+15pts</span>
+              <p className="text-muted-foreground">Pain level 9-10/10</p>
+            </div>
+            <div className="bg-card rounded p-2 border border-border">
+              <span className="font-bold text-amber-500">+15pts</span>
+              <p className="text-muted-foreground">Large loss / L3L marker</p>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-border flex flex-wrap gap-3 text-[10px] sm:text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#b41e1e] animate-pulse"></span>
+              <span className="font-semibold">CRITICAL</span>: 50+ points
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span className="font-semibold">REQUIRED</span>: 30-49 points
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+              <span className="font-semibold">WATCH</span>: 15-29 points
+            </span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 max-h-[400px] sm:max-h-[600px] overflow-y-auto">
           {(showAllBombs ? executiveReviewCases : executiveReviewCases.slice(0, 8)).map((caseItem, idx) => (
             <div
