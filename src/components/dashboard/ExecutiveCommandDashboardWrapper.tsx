@@ -215,14 +215,25 @@ export function ExecutiveCommandDashboardWrapper() {
   const typeGroupData = data.typeGroupSummaries || [];
   const litCount = typeGroupData.find(t => t.typeGroup === 'LIT')?.grandTotal || 0;
 
-  // Budget metrics calculation (still using placeholder for spend tracking)
+  // Budget metrics calculation - 2026 YTD BI/UM/UI Payments (1/1/26 - 1/7/26)
+  // Source: GWCHKHIS03_1.8.26.xlsx
   const budgetMetrics = {
     coverageBreakdown: {
       bi: {
-        ytd2026: 42000,
-        ytd2025: 316600000,
+        ytd2026: 5847291.33,  // BI Paid YTD (335 payments)
+        ytd2025: 316610919,   // BI 2025 Full Year
+      },
+      um: {
+        ytd2026: 101896.68,   // UM Paid YTD (7 payments)
+        ytd2025: 45234182,    // UM 2025 Full Year
+      },
+      ui: {
+        ytd2026: 90000.00,    // UI Paid YTD (3 payments)
+        ytd2025: 21759007,    // UI 2025 Full Year
       }
-    }
+    },
+    totalYtd2026: 6039188.01,
+    total2025: 383604108,
   };
 
   // Drilldown handler
@@ -965,17 +976,36 @@ export function ExecutiveCommandDashboardWrapper() {
           </SheetHeader>
           
           <div className="mt-6 space-y-6">
-            {/* YoY Comparison */}
+            {/* YoY Comparison - Total BI/UM/UI */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl bg-muted/30 border">
-                <p className="text-xs text-muted-foreground">2026 YTD</p>
-                <p className="text-2xl font-bold">{formatK(budgetMetrics.coverageBreakdown.bi.ytd2026)}</p>
-                <Badge className="mt-2 bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Jan only</Badge>
+                <p className="text-xs text-muted-foreground">2026 YTD (1/1 - 1/7)</p>
+                <p className="text-2xl font-bold">{formatM(budgetMetrics.totalYtd2026)}</p>
+                <Badge className="mt-2 bg-emerald-500/20 text-emerald-500 border-emerald-500/30">345 claims</Badge>
               </div>
               <div className="p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">2025 Full Year</p>
-                <p className="text-2xl font-bold">{formatM(budgetMetrics.coverageBreakdown.bi.ytd2025)}</p>
+                <p className="text-2xl font-bold">{formatM(budgetMetrics.total2025)}</p>
                 <Badge className="mt-2" variant="outline">Complete</Badge>
+              </div>
+            </div>
+
+            {/* Coverage Breakdown */}
+            <div className="p-4 rounded-xl border bg-card">
+              <h4 className="font-semibold mb-4">Coverage Breakdown (1/1/26 - 1/7/26)</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Bodily Injury (335)</span>
+                  <span className="font-mono">{formatM(budgetMetrics.coverageBreakdown.bi.ytd2026)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Uninsured Motorist BI (7)</span>
+                  <span className="font-mono">{formatK(budgetMetrics.coverageBreakdown.um.ytd2026)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Underinsured Motorist BI (3)</span>
+                  <span className="font-mono">{formatK(budgetMetrics.coverageBreakdown.ui.ytd2026)}</span>
+                </div>
               </div>
             </div>
 
@@ -985,23 +1015,23 @@ export function ExecutiveCommandDashboardWrapper() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Projected 2026</span>
-                  <span className="font-mono">{formatM(budgetMetrics.coverageBreakdown.bi.ytd2026 * 12)}</span>
+                  <span className="font-mono">{formatM(budgetMetrics.totalYtd2026 * 52)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">2025 Actual</span>
-                  <span className="font-mono">{formatM(budgetMetrics.coverageBreakdown.bi.ytd2025)}</span>
+                  <span className="font-mono">{formatM(budgetMetrics.total2025)}</span>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">YoY Change</span>
+                    <span className="text-sm font-medium">YoY Change (Projected)</span>
                     <div className="flex items-center gap-1">
-                      {budgetMetrics.coverageBreakdown.bi.ytd2026 * 12 > budgetMetrics.coverageBreakdown.bi.ytd2025 ? (
+                      {budgetMetrics.totalYtd2026 * 52 > budgetMetrics.total2025 ? (
                         <TrendingUp className="h-4 w-4 text-destructive" />
                       ) : (
                         <TrendingDown className="h-4 w-4 text-emerald-500" />
                       )}
-                      <span className={budgetMetrics.coverageBreakdown.bi.ytd2026 * 12 > budgetMetrics.coverageBreakdown.bi.ytd2025 ? 'text-destructive font-medium' : 'text-emerald-500 font-medium'}>
-                        {(((budgetMetrics.coverageBreakdown.bi.ytd2026 * 12 - budgetMetrics.coverageBreakdown.bi.ytd2025) / budgetMetrics.coverageBreakdown.bi.ytd2025) * 100).toFixed(1)}%
+                      <span className={budgetMetrics.totalYtd2026 * 52 > budgetMetrics.total2025 ? 'text-destructive font-medium' : 'text-emerald-500 font-medium'}>
+                        {(((budgetMetrics.totalYtd2026 * 52 - budgetMetrics.total2025) / budgetMetrics.total2025) * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
