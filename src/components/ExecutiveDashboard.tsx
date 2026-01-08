@@ -1192,7 +1192,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
               </div>
               
               <p className="text-[10px] text-gray-500 mt-2 pt-1 border-t border-[#0c2340]/10 truncate">
-                {caseItem.adjuster} • {caseItem.stage} • <span className="font-medium">{caseItem.daysOpen.toLocaleString()} days</span>
+                {caseItem.adjuster} • {caseItem.stage} • <span className={`font-medium ${caseItem.daysOpen > 730 ? 'text-red-600' : caseItem.daysOpen > 365 ? 'text-amber-600' : 'text-green-600'}`}>{caseItem.daysOpen.toLocaleString()}d</span>
               </p>
             </div>
           ))}
