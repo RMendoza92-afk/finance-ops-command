@@ -1038,6 +1038,11 @@ export function useExportData() {
     biSpend2025: number;
     dataDate: string;
     delta?: { change: number; changePercent: number; reservesChange: number; reservesChangePercent: number };
+    // Fatality & Severity
+    fatalityCount?: number;
+    fatalityReserves?: number;
+    surgeryCount?: number;
+    hospitalizationCount?: number;
   }) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pw = doc.internal.pageSize.getWidth();
@@ -1225,6 +1230,14 @@ export function useExportData() {
 
     const risks = [
       { 
+        label: '🔴 FATALITY CLAIMS', 
+        count: fmtNum(data.fatalityCount || 0), 
+        exposure: fmtCurrency(data.fatalityReserves || 0, true),
+        pct: data.totalClaims > 0 ? (((data.fatalityCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%',
+        level: (data.fatalityCount || 0) > 0 ? 'critical' : 'normal',
+        icon: '💀',
+      },
+      { 
         label: 'NO EVALUATION', 
         count: fmtNum(data.noEvalCount), 
         exposure: fmtCurrency(data.noEvalReserves, true),
@@ -1239,14 +1252,6 @@ export function useExportData() {
         pct: ((data.aged365Plus / data.totalClaims) * 100).toFixed(0) + '%',
         level: data.aged365Plus > 3000 ? 'critical' : data.aged365Plus > 1500 ? 'warning' : 'normal',
         icon: '⏱',
-      },
-      { 
-        label: 'BI SPEND TRAJECTORY', 
-        count: fmtCurrency(data.biSpend2026, true), 
-        exposure: '2026 YTD',
-        pct: 'vs ' + fmtCurrency(data.biSpend2025, true) + ' (2025)',
-        level: data.biSpend2026 > data.biSpend2025 / 12 ? 'warning' : 'normal',
-        icon: '📊',
       },
     ];
 
@@ -1296,6 +1301,7 @@ export function useExportData() {
     y += 8;
 
     const actions: string[] = [];
+    if ((data.fatalityCount || 0) > 0) actions.push('FATALITY ALERT: ' + fmtNum(data.fatalityCount || 0) + ' fatality claims (' + fmtCurrency(data.fatalityReserves || 0, true) + ' exposure) require immediate executive review');
     if (data.noEvalCount > 2000) actions.push('PRIORITY: Clear ' + fmtNum(data.noEvalCount) + ' pending evaluations within 48-72 hours');
     if (data.aged365Plus > 1500) actions.push('ESCALATION: Review ' + fmtNum(data.aged365Plus) + ' aged claims for resolution strategy');
     if (data.decisionsCount > 0) actions.push('DECISIONS: ' + fmtNum(data.decisionsCount) + ' claims requiring executive decision (' + fmtCurrency(data.decisionsExposure, true) + ' exposure)');
@@ -1306,7 +1312,7 @@ export function useExportData() {
     doc.roundedRect(m.l, y, cw, actions.length * 10 + 8, 3, 3, 'F');
     
     actions.forEach((action, idx) => {
-      const isHigh = action.startsWith('PRIORITY') || action.startsWith('ESCALATION');
+      const isHigh = action.startsWith('PRIORITY') || action.startsWith('ESCALATION') || action.startsWith('FATALITY');
       const circleColor = isHigh ? C.red : C.gold;
       doc.setFillColor(...circleColor);
       doc.circle(m.l + 8, y + 8 + idx * 10, 2, 'F');
@@ -1358,6 +1364,11 @@ export function useExportData() {
     biSpend2026: number;
     biSpend2025: number;
     dataDate: string;
+    // Fatality & Severity
+    fatalityCount?: number;
+    fatalityReserves?: number;
+    surgeryCount?: number;
+    hospitalizationCount?: number;
   }) => {
     const wb = XLSX.utils.book_new();
 
@@ -1393,6 +1404,9 @@ export function useExportData() {
       ['', '└─────────────────────────────────────────────────────────────────────────────┘'],
       [''],
       ['', 'RISK AREA', 'COUNT', 'EXPOSURE', '% OF TOTAL', 'ALERT LEVEL'],
+      ['', '🔴 FATALITY', data.fatalityCount || 0, fmtCurrency(data.fatalityReserves || 0, false), data.totalClaims > 0 ? (((data.fatalityCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.fatalityCount || 0) > 0 ? '🔴 CRITICAL' : '🟢 NONE'],
+      ['', 'Surgery Claims', data.surgeryCount || 0, '-', data.totalClaims > 0 ? (((data.surgeryCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.surgeryCount || 0) > 50 ? '🟡 ELEVATED' : '🟢 NORMAL'],
+      ['', 'Hospitalization', data.hospitalizationCount || 0, '-', data.totalClaims > 0 ? (((data.hospitalizationCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.hospitalizationCount || 0) > 100 ? '🟡 ELEVATED' : '🟢 NORMAL'],
       ['', 'No Evaluation', data.noEvalCount, fmtCurrency(data.noEvalReserves, false), ((data.noEvalCount / data.totalClaims) * 100).toFixed(1) + '%', data.noEvalCount > 5000 ? '🔴 CRITICAL' : data.noEvalCount > 2000 ? '🟡 ELEVATED' : '🟢 NORMAL'],
       ['', 'Aged 365+ Days', data.aged365Plus, fmtCurrency(data.aged365Reserves, false), ((data.aged365Plus / data.totalClaims) * 100).toFixed(1) + '%', data.aged365Plus > 3000 ? '🔴 CRITICAL' : data.aged365Plus > 1500 ? '🟡 ELEVATED' : '🟢 NORMAL'],
       ['', 'Aged 181-365 Days', data.aged181to365, '-', ((data.aged181to365 / data.totalClaims) * 100).toFixed(1) + '%', '🟡 MONITORING'],
@@ -1414,6 +1428,7 @@ export function useExportData() {
     ];
 
     // Add dynamic action items
+    if ((data.fatalityCount || 0) > 0) dashboardRows.push(['', '🔴', 'FATALITY ALERT: ' + (data.fatalityCount || 0) + ' fatality claims (' + fmtCurrency(data.fatalityReserves || 0, false) + ' exposure) require immediate executive review', '', '']);
     if (data.noEvalCount > 2000) dashboardRows.push(['', '🔴', 'PRIORITY: Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations within 48-72 hours', '', '']);
     if (data.aged365Plus > 1500) dashboardRows.push(['', '🔴', 'ESCALATION: Review ' + data.aged365Plus.toLocaleString() + ' aged claims for resolution strategy', '', '']);
     if (data.decisionsCount > 0) dashboardRows.push(['', '🟡', 'DECISIONS: ' + data.decisionsCount + ' claims requiring executive decision (' + fmtCurrency(data.decisionsExposure, false) + ' exposure)', '', '']);

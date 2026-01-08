@@ -2870,6 +2870,53 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           ]),
         } as ExportableData,
       },
+      {
+        title: 'Fatality & Severity',
+        data: {
+          title: 'Fatality & Severity Claims',
+          subtitle: 'High severity claims requiring executive attention',
+          timestamp,
+          summary: {
+            'Fatality Claims': data.fatalitySummary?.fatalityCount || 0,
+            'Fatality Reserves': formatCurrencyFullValue(data.fatalitySummary?.fatalityReserves || 0),
+            'Surgery Claims': data.fatalitySummary?.surgeryCount || 0,
+            'Hospitalization': data.fatalitySummary?.hospitalizationCount || 0,
+          },
+          columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Type Group', 'Reserves', 'Low Eval', 'High Eval', 'Team'],
+          rows: (data.fatalitySummary?.fatalityClaims || []).slice(0, 50).map(c => [
+            c.claimNumber,
+            c.claimant,
+            c.coverage,
+            c.days,
+            c.typeGroup,
+            c.openReserves,
+            c.lowEval,
+            c.highEval,
+            c.teamGroup,
+          ]),
+          rawClaimData: [{
+            sheetName: 'All Fatality Claims',
+            columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Eval Phase', 'Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Team', 'Fatality', 'Surgery', 'Hospitalization'],
+            rows: (data.fatalitySummary?.fatalityClaims || []).map(c => [
+              c.claimNumber,
+              c.claimant,
+              c.coverage,
+              c.days,
+              c.ageBucket,
+              c.typeGroup,
+              c.evaluationPhase,
+              c.openReserves,
+              c.lowEval,
+              c.highEval,
+              c.overallCP1,
+              c.teamGroup,
+              'YES',
+              c.surgery ? 'YES' : '',
+              c.hospitalization ? 'YES' : '',
+            ]),
+          }],
+        } as ExportableData,
+      },
     ];
 
     generateFullExcel(sections);
