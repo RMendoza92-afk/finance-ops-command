@@ -399,6 +399,37 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
         })),
       };
     })(),
+    
+    // === FATALITY & SEVERITY ANALYSIS ===
+    fatality_severity: exp.fatalitySummary ? {
+      fatality_count: exp.fatalitySummary.fatalityCount || 0,
+      fatality_reserves_usd: exp.fatalitySummary.fatalityReserves || 0,
+      fatality_low_eval_usd: exp.fatalitySummary.fatalityLowEval || 0,
+      fatality_high_eval_usd: exp.fatalitySummary.fatalityHighEval || 0,
+      surgery_count: exp.fatalitySummary.surgeryCount || 0,
+      hospitalization_count: exp.fatalitySummary.hospitalizationCount || 0,
+      fatality_claims_sample: (exp.fatalitySummary.fatalityClaims || []).slice(0, 15).map((c: any) => ({
+        claim_id: c.claimNumber,
+        claimant: c.claimant,
+        coverage: c.coverage,
+        type_group: c.typeGroup,
+        team: c.teamGroup,
+        days_open: c.days,
+        reserves_usd: c.openReserves || 0,
+        low_eval_usd: c.lowEval || 0,
+        high_eval_usd: c.highEval || 0,
+        bi_status: c.biStatus,
+        evaluation_phase: c.evaluationPhase,
+      })),
+    } : {
+      fatality_count: 0,
+      fatality_reserves_usd: 0,
+      fatality_low_eval_usd: 0,
+      fatality_high_eval_usd: 0,
+      surgery_count: 0,
+      hospitalization_count: 0,
+      fatality_claims_sample: [],
+    },
   };
 
   return verified;
@@ -426,6 +457,7 @@ You have complete, real-time access to:
 - **Demand & Settlement**: What claimants are asking vs what we're paying
 - **Reserve Adequacy**: Over/under reserved analysis
 - **Litigation Status**: In-suit claims, cause numbers, matter status
+- **Fatality & Severity**: Fatality claims, surgery cases, hospitalizations with exposure
 - **Actuarial Data**: Frequency trends, loss development, rate analysis, payments
 
 ## ACTUARIAL EXPERTISE:

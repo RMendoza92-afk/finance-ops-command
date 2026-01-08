@@ -150,19 +150,23 @@ export interface RawClaimExport {
   daysSinceNegotiation: number | null;
   negotiationType: string;
   negotiationDate: string;
-  // NEW: Demand/settlement data
+  // Demand/settlement data
   negotiationAmount: number;
   authAmount: number;
   totalPaid: number;
   netTotalIncurred: number;
   reserveChangePercent: number;
-  // NEW: Litigation/trial data
+  // Litigation/trial data
   inLitigation: boolean;
   causeNumber: string;
   caseType: string;
   matterStatus: string;
   settledDate: string;
   daysSinceSettled: number | null;
+  // Fatality and severity flags
+  fatality: boolean;
+  surgery: boolean;
+  hospitalization: boolean;
 }
 
 export interface CP1ByTypeGroup {
@@ -296,6 +300,16 @@ export interface OpenExposureData {
       highEval: number;
     }[];
     demandClaims: RawClaimExport[];
+  };
+  // Fatality and severity summary
+  fatalitySummary: {
+    fatalityCount: number;
+    fatalityReserves: number;
+    fatalityLowEval: number;
+    fatalityHighEval: number;
+    surgeryCount: number;
+    hospitalizationCount: number;
+    fatalityClaims: RawClaimExport[];
   };
   delta?: {
     previousTotal: number;
@@ -526,6 +540,14 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const daysSinceSettledStr = row['Days Since Settled?']?.trim() || '';
     const daysSinceSettled = daysSinceSettledStr ? parseInt(daysSinceSettledStr, 10) || null : null;
     
+    // Parse fatality and severity flags
+    const fatalityVal = (row['FATALITY'] || '').toString().toLowerCase().trim();
+    const isFatality = fatalityVal === 'yes' || fatalityVal === 'y' || fatalityVal === 'true' || fatalityVal === '1';
+    const surgeryVal = (row['SURGERY'] || '').toString().toLowerCase().trim();
+    const isSurgery = surgeryVal === 'yes' || surgeryVal === 'y' || surgeryVal === 'true' || surgeryVal === '1';
+    const hospitalizationVal = (row['HOSPITALIZATION'] || '').toString().toLowerCase().trim();
+    const isHospitalization = hospitalizationVal === 'yes' || hospitalizationVal === 'y' || hospitalizationVal === 'true' || hospitalizationVal === '1';
+    
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
     const areaNumber = row['Area#']?.trim() || '';
@@ -568,6 +590,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       matterStatus,
       settledDate,
       daysSinceSettled,
+      fatality: isFatality,
+      surgery: isSurgery,
+      hospitalization: isHospitalization,
     });
     
     // Track CP1 for ALL coverages (for grand total)
@@ -612,7 +637,6 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       daysSinceNegotiation,
       negotiationType,
       negotiationDate,
-      // NEW fields
       negotiationAmount,
       authAmount,
       totalPaid,
@@ -624,6 +648,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       matterStatus,
       settledDate,
       daysSinceSettled,
+      fatality: isFatality,
+      surgery: isSurgery,
+      hospitalization: isHospitalization,
     });
     
     // Update grand totals (claim counts)
@@ -1127,6 +1154,20 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     demandClaims: claimsWithDemand, // Include raw claims for export
   };
   
+  // ============ FATALITY & SEVERITY SUMMARY ============
+  const fatalityClaims = rawClaimsExport.filter(c => c.fatality);
+  const surgeryClaims = rawClaimsExport.filter(c => c.surgery);
+  const hospitalizationClaims = rawClaimsExport.filter(c => c.hospitalization);
+  const fatalitySummary = {
+    fatalityCount: fatalityClaims.length,
+    fatalityReserves: fatalityClaims.reduce((sum, c) => sum + c.openReserves, 0),
+    fatalityLowEval: fatalityClaims.reduce((sum, c) => sum + c.lowEval, 0),
+    fatalityHighEval: fatalityClaims.reduce((sum, c) => sum + c.highEval, 0),
+    surgeryCount: surgeryClaims.length,
+    hospitalizationCount: hospitalizationClaims.length,
+    fatalityClaims: fatalityClaims, // Include raw claims for export
+  };
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -1172,6 +1213,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     negotiationRecency,
     biStatusBreakdown,
     demandSummary,
+    fatalitySummary,
   };
 }
 
