@@ -124,17 +124,22 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
   doc.setFillColor(...C.gold);
   doc.rect(0, 24, pw, 0.5, 'F');
 
-  // Logo - simple rectangle placement
+  // Logo - constrained aspect ratio (original is ~3:1 ratio)
   try {
-    doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
+    // Use fixed dimensions that maintain aspect ratio: height 12mm, width ~36mm (3:1)
+    doc.addImage(loyaLogo, 'JPEG', m.l + 2, 5, 36, 12);
   } catch (e) {
-    // Logo failed
+    // Logo failed - use text fallback
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...C.white);
+    doc.text('FRED LOYA INSURANCE', m.l + 4, 14);
   }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(...C.white);
-  doc.text('CEO CONTROL PANEL', m.l + 20, 13);
+  doc.text('CEO CONTROL PANEL', m.l + 42, 13);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
