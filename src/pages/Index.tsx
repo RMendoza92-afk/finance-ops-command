@@ -9,8 +9,9 @@ import { LitigationChat } from "@/components/LitigationChat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { SalesTickerBanner } from "@/components/SalesTickerBanner";
+import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import { Button } from "@/components/ui/button";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, HelpCircle } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { 
   getLitigationStage, 
@@ -21,6 +22,7 @@ import {
 
 const Index = () => {
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const { showTutorial, startTutorial, completeTutorial } = useTutorial();
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
     const savedPainData = localStorage.getItem('painLevelOverrides');
@@ -224,10 +226,21 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button
+              variant="ghost"
+              size="sm"
+              onClick={startTutorial}
+              className="gap-2 h-8 sm:h-9"
+              title="Show tutorial"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Help</span>
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => setAlertDialogOpen(true)}
               className="gap-2 h-8 sm:h-9"
+              data-tutorial="send-alert"
             >
               <Send className="h-4 w-4" />
               <span className="hidden sm:inline">Send Alert</span>
@@ -291,6 +304,11 @@ const Index = () => {
           actionRequired: 'General Dashboard Alert'
         }}
       />
+
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay onComplete={completeTutorial} />
+      )}
     </div>
   );
 };
