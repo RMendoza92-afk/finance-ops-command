@@ -1330,11 +1330,16 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       // Sheet 5: Raw Claims Data (for validation)
       if (data?.rawClaims && data.rawClaims.length > 0) {
+        const extractTeamNumber = (teamGroup: string) => {
+          const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
+          return m?.[1] || '';
+        };
+
         const rawClaimsData = [
           ['RAW CLAIMS DATA - CP1 VALIDATION'],
           [`Total Claims: ${data.rawClaims.length} (BI/UM/UI coverages only)`],
           [],
-          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type'],
+          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type'],
           ...data.rawClaims.map(claim => [
             claim.claimNumber,
             claim.claimant,
@@ -1342,13 +1347,15 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             claim.days,
             claim.ageBucket,
             claim.typeGroup,
+            claim.teamGroup,
+            extractTeamNumber(claim.teamGroup),
             claim.openReserves,
             claim.lowEval,
             claim.highEval,
             claim.cp1Flag,
             claim.overallCP1,
             claim.evaluationPhase,
-            claim.demandType
+            claim.demandType,
           ])
         ];
         const rawClaimsSheet = XLSX.utils.aoa_to_sheet(rawClaimsData);
