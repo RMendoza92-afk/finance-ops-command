@@ -1153,53 +1153,37 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 {formatClaimNumber(caseItem.matterId)}
               </p>
               
-              {/* Factor Icons */}
-              <div className="flex gap-1.5 mb-2">
+              {/* Concise factor tags */}
+              <div className="flex flex-wrap gap-1 mb-2">
                 {caseItem.executiveReview.reasons.map((reason, rIdx) => {
                   const reasonLower = reason.toLowerCase();
-                  let Icon = AlertTriangle;
-                  let title = reason;
-                  let color = "text-amber-500";
+                  let label = reason;
+                  let bg = "bg-amber-100 text-amber-800";
                   
                   if (reasonLower.includes('yr old') || reasonLower.includes('yr in') || reasonLower.includes('yr lit')) {
-                    Icon = Clock;
-                    title = "Old claim";
-                    color = "text-destructive";
-                  } else if (reasonLower.includes('stage') || reasonLower.includes('expert')) {
-                    Icon = Target;
-                    title = "Missing strategy";
-                    color = "text-amber-600";
+                    label = `${reason.match(/\d+/)?.[0] || '?'}yr old`;
+                    bg = "bg-red-100 text-red-700";
+                  } else if (reasonLower.includes('stage') && reasonLower.includes('expert')) {
+                    label = "No expert";
+                    bg = "bg-orange-100 text-orange-700";
                   } else if (reasonLower.includes('pain') && reasonLower.includes('escal')) {
-                    Icon = TrendingUp;
-                    title = "Getting worse";
-                    color = "text-orange-500";
+                    label = "Worsening";
+                    bg = "bg-orange-100 text-orange-700";
                   } else if (reasonLower.includes('pain level')) {
-                    Icon = Flame;
-                    title = "High severity";
-                    color = "text-destructive";
+                    label = `Pain ${reason.match(/\d+/)?.[0] || '?'}/10`;
+                    bg = "bg-red-100 text-red-700";
                   } else if (reasonLower.includes('large') || reasonLower.includes('complex')) {
-                    Icon = Scale;
-                    title = "Complex case";
-                    color = "text-purple-500";
+                    label = "Complex";
+                    bg = "bg-purple-100 text-purple-700";
                   } else if (reasonLower.includes('reactive')) {
-                    Icon = Zap;
-                    title = "Reactive spend";
-                    color = "text-amber-500";
+                    label = "Reactive $";
+                    bg = "bg-amber-100 text-amber-700";
                   }
                   
                   return (
-                    <TooltipProvider key={rIdx}>
-                      <ShadcnTooltip>
-                        <TooltipTrigger asChild>
-                          <div className={`p-1 rounded ${color} bg-current/10`}>
-                            <Icon className="h-3 w-3" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                          {title}
-                        </TooltipContent>
-                      </ShadcnTooltip>
-                    </TooltipProvider>
+                    <span key={rIdx} className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${bg}`}>
+                      {label}
+                    </span>
                   );
                 })}
               </div>
