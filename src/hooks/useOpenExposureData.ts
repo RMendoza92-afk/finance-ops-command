@@ -1193,8 +1193,8 @@ export function useOpenExposureData() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load current raw data (Jan 5)
-        const currentRes = await fetch('/data/open-exposure-raw-jan5.csv');
+        // Load current raw data (Jan 8)
+        const currentRes = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
         const currentCsv = await currentRes.text();
         
         // Parse current raw data
