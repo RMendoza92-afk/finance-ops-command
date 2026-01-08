@@ -1397,7 +1397,7 @@ export function useExportData() {
       ['Total Claims', data.totalClaims.toLocaleString(), ''],
       ['Reserves', fmtCurrency(data.totalReserves, false), ''],
       ['Evaluation Range', fmtCurrency(data.lowEval, false) + ' - ' + fmtCurrency(data.highEval, false), ''],
-      ['CP1 Rate', data.cp1Rate + '% (' + (data.cp1Count || 0).toLocaleString() + ' claims)', parseFloat(data.cp1Rate) >= 30 ? 'OK' : 'LOW'],
+      ['CP1 Rate', data.cp1Rate + '% (' + (data.cp1Count || 0).toLocaleString() + ' claims)', parseFloat(data.cp1Rate) >= 30 ? 'OK' : 'CRITICAL'],
       [''],
       ['RISK AREAS'],
       ['Category', 'Count', 'Exposure', 'Alert'],
@@ -1421,7 +1421,7 @@ export function useExportData() {
     if (data.noEvalCount > 2000) dashboardRows.push(['HIGH: Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations']);
     if (data.aged365Plus > 1500) dashboardRows.push(['HIGH: Review ' + data.aged365Plus.toLocaleString() + ' aged claims']);
     if (data.decisionsCount > 0) dashboardRows.push(['MEDIUM: ' + data.decisionsCount + ' claims pending decision']);
-    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['MEDIUM: CP1 rate below target (' + data.cp1Rate + '% vs 35%)']);
+    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['CRITICAL: CP1 rate below target (' + data.cp1Rate + '% vs 35%)']);
     
     dashboardRows.push(['']);
     dashboardRows.push(['─────────────────────────────────────────────────────────────────────────────']);
@@ -1449,7 +1449,7 @@ export function useExportData() {
       ['Aging', '365+ Exposure', fmtCurrency(data.aged365Reserves, false), '-', '-'],
       ['Aging', '181-365 Days', data.aged181to365.toLocaleString(), '-', 'MONITORING'],
       [''],
-      ['CP1', 'Rate', data.cp1Rate + '%', '35%', parseFloat(data.cp1Rate) >= 35 ? 'ON TARGET' : 'BELOW'],
+      ['CP1', 'Rate', data.cp1Rate + '%', '35%', parseFloat(data.cp1Rate) >= 35 ? 'ON TARGET' : 'CRITICAL'],
       ['CP1', 'Count', (data.cp1Count || 0).toLocaleString(), '-', '-'],
       [''],
       ['Decisions', 'Pending', data.decisionsCount, 50, data.decisionsCount > 50 ? 'ELEVATED' : 'OK'],
