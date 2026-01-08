@@ -3,21 +3,21 @@ import { TrendingUp, TrendingDown, DollarSign, FileText, Users, Percent, Chevron
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const salesData = {
-  period: "1/1/26 - 1/6/26",
+  period: "1/1/26 - 1/7/26",
   capArea: "CAP AREA",
-  quotesGiven: 9430,
-  policiesSold: 3598,
+  quotesGiven: 11594,
+  policiesSold: 4331,
   otherSold: 0,
-  closingPercent: 38.15,
-  numberOfZeros: 2055,
-  netWrittenPremium: 8420936,
-  grossWrittenPremium: 9302163,
-  cancellationPremium: -881227,
-  cancellationPercent: -9.00,
-  renewalPercent6Mo: 88.57,
-  policiesRenewedMonthly: 24219,
-  policiesExpiredMonthly: 6323,
-  renewalPercentMonthly: 79.30,
+  closingPercent: 37.36,
+  numberOfZeros: 2417,
+  netWrittenPremium: 10402014,
+  grossWrittenPremium: 11436998,
+  cancellationPremium: -1034984,
+  cancellationPercent: -8.56,
+  renewalPercent6Mo: 89.35,
+  policiesRenewedMonthly: 29368,
+  policiesExpiredMonthly: 6946,
+  renewalPercentMonthly: 80.87,
 };
 
 const formatCurrency = (value: number) => {
