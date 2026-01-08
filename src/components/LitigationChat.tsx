@@ -626,6 +626,62 @@ export function LitigationChat() {
     };
   }, [actuarialData]);
 
+  // Build Quick Stats - Instant portfolio snapshot
+  const buildQuickStats = useCallback(() => {
+    if (!openExposureContext && !dataContext) return null;
+
+    const formatCurrency = (val: number): string => {
+      if (val >= 1000000000) return '$' + (val / 1000000000).toFixed(2) + 'B';
+      if (val >= 1000000) return '$' + (val / 1000000).toFixed(2) + 'M';
+      if (val >= 1000) return '$' + Math.round(val / 1000).toLocaleString() + 'K';
+      return '$' + val.toLocaleString();
+    };
+
+    // Get data from open exposure context (primary source)
+    const totals = openExposureContext?.totals;
+    const cp1Data = openExposureContext?.cp1Data;
+    const financials = openExposureContext?.financials;
+    const knownTotals = openExposureContext?.knownTotals;
+    
+    // Get MTD closures from data context
+    const mtd = dataContext?.monthToDate;
+    
+    // Build the response
+    const lines: string[] = [
+      '## ⚡ PORTFOLIO QUICK STATS',
+      '',
+      '### OPEN CLAIMS INVENTORY',
+      `Total Open Claims: ${totals?.grandTotal?.toLocaleString() || 'N/A'}`,
+      `Total Reserves: ${formatCurrency(financials?.totalOpenReserves || 0)}`,
+      `Low Evaluation: ${formatCurrency(financials?.totalLowEval || 0)}`,
+      `High Evaluation: ${formatCurrency(financials?.totalHighEval || 0)}`,
+      '',
+      '### CP1 STATUS',
+      `CP1 Rate: ${cp1Data?.cp1Rate || 'N/A'}`,
+      `CP1 Claims: ${cp1Data?.totals?.yes?.toLocaleString() || 'N/A'} claims`,
+      '',
+      '### EVALUATION COVERAGE',
+      `No Evaluation Count: ${financials?.noEvalCount?.toLocaleString() || 'N/A'}`,
+      `No Evaluation Reserves: ${formatCurrency(financials?.noEvalReserves || 0)}`,
+      '',
+      '### MTD CLOSURES',
+      `Closures This Month: ${mtd?.closures?.toLocaleString() || 'N/A'}`,
+      `Total Paid MTD: ${formatCurrency(mtd?.totalPaid || 0)}`,
+      `Avg Payment: ${formatCurrency(mtd?.avgPayment || 0)}`,
+      '',
+      '### AGE DISTRIBUTION',
+      `365+ Days: ${totals?.age365Plus?.toLocaleString() || 'N/A'}`,
+      `181-365 Days: ${totals?.age181To365?.toLocaleString() || 'N/A'}`,
+      `61-180 Days: ${totals?.age61To180?.toLocaleString() || 'N/A'}`,
+      `Under 60 Days: ${totals?.ageUnder60?.toLocaleString() || 'N/A'}`,
+      '',
+      '---',
+      '_Click any Quick Insight above for detailed analysis, or ask the Oracle anything._'
+    ];
+
+    return lines.join('\n');
+  }, [openExposureContext, dataContext]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -724,9 +780,10 @@ export function LitigationChat() {
     doc.setTextColor(...C.white);
     doc.text('EXECUTIVE BRIEF', m.l + 27.5, 21, { align: 'center' });
 
-    // Logo
+    // Logo - constrained aspect ratio (original is ~3:1 ratio)
     try {
-      doc.addImage(loyaLogo, 'JPEG', pw - m.r - 28, 10, 26, 26);
+      // Use fixed dimensions that maintain aspect ratio: height 22mm, width ~66mm (3:1) - but constrained to 50mm width
+      doc.addImage(loyaLogo, 'JPEG', pw - m.r - 50, 12, 48, 16);
     } catch (e) {}
 
     // Main title
@@ -1326,6 +1383,27 @@ export function LitigationChat() {
                     </div>
                   </div>
                 </div>
+
+                {/* QUICK STATS BUTTON - Instant Portfolio Snapshot */}
+                <button
+                  onClick={() => {
+                    const stats = buildQuickStats();
+                    if (stats) {
+                      setMessages([{
+                        role: 'assistant',
+                        content: stats
+                      }]);
+                    }
+                  }}
+                  disabled={!dataReady}
+                  className="w-full p-3 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#b8962e] 
+                    text-[#0c0c0c] font-bold text-sm shadow-lg hover:shadow-xl hover:scale-[1.01] 
+                    transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                    flex items-center justify-center gap-2 border border-[#d4af37]/50"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  ⚡ QUICK STATS - Instant Portfolio Snapshot
+                </button>
 
                 {/* Quick Insights - Executive Questions */}
                 <div className="bg-[#0c0c0c] rounded-lg p-3 border border-[#d4af37]/30">

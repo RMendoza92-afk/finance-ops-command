@@ -197,10 +197,11 @@ export function useExportData() {
     doc.setFillColor(...C.gold);
     doc.rect(0, 22, pw, 1, 'F');
 
-    // Logo
+    // Logo - constrained aspect ratio (original is ~3:1 ratio)
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', m.l, 4, 40, 12);
+      // Use fixed dimensions that maintain aspect ratio: height 12mm, width ~36mm (3:1)
+      doc.addImage(logoBase64, 'JPEG', m.l, 4, 36, 12);
     } catch {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
@@ -834,9 +835,11 @@ export function useExportData() {
     doc.setFillColor(...C.gold);
     doc.rect(0, 20, pw, 1.2, 'F');
 
+    // Logo - constrained aspect ratio (original is ~3:1 ratio)
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', m.l, 3.5, 38, 11);
+      // Use fixed dimensions that maintain aspect ratio: height 10mm, width ~30mm (3:1)
+      doc.addImage(logoBase64, 'JPEG', m.l, 4, 30, 10);
     } catch {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
@@ -1092,20 +1095,22 @@ export function useExportData() {
     doc.setFillColor(...C.headerBg);
     doc.rect(0, 3, pw, 35, 'F');
 
+    // Logo - constrained aspect ratio (original is ~3:1 ratio)
     try {
       const logoBase64 = await loadImageAsBase64(loyaLogo);
-      doc.addImage(logoBase64, 'JPEG', m.l, 8, 24, 24);
+      // Use fixed dimensions that maintain aspect ratio: height 16mm, width ~48mm (3:1)
+      doc.addImage(logoBase64, 'JPEG', m.l, 10, 48, 16);
     } catch { /* skip logo */ }
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
+    doc.setFontSize(18);
     doc.setTextColor(...C.white);
-    doc.text('EXECUTIVE PORTFOLIO BRIEFING', m.l + 32, 20);
+    doc.text('EXECUTIVE PORTFOLIO BRIEFING', m.l + 55, 18);
     
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(...C.gold);
-    doc.text('Fred Loya Insurance | Discipline Command Center', m.l + 32, 28);
+    doc.text('Fred Loya Insurance | Discipline Command Center', m.l + 55, 26);
 
     // Right side info
     doc.setFontSize(9);
