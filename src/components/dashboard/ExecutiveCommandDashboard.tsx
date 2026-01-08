@@ -49,6 +49,10 @@ interface ExecutiveCommandDashboardProps {
     litCount: number;
     biLitSpend2026: number;
     biLitSpend2025: number;
+    fatalityCount?: number;
+    fatalityReserves?: number;
+    surgeryCount?: number;
+    hospitalizationCount?: number;
     dataDate: string;
     delta?: {
       change: number;
@@ -146,6 +150,10 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         biSpend2026: data.biLitSpend2026,
         biSpend2025: data.biLitSpend2025,
         dataDate: data.dataDate,
+        fatalityCount: data.fatalityCount,
+        fatalityReserves: data.fatalityReserves,
+        surgeryCount: data.surgeryCount,
+        hospitalizationCount: data.hospitalizationCount,
       });
       toast.success('C-Suite Portfolio Excel generated');
     } catch (err) {

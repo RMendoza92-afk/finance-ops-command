@@ -307,6 +307,10 @@ export function ExecutiveCommandDashboardWrapper() {
           biSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
           dataDate: data.dataDate || timestamp,
+          fatalityCount: data.fatalitySummary?.fatalityCount || 0,
+          fatalityReserves: data.fatalitySummary?.fatalityReserves || 0,
+          surgeryCount: data.fatalitySummary?.surgeryCount || 0,
+          hospitalizationCount: data.fatalitySummary?.hospitalizationCount || 0,
         };
         generateCSuiteBriefing(exportData);
         generateCSuiteExcel(exportData);
@@ -350,6 +354,10 @@ export function ExecutiveCommandDashboardWrapper() {
           biLitSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biLitSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
           dataDate: data.dataDate || timestamp,
+          fatalityCount: data.fatalitySummary?.fatalityCount || 0,
+          fatalityReserves: data.fatalitySummary?.fatalityReserves || 0,
+          surgeryCount: data.fatalitySummary?.surgeryCount || 0,
+          hospitalizationCount: data.fatalitySummary?.hospitalizationCount || 0,
           delta: undefined,
           typeGroupData: typeGroupData,
           ageBreakdown: data.financials.byAge,
