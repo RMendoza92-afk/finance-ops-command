@@ -666,7 +666,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="border-l-2 border-[#b41e1e] pl-3 sm:pl-4">
             <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide">EXECUTIVE COMMAND CENTER</h2>
-            <p className="text-[10px] sm:text-xs text-gray-300">Litigation Intelligence Dashboard</p>
+            <p className="text-[10px] sm:text-xs text-gray-300">Discipline Command Center</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <button

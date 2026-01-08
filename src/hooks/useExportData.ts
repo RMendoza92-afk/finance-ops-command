@@ -1068,7 +1068,7 @@ export function useExportData() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...C.gold);
-    doc.text('Fred Loya Insurance | Claims & Litigation', m.l + 32, 28);
+    doc.text('Fred Loya Insurance | Discipline Command Center', m.l + 32, 28);
 
     // Right side info
     doc.setFontSize(9);
