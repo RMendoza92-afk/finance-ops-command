@@ -184,6 +184,7 @@ export interface MultiPackGroup {
     days: number;
     ageBucket: string;
     typeGroup: string;
+    teamGroup: string;
     reserves: number;
     lowEval: number;
     highEval: number;
@@ -907,6 +908,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     days: number;
     ageBucket: string;
     typeGroup: string;
+    teamGroup: string;
     reserves: number;
     lowEval: number;
     highEval: number;
@@ -938,6 +940,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       days: claim.days,
       ageBucket: claim.ageBucket,
       typeGroup: claim.typeGroup,
+      teamGroup: claim.teamGroup,
       reserves: claim.openReserves,
       lowEval: claim.lowEval,
       highEval: claim.highEval,
