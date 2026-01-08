@@ -119,7 +119,7 @@ export function useSOLBreachAnalysis() {
   useEffect(() => {
     async function loadAndAnalyze() {
       try {
-        const response = await fetch('/data/open-exposure-raw-jan5.csv');
+        const response = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
         const csvText = await response.text();
         
         const parsed = Papa.parse(csvText, {
