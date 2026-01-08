@@ -114,6 +114,35 @@ const sanitize = (text: string): string => {
     .replace(/[^\x20-\x7E\n]/g, '');
 };
 
+const extractTeamNumber = (teamValue: unknown): string => {
+  const s = String(teamValue ?? '').trim();
+  const m = s.match(/\b(\d{1,3})\b/);
+  return m?.[1] ?? '';
+};
+
+const withTeamNumberColumn = (input: { columns: string[]; rows: (string | number)[][] }) => {
+  const columns = [...(input.columns || [])];
+  const rows = input.rows || [];
+
+  // Find an existing Team column ("Team", "Team Group", etc.)
+  const teamIdx = columns.findIndex((c) => /\bteam\b/i.test(c) || /team\s*group/i.test(c));
+  const hasTeamNumber = columns.some((c) => /^team\s*#$/i.test(c) || /^team\s*number$/i.test(c));
+
+  if (teamIdx < 0 || hasTeamNumber) return { columns, rows };
+
+  const nextColumns = [...columns];
+  nextColumns.splice(teamIdx + 1, 0, 'Team #');
+
+  const nextRows = rows.map((r) => {
+    const arr = [...r];
+    const teamNum = extractTeamNumber(arr[teamIdx]);
+    arr.splice(teamIdx + 1, 0, teamNum);
+    return arr;
+  });
+
+  return { columns: nextColumns, rows: nextRows };
+};
+
 // Format number with commas
 const fmtNum = (n: number): string => n.toLocaleString();
 
@@ -449,9 +478,11 @@ export function useExportData() {
     }
 
     if (data.columns.length > 0 && data.rows.length > 0) {
+      const normalized = withTeamNumberColumn({ columns: data.columns, rows: data.rows });
+
       summaryRows.push(['DATA SUMMARY']);
-      summaryRows.push(data.columns);
-      data.rows.forEach(row => {
+      summaryRows.push(normalized.columns);
+      normalized.rows.forEach(row => {
         summaryRows.push(row.map(c => typeof c === 'number' ? c : String(c)));
       });
     }
@@ -494,15 +525,17 @@ export function useExportData() {
     // === RAW CLAIM DATA SHEETS ===
     if (data.rawClaimData && data.rawClaimData.length > 0) {
       data.rawClaimData.forEach((rawData, idx) => {
+        const normalized = withTeamNumberColumn({ columns: rawData.columns, rows: rawData.rows });
         const sheetName = (rawData.sheetName || 'Claims Data ' + (idx + 1)).substring(0, 31);
-        const rawRows: (string | number)[][] = [rawData.columns];
-        rawData.rows.forEach(row => {
+
+        const rawRows: (string | number)[][] = [normalized.columns];
+        normalized.rows.forEach(row => {
           rawRows.push(row.map(c => typeof c === 'number' ? c : String(c)));
         });
 
         const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
-        const colWidths = rawData.columns.map((col, i) => {
-          const maxLen = Math.max(col.length, ...rawData.rows.slice(0, 100).map(r => String(r[i] || '').length));
+        const colWidths = normalized.columns.map((col, i) => {
+          const maxLen = Math.max(col.length, ...normalized.rows.slice(0, 100).map(r => String(r[i] || '').length));
           return { wch: Math.min(maxLen + 2, 50) };
         });
         rawSheet['!cols'] = colWidths;
@@ -552,9 +585,11 @@ export function useExportData() {
       }
 
       if (data.columns.length > 0 && data.rows.length > 0) {
+        const normalized = withTeamNumberColumn({ columns: data.columns, rows: data.rows });
+
         rows.push(['DATA']);
-        rows.push(data.columns);
-        data.rows.forEach(row => {
+        rows.push(normalized.columns);
+        normalized.rows.forEach(row => {
           rows.push(row.map(c => typeof c === 'number' ? c : String(c)));
         });
       }
@@ -566,8 +601,10 @@ export function useExportData() {
       // Raw data sheets
       if (data.rawClaimData && data.rawClaimData.length > 0) {
         data.rawClaimData.forEach((rawData, rawIdx) => {
-          const rawRows: (string | number)[][] = [rawData.columns];
-          rawData.rows.forEach(row => {
+          const normalized = withTeamNumberColumn({ columns: rawData.columns, rows: rawData.rows });
+
+          const rawRows: (string | number)[][] = [normalized.columns];
+          normalized.rows.forEach(row => {
             rawRows.push(row.map(c => typeof c === 'number' ? c : String(c)));
           });
           const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
