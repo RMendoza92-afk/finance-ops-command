@@ -72,6 +72,8 @@ interface SOLBreachClaim {
   category: 'breached' | 'approaching';
   teamGroup: string;
   teamNumber: string;
+  typeGroup: string;
+  exposureCategory: string;
 }
 
 export interface SOLBreachData {
@@ -156,6 +158,8 @@ export function useSOLBreachAnalysis() {
           const claimNumber = row['Claim#'] || '';
           const teamGroup = row['Team Group']?.trim() || '';
           const teamNumber = extractTeamNumber(teamGroup);
+          const typeGroup = row['Type Group']?.trim() || '';
+          const exposureCategory = row['Exposure Category']?.trim() || '';
           
           // Get SOL for state
           const solYears = STATE_SOL[state];
@@ -182,6 +186,8 @@ export function useSOLBreachAnalysis() {
               category: 'breached',
               teamGroup,
               teamNumber,
+              typeGroup,
+              exposureCategory,
             };
             
             breachedClaims.push(breach);
@@ -207,6 +213,8 @@ export function useSOLBreachAnalysis() {
               category: 'approaching',
               teamGroup,
               teamNumber,
+              typeGroup,
+              exposureCategory,
             };
             
             approachingClaims.push(approaching);
@@ -274,12 +282,14 @@ export function useSOLBreachAnalysis() {
         ['BREACHED CLAIMS - PAST STATUTE OF LIMITATIONS'],
         ['Generated: 2026-01-06'],
         [''],
-        ['Claim #', 'State', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Past Due', 'Open Reserves'],
+        ['Claim #', 'State', 'Type Group', 'Exp. Category', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Past Due', 'Open Reserves'],
       ];
       data.breachedClaims.forEach(c => {
         breachedRows.push([
           c.claimNumber,
           c.state,
+          c.typeGroup,
+          c.exposureCategory,
           c.teamGroup,
           c.teamNumber,
           c.biStatus,
@@ -291,7 +301,7 @@ export function useSOLBreachAnalysis() {
         ]);
       });
       const breachedWs = XLSX.utils.aoa_to_sheet(breachedRows);
-      breachedWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
+      breachedWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, breachedWs, 'Breached Claims');
     }
 
@@ -301,12 +311,14 @@ export function useSOLBreachAnalysis() {
         ['APPROACHING CLAIMS - WITHIN 90 DAYS OF SOL'],
         ['Generated: 2026-01-06'],
         [''],
-        ['Claim #', 'State', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Until Expiry', 'Open Reserves'],
+        ['Claim #', 'State', 'Type Group', 'Exp. Category', 'Team Group', 'Team #', 'BI Status', 'Exp. Create Date', 'SOL (Years)', 'SOL Expiry', 'Days Until Expiry', 'Open Reserves'],
       ];
       data.approachingClaims.forEach(c => {
         approachingRows.push([
           c.claimNumber,
           c.state,
+          c.typeGroup,
+          c.exposureCategory,
           c.teamGroup,
           c.teamNumber,
           c.biStatus,
@@ -318,7 +330,7 @@ export function useSOLBreachAnalysis() {
         ]);
       });
       const approachingWs = XLSX.utils.aoa_to_sheet(approachingRows);
-      approachingWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      approachingWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, approachingWs, 'Approaching Claims');
     }
 
