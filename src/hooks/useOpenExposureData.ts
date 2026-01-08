@@ -451,9 +451,13 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     allTypeGroupExposures.set(typeGroup, (allTypeGroupExposures.get(typeGroup) || 0) + 1);
     
     // Track flagged claims (CP1 flags)
-    const isCP1 = row['Overall CP1 Flag']?.toLowerCase() === 'yes' || 
-                  row['CP1 Exposure Flag']?.toLowerCase() === 'yes' ||
-                  row['CP1 Claim Flag']?.toLowerCase() === 'yes';
+    // IMPORTANT: CP1 is defined by the "Overall CP1 Flag" (the derived business definition).
+    // Falling back to the component flags only if Overall is blank prevents double-counting.
+    const overall = (row['Overall CP1 Flag'] || '').trim().toLowerCase();
+    const exposureFlag = (row['CP1 Exposure Flag'] || '').trim().toLowerCase();
+    const claimFlag = (row['CP1 Claim Flag'] || '').trim().toLowerCase();
+
+    const isCP1 = overall === 'yes' || (overall === '' && (exposureFlag === 'yes' || claimFlag === 'yes'));
     if (isCP1) {
       allFlaggedCount++;
     }
