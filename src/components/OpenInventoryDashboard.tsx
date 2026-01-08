@@ -656,11 +656,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   // Budget Burn Rate calculation - based on actual Loya Insurance Group claims data
   // Source: 2026 YTD BI/UM/UI Paid (1/1/26 - 1/7/26) from GWCHKHIS03_1.8.26.xlsx
   const budgetMetrics = useMemo(() => {
-    // 2025 Actuals (full year baseline - Jan-Nov 2025)
-    const bi2025Full = 316610919;  // BI Total
-    const um2025Full = 45234182;   // UM Total  
-    const ui2025Full = 21759007;   // UI Total
-    const total2025 = bi2025Full + um2025Full + ui2025Full; // $383,604,108
+    // 2025 Actuals (full year baseline)
+    const bi2025Full = 371440000;  // BI Total
+    const um2025Full = 53060000;   // UM Total  
+    const ui2025Full = 25500000;   // UI Total
+    const total2025 = bi2025Full + um2025Full + ui2025Full; // $450,000,000
     
     // 2026 YTD (1/1/26 - 1/7/26) - BI, UM, UI Payments from check history
     // Source: GWCHKHIS03_1.8.26.xlsx - Paid status only (excludes Void)
