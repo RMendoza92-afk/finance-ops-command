@@ -617,6 +617,209 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [pendingDecisions]);
 
+  // Generate PDF for Decisions Pending (CSV-based data from useDecisionsPending)
+  const generateDecisionsPendingPDF = useCallback(async () => {
+    if (!decisionsData || decisionsData.claims.length === 0) {
+      toast.error('No decisions pending data to export');
+      return;
+    }
+    
+    setGeneratingDecisionsPDF(true);
+    try {
+      const ctx = getReportContext();
+      const claims = decisionsData.claims;
+      const byPainLevel = decisionsData.byPainLevel;
+      
+      // Build summary stats
+      const highPainCount = claims.filter(c => c.painLevel.includes('5+') || c.painLevel === 'Limits').length;
+      const pendingPainCount = claims.filter(c => c.painLevel === 'Pending' || c.painLevel === 'Blank').length;
+      const criticalCount = claims.filter(c => c.reserves >= 100000).length;
+      
+      const reportConfig: ExecutiveReportConfig = {
+        title: 'Decisions Pending Report',
+        subtitle: `${claims.length} Claims Requiring Evaluation Decisions`,
+        reportType: 'DECISION',
+        classification: 'CONFIDENTIAL',
+        
+        executiveSummary: {
+          keyTakeaway: `${claims.length} claims with high reserves (≥$15K) have no evaluation set, totaling ${formatExecCurrency(decisionsData.totalReserves, true)} in open reserves. ${highPainCount} have high pain levels (5+), ${pendingPainCount} have pending pain assessments. Immediate evaluation decisions required.`,
+          
+          metrics: [
+            {
+              label: 'Total Claims',
+              value: claims.length,
+              context: 'Requiring Decisions'
+            },
+            {
+              label: 'Total Reserves',
+              value: formatExecCurrency(decisionsData.totalReserves, true),
+              context: 'At risk without evaluation'
+            },
+            {
+              label: 'High Pain (5+)',
+              value: highPainCount,
+              context: 'Elevated injury severity',
+              deltaDirection: highPainCount > 10 ? 'negative' : 'neutral'
+            },
+            {
+              label: 'Critical (≥$100K)',
+              value: criticalCount,
+              context: 'Highest priority',
+              deltaDirection: criticalCount > 5 ? 'negative' : 'neutral'
+            }
+          ],
+          
+          insights: claims.slice(0, 4).map(c => ({
+            priority: c.reserves >= 100000 ? 'critical' as const : 
+                     c.painLevel.includes('5+') ? 'high' as const : 'medium' as const,
+            headline: `${c.claimNumber}: ${c.state} - ${formatExecCurrency(c.reserves, true)}`,
+            action: `Set evaluation for ${c.painLevel} pain level claim`
+          })),
+          
+          bottomLine: criticalCount > 0 
+            ? `${criticalCount} claims with reserves ≥$100K require immediate evaluation decisions. Combined exposure of ${formatExecCurrency(decisionsData.totalReserves, true)} at risk. Focus on ${highPainCount} high pain level claims first.`
+            : `All ${claims.length} pending decisions are routine priority. Total exposure: ${formatExecCurrency(decisionsData.totalReserves, true)}. Recommend batch evaluation review.`
+        },
+        
+        tables: [
+          {
+            title: 'Decisions Pending - Claims Without Evaluation',
+            headers: ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team', 'Reason'],
+            rows: claims.slice(0, 30).map(c => ({
+              cells: [
+                c.claimNumber,
+                c.state,
+                c.painLevel,
+                formatExecCurrency(c.reserves, true),
+                c.biStatus,
+                c.team,
+                c.reason.substring(0, 25)
+              ],
+              highlight: c.reserves >= 100000 ? 'risk' as const : 
+                        c.painLevel.includes('5+') ? 'warning' as const : undefined
+            })),
+            footnote: claims.length > 30 ? `Showing 30 of ${claims.length} claims` : undefined
+          }
+        ],
+        
+        appendix: [
+          {
+            title: 'By Pain Level Category',
+            content: `Claims grouped by pain severity level.`,
+            table: {
+              title: 'Pain Level Distribution',
+              headers: ['Pain Category', 'Count', 'Total Reserves', 'Avg Reserve'],
+              rows: Object.entries(byPainLevel).map(([category, data]) => ({
+                cells: [
+                  category,
+                  data.count,
+                  formatExecCurrency(data.reserves, true),
+                  formatExecCurrency(data.reserves / data.count, true)
+                ],
+                highlight: category.includes('High') || category === 'Limits' ? 'warning' as const : undefined
+              }))
+            }
+          },
+          {
+            title: 'Full Claims List',
+            table: {
+              title: 'All Pending Decisions',
+              headers: ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team'],
+              rows: claims.map(c => ({
+                cells: [
+                  c.claimNumber,
+                  c.state,
+                  c.painLevel,
+                  formatExecCurrency(c.reserves, true),
+                  c.biStatus,
+                  c.team
+                ],
+                highlight: c.reserves >= 100000 ? 'risk' as const : undefined
+              }))
+            }
+          }
+        ],
+        
+        includeAllContent: true
+      };
+      
+      const result = await generateExecutiveReport(reportConfig);
+      
+      if (result.success) {
+        toast.success(`Decisions Pending PDF generated (${claims.length} claims)`);
+      } else {
+        throw new Error('Report generation failed');
+      }
+    } catch (err) {
+      console.error('Error generating Decisions Pending PDF:', err);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setGeneratingDecisionsPDF(false);
+    }
+  }, [decisionsData]);
+
+  // Generate Excel for Decisions Pending (CSV-based data)
+  const generateDecisionsPendingExcel = useCallback(async () => {
+    if (!decisionsData || decisionsData.claims.length === 0) {
+      toast.error('No decisions pending data to export');
+      return;
+    }
+    
+    try {
+      const XLSX = await import('xlsx');
+      const claims = decisionsData.claims;
+      const byPainLevel = decisionsData.byPainLevel;
+      
+      // Summary sheet
+      const summaryData = [
+        ['Decisions Pending Report'],
+        ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
+        [''],
+        ['Summary'],
+        ['Total Claims:', claims.length],
+        ['Total Reserves:', `$${decisionsData.totalReserves.toLocaleString()}`],
+        [''],
+        ['By Pain Level Category'],
+        ['Category', 'Count', 'Total Reserves', 'Avg Reserve'],
+        ...Object.entries(byPainLevel).map(([category, data]) => [
+          category,
+          data.count,
+          `$${data.reserves.toLocaleString()}`,
+          `$${Math.round(data.reserves / data.count).toLocaleString()}`
+        ])
+      ];
+      
+      // Claims detail sheet
+      const claimsData = [
+        ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team', 'Reason'],
+        ...claims.map(c => [
+          c.claimNumber,
+          c.state,
+          c.painLevel,
+          c.reserves,
+          c.biStatus,
+          c.team,
+          c.reason
+        ])
+      ];
+      
+      const wb = XLSX.utils.book_new();
+      
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+      
+      const claimsWs = XLSX.utils.aoa_to_sheet(claimsData);
+      XLSX.utils.book_append_sheet(wb, claimsWs, 'Claims Detail');
+      
+      XLSX.writeFile(wb, `Decisions_Pending_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+      
+      toast.success(`Decisions Pending Excel exported (${claims.length} claims)`);
+    } catch (err) {
+      console.error('Error generating Decisions Pending Excel:', err);
+      toast.error('Failed to generate Excel');
+    }
+  }, [decisionsData]);
+
   const pendingDecisionsStats = useMemo(() => {
     // If we have Supabase-based pendingDecisions, use them
     if (pendingDecisions.length > 0) {
@@ -3837,13 +4040,43 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
         <SheetContent className="sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
-            <SheetTitle className="flex items-center gap-2">
-              <Flag className="h-5 w-5 text-warning" />
-              Decisions Pending
-            </SheetTitle>
-            <SheetDescription>
-              {decisionsData?.totalCount || 0} claims with high reserves and no evaluation • Total: {formatCurrency(decisionsData?.totalReserves || 0)}
-            </SheetDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <SheetTitle className="flex items-center gap-2">
+                  <Flag className="h-5 w-5 text-warning" />
+                  Decisions Pending
+                </SheetTitle>
+                <SheetDescription>
+                  {decisionsData?.totalCount || 0} claims with high reserves and no evaluation • Total: {formatCurrency(decisionsData?.totalReserves || 0)}
+                </SheetDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generateDecisionsPendingPDF}
+                  disabled={generatingDecisionsPDF}
+                  className="flex items-center gap-2"
+                >
+                  {generatingDecisionsPDF ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generateDecisionsPendingExcel}
+                  disabled={generatingDecisionsPDF}
+                  className="flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Excel
+                </Button>
+              </div>
+            </div>
           </SheetHeader>
 
           {/* Summary Stats by Pain Category */}
