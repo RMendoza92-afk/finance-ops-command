@@ -443,44 +443,6 @@ export function ExecutiveCommandDashboardWrapper() {
               </div>
             </div>
 
-            {/* Recent Claim Reviews from Database */}
-            {claimReviews.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Recent Claim Reviews</h4>
-                {loadingDrilldown ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="rounded-xl border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="font-bold">Claim ID</TableHead>
-                          <TableHead className="font-bold">Area</TableHead>
-                          <TableHead className="text-right font-bold">Reserves</TableHead>
-                          <TableHead className="font-bold">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {claimReviews.slice(0, 15).map((review) => (
-                          <TableRow key={review.id} className="hover:bg-muted/30">
-                            <TableCell className="font-mono text-xs">{review.claim_id}</TableCell>
-                            <TableCell className="text-sm">{review.area}</TableCell>
-                            <TableCell className="text-right font-medium">{formatK(review.reserves)}</TableCell>
-                            <TableCell>
-                              <Badge variant={review.status === 'completed' ? 'default' : review.status === 'flagged' ? 'destructive' : 'secondary'} className="text-xs">
-                                {review.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </SheetContent>
       </Sheet>
