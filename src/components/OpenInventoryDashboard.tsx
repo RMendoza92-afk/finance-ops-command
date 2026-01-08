@@ -2161,12 +2161,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const handleExportSummary = useCallback(async () => {
     if (!metrics) return;
     const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
-    const manager = selectedReviewer || 'Richie Mendoza';
-    
-    // No Eval tracking - all assigned to Richie Mendoza
-    const noEvalTracking: ManagerTracking[] = [
-      { name: 'Richie Mendoza', value: metrics.financials.totals.noEvalCount, category: 'no_eval' },
-    ];
     
     // Use the full list with amounts directly
     const allHighEvalTracking: ManagerTracking[] = ALL_HIGH_EVAL_ADJUSTERS;
@@ -2201,7 +2195,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
     // Key bullet insights summarizing dashboard state
     const bulletInsights = [
-      `${formatNumber(metrics.financials.totals.noEvalCount)} claims awaiting evaluation — all assigned to ${manager}`,
+      `${formatNumber(metrics.financials.totals.noEvalCount)} claims awaiting evaluation`,
       `Aged inventory (365+ days) represents ${formatCurrency(FINANCIAL_DATA.byAge[0].openReserves)} in reserves`,
       `Low-to-High evaluation spread: ${formatCurrency(metrics.financials.totals.totalLowEval)} – ${formatCurrency(metrics.financials.totals.totalHighEval)}`,
       `Top evaluator: ${allHighEvalTracking[0]?.name || 'N/A'} with ${allHighEvalTracking[0]?.value || 'N/A'} in high evals`,
@@ -2259,9 +2253,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       title: 'Open Inventory Summary',
       subtitle: 'Claims and Financial Overview',
       timestamp,
-      affectsManager: manager,
-      directive: 'Complete all evaluations within 5 business days. No exceptions. High eval claims require manager review and approval. All claims without evaluation are assigned to Richie Mendoza for immediate action.',
-      managerTracking: [...allHighEvalTracking, ...noEvalTracking],
+      directive: 'Complete all evaluations within 5 business days. No exceptions. High eval claims require manager review and approval.',
+      managerTracking: allHighEvalTracking,
       dashboardVisuals,
       bulletInsights,
       charts,
