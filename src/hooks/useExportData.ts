@@ -1377,74 +1377,63 @@ export function useExportData() {
     // SHEET 1: EXECUTIVE DASHBOARD
     // ═══════════════════════════════════════════════════════════════
     const dashboardRows: (string | number)[][] = [
+      ['C-SUITE PORTFOLIO BRIEFING'],
+      ['Fred Loya Insurance - Executive Summary'],
       [''],
-      ['', '╔════════════════════════════════════════════════════════════════════════════╗'],
-      ['', '║                    C-SUITE PORTFOLIO BRIEFING                              ║'],
-      ['', '║                   Fred Loya Insurance - Executive Summary                  ║'],
-      ['', '╚════════════════════════════════════════════════════════════════════════════╝'],
-      [''],
-      ['', 'Report Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
-      ['', 'Data As Of:', data.dataDate],
-      ['', 'Classification:', 'CONFIDENTIAL - C-SUITE ONLY'],
+      ['Report Generated', format(new Date(), 'MMMM d, yyyy h:mm a')],
+      ['Data As Of', data.dataDate],
+      ['Classification', 'CONFIDENTIAL - C-SUITE ONLY'],
       [''],
       [''],
-      ['', '┌─────────────────────────────────────────────────────────────────────────────┐'],
-      ['', '│                        KEY PERFORMANCE INDICATORS                           │'],
-      ['', '└─────────────────────────────────────────────────────────────────────────────┘'],
+      ['KEY PERFORMANCE INDICATORS'],
       [''],
-      ['', 'METRIC', 'VALUE', 'CONTEXT', 'STATUS'],
-      ['', 'Total Open Claims', data.totalClaims, 'Active claims in inventory', '●'],
-      ['', 'Total Reserves', fmtCurrency(data.totalReserves, false), 'Gross exposure at risk', '●'],
-      ['', 'Low Evaluation', fmtCurrency(data.lowEval, false), 'Conservative estimate', '●'],
-      ['', 'High Evaluation', fmtCurrency(data.highEval, false), 'Upper bound estimate', data.highEval > data.lowEval * 1.2 ? '⚠' : '●'],
-      ['', 'CP1 Rate', data.cp1Rate + '%', data.cp1Count.toLocaleString() + ' claims within limits', parseFloat(data.cp1Rate) >= 30 ? '●' : '⚠'],
+      ['METRIC', 'VALUE', 'CONTEXT', 'STATUS'],
+      ['Total Open Claims', data.totalClaims, 'Active claims in inventory', '●'],
+      ['Total Reserves', fmtCurrency(data.totalReserves, false), 'Gross exposure at risk', '●'],
+      ['Low Evaluation', fmtCurrency(data.lowEval, false), 'Conservative estimate', '●'],
+      ['High Evaluation', fmtCurrency(data.highEval, false), 'Upper bound estimate', data.highEval > data.lowEval * 1.2 ? '⚠' : '●'],
+      ['CP1 Rate', data.cp1Rate + '%', (data.cp1Count || 0).toLocaleString() + ' claims', parseFloat(data.cp1Rate) >= 30 ? '●' : '⚠'],
       [''],
       [''],
-      ['', '┌─────────────────────────────────────────────────────────────────────────────┐'],
-      ['', '│                           RISK MATRIX                                        │'],
-      ['', '└─────────────────────────────────────────────────────────────────────────────┘'],
+      ['RISK MATRIX'],
       [''],
-      ['', 'RISK AREA', 'COUNT', 'EXPOSURE', '% OF TOTAL', 'ALERT LEVEL'],
-      ['', '🔴 FATALITY', data.fatalityCount || 0, fmtCurrency(data.fatalityReserves || 0, false), data.totalClaims > 0 ? (((data.fatalityCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.fatalityCount || 0) > 0 ? '🔴 CRITICAL' : '🟢 NONE'],
-      ['', 'Surgery Claims', data.surgeryCount || 0, '-', data.totalClaims > 0 ? (((data.surgeryCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.surgeryCount || 0) > 50 ? '🟡 ELEVATED' : '🟢 NORMAL'],
-      ['', 'Hospitalization', data.hospitalizationCount || 0, '-', data.totalClaims > 0 ? (((data.hospitalizationCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.hospitalizationCount || 0) > 100 ? '🟡 ELEVATED' : '🟢 NORMAL'],
-      ['', 'No Evaluation', data.noEvalCount, fmtCurrency(data.noEvalReserves, false), ((data.noEvalCount / data.totalClaims) * 100).toFixed(1) + '%', data.noEvalCount > 5000 ? '🔴 CRITICAL' : data.noEvalCount > 2000 ? '🟡 ELEVATED' : '🟢 NORMAL'],
-      ['', 'Aged 365+ Days', data.aged365Plus, fmtCurrency(data.aged365Reserves, false), ((data.aged365Plus / data.totalClaims) * 100).toFixed(1) + '%', data.aged365Plus > 3000 ? '🔴 CRITICAL' : data.aged365Plus > 1500 ? '🟡 ELEVATED' : '🟢 NORMAL'],
-      ['', 'Aged 181-365 Days', data.aged181to365, '-', ((data.aged181to365 / data.totalClaims) * 100).toFixed(1) + '%', '🟡 MONITORING'],
-      ['', 'Pending Decisions', data.decisionsCount, fmtCurrency(data.decisionsExposure, false), '-', data.decisionsCount > 100 ? '🔴 REVIEW' : '🟢 NORMAL'],
+      ['RISK AREA', 'COUNT', 'EXPOSURE', '% OF TOTAL', 'ALERT LEVEL'],
+      ['FATALITY', data.fatalityCount || 0, fmtCurrency(data.fatalityReserves || 0, false), data.totalClaims > 0 ? (((data.fatalityCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.fatalityCount || 0) > 0 ? 'CRITICAL' : 'NONE'],
+      ['Surgery Claims', data.surgeryCount || 0, '-', data.totalClaims > 0 ? (((data.surgeryCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.surgeryCount || 0) > 50 ? 'ELEVATED' : 'NORMAL'],
+      ['Hospitalization', data.hospitalizationCount || 0, '-', data.totalClaims > 0 ? (((data.hospitalizationCount || 0) / data.totalClaims) * 100).toFixed(2) + '%' : '0%', (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : 'NORMAL'],
+      ['No Evaluation', data.noEvalCount, fmtCurrency(data.noEvalReserves, false), ((data.noEvalCount / data.totalClaims) * 100).toFixed(1) + '%', data.noEvalCount > 5000 ? 'CRITICAL' : data.noEvalCount > 2000 ? 'ELEVATED' : 'NORMAL'],
+      ['Aged 365+ Days', data.aged365Plus, fmtCurrency(data.aged365Reserves, false), ((data.aged365Plus / data.totalClaims) * 100).toFixed(1) + '%', data.aged365Plus > 3000 ? 'CRITICAL' : data.aged365Plus > 1500 ? 'ELEVATED' : 'NORMAL'],
+      ['Aged 181-365 Days', data.aged181to365, '-', ((data.aged181to365 / data.totalClaims) * 100).toFixed(1) + '%', 'MONITORING'],
+      ['Pending Decisions', data.decisionsCount, fmtCurrency(data.decisionsExposure, false), '-', data.decisionsCount > 100 ? 'REVIEW' : 'NORMAL'],
       [''],
       [''],
-      ['', '┌─────────────────────────────────────────────────────────────────────────────┐'],
-      ['', '│                        FINANCIAL TRAJECTORY                                  │'],
-      ['', '└─────────────────────────────────────────────────────────────────────────────┘'],
+      ['FINANCIAL TRAJECTORY'],
       [''],
-      ['', 'COVERAGE', '2025 FULL YEAR', '2026 YTD', 'YOY CHANGE', 'TREND'],
-      ['', 'BI Litigation Spend', fmtCurrency(data.biSpend2025, false), fmtCurrency(data.biSpend2026, false), fmtCurrency(data.biSpend2026 * 12 - data.biSpend2025, false) + ' (projected)', data.biSpend2026 * 12 > data.biSpend2025 ? '📈' : '📉'],
+      ['COVERAGE', '2025 FULL YEAR', '2026 YTD', 'YOY CHANGE', 'TREND'],
+      ['BI Litigation Spend', fmtCurrency(data.biSpend2025, false), fmtCurrency(data.biSpend2026, false), fmtCurrency(data.biSpend2026 * 12 - data.biSpend2025, false) + ' (proj)', data.biSpend2026 * 12 > data.biSpend2025 ? 'UP' : 'DOWN'],
       [''],
       [''],
-      ['', '┌─────────────────────────────────────────────────────────────────────────────┐'],
-      ['', '│                      EXECUTIVE ACTION ITEMS                                  │'],
-      ['', '└─────────────────────────────────────────────────────────────────────────────┘'],
+      ['EXECUTIVE ACTION ITEMS'],
       [''],
+      ['PRIORITY', 'ACTION'],
     ];
 
     // Add dynamic action items
-    if ((data.fatalityCount || 0) > 0) dashboardRows.push(['', '🔴', 'FATALITY ALERT: ' + (data.fatalityCount || 0) + ' fatality claims (' + fmtCurrency(data.fatalityReserves || 0, false) + ' exposure) require immediate executive review', '', '']);
-    if (data.noEvalCount > 2000) dashboardRows.push(['', '🔴', 'PRIORITY: Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations within 48-72 hours', '', '']);
-    if (data.aged365Plus > 1500) dashboardRows.push(['', '🔴', 'ESCALATION: Review ' + data.aged365Plus.toLocaleString() + ' aged claims for resolution strategy', '', '']);
-    if (data.decisionsCount > 0) dashboardRows.push(['', '🟡', 'DECISIONS: ' + data.decisionsCount + ' claims requiring executive decision (' + fmtCurrency(data.decisionsExposure, false) + ' exposure)', '', '']);
-    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['', '🟡', 'OPTIMIZATION: CP1 rate at ' + data.cp1Rate + '% - target 35%+ through early settlement', '', '']);
-    if (dashboardRows[dashboardRows.length - 1][1] !== '🔴' && dashboardRows[dashboardRows.length - 1][1] !== '🟡') {
-      dashboardRows.push(['', '🟢', 'MAINTAIN: Continue standard portfolio monitoring cadence', '', '']);
+    if ((data.fatalityCount || 0) > 0) dashboardRows.push(['CRITICAL', 'FATALITY ALERT: ' + (data.fatalityCount || 0) + ' fatality claims (' + fmtCurrency(data.fatalityReserves || 0, false) + ' exposure) require immediate executive review']);
+    if (data.noEvalCount > 2000) dashboardRows.push(['HIGH', 'Clear ' + data.noEvalCount.toLocaleString() + ' pending evaluations within 48-72 hours']);
+    if (data.aged365Plus > 1500) dashboardRows.push(['HIGH', 'Review ' + data.aged365Plus.toLocaleString() + ' aged claims for resolution strategy']);
+    if (data.decisionsCount > 0) dashboardRows.push(['MEDIUM', data.decisionsCount + ' claims requiring executive decision (' + fmtCurrency(data.decisionsExposure, false) + ' exposure)']);
+    if (parseFloat(data.cp1Rate) < 30) dashboardRows.push(['MEDIUM', 'CP1 rate at ' + data.cp1Rate + '% - target 35%+ through early settlement']);
+    if (dashboardRows[dashboardRows.length - 1][0] !== 'CRITICAL' && dashboardRows[dashboardRows.length - 1][0] !== 'HIGH' && dashboardRows[dashboardRows.length - 1][0] !== 'MEDIUM') {
+      dashboardRows.push(['NORMAL', 'Continue standard portfolio monitoring cadence']);
     }
 
     dashboardRows.push(['']);
-    dashboardRows.push(['', '═══════════════════════════════════════════════════════════════════════════']);
-    dashboardRows.push(['', 'Report prepared for C-Suite distribution. Contains confidential business data.']);
-    dashboardRows.push(['', '═══════════════════════════════════════════════════════════════════════════']);
+    dashboardRows.push(['']);
+    dashboardRows.push(['Report prepared for C-Suite distribution. Contains confidential business data.']);
 
     const dashSheet = XLSX.utils.aoa_to_sheet(dashboardRows);
-    dashSheet['!cols'] = [{ wch: 3 }, { wch: 22 }, { wch: 18 }, { wch: 35 }, { wch: 15 }, { wch: 15 }];
+    dashSheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, dashSheet, 'Executive Dashboard');
 
     // ═══════════════════════════════════════════════════════════════
@@ -1456,16 +1445,16 @@ export function useExportData() {
       ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
       [''],
       ['CATEGORY', 'METRIC', 'VALUE', 'BENCHMARK', 'VARIANCE', 'STATUS'],
-      ['🔴 FATALITY', 'Count', data.fatalityCount || 0, 0, data.fatalityCount || 0, (data.fatalityCount || 0) > 0 ? '🔴 CRITICAL' : 'NONE'],
-      ['🔴 FATALITY', 'Exposure', data.fatalityReserves || 0, '-', '-', '-'],
+      ['FATALITY', 'Count', data.fatalityCount || 0, 0, data.fatalityCount || 0, (data.fatalityCount || 0) > 0 ? 'CRITICAL' : 'NONE'],
+      ['FATALITY', 'Exposure', data.fatalityReserves || 0, '-', '-', '-'],
       ['Severity', 'Surgery Claims', data.surgeryCount || 0, '-', '-', (data.surgeryCount || 0) > 50 ? 'ELEVATED' : 'NORMAL'],
       ['Severity', 'Hospitalization', data.hospitalizationCount || 0, '-', '-', (data.hospitalizationCount || 0) > 100 ? 'ELEVATED' : 'NORMAL'],
       [''],
-      ['No Evaluation', 'Count', data.noEvalCount, 2000, data.noEvalCount - 2000, data.noEvalCount > 2000 ? 'ABOVE THRESHOLD' : 'WITHIN LIMITS'],
+      ['No Evaluation', 'Count', data.noEvalCount, 2000, data.noEvalCount - 2000, data.noEvalCount > 2000 ? 'ABOVE THRESHOLD' : 'OK'],
       ['No Evaluation', 'Exposure', data.noEvalReserves, '-', '-', '-'],
       ['No Evaluation', '% of Portfolio', ((data.noEvalCount / data.totalClaims) * 100).toFixed(2) + '%', '10%', '-', '-'],
       [''],
-      ['Aged Claims', '365+ Days', data.aged365Plus, 1500, data.aged365Plus - 1500, data.aged365Plus > 1500 ? 'ABOVE THRESHOLD' : 'WITHIN LIMITS'],
+      ['Aged Claims', '365+ Days', data.aged365Plus, 1500, data.aged365Plus - 1500, data.aged365Plus > 1500 ? 'ABOVE THRESHOLD' : 'OK'],
       ['Aged Claims', '365+ Reserves', data.aged365Reserves, '-', '-', '-'],
       ['Aged Claims', '181-365 Days', data.aged181to365, '-', '-', 'MONITORING'],
       [''],
