@@ -517,15 +517,12 @@ export function LitigationChat() {
     // Get latest frequency data
     const latestFreq = claimsFrequency.length > 0 ? claimsFrequency[claimsFrequency.length - 1] : null;
     
-    // BI payments for 2025
-    const biPayments2025 = claimsPayments
-      .filter(p => p.coverage === 'BI' && p.periodYear === 2025 && p.isYtd)
-      .reduce((sum, p) => sum + p.totalPayments, 0);
-    
-    // Total payments for 2025
-    const totalPayments2025 = claimsPayments
-      .filter(p => p.periodYear === 2025 && p.isYtd)
-      .reduce((sum, p) => sum + p.totalPayments, 0);
+    // BI/UM/UI payments for 2026 YTD (1/1/26 - 1/7/26)
+    // Source: GWCHKHIS03_1.8.26.xlsx
+    const biPayments2026 = 5847291.33;  // BI Paid YTD (335 payments)
+    const umPayments2026 = 101896.68;   // UM Paid YTD (7 payments)
+    const uiPayments2026 = 90000.00;    // UI Paid YTD (3 payments)
+    const totalPayments2026 = biPayments2026 + umPayments2026 + uiPayments2026;
     
     // Get recent AY development
     const recentAYDev = accidentYearDev.slice(0, 20);
@@ -549,9 +546,13 @@ export function LitigationChat() {
           reported: f.reportedClaims,
         })),
       },
-      payments_2025: {
-        bi_payments_ytd_usd: biPayments2025,
-        total_payments_ytd_usd: totalPayments2025,
+      payments_2026_ytd: {
+        period: '1/1/26 - 1/7/26',
+        bi_payments_ytd_usd: biPayments2026,
+        um_payments_ytd_usd: umPayments2026,
+        ui_payments_ytd_usd: uiPayments2026,
+        total_payments_ytd_usd: totalPayments2026,
+        claim_count: { bi: 335, um: 7, ui: 3 },
         by_coverage: claimsPayments
           .filter(p => p.periodYear === 2025 && p.isYtd)
           .map(p => ({

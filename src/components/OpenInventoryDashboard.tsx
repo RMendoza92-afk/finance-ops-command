@@ -812,7 +812,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             },
             {
               priority: 'info',
-              headline: `Average cost per claim: $${Math.round(budgetMetrics.ytdPaid / 47149).toLocaleString()}`,
+              headline: `Average cost per claim: $${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}`,
               action: 'Monitor severity trends for leading indicators'
             }
           ],
@@ -841,11 +841,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               })),
               {
                 cells: ['TOTAL', formatExecCurrency(budgetMetrics.total2025, true), formatExecCurrency(budgetMetrics.ytdPaid, true), 
-                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '2', '$20,758'],
+                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '345', `$${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}`],
                 highlight: 'total' as const
               }
             ],
-            footnote: 'Source: Loya Insurance Group - Litigation BI Payments Jan 2026'
+            footnote: 'Source: Loya Insurance Group - BI/UM/UI Payments 1/1/26 - 1/7/26'
           },
           {
             title: 'Monthly Budget Tracking',
@@ -882,7 +882,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           },
           {
             title: 'Coverage Mix Impact on Budget',
-            content: `Bodily Injury claims represent 100% of total 2026 YTD claims spend ($41,516). Only 2 claims paid so far - on track with budget.`,
+            content: `BI/UM/UI claims YTD spend totals $6.04M (1/1/26 - 1/7/26). 345 claims paid - BI: $5.85M (335), UM: $101.9K (7), UI: $90K (3). Tracking against annual budget of $402.8M.`,
             table: {
               title: 'Average Cost Per Claim by Coverage',
               headers: ['Coverage', '2025 Avg', '2026 Avg', 'Change', 'Trend'],
@@ -3993,13 +3993,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
             {/* Coverage Breakdown - YoY Comparison */}
             <div>
-              <h4 className="text-sm font-semibold mb-3">BI Litigation Spend - YoY Comparison</h4>
+              <h4 className="text-sm font-semibold mb-3">BI/UM/UI Payments - YoY Comparison</h4>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-xs">Coverage</TableHead>
-                      <TableHead className="text-xs text-right">2025 (Jan-Nov)</TableHead>
+                      <TableHead className="text-xs text-right">2025 Full Year</TableHead>
                       <TableHead className="text-xs text-right">2026 YTD</TableHead>
                       <TableHead className="text-xs text-right">Claims</TableHead>
                       <TableHead className="text-xs text-right">Avg/Claim</TableHead>
@@ -4013,11 +4013,32 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       <TableCell className="text-right">{budgetMetrics.coverageBreakdown.bi.claimCount2026.toLocaleString()}</TableCell>
                       <TableCell className="text-right">${budgetMetrics.coverageBreakdown.bi.avgPerClaim2026.toLocaleString()}</TableCell>
                     </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Uninsured Motorist BI</TableCell>
+                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.cl.ytd2025)}</TableCell>
+                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.cl.ytd2026)}</TableCell>
+                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.cl.claimCount2026.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.cl.avgPerClaim2026.toLocaleString()}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Underinsured Motorist BI</TableCell>
+                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.oc.ytd2025)}</TableCell>
+                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.oc.ytd2026)}</TableCell>
+                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.oc.claimCount2026.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.oc.avgPerClaim2026.toLocaleString()}</TableCell>
+                    </TableRow>
+                    <TableRow className="bg-muted/30 font-semibold">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-right">{formatCurrency(budgetMetrics.total2025)}</TableCell>
+                      <TableCell className="text-right text-success">{formatCurrency(budgetMetrics.ytdPaid)}</TableCell>
+                      <TableCell className="text-right">345</TableCell>
+                      <TableCell className="text-right">${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}</TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Source: Loya Insurance Group - Litigation BI Payments Jan 2026
+                Source: Loya Insurance Group - BI/UM/UI Payments 1/1/26 - 1/7/26
               </p>
             </div>
 
