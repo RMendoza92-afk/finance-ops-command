@@ -350,13 +350,7 @@ export function ExecutiveCommandDashboardWrapper() {
           biLitSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biLitSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
           dataDate: data.dataDate || timestamp,
-          delta: data.delta ? {
-            change: data.delta.change,
-            changePercent: data.delta.changePercent,
-            reservesChange: data.delta.reservesChange || 0,
-            reservesChangePercent: data.delta.reservesChangePercent || 0,
-            previousDate: data.delta.previousDate,
-          } : undefined,
+          delta: undefined,
           typeGroupData: typeGroupData,
           ageBreakdown: data.financials.byAge,
         }}
