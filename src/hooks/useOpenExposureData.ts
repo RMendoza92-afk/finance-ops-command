@@ -282,6 +282,21 @@ export interface OpenExposureData {
     settled: { claims: number; reserves: number };
     other: { claims: number; reserves: number };
   };
+  // Demand summary - claims with a demand type
+  demandSummary: {
+    claimsWithDemand: number;
+    totalDemandReserves: number;
+    totalDemandLowEval: number;
+    totalDemandHighEval: number;
+    byDemandType: {
+      demandType: string;
+      claims: number;
+      reserves: number;
+      lowEval: number;
+      highEval: number;
+    }[];
+    demandClaims: RawClaimExport[];
+  };
   delta?: {
     previousTotal: number;
     currentTotal: number;
@@ -1082,6 +1097,36 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     }
   }
   
+  // ============ DEMAND SUMMARY ============
+  // Claims "with demand" = claims where demandType is not blank/empty
+  const claimsWithDemand = rawClaimsExport.filter(c => 
+    c.demandType && c.demandType.trim() !== '' && c.demandType !== '(blank)'
+  );
+  const demandSummary = {
+    claimsWithDemand: claimsWithDemand.length,
+    totalDemandReserves: claimsWithDemand.reduce((sum, c) => sum + c.openReserves, 0),
+    totalDemandLowEval: claimsWithDemand.reduce((sum, c) => sum + c.lowEval, 0),
+    totalDemandHighEval: claimsWithDemand.reduce((sum, c) => sum + c.highEval, 0),
+    byDemandType: (() => {
+      const demandTypeMap = new Map<string, { claims: number; reserves: number; lowEval: number; highEval: number }>();
+      for (const claim of claimsWithDemand) {
+        const dt = claim.demandType || 'Unknown';
+        if (!demandTypeMap.has(dt)) {
+          demandTypeMap.set(dt, { claims: 0, reserves: 0, lowEval: 0, highEval: 0 });
+        }
+        const d = demandTypeMap.get(dt)!;
+        d.claims++;
+        d.reserves += claim.openReserves;
+        d.lowEval += claim.lowEval;
+        d.highEval += claim.highEval;
+      }
+      return Array.from(demandTypeMap.entries())
+        .map(([demandType, data]) => ({ demandType, ...data }))
+        .sort((a, b) => b.claims - a.claims);
+    })(),
+    demandClaims: claimsWithDemand, // Include raw claims for export
+  };
+  
   return {
     litPhases,
     typeGroupSummaries,
@@ -1126,6 +1171,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     phaseBreakdown,
     negotiationRecency,
     biStatusBreakdown,
+    demandSummary,
   };
 }
 

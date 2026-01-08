@@ -318,22 +318,26 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
     multi_pack_claims: multiPackPayload,
     
     // === DEMAND & SETTLEMENT ANALYSIS ===
-    demand_settlement_summary: (() => {
-      const claims = exp.rawClaims || [];
-      const withDemand = claims.filter((c: any) => c.negotiationAmount > 0);
-      const totalDemandAmount = withDemand.reduce((sum: number, c: any) => sum + (c.negotiationAmount || 0), 0);
-      const totalAuthAmount = claims.reduce((sum: number, c: any) => sum + (c.authAmount || 0), 0);
-      const totalPaidAmount = claims.reduce((sum: number, c: any) => sum + (c.totalPaid || 0), 0);
-      
-      return {
-        claims_with_demand: withDemand.length,
-        total_demand_amount_usd: totalDemandAmount,
-        avg_demand_usd: withDemand.length > 0 ? Math.round(totalDemandAmount / withDemand.length) : 0,
-        total_auth_amount_usd: totalAuthAmount,
-        total_paid_amount_usd: totalPaidAmount,
-        demand_to_paid_ratio: totalDemandAmount > 0 ? (totalPaidAmount / totalDemandAmount * 100).toFixed(1) : '0',
-      };
-    })(),
+    // Use demandSummary from openExposureContext (based on demandType field, not negotiationAmount)
+    demand_settlement_summary: exp.demandSummary ? {
+      claims_with_demand: exp.demandSummary.claimsWithDemand || 0,
+      total_demand_reserves_usd: exp.demandSummary.totalDemandReserves || 0,
+      total_demand_low_eval_usd: exp.demandSummary.totalDemandLowEval || 0,
+      total_demand_high_eval_usd: exp.demandSummary.totalDemandHighEval || 0,
+      by_demand_type: (exp.demandSummary.byDemandType || []).map((dt: any) => ({
+        demand_type: dt.demandType,
+        claims: dt.claims,
+        reserves_usd: dt.reserves,
+        low_eval_usd: dt.lowEval,
+        high_eval_usd: dt.highEval,
+      })),
+    } : {
+      claims_with_demand: 0,
+      total_demand_reserves_usd: 0,
+      total_demand_low_eval_usd: 0,
+      total_demand_high_eval_usd: 0,
+      by_demand_type: [],
+    },
     
     // === RESERVE ADEQUACY ANALYSIS ===
     reserve_adequacy: (() => {
@@ -552,7 +556,7 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - lor_intervention: pending_count, accepted_count, rejected_count, expired_count, total_offered_usd, offers[]
 
 ## DEMAND & SETTLEMENT DATA:
-- demand_settlement_summary: claims_with_demand, total_demand_amount_usd, avg_demand_usd, total_auth_amount_usd, total_paid_amount_usd, demand_to_paid_ratio
+- demand_settlement_summary: claims_with_demand, total_demand_reserves_usd, total_demand_low_eval_usd, total_demand_high_eval_usd, by_demand_type[]: { demand_type, claims, reserves_usd, low_eval_usd, high_eval_usd }
 
 ## RESERVE ADEQUACY DATA:
 - reserve_adequacy: claims_with_reserve_change, avg_reserve_change_pct, over_reserved_count, under_reserved_count, over_reserved_sample[], under_reserved_sample[]
