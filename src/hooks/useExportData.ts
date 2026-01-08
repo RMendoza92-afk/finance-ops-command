@@ -1370,6 +1370,15 @@ export function useExportData() {
     fatalityReserves?: number;
     surgeryCount?: number;
     hospitalizationCount?: number;
+    // Week-over-Week comparison (optional)
+    priorWeek?: {
+      totalClaims: number;
+      totalReserves: number;
+      cp1Rate: string;
+      noEvalCount: number;
+      aged365Plus: number;
+      dataDate: string;
+    };
   }) => {
     const wb = XLSX.utils.book_new();
 
@@ -1474,10 +1483,53 @@ export function useExportData() {
     trendSheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, trendSheet, 'Financials');
 
+    // SHEET 4: WEEK-OVER-WEEK COMPARISON
+    const pw = data.priorWeek;
+    const wowRows: (string | number)[][] = [
+      ['WEEK-OVER-WEEK COMPARISON'],
+      [format(new Date(), 'MMMM d, yyyy')],
+      [''],
+      ['Metric', 'Current', 'Prior Week', 'Change', 'Direction'],
+    ];
+
+    if (pw) {
+      const claimsDelta = data.totalClaims - pw.totalClaims;
+      const reservesDelta = data.totalReserves - pw.totalReserves;
+      const cp1Delta = parseFloat(data.cp1Rate) - parseFloat(pw.cp1Rate);
+      const noEvalDelta = data.noEvalCount - pw.noEvalCount;
+      const aged365Delta = data.aged365Plus - pw.aged365Plus;
+
+      wowRows.push(
+        ['Data As Of', data.dataDate, pw.dataDate, '-', '-'],
+        [''],
+        ['Total Claims', data.totalClaims.toLocaleString(), pw.totalClaims.toLocaleString(), (claimsDelta >= 0 ? '+' : '') + claimsDelta.toLocaleString(), claimsDelta > 0 ? 'UP' : claimsDelta < 0 ? 'DOWN' : 'FLAT'],
+        ['Total Reserves', fmtCurrency(data.totalReserves, false), fmtCurrency(pw.totalReserves, false), (reservesDelta >= 0 ? '+' : '') + fmtCurrency(reservesDelta, false), reservesDelta > 0 ? 'UP' : reservesDelta < 0 ? 'DOWN' : 'FLAT'],
+        ['CP1 Rate', data.cp1Rate + '%', pw.cp1Rate + '%', (cp1Delta >= 0 ? '+' : '') + cp1Delta.toFixed(1) + '%', cp1Delta > 0 ? 'IMPROVING' : cp1Delta < 0 ? 'DECLINING' : 'FLAT'],
+        ['No Evaluation', data.noEvalCount.toLocaleString(), pw.noEvalCount.toLocaleString(), (noEvalDelta >= 0 ? '+' : '') + noEvalDelta.toLocaleString(), noEvalDelta < 0 ? 'IMPROVING' : noEvalDelta > 0 ? 'WORSENING' : 'FLAT'],
+        ['Aged 365+', data.aged365Plus.toLocaleString(), pw.aged365Plus.toLocaleString(), (aged365Delta >= 0 ? '+' : '') + aged365Delta.toLocaleString(), aged365Delta < 0 ? 'IMPROVING' : aged365Delta > 0 ? 'WORSENING' : 'FLAT'],
+        [''],
+        ['SUMMARY'],
+        ['Net Claims Movement', claimsDelta >= 0 ? '+' + claimsDelta : claimsDelta, '', '', claimsDelta > 100 ? 'ELEVATED INTAKE' : claimsDelta < -100 ? 'STRONG CLOSURES' : 'NORMAL'],
+        ['Reserve Movement', fmtCurrency(reservesDelta, false), '', '', Math.abs(reservesDelta) > 5000000 ? 'SIGNIFICANT' : 'NORMAL'],
+      );
+    } else {
+      wowRows.push(
+        [''],
+        ['Prior week data not available.'],
+        [''],
+        ['To enable WoW comparison, upload the prior week inventory snapshot.'],
+      );
+    }
+
+    const wowSheet = XLSX.utils.aoa_to_sheet(wowRows);
+    wowSheet['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wowSheet, 'WoW Comparison');
+
+    const sheetCount = pw ? 4 : 4;
     const filename = 'CSuite_Portfolio_Briefing_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
     XLSX.writeFile(wb, filename);
     
-    logDownload('excel', 'C-Suite Portfolio Briefing', 'xlsx', 3, { level: 'executive', sheets: 3 });
+    logDownload('excel', 'C-Suite Portfolio Briefing', 'xlsx', sheetCount, { level: 'executive', sheets: sheetCount });
     
     return filename;
   };

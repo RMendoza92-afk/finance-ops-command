@@ -160,6 +160,14 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         fatalityReserves: data.fatalityReserves,
         surgeryCount: data.surgeryCount,
         hospitalizationCount: data.hospitalizationCount,
+        priorWeek: data.delta ? {
+          totalClaims: data.totalClaims - data.delta.change,
+          totalReserves: data.totalReserves - data.delta.reservesChange,
+          cp1Rate: data.cp1Rate, // Prior CP1 not tracked yet
+          noEvalCount: data.noEvalCount, // Prior not tracked yet
+          aged365Plus: data.aged365Plus, // Prior not tracked yet
+          dataDate: data.delta.previousDate,
+        } : undefined,
       });
       toast.success('C-Suite Portfolio Excel generated');
     } catch (err) {
