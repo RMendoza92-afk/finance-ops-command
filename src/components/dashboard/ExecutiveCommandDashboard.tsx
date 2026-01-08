@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle,
   BarChart3, PieChart as PieChartIcon,
   ArrowUpRight, ArrowDownRight, Activity, Zap, Shield, Flag,
   Database, Wallet, ChevronDown, ChevronUp, AlertCircle,
-  FileText, FileSpreadsheet, Loader2
+  FileText, FileSpreadsheet, Loader2, Info
 } from "lucide-react";
 import {
   Table,
@@ -350,7 +351,20 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">CP1 Compliance</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">CP1 Compliance</span>
+              <TooltipProvider>
+                <ShadcnTooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[280px] text-xs">
+                    <p className="font-semibold mb-1">Claims within Policy Tier 1</p>
+                    <p className="text-muted-foreground">% of open claims where current reserves + evaluation fall within policy limits. Higher = less excess exposure risk.</p>
+                  </TooltipContent>
+                </ShadcnTooltip>
+              </TooltipProvider>
+            </div>
             <Shield className="h-4 w-4 text-success" />
           </div>
           <p className="text-3xl font-bold text-success tracking-tight font-mono">{data.cp1Rate}%</p>
