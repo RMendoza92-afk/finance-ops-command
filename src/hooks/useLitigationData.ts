@@ -28,6 +28,7 @@ export interface LitigationMatter {
   startPainLvl: number;
   endPainLvl: number;
   transferDate: string;
+  daysOpen?: number;
   previousDept?: string;
   previousTeam?: string;
   previousAdjuster?: string;
@@ -70,6 +71,18 @@ function parseNumber(value: string): number {
 }
 
 function transformRow(row: CSVRow, index: number): LitigationMatter {
+  // Calculate days open from transfer date
+  let daysOpen = 0;
+  if (row['Transfer Date']) {
+    const transferMatch = row['Transfer Date'].match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/);
+    if (transferMatch) {
+      const months: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+      const transferDate = new Date(parseInt(transferMatch[3]), months[transferMatch[1]] || 0, parseInt(transferMatch[2]));
+      const today = new Date(2026, 0, 8); // Current date: Jan 8, 2026
+      daysOpen = Math.floor((today.getTime() - transferDate.getTime()) / (1000 * 60 * 60 * 24));
+    }
+  }
+  
   return {
     id: row['Unique Record'] || `row-${index}`,
     class: row.Class || '',
@@ -95,6 +108,7 @@ function transformRow(row: CSVRow, index: number): LitigationMatter {
     startPainLvl: parseNumber(row['Start Pain Lvl']),
     endPainLvl: parseNumber(row['End Pain Lvl']),
     transferDate: row['Transfer Date'] || '',
+    daysOpen,
     previousDept: row['Previous Dept'] || undefined,
     previousTeam: row['Previous Team'] || undefined,
     previousAdjuster: row['Previous Adjuster Name'] || undefined,
@@ -140,7 +154,8 @@ function transformDBRow(row: any): LitigationMatter {
     cwpCwn,
     startPainLvl: painNum,
     endPainLvl: painNum,
-    transferDate: '',
+    transferDate: row.filing_date || '',
+    daysOpen: Number(row.days_open) || 0,
     previousDept: undefined,
     previousTeam: undefined,
     previousAdjuster: undefined,
