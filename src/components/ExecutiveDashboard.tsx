@@ -2,7 +2,7 @@ import { useMemo, useCallback, useState } from "react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { useExportData, ExportableData, RawClaimData } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
-import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info, MessageSquare } from "lucide-react";
+import { DollarSign, TrendingUp, AlertTriangle, Target, Download, FileSpreadsheet, ChevronDown, ChevronUp, Info, MessageSquare, Clock, Flame, Scale, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip as ShadcnTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -1153,14 +1153,55 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
                 {formatClaimNumber(caseItem.matterId)}
               </p>
               
-              {/* Score breakdown - all reasons */}
-              <div className="space-y-1 text-[10px]">
-                {caseItem.executiveReview.reasons.map((reason, rIdx) => (
-                  <div key={rIdx} className="flex items-start gap-1.5 text-[#b41e1e]/90">
-                    <span className="text-[#b41e1e] mt-0.5">•</span>
-                    <span className="leading-tight">{reason}</span>
-                  </div>
-                ))}
+              {/* Factor Icons */}
+              <div className="flex gap-1.5 mb-2">
+                {caseItem.executiveReview.reasons.map((reason, rIdx) => {
+                  const reasonLower = reason.toLowerCase();
+                  let Icon = AlertTriangle;
+                  let title = reason;
+                  let color = "text-amber-500";
+                  
+                  if (reasonLower.includes('yr old') || reasonLower.includes('yr in') || reasonLower.includes('yr lit')) {
+                    Icon = Clock;
+                    title = "Old claim";
+                    color = "text-destructive";
+                  } else if (reasonLower.includes('stage') || reasonLower.includes('expert')) {
+                    Icon = Target;
+                    title = "Missing strategy";
+                    color = "text-amber-600";
+                  } else if (reasonLower.includes('pain') && reasonLower.includes('escal')) {
+                    Icon = TrendingUp;
+                    title = "Getting worse";
+                    color = "text-orange-500";
+                  } else if (reasonLower.includes('pain level')) {
+                    Icon = Flame;
+                    title = "High severity";
+                    color = "text-destructive";
+                  } else if (reasonLower.includes('large') || reasonLower.includes('complex')) {
+                    Icon = Scale;
+                    title = "Complex case";
+                    color = "text-purple-500";
+                  } else if (reasonLower.includes('reactive')) {
+                    Icon = Zap;
+                    title = "Reactive spend";
+                    color = "text-amber-500";
+                  }
+                  
+                  return (
+                    <TooltipProvider key={rIdx}>
+                      <ShadcnTooltip>
+                        <TooltipTrigger asChild>
+                          <div className={`p-1 rounded ${color} bg-current/10`}>
+                            <Icon className="h-3 w-3" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {title}
+                        </TooltipContent>
+                      </ShadcnTooltip>
+                    </TooltipProvider>
+                  );
+                })}
               </div>
               
               <p className="text-[10px] text-gray-500 mt-2 pt-1 border-t border-[#0c2340]/10 truncate">
