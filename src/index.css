@@ -499,6 +499,64 @@
   .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE DATA TABLE RESPONSIVENESS
+   Ensure all data tables/cards scroll horizontally on mobile
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  /* Ensure tables can scroll horizontally */
+  .data-table-container,
+  [class*="overflow-x-auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ensure table cells don't wrap awkwardly */
+  table td,
+  table th {
+    white-space: nowrap;
+  }
+  
+  /* Add horizontal scroll hint with fade on right edge */
+  .scroll-hint {
+    position: relative;
+  }
+  
+  .scroll-hint::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to right, transparent, hsl(var(--background)));
+    pointer-events: none;
+  }
+  
+  /* Tighter padding on mobile cards */
+  .mobile-compact {
+    padding: 0.75rem;
+  }
+  
+  /* Stack flex items on very small screens */
+  .mobile-stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  /* Smaller font sizes for dense data on mobile */
+  .mobile-data-text {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+  }
+  
+  /* Ensure recharts are touch-scrollable */
+  .recharts-responsive-container {
+    touch-action: pan-x pan-y;
+  }
+}
+
 /* NYSE Ticker Animation - Continuous right to left */
 .ticker-wrapper {
   overflow: hidden;
