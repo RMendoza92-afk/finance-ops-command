@@ -300,7 +300,11 @@ interface RawClaimRow {
   'Claim#': string;
   'Claimant': string;
   'Coverage': string;
-  'Days': string;
+  // Historical exports used "Days"; the 1/08 export uses "Open/Closed Days"
+  'Days'?: string;
+  'Open/Closed Days'?: string;
+  'Open/Closed Days '?: string;
+  // Bucket label in the export (e.g., "365+ Days", "61-180 Days")
   'Age': string;
   'Type Group': string;
   'Open Reserves': string;
@@ -313,7 +317,7 @@ interface RawClaimRow {
   'Exposure Category': string;
   'Evaluation Phase': string;
   'Demand Type': string;
-  [key: string]: string;
+  [key: string]: string | undefined;
 }
 
 function parseCurrency(val: string): number {
@@ -434,9 +438,22 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
-    const days = parseInt(row['Days'] || '0', 10) || 0;
-    const ageBucket = getAgeBucket(days);
-    
+
+    // The 1/08 export changed the days column header.
+    const daysStr = (row['Days'] || row['Open/Closed Days'] || row['Open/Closed Days '] || '0').toString();
+    const days = parseInt(daysStr, 10) || 0;
+
+    // Prefer the explicit bucket label if present; fall back to computed days.
+    const ageLabel = (row['Age'] || '').trim();
+    const ageBucket = ageLabel.includes('365+')
+      ? 'age365Plus'
+      : ageLabel.includes('181-365')
+        ? 'age181To365'
+        : ageLabel.includes('61-180')
+          ? 'age61To180'
+          : ageLabel.includes('Under 60')
+            ? 'ageUnder60'
+            : getAgeBucket(days);
     // ═══════════════════════════════════════════════════════════════════
     // COUNT ALL CLAIMS/EXPOSURES FIRST (before coverage filter)
     // ═══════════════════════════════════════════════════════════════════
