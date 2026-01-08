@@ -4377,6 +4377,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 onClick={() => {
                   import('xlsx').then((XLSX) => {
                     const groups = data?.multiPackData?.groups || [];
+                    const extractTeamNumber = (teamGroup: string) => {
+                      const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
+                      return m?.[1] || '';
+                    };
                     const rows: any[] = [];
                     groups
                       .filter(g => selectedPackSize === null || g.packSize === selectedPackSize)
@@ -4389,6 +4393,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                             'Claimant #': claim.claimant,
                             'Coverage': claim.coverage,
                             'Days Open': claim.days,
+                            'Type Group': claim.typeGroup,
+                            'Team Group': claim.teamGroup,
+                            'Team #': extractTeamNumber(claim.teamGroup),
                             'Exposure Category': claim.exposureCategory,
                             'Overall CP1': claim.overallCP1,
                             'BI Phase': claim.evaluationPhase,
