@@ -1635,6 +1635,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   }, [data]);
 
   // Historical CP1 trend data (static - for trend charts)
+  // Jan 26 rate uses the same ~27k baseline as previous months for comparability
+  const jan26BaselineTotal = historicalMetrics.lastWeek.totalClaims || 26709;
+  const jan26CP1Rate = jan26BaselineTotal > 0 
+    ? parseFloat(((CP1_DATA.totals.yes / jan26BaselineTotal) * 100).toFixed(1))
+    : parseFloat(CP1_DATA.cp1Rate);
+  
   const CP1_MONTHLY_TREND = [
     { month: 'Feb 25', cp1Rate: 24.2, cp1Count: 6420, totalClaims: 26528 },
     { month: 'Mar 25', cp1Rate: 24.8, cp1Count: 6580, totalClaims: 26532 },
@@ -1647,7 +1653,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     { month: 'Oct 25', cp1Rate: 26.3, cp1Count: 7010, totalClaims: 26654 },
     { month: 'Nov 25', cp1Rate: 26.4, cp1Count: 7048, totalClaims: 26697 },
     { month: 'Dec 25', cp1Rate: 26.5, cp1Count: 7078, totalClaims: 26709 },
-    { month: 'Jan 26', cp1Rate: parseFloat(CP1_DATA.cp1Rate), cp1Count: CP1_DATA.totals.yes, totalClaims: CP1_DATA.totals.grandTotal },
+    { month: 'Jan 26', cp1Rate: jan26CP1Rate, cp1Count: CP1_DATA.totals.yes, totalClaims: jan26BaselineTotal },
   ];
 
   // Rear Ends - Texas Areas 101-110 | Loss Desc: IV R/E CV only
@@ -4195,7 +4201,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-warning" />
                     <span className="text-xs text-muted-foreground">
-                      +2.4% YoY (Feb '25: 24.2% → Jan '26: 26.6%)
+                      +{(CP1_MONTHLY_TREND[CP1_MONTHLY_TREND.length - 1].cp1Rate - CP1_MONTHLY_TREND[0].cp1Rate).toFixed(1)}% YoY (Feb '25: 24.2% → Jan '26: {CP1_MONTHLY_TREND[CP1_MONTHLY_TREND.length - 1].cp1Rate}%)
                     </span>
                   </div>
                   <Badge variant="outline" className="text-xs">
