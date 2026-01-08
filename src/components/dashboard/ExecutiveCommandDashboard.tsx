@@ -354,7 +354,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             <Shield className="h-4 w-4 text-success" />
           </div>
           <p className="text-3xl font-bold text-success tracking-tight font-mono">{data.cp1Rate}%</p>
-          <p className="text-xs text-muted-foreground mt-2 font-mono">{data.cp1Count.toLocaleString()} settled under policy cap</p>
+          <p className="text-xs text-muted-foreground mt-2 font-mono">{data.cp1Count.toLocaleString()} claims</p>
         </div>
 
         {/* Claims Payments 2026 YTD */}
