@@ -975,12 +975,16 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
       };
 
-      // CALCULATIONS - Using actual claim counts from data
-      const currentCP1Rate = parseFloat(CP1_DATA.cp1Rate);
+      // CALCULATIONS - keep the same baseline as the dashboard trend series (~27k open exposures)
+      const cp1ClaimCount = CP1_DATA.totals?.yes ?? 0;
+      const baselineTotal = historicalMetrics.lastWeek.totalClaims || 0;
+      const denom = baselineTotal > 0 ? baselineTotal : (CP1_DATA.totals?.grandTotal ?? 0);
+      const cp1RateOfInventory = denom > 0 ? ((cp1ClaimCount / denom) * 100).toFixed(1) : CP1_DATA.cp1Rate;
+
+      const currentCP1Rate = parseFloat(cp1RateOfInventory);
       const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
       
       // Note: These are claim counts, not dollar exposure (we don't have per-claim financials)
-      const cp1ClaimCount = CP1_DATA.totals?.yes ?? 0;
       const agedBIClaimCount = CP1_DATA.biByAge?.[0]?.yes ?? 0;
 
       // BACKGROUND
@@ -1019,7 +1023,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(...C.white);
-      doc.text(`STATUS: ${status}  |  ${cp1ClaimCount.toLocaleString()} CLAIMS AT LIMITS  |  ${CP1_DATA.cp1Rate}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
+      doc.text(`STATUS: ${status}  |  ${cp1ClaimCount.toLocaleString()} CLAIMS AT LIMITS  |  ${cp1RateOfInventory}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
       y += 14;
 
       // KEY METRICS ROW
@@ -1036,7 +1040,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const agedBIPct = cp1ClaimCount > 0 ? ((agedBIClaimCount / cp1ClaimCount) * 100).toFixed(0) : '0';
       const metrics = [
         { label: 'CP1 CLAIMS', value: cp1ClaimCount.toLocaleString(), sub: 'At Policy Limits' },
-        { label: 'CP1 RATE', value: CP1_DATA.cp1Rate + '%', sub: 'of Total Inventory' },
+        { label: 'CP1 RATE', value: cp1RateOfInventory + '%', sub: 'of Total Inventory' },
         { label: 'BI CP1 RATE', value: biRate + '%', sub: 'Highest by Coverage' },
         { label: 'AGED BI', value: agedBIClaimCount.toLocaleString(), sub: `${agedBIPct}% of CP1 (365+)` },
       ];
@@ -1562,6 +1566,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
   }, [data]);
 
+  // CP1 rate should be comparable to the same baseline used in the original build (~27k open exposures).
+  // We use the historical baseline total until a full-inventory raw feed is available.
+  const CP1_RATE_OF_OPEN_INVENTORY = useMemo(() => {
+    const cp1Count = CP1_DATA.totals?.yes ?? 0;
+    const baselineTotal = historicalMetrics.lastWeek.totalClaims || 0;
+    const denom = baselineTotal > 0 ? baselineTotal : (CP1_DATA.totals?.grandTotal ?? 0);
+    return denom > 0 ? ((cp1Count / denom) * 100).toFixed(1) : '0.0';
+  }, [CP1_DATA.totals, historicalMetrics]);
   // EXECUTIVE METRICS - Dynamic from CSV data
   const EXECUTIVE_METRICS = useMemo(() => {
     if (!data) return {
@@ -2962,9 +2974,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1</p>
-              <p className="text-lg sm:text-2xl font-bold text-success mt-0.5 sm:mt-1">{CP1_DATA.totals.yes.toLocaleString()}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">({CP1_DATA.cp1Rate}%)</span></p>
+              <p className="text-lg sm:text-2xl font-bold text-success mt-0.5 sm:mt-1">
+                {CP1_DATA.totals.yes.toLocaleString()}
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">({CP1_RATE_OF_OPEN_INVENTORY}%)</span>
+              </p>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                In Progress: <span className="text-success font-semibold">{CP1_DATA.byStatus?.inProgressPct || '0'}%</span> • Settle: <span className="font-medium">{CP1_DATA.byStatus?.settledPct || '0'}%</span>
+                In Progress: <span className="text-success font-semibold">{CP1_DATA.byStatus?.inProgressPct || '0'}%</span> • Settled: <span className="font-medium">{CP1_DATA.byStatus?.settledPct || '0'}%</span>
               </p>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
