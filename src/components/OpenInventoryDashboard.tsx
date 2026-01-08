@@ -654,27 +654,27 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   }, [pendingDecisions, decisionsData]);
 
   // Budget Burn Rate calculation - based on actual Loya Insurance Group claims data
-  // Source: 2026 YTD Litigation BI Paid (Jan 2026)
+  // Source: 2026 YTD BI/UM/UI Paid (1/1/26 - 1/7/26) from GWCHKHIS03_1.8.26.xlsx
   const budgetMetrics = useMemo(() => {
     // 2025 Actuals (full year baseline - Jan-Nov 2025)
     const bi2025Full = 316610919;  // BI Total
-    const cl2025Full = 76321524;   // CL Total  
-    const oc2025Full = 21759007;   // OC Total
-    const total2025 = bi2025Full + cl2025Full + oc2025Full; // $414,691,450
+    const um2025Full = 45234182;   // UM Total  
+    const ui2025Full = 21759007;   // UI Total
+    const total2025 = bi2025Full + um2025Full + ui2025Full; // $383,604,108
     
-    // 2026 YTD (through January) - Litigation BI only
-    // Claim 63-0000382073: $27,000.00 + Claim 66-0000052038: $14,516.16 = $41,516.16
-    const bi2026 = 41516.16;  // BI Litigation Paid YTD
-    const cl2026 = 0;   // CL Total YTD
-    const oc2026 = 0;   // OC Total YTD
-    const ytdPaid = bi2026 + cl2026 + oc2026; // $41,516.16
+    // 2026 YTD (1/1/26 - 1/7/26) - BI, UM, UI Payments from check history
+    // Source: GWCHKHIS03_1.8.26.xlsx - Paid status only (excludes Void)
+    const bi2026 = 5847291.33;  // BI Paid YTD (335 unique payments)
+    const um2026 = 101896.68;   // UM Paid YTD (Uninsured Motorist BI)
+    const ui2026 = 90000.00;    // UI Paid YTD (Underinsured Motorist BI)
+    const ytdPaid = bi2026 + um2026 + ui2026; // $6,039,188.01
     
     // Annual budget based on 2025 actuals + 5% growth allowance
-    const annualBudget = Math.round(total2025 * 1.05); // ~$435.4M
+    const annualBudget = Math.round(total2025 * 1.05); // ~$402.8M
     
     const burnRate = (ytdPaid / annualBudget) * 100;
     const remaining = annualBudget - ytdPaid;
-    const monthsElapsed = 1; // Through January 2026
+    const monthsElapsed = 0.23; // Through 1/7/26 (7 days / 30 days)
     const monthsRemaining = 12 - monthsElapsed;
     const projectedBurn = (ytdPaid / monthsElapsed) * 12;
     const projectedVariance = annualBudget - projectedBurn;
@@ -683,7 +683,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     const avgMonthlyBudget = annualBudget / 12;
     
     const monthlyData = [
-      { month: 'Jan', budget: avgMonthlyBudget, actual: 41516.16, variance: avgMonthlyBudget - 41516.16 },
+      { month: 'Jan', budget: avgMonthlyBudget, actual: ytdPaid, variance: avgMonthlyBudget - ytdPaid },
       { month: 'Feb', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
       { month: 'Mar', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
       { month: 'Apr', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
@@ -697,36 +697,36 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       { month: 'Dec', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
     ];
 
-    // Coverage breakdown for drilldown
+    // Coverage breakdown for drilldown (now BI, UM, UI instead of BI, CL, OC)
     const coverageBreakdown = {
       bi: { 
         name: 'Bodily Injury', 
         ytd2026: bi2026, 
         ytd2025: bi2025Full, 
         change: bi2026 - bi2025Full,
-        claimCount2026: 2,
+        claimCount2026: 335,
         claimCount2025: 34040,
-        avgPerClaim2026: 20758.08,
+        avgPerClaim2026: Math.round(bi2026 / 335),
         avgPerClaim2025: 9301,
       },
       cl: { 
-        name: 'Collision', 
-        ytd2026: cl2026, 
-        ytd2025: cl2025Full, 
-        change: cl2026 - cl2025Full,
-        claimCount2026: 0,
-        claimCount2025: 10200,
-        avgPerClaim2026: 0,
-        avgPerClaim2025: 7483,
+        name: 'Uninsured Motorist BI', 
+        ytd2026: um2026, 
+        ytd2025: um2025Full, 
+        change: um2026 - um2025Full,
+        claimCount2026: 7,
+        claimCount2025: 6042,
+        avgPerClaim2026: Math.round(um2026 / 7),
+        avgPerClaim2025: 7485,
       },
       oc: { 
-        name: 'Other Coverage', 
-        ytd2026: oc2026, 
-        ytd2025: oc2025Full, 
-        change: oc2026 - oc2025Full,
-        claimCount2026: 0,
+        name: 'Underinsured Motorist BI', 
+        ytd2026: ui2026, 
+        ytd2025: ui2025Full, 
+        change: ui2026 - ui2025Full,
+        claimCount2026: 3,
         claimCount2025: 2909,
-        avgPerClaim2026: 0,
+        avgPerClaim2026: Math.round(ui2026 / 3),
         avgPerClaim2025: 7480,
       },
     };
@@ -740,7 +740,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       projectedBurn,
       projectedVariance,
       monthlyData,
-      onTrack: true, // Way under budget
+      onTrack: projectedBurn <= annualBudget,
       coverageBreakdown,
       total2025,
     };
