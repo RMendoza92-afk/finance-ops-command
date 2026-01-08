@@ -164,15 +164,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
     { name: '<60', value: data.agedUnder60, color: 'hsl(var(--success))' },
   ];
 
-  // Calculate real metrics from claims payments (2025 YTD only)
-  const currentYear = 2025;
-  const biPaymentsYTD = claimsPayments
-    .filter(p => p.coverage === 'BI' && p.isYtd && p.periodYear === currentYear)
-    .reduce((sum, p) => sum + p.totalPayments, 0);
-  
-  const totalPaymentsYTD = claimsPayments
-    .filter(p => p.isYtd && p.periodYear === currentYear && p.coverage === 'TOTAL')
-    .reduce((sum, p) => sum + p.totalPayments, 0);
+  // Calculate real metrics from claims payments (2026 YTD)
+  // Source: GWCHKHIS03_1.8.26.xlsx - BI/UM/UI Payments 1/1/26 - 1/7/26
+  const biPaymentsYTD = 5847291.33;  // BI Paid YTD
+  const umPaymentsYTD = 101896.68;   // UM Paid YTD  
+  const uiPaymentsYTD = 90000.00;    // UI Paid YTD
+  const totalPaymentsYTD = biPaymentsYTD + umPaymentsYTD + uiPaymentsYTD; // $6,039,188.01
 
   // Calculate overspend totals
   const overspendByType = overspendSummary.reduce((acc, item) => {
@@ -352,7 +349,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           <p className="text-xs text-muted-foreground mt-2 font-mono">{data.cp1Count.toLocaleString()} within limits</p>
         </div>
 
-        {/* Claims Payments 2025 */}
+        {/* Claims Payments 2026 YTD */}
         <div 
           className="metric-card cursor-pointer group"
           onClick={() => onDrilldown('budget')}
@@ -360,12 +357,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           title="Click to view details • Double-click to generate PDF report"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">BI Payments YTD</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">BI/UM/UI Payments YTD</span>
             <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-3xl font-bold text-foreground tracking-tight font-mono">{formatCurrency(biPaymentsYTD)}</p>
+          <p className="text-3xl font-bold text-foreground tracking-tight font-mono">{formatCurrency(totalPaymentsYTD)}</p>
           <p className="text-xs text-muted-foreground mt-2 font-mono">
-            Nov '25 • Total: {formatCurrency(totalPaymentsYTD)}
+            1/1/26 - 1/7/26 • BI: {formatCurrency(biPaymentsYTD)}
           </p>
         </div>
       </div>
