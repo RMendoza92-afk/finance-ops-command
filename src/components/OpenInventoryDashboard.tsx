@@ -1543,7 +1543,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           ['RAW CLAIMS DATA - CP1 VALIDATION'],
           [`Total Claims: ${data.rawClaims.length} (BI/UM/UI coverages only)`],
           [],
-          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type'],
+          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type', 'Fatality', 'Surgery', 'Hospitalization'],
           ...data.rawClaims.map(claim => [
             claim.claimNumber,
             claim.claimant,
@@ -1560,6 +1560,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             claim.overallCP1,
             claim.evaluationPhase,
             claim.demandType,
+            claim.fatality ? 'YES' : '',
+            claim.surgery ? 'YES' : '',
+            claim.hospitalization ? 'YES' : '',
           ])
         ];
         const rawClaimsSheet = XLSX.utils.aoa_to_sheet(rawClaimsData);
@@ -2656,7 +2659,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       ]),
       rawClaimData: [{
         sheetName: 'Claims with Demand',
-        columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Demand Type', 'Eval Phase', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Team'],
+        columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Demand Type', 'Eval Phase', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Team', 'Fatality', 'Surgery'],
         rows: demandClaims.map(c => [
           c.claimNumber,
           c.claimant,
@@ -2671,6 +2674,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           c.highEval,
           c.overallCP1,
           c.teamGroup,
+          c.fatality ? 'YES' : '',
+          c.surgery ? 'YES' : '',
         ]),
       }],
     };
@@ -4062,6 +4067,37 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         </div>
       )}
 
+      {/* Fatality & Severity Summary Card */}
+      {data.fatalitySummary && data.fatalitySummary.fatalityCount > 0 && (
+        <div className="bg-card border-2 border-red-600/50 rounded-xl p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex px-2 py-1 text-xs font-bold uppercase tracking-wide bg-red-600 text-white rounded animate-pulse">
+              FATALITY CLAIMS
+            </span>
+            <span className="text-xs text-muted-foreground">High priority claims requiring immediate attention</span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="p-3 rounded-lg bg-red-600/10 border border-red-600/30 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Fatalities</p>
+              <p className="text-2xl font-bold text-red-600">{data.fatalitySummary.fatalityCount}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 border text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Reserves</p>
+              <p className="text-lg font-semibold text-foreground">{formatCurrency(data.fatalitySummary.fatalityReserves)}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Surgery</p>
+              <p className="text-lg font-semibold text-orange-500">{data.fatalitySummary.surgeryCount}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Hospitalization</p>
+              <p className="text-lg font-semibold text-warning">{data.fatalitySummary.hospitalizationCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div 
         className="bg-card border border-destructive/30 rounded-xl p-5 cursor-pointer hover:bg-muted/30 transition-colors"
         onDoubleClick={async () => {
@@ -4108,7 +4144,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 sheetName: 'Summary',
               },
               {
-                columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Type Group', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Eval Phase', 'Demand Type'],
+                columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Type Group', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Eval Phase', 'Demand Type', 'Fatality', 'Surgery'],
                 rows: agedRawClaims.map(claim => [
                   claim.claimNumber,
                   claim.claimant,
@@ -4121,6 +4157,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   claim.overallCP1,
                   claim.evaluationPhase,
                   claim.demandType,
+                  claim.fatality ? 'YES' : '',
+                  claim.surgery ? 'YES' : '',
                 ]),
                 sheetName: 'Raw Claims 365+ Days',
               },
@@ -4241,8 +4279,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-sm text-primary">{claim.claimNumber}</span>
+                            {claim.fatality && (
+                              <span className="inline-flex px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-600 text-white rounded animate-pulse">
+                                FATALITY
+                              </span>
+                            )}
                             <Badge variant={
                               isHighPain ? 'destructive' :
                               isPending ? 'default' : 'secondary'
