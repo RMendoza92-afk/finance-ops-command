@@ -217,23 +217,24 @@ export function ExecutiveCommandDashboardWrapper() {
 
   // Budget metrics calculation - 2026 YTD BI/UM/UI Payments (1/1/26 - 1/7/26)
   // Source: GWCHKHIS03_1.8.26.xlsx
+  // 2025 Actuals: YTD December 31, 2025
   const budgetMetrics = {
     coverageBreakdown: {
       bi: {
         ytd2026: 5847291.33,  // BI Paid YTD (335 payments)
-        ytd2025: 371440000,   // BI 2025 Full Year
+        ytd2025: 344631765,   // BI 2025 Full Year: $344,631,765 (37,700 claims)
       },
       um: {
         ytd2026: 101896.68,   // UM Paid YTD (7 payments)
-        ytd2025: 53060000,    // UM 2025 Full Year
+        ytd2025: 83565242,    // UM 2025 Full Year: $83,565,242 (10,998 claims)
       },
       ui: {
         ytd2026: 90000.00,    // UI Paid YTD (3 payments)
-        ytd2025: 25500000,    // UI 2025 Full Year
+        ytd2025: 23226040,    // UI 2025 Full Year: $23,226,040 (3,109 claims)
       }
     },
     totalYtd2026: 6039188.01,
-    total2025: 450000000,
+    total2025: 451423047,  // Total 2025: $451,423,047 (51,807 total claims)
   };
 
   // Drilldown handler

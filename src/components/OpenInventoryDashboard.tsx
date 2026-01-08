@@ -655,12 +655,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
   // Budget Burn Rate calculation - based on actual Loya Insurance Group claims data
   // Source: 2026 YTD BI/UM/UI Paid (1/1/26 - 1/7/26) from GWCHKHIS03_1.8.26.xlsx
+  // 2025 Actuals: YTD December 31, 2025 (final)
   const budgetMetrics = useMemo(() => {
-    // 2025 Actuals (full year baseline)
-    const bi2025Full = 371440000;  // BI Total
-    const um2025Full = 53060000;   // UM Total  
-    const ui2025Full = 25500000;   // UI Total
-    const total2025 = bi2025Full + um2025Full + ui2025Full; // $450,000,000
+    // 2025 Actuals (full year final) - YTD December 31, 2025
+    const bi2025Full = 344631765;  // BI Total: $344,631,765 (37,700 claims, avg $9,141)
+    const um2025Full = 83565242;   // UM Total: $83,565,242 (10,998 claims, avg $7,598)
+    const ui2025Full = 23226040;   // UI Total: $23,226,040 (3,109 claims, avg $7,471)
+    const total2025 = bi2025Full + um2025Full + ui2025Full; // $451,423,047
     
     // 2026 YTD (1/1/26 - 1/7/26) - BI, UM, UI Payments from check history
     // Source: GWCHKHIS03_1.8.26.xlsx - Paid status only (excludes Void)
@@ -670,7 +671,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     const ytdPaid = bi2026 + um2026 + ui2026; // $6,039,188.01
     
     // Annual budget based on 2025 actuals + 5% growth allowance
-    const annualBudget = Math.round(total2025 * 1.05); // ~$402.8M
+    const annualBudget = Math.round(total2025 * 1.05); // ~$474M
     
     const burnRate = (ytdPaid / annualBudget) * 100;
     const remaining = annualBudget - ytdPaid;
@@ -705,9 +706,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ytd2025: bi2025Full, 
         change: bi2026 - bi2025Full,
         claimCount2026: 335,
-        claimCount2025: 34040,
+        claimCount2025: 37700,  // 2025 actual claim count
         avgPerClaim2026: Math.round(bi2026 / 335),
-        avgPerClaim2025: 9301,
+        avgPerClaim2025: 9141,  // 2025 actual average
       },
       cl: { 
         name: 'Uninsured Motorist BI', 
@@ -715,9 +716,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ytd2025: um2025Full, 
         change: um2026 - um2025Full,
         claimCount2026: 7,
-        claimCount2025: 6042,
+        claimCount2025: 10998,  // 2025 actual claim count
         avgPerClaim2026: Math.round(um2026 / 7),
-        avgPerClaim2025: 7485,
+        avgPerClaim2025: 7598,  // 2025 actual average
       },
       oc: { 
         name: 'Underinsured Motorist BI', 
@@ -725,9 +726,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ytd2025: ui2025Full, 
         change: ui2026 - ui2025Full,
         claimCount2026: 3,
-        claimCount2025: 2909,
+        claimCount2025: 3109,   // 2025 actual claim count
         avgPerClaim2026: Math.round(ui2026 / 3),
-        avgPerClaim2025: 7480,
+        avgPerClaim2025: 7471,  // 2025 actual average
       },
     };
 
