@@ -2620,6 +2620,65 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     toast.success('PDF + Excel exported: Inventory Age');
   }, [exportBoth, timestamp, metrics, selectedReviewer]);
 
+  // Export Claims with Demand - PDF + Excel combo
+  const handleExportDemandClaims = useCallback(async () => {
+    if (!data?.demandSummary) {
+      toast.error('No demand data available');
+      return;
+    }
+    
+    const demandSummary = data.demandSummary;
+    const demandClaims = demandSummary.demandClaims || [];
+    
+    const exportData: ExportableData = {
+      title: 'Claims with Demand Analysis',
+      subtitle: `${demandSummary.claimsWithDemand.toLocaleString()} claims with active demand`,
+      timestamp,
+      summary: {
+        'Total Claims with Demand': formatNumber(demandSummary.claimsWithDemand),
+        'Total Reserves': formatCurrencyFullValue(demandSummary.totalDemandReserves),
+        'Total Low Eval': formatCurrencyFullValue(demandSummary.totalDemandLowEval),
+        'Total High Eval': formatCurrencyFullValue(demandSummary.totalDemandHighEval),
+      },
+      bulletInsights: [
+        `${formatNumber(demandSummary.claimsWithDemand)} claims have an active demand type`,
+        `Total exposure: ${formatCurrency(demandSummary.totalDemandReserves)} in reserves`,
+        `Evaluation range: ${formatCurrency(demandSummary.totalDemandLowEval)} – ${formatCurrency(demandSummary.totalDemandHighEval)}`,
+        `Top demand type: ${demandSummary.byDemandType[0]?.demandType || 'N/A'} (${demandSummary.byDemandType[0]?.claims || 0} claims)`,
+      ],
+      columns: ['Demand Type', 'Claims', 'Reserves', 'Low Eval', 'High Eval'],
+      rows: demandSummary.byDemandType.map(dt => [
+        dt.demandType,
+        dt.claims,
+        formatCurrencyFullValue(dt.reserves),
+        formatCurrencyFullValue(dt.lowEval),
+        formatCurrencyFullValue(dt.highEval),
+      ]),
+      rawClaimData: [{
+        sheetName: 'Claims with Demand',
+        columns: ['Claim#', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Demand Type', 'Eval Phase', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Team'],
+        rows: demandClaims.map(c => [
+          c.claimNumber,
+          c.claimant,
+          c.coverage,
+          c.days,
+          c.ageBucket,
+          c.typeGroup,
+          c.demandType,
+          c.evaluationPhase,
+          c.openReserves,
+          c.lowEval,
+          c.highEval,
+          c.overallCP1,
+          c.teamGroup,
+        ]),
+      }],
+    };
+    
+    await exportBoth(exportData);
+    toast.success(`PDF + Excel exported: ${demandSummary.claimsWithDemand.toLocaleString()} claims with demand`);
+  }, [exportBoth, timestamp, data]);
+
   // Full Export - all sections in one workbook
   const handleFullExport = useCallback(() => {
     if (!metrics || !data) return;
@@ -3933,6 +3992,75 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           <span className="text-muted-foreground">Tiers: <span className="font-medium">$5K / $6K / $7.5K</span></span>
         </div>
       </div>
+
+      {/* Claims with Demand Analysis */}
+      {data?.demandSummary && data.demandSummary.claimsWithDemand > 0 && (
+        <div 
+          className="bg-card border border-accent/30 rounded-xl p-4 sm:p-5 cursor-pointer hover:border-accent/50 transition-colors"
+          onDoubleClick={handleExportDemandClaims}
+          title="Double-click to export PDF + Excel"
+        >
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div>
+              <h3 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wide">Claims with Demand</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Active demands by type • Double-click to export</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExportDemandClaims();
+              }}
+              className="h-7 text-xs gap-1.5"
+            >
+              <Download className="h-3 w-3" />
+              Export
+            </Button>
+          </div>
+          
+          {/* Summary Stats */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-accent/10 border border-accent/20 text-center">
+              <p className="text-[10px] text-muted-foreground">Claims</p>
+              <p className="text-lg font-bold text-accent">{formatNumber(data.demandSummary.claimsWithDemand)}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-muted/50 border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Reserves</p>
+              <p className="text-sm font-semibold text-foreground">{formatCurrency(data.demandSummary.totalDemandReserves)}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-muted/50 border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Low Eval</p>
+              <p className="text-sm font-semibold text-foreground">{formatCurrency(data.demandSummary.totalDemandLowEval)}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-warning/10 border border-warning/20 text-center">
+              <p className="text-[10px] text-muted-foreground">High Eval</p>
+              <p className="text-sm font-semibold text-warning">{formatCurrency(data.demandSummary.totalDemandHighEval)}</p>
+            </div>
+          </div>
+
+          {/* By Demand Type */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase">By Demand Type</p>
+            <div className="space-y-1">
+              {data.demandSummary.byDemandType.slice(0, 6).map((dt) => (
+                <div key={dt.demandType} className="flex items-center justify-between py-1.5 px-2 rounded bg-muted/30 text-xs">
+                  <span className="font-medium text-foreground truncate flex-1">{dt.demandType}</span>
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <span>{formatNumber(dt.claims)} claims</span>
+                    <span className="text-primary font-medium">{formatCurrency(dt.reserves)}</span>
+                  </div>
+                </div>
+              ))}
+              {data.demandSummary.byDemandType.length > 6 && (
+                <p className="text-[10px] text-muted-foreground text-center pt-1">
+                  +{data.demandSummary.byDemandType.length - 6} more types in export
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div 
         className="bg-card border border-destructive/30 rounded-xl p-5 cursor-pointer hover:bg-muted/30 transition-colors"
