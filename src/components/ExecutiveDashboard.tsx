@@ -968,6 +968,64 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
             </div>
           </div>
         </div>
+
+        {/* Expense Category Breakdown */}
+        <div className="bg-card border-2 border-[#0c2340]/20 rounded-xl p-3 sm:p-5 shadow-md lg:col-span-2">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-5 bg-[#0c2340] rounded"></div>
+            <h3 className="text-xs sm:text-sm font-semibold text-[#0c2340] uppercase tracking-wide">Expense Category Classification</h3>
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4 ml-3">How expense categories are classified as Expert vs Posture spend</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Expert Spend Categories */}
+            <div className="bg-success/5 border border-success/20 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded bg-success"></div>
+                <h4 className="text-sm font-semibold text-success">Expert Spend (Strategic)</h4>
+              </div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">Categories containing these keywords:</p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-1 bg-success/10 text-success text-[10px] sm:text-xs font-medium rounded-full">EXPERT</span>
+                <span className="px-2 py-1 bg-success/10 text-success text-[10px] sm:text-xs font-medium rounded-full">MED / MEDICAL</span>
+                <span className="px-2 py-1 bg-success/10 text-success text-[10px] sm:text-xs font-medium rounded-full">CONSULT</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-success/10">
+                <p className="text-[10px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Examples:</span> Medical expert witness, IME, accident reconstruction, economic expert, vocational consultant, biomechanical expert
+                </p>
+              </div>
+            </div>
+
+            {/* Posture Spend Categories */}
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded bg-destructive"></div>
+                <h4 className="text-sm font-semibold text-destructive">Posture Spend (Reactive)</h4>
+              </div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">All other expense categories:</p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">LEGAL FEES</span>
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">DEPOSITION</span>
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">MOTION PRACTICE</span>
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">DISCOVERY</span>
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">COURT COSTS</span>
+                <span className="px-2 py-1 bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium rounded-full">ATR</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-destructive/10">
+                <p className="text-[10px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Examples:</span> Defense counsel fees, written discovery, depositions, motion drafting, court filings, trial prep without expert strategy
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">💡 Key Insight:</span> High posture-to-expert ratio indicates reactive litigation strategy. Claims with early expert engagement typically resolve faster and at lower total cost.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Executive Review Required */}
