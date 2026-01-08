@@ -607,7 +607,16 @@ export function ExecutiveCommandDashboardWrapper() {
                     <TableBody>
                       {decisionsData.claims.slice(0, 15).map((claim, idx) => (
                         <TableRow key={idx} className="hover:bg-muted/30">
-                          <TableCell className="font-mono text-xs">{claim.claimNumber}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-2">
+                              {claim.claimNumber}
+                              {claim.fatality && (
+                                <span className="inline-flex px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-600 text-white rounded animate-pulse">
+                                  FATALITY
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-sm">{claim.state}</TableCell>
                           <TableCell className="text-right font-medium">{formatK(claim.reserves)}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{claim.reason}</TableCell>

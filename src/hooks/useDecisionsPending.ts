@@ -16,6 +16,7 @@ interface DecisionClaim {
   biStatus: string;
   team: string;
   reason: string;
+  fatality: boolean;
 }
 
 function parseCurrency(val: string): number {
@@ -68,6 +69,8 @@ export function useDecisionsPending() {
           const state = row['Accident Location State']?.trim() || '';
           const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
           const team = row['Team Group']?.trim() || '';
+          const fatalityVal = (row['FATALITY'] || '').toString().toLowerCase().trim();
+          const isFatality = fatalityVal === 'yes' || fatalityVal === 'y' || fatalityVal === 'true' || fatalityVal === '1';
           
           // Determine reason
           let reason = 'High reserves with no evaluation';
@@ -85,6 +88,7 @@ export function useDecisionsPending() {
             biStatus,
             team,
             reason,
+            fatality: isFatality,
           });
           
           // Track by pain level category
