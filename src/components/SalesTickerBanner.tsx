@@ -39,16 +39,16 @@ export function SalesTickerBanner() {
     { label: "PERIOD", value: salesData.period, icon: null, type: "text" },
     { label: "QUOTES", value: salesData.quotesGiven.toLocaleString(), icon: FileText, type: "neutral" },
     { label: "POLICIES SOLD", value: salesData.policiesSold.toLocaleString(), icon: Users, type: "positive" },
-    { label: "CLOSING %", value: `${salesData.closingPercent}%`, icon: Percent, type: "positive" },
+    { label: "CLOSING %", value: `${salesData.closingPercent}%`, icon: null, type: "positive" },
     { label: "# ZEROS", value: salesData.numberOfZeros.toLocaleString(), icon: null, type: "warning" },
-    { label: "NET WP", value: formatCurrency(salesData.netWrittenPremium), icon: DollarSign, type: "positive" },
-    { label: "GROSS WP", value: formatCurrency(salesData.grossWrittenPremium), icon: DollarSign, type: "positive" },
-    { label: "CANCEL PREM", value: formatCurrency(salesData.cancellationPremium), icon: TrendingDown, type: "negative" },
-    { label: "CANCEL %", value: formatPercent(salesData.cancellationPercent), icon: TrendingDown, type: "negative" },
-    { label: "RENEWAL % (6MO)", value: `${salesData.renewalPercent6Mo}%`, icon: TrendingUp, type: "positive" },
+    { label: "NET WP", value: formatCurrency(salesData.netWrittenPremium), icon: null, type: "positive" },
+    { label: "GROSS WP", value: formatCurrency(salesData.grossWrittenPremium), icon: null, type: "positive" },
+    { label: "CANCEL PREM", value: formatCurrency(salesData.cancellationPremium), icon: null, type: "negative" },
+    { label: "CANCEL %", value: formatPercent(salesData.cancellationPercent), icon: null, type: "negative" },
+    { label: "RENEWAL % (6MO)", value: `${salesData.renewalPercent6Mo}%`, icon: null, type: "positive" },
     { label: "RENEWED (MO)", value: salesData.policiesRenewedMonthly.toLocaleString(), icon: null, type: "positive" },
     { label: "EXPIRED (MO)", value: salesData.policiesExpiredMonthly.toLocaleString(), icon: null, type: "warning" },
-    { label: "RENEWAL % (MO)", value: `${salesData.renewalPercentMonthly}%`, icon: TrendingUp, type: "positive" },
+    { label: "RENEWAL % (MO)", value: `${salesData.renewalPercentMonthly}%`, icon: null, type: "positive" },
   ];
 
   const getTypeStyles = (type: string) => {
