@@ -1078,9 +1078,9 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           </div>
         </div>
 
-        {/* Scoring: Age + Stage + Pain + Complexity */}
+        {/* Plain English Scoring */}
         <p className="text-[10px] text-muted-foreground mb-3 ml-3">
-          Score = Age (7yr+40, 5yr+25) + Stage mismatch (+20) + Pain escalation (+20) + Complexity (+15) · <span className="font-semibold">CRITICAL ≥50</span> · <span className="font-semibold">REQUIRED ≥30</span>
+          Higher scores = more urgent. Points added for: <span className="font-medium">older claims</span>, <span className="font-medium">worsening condition</span>, <span className="font-medium">missing strategy</span>, and <span className="font-medium">high severity</span>. Red = act now · Orange = review soon.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 max-h-[400px] sm:max-h-[600px] overflow-y-auto">
