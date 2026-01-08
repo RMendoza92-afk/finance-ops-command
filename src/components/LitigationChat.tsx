@@ -1331,10 +1331,10 @@ export function LitigationChat() {
   }
 
   return (
-    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-primary/20 ${
+    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-primary/20 overflow-hidden ${
       isMinimized 
         ? "bottom-4 right-4 sm:bottom-6 sm:right-6 w-64 sm:w-72 h-12 sm:h-14" 
-        : "inset-4 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh]"
+        : "inset-2 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh] max-h-[calc(100vh-1rem)]"
     }`}>
       <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-card to-muted/30">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
