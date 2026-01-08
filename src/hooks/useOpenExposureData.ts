@@ -1233,7 +1233,7 @@ export function useOpenExposureData() {
         });
         
         // Current snapshot date (from filename or hardcoded for now)
-        const currentSnapshotDate = '2026-01-05';
+        const currentSnapshotDate = '2026-01-08';
         
         // Save current data as snapshot
         await saveSnapshot(currentData, currentSnapshotDate);
