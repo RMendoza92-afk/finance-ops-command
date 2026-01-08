@@ -171,7 +171,7 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
 
       {/* Header */}
       <div className="mb-4">
-        <h3 className="text-xl font-bold text-foreground">2025 Litigation Discipline Dashboard</h3>
+        <h3 className="text-xl font-bold text-foreground">2025 Discipline Command Dashboard</h3>
         <p className="text-sm text-muted-foreground">
           Hybrid governance dashboard using real 2025 litigation data. Purpose: enforce spend discipline by separating information spend from posture spend, identifying decision gate leakage, and learning from repeatable patterns.
         </p>
