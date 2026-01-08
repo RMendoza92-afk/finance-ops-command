@@ -1169,7 +1169,7 @@ export function useExportData() {
       { 
         label: 'CP1 RATE', 
         value: data.cp1Rate + '%', 
-        sub: 'Within policy limits',
+        sub: 'Settled under policy cap',
         color: parseFloat(data.cp1Rate) >= 30 ? C.emerald : C.amber,
         trend: 0,
       },
