@@ -232,7 +232,7 @@ export function useSOLBreachAnalysis() {
     // === EXECUTIVE SUMMARY SHEET ===
     const summaryRows: (string | number)[][] = [
       ['SOL RISK REVIEW - DECISIONS PENDING'],
-      ['Fred Loya Insurance | Litigation Command Center'],
+      ['Fred Loya Insurance | Discipline Command Center'],
       [''],
       ['Report Date:', '2026-01-06'],
       ['Classification:', 'CONFIDENTIAL - EXECUTIVE USE ONLY'],

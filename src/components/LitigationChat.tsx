@@ -1039,7 +1039,7 @@ export function LitigationChat() {
       doc.text('CONFIDENTIAL - EXECUTIVE USE ONLY', m.l, ph - 6);
       
       setIBMPlexSans(doc, 'bold');
-      doc.text('Fred Loya Insurance  |  Litigation Command Center', pw / 2, ph - 6, { align: 'center' });
+      doc.text('Fred Loya Insurance  |  Discipline Command Center', pw / 2, ph - 6, { align: 'center' });
       
       setIBMPlexSans(doc, 'normal');
       doc.text(`Page ${i} of ${pageCount}`, pw - m.r, ph - 6, { align: 'right' });

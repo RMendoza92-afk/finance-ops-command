@@ -103,7 +103,7 @@ export default function Auth() {
           <img src={loyaLogo} alt="Fred Loya Insurance" className="h-16 w-auto mb-4" />
           <div className="flex items-center gap-2 text-primary">
             <Shield className="h-5 w-5" />
-            <span className="font-semibold">Litigation Command</span>
+            <span className="font-semibold">Discipline Command</span>
           </div>
         </div>
 
@@ -111,7 +111,7 @@ export default function Auth() {
           <CardHeader className="text-center">
             <CardTitle>Welcome</CardTitle>
             <CardDescription>
-              Sign in to access the litigation dashboard
+              Sign in to access the discipline dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
