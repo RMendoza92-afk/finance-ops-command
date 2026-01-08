@@ -396,7 +396,7 @@ export function useExportData() {
       doc.setFontSize(6);
       doc.setTextColor(...C.muted);
       doc.text('CONFIDENTIAL - EXECUTIVE USE ONLY', m.l, ph - 4);
-      doc.text('Fred Loya Insurance | Litigation Command Center', pw / 2, ph - 4, { align: 'center' });
+      doc.text('Fred Loya Insurance | Discipline Command Center', pw / 2, ph - 4, { align: 'center' });
       doc.text('Page ' + i + ' of ' + totalPages, pw - m.r, ph - 4, { align: 'right' });
     }
 

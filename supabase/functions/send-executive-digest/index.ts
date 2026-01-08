@@ -240,7 +240,7 @@ serve(async (req: Request): Promise<Response> => {
           <tr>
             <td>
               <p style="margin: 0; color: #64748b; font-size: 11px;">
-                FLI Litigation Command Center • Automated Executive Digest
+                FLI Discipline Command Center • Automated Executive Digest
                 ${isTest ? '<br><span style="color: #f59e0b;">[TEST MODE - Not a scheduled report]</span>' : ''}
               </p>
             </td>
@@ -283,7 +283,7 @@ Low:    ${formatCurrency(metrics.totalLowEval)}
 Median: ${formatCurrency(metrics.medianEval)}
 High:   ${formatCurrency(metrics.totalHighEval)}
 
-— FLI Litigation Command Center
+— FLI Discipline Command Center
     `.trim();
 
     // Check for Resend API key
