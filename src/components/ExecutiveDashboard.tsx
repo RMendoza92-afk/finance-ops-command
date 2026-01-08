@@ -205,6 +205,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       expense: number;
       adjuster: string;
       claimAge: number;
+      daysOpen: number;
       painEscalation: number;
       maxPain: number;
       expCategory: string;
@@ -235,6 +236,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
           expense: expenseAmount,
           adjuster: matter.adjusterName || 'Unknown',
           claimAge,
+          daysOpen: matter.daysOpen || 0,
           painEscalation,
           maxPain: matter.endPainLvl,
           expCategory: matter.expCategory || '',
@@ -1190,7 +1192,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
               </div>
               
               <p className="text-[10px] text-gray-500 mt-2 pt-1 border-t border-[#0c2340]/10 truncate">
-                {caseItem.adjuster} • {caseItem.stage} • {caseItem.claimAge}yr old
+                {caseItem.adjuster} • {caseItem.stage} • <span className="font-medium">{caseItem.daysOpen.toLocaleString()} days</span>
               </p>
             </div>
           ))}
