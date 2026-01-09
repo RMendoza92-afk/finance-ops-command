@@ -209,20 +209,22 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const expenseRatio = (metrics?.total_expense_ratio ?? 0.23) * 100;
     const combinedRatio = lossRatio + laeRatio + expenseRatio;
     
+    // 2024 IBNR: $13M (hardcoded for RBC calculation)
+    const ibnr2024 = 13000000;
+    
     // RBC Ratio: Industry standard calculation
     // Total Adjusted Capital / Risk-Based Capital = RBC Ratio
-    // Using reserves and premium data to derive realistic RBC
     const totalReserves = inventory?.total_reserves ?? 28500000;
     const ultimateLoss = metrics?.ultimate_loss ?? 21340000;
     
-    // Authorized Control Level (ACL) approximated from ultimate loss
-    const authorizedControlLevel = ultimateLoss * 0.08; // ~8% of ultimate loss
+    // Authorized Control Level (ACL) approximated from IBNR + ultimate loss
+    const authorizedControlLevel = (ibnr2024 + ultimateLoss) * 0.05;
     const totalAdjustedCapital = totalReserves * 0.35; // Surplus as % of reserves
     
     // RBC Ratio = TAC / ACL * 100 (regulatory minimum is 200%)
     const rbcRatio = authorizedControlLevel > 0 
       ? Math.min(450, Math.max(150, (totalAdjustedCapital / authorizedControlLevel) * 100))
-      : 285; // Default to healthy ratio
+      : 285;
     
     return {
       rbcRatio,
@@ -232,7 +234,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       combinedRatio,
       developmentFactor: metrics?.development_factor ?? 1.15,
       trendFactor: metrics?.trend_factor ?? 1.03,
-      ibnr: lossDev?.ibnr ?? 0,
+      ibnr: ibnr2024,
       ultimateLoss: metrics?.ultimate_loss ?? 0,
       credibility: metrics?.credibility ?? 0,
       incurredLosses: lossDev?.incurred_losses ?? 0,
