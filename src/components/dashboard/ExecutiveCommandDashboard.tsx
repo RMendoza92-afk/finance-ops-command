@@ -65,6 +65,23 @@ interface ExecutiveCommandDashboardProps {
     trendData?: Array<{ month: string; claims: number; reserves: number }>;
     typeGroupData?: Array<{ typeGroup: string; grandTotal: number; reserves: number }>;
     ageBreakdown?: Array<{ age: string; claims: number; openReserves: number }>;
+    rawClaims?: Array<{
+      claimNumber: string;
+      claimant: string;
+      coverage: string;
+      days: number;
+      ageBucket: string;
+      typeGroup: string;
+      openReserves: number;
+      lowEval: number;
+      highEval: number;
+      cp1Flag: string;
+      adjuster: string;
+      areaNumber: string;
+      fatality?: boolean;
+      surgery?: boolean;
+      hospitalization?: boolean;
+    }>;
   };
   onOpenChat: () => void;
   onDrilldown: (section: string) => void;
@@ -163,11 +180,12 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         priorWeek: data.delta ? {
           totalClaims: data.totalClaims - data.delta.change,
           totalReserves: data.totalReserves - data.delta.reservesChange,
-          cp1Rate: data.cp1Rate, // Prior CP1 not tracked yet
-          noEvalCount: data.noEvalCount, // Prior not tracked yet
-          aged365Plus: data.aged365Plus, // Prior not tracked yet
+          cp1Rate: data.cp1Rate,
+          noEvalCount: data.noEvalCount,
+          aged365Plus: data.aged365Plus,
           dataDate: data.delta.previousDate,
         } : undefined,
+        rawClaims: data.rawClaims,
       });
       toast.success('C-Suite Portfolio Excel generated');
     } catch (err) {

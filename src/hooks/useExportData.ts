@@ -1379,6 +1379,24 @@ export function useExportData() {
       aged365Plus: number;
       dataDate: string;
     };
+    // Raw claim data for management action
+    rawClaims?: Array<{
+      claimNumber: string;
+      claimant: string;
+      coverage: string;
+      days: number;
+      ageBucket: string;
+      typeGroup: string;
+      openReserves: number;
+      lowEval: number;
+      highEval: number;
+      cp1Flag: string;
+      adjuster: string;
+      areaNumber: string;
+      fatality?: boolean;
+      surgery?: boolean;
+      hospitalization?: boolean;
+    }>;
   }) => {
     const wb = XLSX.utils.book_new();
 
@@ -1582,7 +1600,48 @@ export function useExportData() {
     wowSheet['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wowSheet, 'WoW Comparison');
 
-    const sheetCount = pw ? 4 : 4;
+    // SHEET 5: RAW CLAIM DATA (for management action)
+    if (data.rawClaims && data.rawClaims.length > 0) {
+      const claimRows: (string | number | boolean)[][] = [
+        ['CLAIM-LEVEL DATA'],
+        [format(new Date(), 'MMMM d, yyyy') + ' | ' + data.rawClaims.length + ' claims'],
+        [''],
+        ['Claim #', 'Claimant', 'Coverage', 'Days', 'Age', 'Type Group', 'Reserves', 'Low Eval', 'High Eval', 'CP1', 'Adjuster', 'Area', 'Fatality', 'Surgery', 'Hosp'],
+      ];
+
+      // Sort by reserves descending for prioritization
+      const sortedClaims = [...data.rawClaims].sort((a, b) => b.openReserves - a.openReserves);
+
+      for (const claim of sortedClaims) {
+        claimRows.push([
+          claim.claimNumber,
+          claim.claimant,
+          claim.coverage,
+          claim.days,
+          claim.ageBucket,
+          claim.typeGroup,
+          claim.openReserves,
+          claim.lowEval,
+          claim.highEval,
+          claim.cp1Flag,
+          claim.adjuster,
+          claim.areaNumber,
+          claim.fatality ? 'YES' : '',
+          claim.surgery ? 'YES' : '',
+          claim.hospitalization ? 'YES' : '',
+        ]);
+      }
+
+      const claimsSheet = XLSX.utils.aoa_to_sheet(claimRows);
+      claimsSheet['!cols'] = [
+        { wch: 14 }, { wch: 20 }, { wch: 8 }, { wch: 6 }, { wch: 10 },
+        { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 6 },
+        { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 },
+      ];
+      XLSX.utils.book_append_sheet(wb, claimsSheet, 'Claim Detail');
+    }
+
+    const sheetCount = data.rawClaims?.length ? 5 : 4;
     const filename = 'CSuite_Portfolio_Briefing_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
     XLSX.writeFile(wb, filename);
     
