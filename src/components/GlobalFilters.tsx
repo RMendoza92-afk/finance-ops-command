@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 export interface PainLevelRow {
   oldStartPain: string;
   oldEndPain: string;
@@ -37,6 +39,11 @@ interface FilterOptions {
   adjusters: string[];
 }
 
+// Check if RBC access is unlocked (via session storage from password gate)
+const isRBCUnlocked = () => {
+  return sessionStorage.getItem('rbc_exec_access') === 'true';
+};
+
 interface GlobalFilterPanelProps {
   filters: GlobalFilters;
   onFilterChange: (key: keyof GlobalFilters, value: string) => void;
@@ -49,6 +56,28 @@ export function GlobalFilterPanel({
   filters, 
   onFilterChange
 }: GlobalFilterPanelProps) {
+  const [showRBCButton, setShowRBCButton] = useState(isRBCUnlocked());
+
+  // Secret keyboard shortcut: Ctrl+Shift+R to show RBC tab and navigate to it
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        setShowRBCButton(true);
+        onFilterChange('inventoryStatus', 'rbc');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onFilterChange]);
+
+  // Re-check unlock status when component mounts or filters change
+  useEffect(() => {
+    if (isRBCUnlocked()) {
+      setShowRBCButton(true);
+    }
+  }, [filters.inventoryStatus]);
+
   return (
     <div className="bg-card border border-border rounded-xl p-2 sm:p-4 mb-3 sm:mb-6">
       <div className="flex items-center justify-center">
@@ -84,16 +113,19 @@ export function GlobalFilterPanel({
           >
             Executive
           </button>
-          <button
-            onClick={() => onFilterChange('inventoryStatus', 'rbc')}
-            className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
-              filters.inventoryStatus === 'rbc'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            RBC
-          </button>
+          {/* RBC tab only visible if unlocked via password or keyboard shortcut */}
+          {showRBCButton && (
+            <button
+              onClick={() => onFilterChange('inventoryStatus', 'rbc')}
+              className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
+                filters.inventoryStatus === 'rbc'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              RBC
+            </button>
+          )}
         </div>
       </div>
     </div>
