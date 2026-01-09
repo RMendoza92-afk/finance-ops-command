@@ -316,7 +316,7 @@ export interface OpenExposureData {
     }[];
     demandClaims: RawClaimExport[];
   };
-  // Fatality and severity summary - all CP1 flag types
+  // Fatality and severity summary - all CP1 flag types (17 factors)
   fatalitySummary: {
     fatalityCount: number;
     fatalityReserves: number;
@@ -335,6 +335,12 @@ export interface OpenExposureData {
     lifeCarePlannerCount: number;
     injectionsCount: number;
     emsHeavyImpactCount: number;
+    // New factors added for full CP1 scoring
+    confirmedFracturesCount: number;
+    lacerationsCount: number;
+    priorSurgeryCount: number;
+    painLevel5PlusCount: number;
+    eggshell69PlusCount: number;
   };
   delta?: {
     previousTotal: number;
@@ -1283,6 +1289,12 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   const lifeCarePlannerCount = rawClaimsExport.filter((c) => c.lifeCarePlanner).length;
   const injectionsCount = rawClaimsExport.filter((c) => c.injections).length;
   const emsHeavyImpactCount = rawClaimsExport.filter((c) => c.emsHeavyImpact).length;
+  // Additional factors for complete 17-factor CP1 scoring
+  const confirmedFracturesCount = rawClaimsExport.filter((c) => c.confirmedFractures).length;
+  const lacerationsCount = rawClaimsExport.filter((c) => c.lacerations).length;
+  const priorSurgeryCount = rawClaimsExport.filter((c) => c.priorSurgery).length;
+  const painLevel5PlusCount = rawClaimsExport.filter((c) => c.painLevel5Plus).length;
+  const eggshell69PlusCount = rawClaimsExport.filter((c) => c.eggshell69Plus).length;
   
   const fatalityClaims = rawClaimsExport.filter(c => c.fatality);
   const surgeryClaims = rawClaimsExport.filter(c => c.surgery);
@@ -1305,6 +1317,12 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     lifeCarePlannerCount,
     injectionsCount,
     emsHeavyImpactCount,
+    // New factors for complete 17-factor CP1 scoring
+    confirmedFracturesCount,
+    lacerationsCount,
+    priorSurgeryCount,
+    painLevel5PlusCount,
+    eggshell69PlusCount,
   };
   
   return {
