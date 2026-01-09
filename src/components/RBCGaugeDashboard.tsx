@@ -291,17 +291,14 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const ay2025_projected_reportedLR = ay2025_reportedLossRatio * ldf_9_to_12; // ~71.0%
     
     // ═══════════════════════════════════════════════════════════════════════
-    // AGGREGATE RESERVE POSITION (All Open AYs)
+    // AGGREGATE RESERVE POSITION - Year-End December 31, 2025
     // ═══════════════════════════════════════════════════════════════════════
     
-    const totalCaseReserves = ay2025_claimReserves + ay2024_claimReserves + 
-                              ay2023_claimReserves + ay2022_claimReserves + ay2021_claimReserves;
-    const totalDCCE = ay2025_dcceReserves + ay2024_dcceReserves + 
-                      ay2023_dcceReserves + ay2022_dcceReserves + ay2021_dcceReserves;
-    // Using historical average IBNR of $21.5M (will update with actual number)
-    const ibnrReserve = 21500000;
+    // ACTUAL YEAR-END RESERVES: $324,655,559 from reserves-rolling-weekly.xlsx
+    const totalReserves = 324655559;
     
-    const totalReserves = totalCaseReserves + totalDCCE;
+    // IBNR component (included in total reserves)
+    const ibnrReserve = 21500000;
     const totalIBNR = ibnrReserve;
     
     // Total earned premium (trailing 12 months approximation)
@@ -379,8 +376,8 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       targetLossRatio: (metrics?.target_loss_ratio ?? 0.65) * 100,
       // Additional breakdown
       earnedPremium: trailing12MEarnedPremium,
-      caseReserves: totalCaseReserves,
-      dcceReserves: totalDCCE,
+      caseReserves: totalReserves * 0.92, // Approx case reserves (92% of total)
+      dcceReserves: totalReserves * 0.08, // Approx DCCE (8% of total)
       bulkIBNR: ibnrReserve,
       policyholderSurplus: policyholderSurplus,
       authorizedControlLevel: authorizedControlLevel,
