@@ -914,6 +914,64 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                   {rbcMetrics.selectedChange > 0 && <> Rate change: <span className="font-medium text-success">+{rbcMetrics.selectedChange.toFixed(1)}%</span></>}
                 </p>
               </div>
+
+              {/* Operational Recommendations */}
+              <div className="p-4 rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-transparent">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <span className="font-semibold text-sm">Operational Recommendations</span>
+                  <Badge variant="outline" className="ml-auto text-xs border-orange-500/50 text-orange-600 dark:text-orange-400">
+                    YoY Reserve Δ: $521M → Current
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-red-500">1</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Stabilize Reserve Volatility</div>
+                      <p className="text-xs text-muted-foreground">Implement quarterly reserve reviews with actuarial sign-off. Large swings signal potential reserving methodology gaps or claim development surprises.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-amber-500">2</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Address App Count Decline</div>
+                      <p className="text-xs text-muted-foreground">Review underwriting guidelines for over-tightening. Consider geographic expansion or product diversification to restore premium growth.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-blue-500">3</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Strengthen Claims Management</div>
+                      <p className="text-xs text-muted-foreground">Accelerate settlements on aged claims (365+ days). Implement early intervention protocols to reduce severity development on high-exposure matters.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-emerald-500">4</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Rate Adequacy Review</div>
+                      <p className="text-xs text-muted-foreground">Target 3-5% rate increases in loss-leading states. Focus on CA, FL, TX where BI limits are under pressure from over-limit exposures.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-purple-500">5</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Capital Efficiency</div>
+                      <p className="text-xs text-muted-foreground">Build $55-60M additional surplus buffer over next 2 quarters. Consider reinsurance optimization to reduce net retained volatility.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
