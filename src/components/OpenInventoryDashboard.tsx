@@ -1561,16 +1561,19 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ['Flag', 'Count'],
         ['Fatality', fs?.fatalityCount || 0],
         ['Surgery', fs?.surgeryCount || 0],
-        ['Hospitalization', fs?.hospitalizationCount || 0],
         ['Meds > Limits', fs?.medsVsLimitsCount || 0],
+        ['Hospitalization', fs?.hospitalizationCount || 0],
         ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0],
-        ['Aggravating Factors', fs?.aggravatingFactorsCount || 0],
-        ['Objective Injuries', fs?.objectiveInjuriesCount || 0],
+        ['Lacerations', fs?.lacerationsCount || 0],
         ['Ped/Moto/Bicyclist', fs?.pedestrianMotorcyclistCount || 0],
-        ['Pregnancy', fs?.pregnancyCount || 0],
+        ['DUI/DWI/Hit & Run', fs?.duiDwiHitRunCount || 0],
         ['Life Care Planner', fs?.lifeCarePlannerCount || 0],
-        ['Injections', fs?.injectionsCount || 0],
-        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0],
+        ['Confirmed Fractures', fs?.confirmedFracturesCount || 0],
+        ['Agg Factors DUI', fs?.aggFactorsDuiCount || 0],
+        ['Fled Scene', fs?.fledSceneCount || 0],
+        ['Prior Surgery', fs?.priorSurgeryCount || 0],
+        ['Pregnancy', fs?.pregnancyCount || 0],
+        ['Ambulance Used', fs?.ambulanceUsedCount || 0],
       ];
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(triggerFlagsData), 'Trigger Flags');
 
@@ -1592,16 +1595,19 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         biStatus: c.biStatus,
         fatality: c.fatality ? 'YES' : '',
         surgery: c.surgery ? 'YES' : '',
-        hospitalization: c.hospitalization ? 'YES' : '',
         medsVsLimits: c.medsVsLimits ? 'YES' : '',
+        hospitalization: c.hospitalization ? 'YES' : '',
         lossOfConsciousness: c.lossOfConsciousness ? 'YES' : '',
-        aggravatingFactors: c.aggravatingFactors ? 'YES' : '',
-        objectiveInjuries: c.objectiveInjuries ? 'YES' : '',
+        lacerations: c.lacerations ? 'YES' : '',
         pedestrianMotorcyclist: c.pedestrianMotorcyclist ? 'YES' : '',
-        pregnancy: c.pregnancy ? 'YES' : '',
+        duiDwiHitRun: c.duiDwiHitRun ? 'YES' : '',
         lifeCarePlanner: c.lifeCarePlanner ? 'YES' : '',
-        injections: c.injections ? 'YES' : '',
-        emsHeavyImpact: c.emsHeavyImpact ? 'YES' : '',
+        confirmedFractures: c.confirmedFractures ? 'YES' : '',
+        aggFactorsDui: c.aggFactorsDui ? 'YES' : '',
+        fledScene: c.fledScene ? 'YES' : '',
+        priorSurgery: c.priorSurgery ? 'YES' : '',
+        pregnancy: c.pregnancy ? 'YES' : '',
+        ambulanceUsed: c.ambulanceUsed ? 'YES' : '',
       }));
 
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rawRows), 'Raw (In Progress Only)');
@@ -4658,18 +4664,21 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   // Use cp1BoxData for flags (CP1 CSV only)
                   const fs = cp1BoxData?.fatalitySummary;
                   const flagsList = [
-                    { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', critical: false },
-                    { label: 'Meds > Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', critical: true },
-                    { label: 'Ped/Moto/Bicyclist', key: 'pedestrianMotorcyclist', count: fs?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: true },
                     { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', critical: true },
-                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
                     { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', critical: true },
-                    { label: 'Pregnancy', key: 'pregnancy', count: fs?.pregnancyCount || 0, icon: '🤰', critical: true },
+                    { label: 'Meds > Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', critical: true },
+                    { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', critical: true },
+                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
+                    { label: 'Lacerations', key: 'lacerations', count: fs?.lacerationsCount || 0, icon: '🩹', critical: false },
+                    { label: 'Ped/Moto/Bicyclist', key: 'pedestrianMotorcyclist', count: fs?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: true },
+                    { label: 'DUI/DWI/Hit & Run', key: 'duiDwiHitRun', count: fs?.duiDwiHitRunCount || 0, icon: '🚨', critical: true },
                     { label: 'Life Care Planner', key: 'lifeCarePlanner', count: fs?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
-                    { label: 'Aggravating Factors', key: 'aggravatingFactors', count: fs?.aggravatingFactorsCount || 0, icon: '⚠️', critical: true },
-                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
-                    { label: 'Injections', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', critical: false },
-                    { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', critical: false },
+                    { label: 'Confirmed Fractures', key: 'confirmedFractures', count: fs?.confirmedFracturesCount || 0, icon: '🦴', critical: true },
+                    { label: 'Agg Factors DUI', key: 'aggFactorsDui', count: fs?.aggFactorsDuiCount || 0, icon: '⚠️', critical: true },
+                    { label: 'Fled Scene', key: 'fledScene', count: fs?.fledSceneCount || 0, icon: '🏃', critical: true },
+                    { label: 'Prior Surgery', key: 'priorSurgery', count: fs?.priorSurgeryCount || 0, icon: '📌', critical: false },
+                    { label: 'Pregnancy', key: 'pregnancy', count: fs?.pregnancyCount || 0, icon: '🤰', critical: true },
+                    { label: 'Ambulance Used', key: 'ambulanceUsed', count: fs?.ambulanceUsedCount || 0, icon: '🚑', critical: false },
                   ];
 
                   // Hide zero-count flags to avoid implying data changed
@@ -4685,36 +4694,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                         onClick={() => {
                           import('xlsx').then((XLSX) => {
                             const allClaims = cp1BoxData?.rawClaims || [];
-                            const filteredClaims = allClaims.filter((c) => {
-                              switch (flag.key) {
-                                case 'fatality':
-                                  return c.fatality;
-                                case 'surgery':
-                                  return c.surgery;
-                                case 'hospitalization':
-                                  return c.hospitalization;
-                                case 'medsVsLimits':
-                                  return c.medsVsLimits;
-                                case 'lossOfConsciousness':
-                                  return c.lossOfConsciousness;
-                                case 'aggravatingFactors':
-                                  return c.aggravatingFactors;
-                                case 'objectiveInjuries':
-                                  return c.objectiveInjuries;
-                                case 'pedestrianMotorcyclist':
-                                  return c.pedestrianMotorcyclist;
-                                case 'pregnancy':
-                                  return c.pregnancy;
-                                case 'lifeCarePlanner':
-                                  return c.lifeCarePlanner;
-                                case 'injections':
-                                  return c.injections;
-                                case 'emsHeavyImpact':
-                                  return c.emsHeavyImpact;
-                                default:
-                                  return false;
-                              }
-                            });
+                            const filteredClaims = allClaims.filter((c) => (c as any)[flag.key]);
 
                             const rows = filteredClaims.map((c) => ({
                               'Claim #': c.claimNumber,
@@ -4769,18 +4749,21 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
                       const fs = cp1BoxData?.fatalitySummary;
                       const allFlags = [
-                        { key: 'hospitalization', label: 'Hospitalization', count: fs?.hospitalizationCount || 0 },
-                        { key: 'medsVsLimits', label: 'Meds > Limits', count: fs?.medsVsLimitsCount || 0 },
-                        { key: 'pedestrianMotorcyclist', label: 'Ped/Moto/Bicyclist', count: fs?.pedestrianMotorcyclistCount || 0 },
                         { key: 'fatality', label: 'Fatality', count: fs?.fatalityCount || 0 },
-                        { key: 'lossOfConsciousness', label: 'Loss of Consciousness', count: fs?.lossOfConsciousnessCount || 0 },
                         { key: 'surgery', label: 'Surgery', count: fs?.surgeryCount || 0 },
-                        { key: 'pregnancy', label: 'Pregnancy', count: fs?.pregnancyCount || 0 },
+                        { key: 'medsVsLimits', label: 'Meds > Limits', count: fs?.medsVsLimitsCount || 0 },
+                        { key: 'hospitalization', label: 'Hospitalization', count: fs?.hospitalizationCount || 0 },
+                        { key: 'lossOfConsciousness', label: 'Loss of Consciousness', count: fs?.lossOfConsciousnessCount || 0 },
+                        { key: 'lacerations', label: 'Lacerations', count: fs?.lacerationsCount || 0 },
+                        { key: 'pedestrianMotorcyclist', label: 'Ped/Moto/Bicyclist', count: fs?.pedestrianMotorcyclistCount || 0 },
+                        { key: 'duiDwiHitRun', label: 'DUI/DWI/Hit & Run', count: fs?.duiDwiHitRunCount || 0 },
                         { key: 'lifeCarePlanner', label: 'Life Care Planner', count: fs?.lifeCarePlannerCount || 0 },
-                        { key: 'aggravatingFactors', label: 'Aggravating Factors', count: fs?.aggravatingFactorsCount || 0 },
-                        { key: 'objectiveInjuries', label: 'Objective Injuries', count: fs?.objectiveInjuriesCount || 0 },
-                        { key: 'injections', label: 'Injections', count: fs?.injectionsCount || 0 },
-                        { key: 'emsHeavyImpact', label: 'EMS + Heavy Impact', count: fs?.emsHeavyImpactCount || 0 },
+                        { key: 'confirmedFractures', label: 'Confirmed Fractures', count: fs?.confirmedFracturesCount || 0 },
+                        { key: 'aggFactorsDui', label: 'Agg Factors DUI', count: fs?.aggFactorsDuiCount || 0 },
+                        { key: 'fledScene', label: 'Fled Scene', count: fs?.fledSceneCount || 0 },
+                        { key: 'priorSurgery', label: 'Prior Surgery', count: fs?.priorSurgeryCount || 0 },
+                        { key: 'pregnancy', label: 'Pregnancy', count: fs?.pregnancyCount || 0 },
+                        { key: 'ambulanceUsed', label: 'Ambulance Used', count: fs?.ambulanceUsedCount || 0 },
                       ];
 
                       const topFlags = allFlags
