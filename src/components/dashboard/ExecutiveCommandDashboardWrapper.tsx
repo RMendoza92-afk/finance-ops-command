@@ -373,7 +373,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* CLAIMS DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showClaimsDrawer} onOpenChange={setShowClaimsDrawer}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -416,25 +416,25 @@ export function ExecutiveCommandDashboardWrapper() {
             </div>
 
             {/* Type Group Breakdown Table */}
-            <div>
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
               <h4 className="text-sm font-semibold mb-3">By Type Group</h4>
-              <div className="rounded-xl border">
+              <div className="rounded-xl border min-w-[400px]">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="font-bold">Type Group</TableHead>
-                      <TableHead className="text-right font-bold">Claims</TableHead>
-                      <TableHead className="text-right font-bold">Reserves</TableHead>
-                      <TableHead className="text-right font-bold">%</TableHead>
+                      <TableHead className="font-bold whitespace-nowrap">Type Group</TableHead>
+                      <TableHead className="text-right font-bold whitespace-nowrap">Claims</TableHead>
+                      <TableHead className="text-right font-bold whitespace-nowrap">Reserves</TableHead>
+                      <TableHead className="text-right font-bold whitespace-nowrap">%</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {typeGroupData.slice(0, 10).map((tg) => (
                       <TableRow key={tg.typeGroup} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{tg.typeGroup}</TableCell>
-                        <TableCell className="text-right">{tg.grandTotal.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatM(tg.reserves)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="font-medium whitespace-nowrap">{tg.typeGroup}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{tg.grandTotal.toLocaleString()}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatM(tg.reserves)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
                           <Badge variant="outline" className="text-xs">
                             {((tg.grandTotal / totalOpenClaims) * 100).toFixed(1)}%
                           </Badge>
@@ -454,7 +454,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* RESERVES DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showReservesDrawer} onOpenChange={setShowReservesDrawer}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -486,18 +486,18 @@ export function ExecutiveCommandDashboardWrapper() {
           
           <div className="mt-6 space-y-6">
             {/* Reserve Summary */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
                 <p className="text-xs text-muted-foreground">Total Reserves</p>
-                <p className="text-2xl font-bold text-emerald-500">{formatM(totalReserves)}</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-500">{formatM(totalReserves)}</p>
               </div>
-              <div className="p-4 rounded-xl bg-muted/30 border">
+              <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Low Eval</p>
-                <p className="text-2xl font-bold">{formatM(totalLowEval)}</p>
+                <p className="text-xl sm:text-2xl font-bold">{formatM(totalLowEval)}</p>
               </div>
-              <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
+              <div className="p-3 sm:p-4 rounded-xl bg-warning/10 border border-warning/20">
                 <p className="text-xs text-warning">High Eval</p>
-                <p className="text-2xl font-bold text-warning">{formatM(totalHighEval)}</p>
+                <p className="text-xl sm:text-2xl font-bold text-warning">{formatM(totalHighEval)}</p>
               </div>
             </div>
 
@@ -530,21 +530,21 @@ export function ExecutiveCommandDashboardWrapper() {
             </div>
 
             {/* Reserve by Age */}
-            <div className="rounded-xl border">
+            <div className="rounded-xl border overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="font-bold">Age Bucket</TableHead>
-                    <TableHead className="text-right font-bold">Claims</TableHead>
-                    <TableHead className="text-right font-bold">Reserves</TableHead>
+                    <TableHead className="font-bold whitespace-nowrap">Age Bucket</TableHead>
+                    <TableHead className="text-right font-bold whitespace-nowrap">Claims</TableHead>
+                    <TableHead className="text-right font-bold whitespace-nowrap">Reserves</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.financials.byAge.map((age) => (
                     <TableRow key={age.age}>
-                      <TableCell className="font-medium">{age.age}</TableCell>
-                      <TableCell className="text-right">{age.claims.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{formatM(age.openReserves)}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{age.age}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{age.claims.toLocaleString()}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatM(age.openReserves)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -558,7 +558,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* DECISIONS PENDING DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showDecisionsDrawer} onOpenChange={setShowDecisionsDrawer}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -589,34 +589,34 @@ export function ExecutiveCommandDashboardWrapper() {
           <div className="mt-6 space-y-6">
             {/* Summary */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+              <div className="p-3 sm:p-4 rounded-xl bg-primary/10 border border-primary/20">
                 <p className="text-xs text-muted-foreground">Claims Pending</p>
-                <p className="text-3xl font-bold text-primary">{pendingDecisionsCount.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary">{pendingDecisionsCount.toLocaleString()}</p>
               </div>
-              <div className="p-4 rounded-xl bg-muted/30 border">
+              <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Total Exposure</p>
-                <p className="text-3xl font-bold">{formatM(pendingDecisionsReserves)}</p>
+                <p className="text-2xl sm:text-3xl font-bold">{formatM(pendingDecisionsReserves)}</p>
               </div>
             </div>
 
             {/* Claims requiring decisions */}
             {decisionsData?.claims && decisionsData.claims.length > 0 && (
-              <div>
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <h4 className="text-sm font-semibold mb-3">Top Claims by Exposure</h4>
-                <div className="rounded-xl border">
+                <div className="rounded-xl border min-w-[400px]">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        <TableHead className="font-bold">Claim</TableHead>
-                        <TableHead className="font-bold">State</TableHead>
-                        <TableHead className="text-right font-bold">Reserves</TableHead>
-                        <TableHead className="font-bold">Reason</TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">Claim</TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">State</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Reserves</TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">Reason</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {decisionsData.claims.slice(0, 15).map((claim, idx) => (
                         <TableRow key={idx} className="hover:bg-muted/30">
-                          <TableCell className="font-mono text-xs">
+                          <TableCell className="font-mono text-xs whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               {claim.claimNumber}
                               {claim.fatality && (
@@ -626,9 +626,9 @@ export function ExecutiveCommandDashboardWrapper() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{claim.state}</TableCell>
-                          <TableCell className="text-right font-medium">{formatK(claim.reserves)}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{claim.reason}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{claim.state}</TableCell>
+                          <TableCell className="text-right font-medium whitespace-nowrap">{formatK(claim.reserves)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{claim.reason}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -639,29 +639,29 @@ export function ExecutiveCommandDashboardWrapper() {
 
             {/* LOR Offers from Database */}
             {lorOffers.length > 0 && (
-              <div>
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <h4 className="text-sm font-semibold mb-3">Active LOR Offers</h4>
                 {loadingDrilldown ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="rounded-xl border">
+                  <div className="rounded-xl border min-w-[350px]">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="font-bold">Claim</TableHead>
-                          <TableHead className="text-right font-bold">Offer</TableHead>
-                          <TableHead className="font-bold">Expires</TableHead>
-                          <TableHead className="font-bold">Status</TableHead>
+                          <TableHead className="font-bold whitespace-nowrap">Claim</TableHead>
+                          <TableHead className="text-right font-bold whitespace-nowrap">Offer</TableHead>
+                          <TableHead className="font-bold whitespace-nowrap">Expires</TableHead>
+                          <TableHead className="font-bold whitespace-nowrap">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {lorOffers.slice(0, 10).map((offer) => (
                           <TableRow key={offer.id} className="hover:bg-muted/30">
-                            <TableCell className="font-mono text-xs">{offer.claim_number}</TableCell>
-                            <TableCell className="text-right font-medium">{formatK(offer.offer_amount)}</TableCell>
-                            <TableCell className="text-sm">{format(new Date(offer.expires_date), 'MMM d')}</TableCell>
+                            <TableCell className="font-mono text-xs whitespace-nowrap">{offer.claim_number}</TableCell>
+                            <TableCell className="text-right font-medium whitespace-nowrap">{formatK(offer.offer_amount)}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{format(new Date(offer.expires_date), 'MMM d')}</TableCell>
                             <TableCell>
                               <Badge variant={offer.status === 'accepted' ? 'default' : offer.status === 'expired' ? 'destructive' : 'secondary'} className="text-xs">
                                 {offer.status}
@@ -683,7 +683,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* CP1 DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showCP1Drawer} onOpenChange={setShowCP1Drawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -744,7 +744,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* NO EVAL DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showNoEvalDrawer} onOpenChange={setShowNoEvalDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -774,15 +774,15 @@ export function ExecutiveCommandDashboardWrapper() {
           
           <div className="mt-6 space-y-6">
             {/* Risk Summary */}
-            <div className="p-6 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20">
+            <div className="p-4 sm:p-6 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Claims Without Eval</p>
-                  <p className="text-4xl font-bold text-warning">{noEvalCount.toLocaleString()}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Claims Without Eval</p>
+                  <p className="text-2xl sm:text-4xl font-bold text-warning">{noEvalCount.toLocaleString()}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Exposure at Risk</p>
-                  <p className="text-4xl font-bold text-warning">{formatM(noEvalReserves)}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Exposure at Risk</p>
+                  <p className="text-2xl sm:text-4xl font-bold text-warning">{formatM(noEvalReserves)}</p>
                 </div>
               </div>
             </div>
@@ -820,7 +820,7 @@ export function ExecutiveCommandDashboardWrapper() {
       {/* AGED 365+ DRILLDOWN */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Sheet open={showAged365Drawer} onOpenChange={setShowAged365Drawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-4 sm:p-6">
           <SheetHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -852,13 +852,13 @@ export function ExecutiveCommandDashboardWrapper() {
           <div className="mt-6 space-y-6">
             {/* Aged Summary */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 rounded-xl bg-muted/30 border">
+              <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Aged 365+ Claims</p>
-                <p className="text-3xl font-bold text-red-600">{aged365Plus.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{aged365Plus.toLocaleString()}</p>
               </div>
-              <div className="p-4 rounded-xl bg-muted/30 border">
+              <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border">
                 <p className="text-xs text-muted-foreground">Reserve Exposure</p>
-                <p className="text-3xl font-bold text-red-600">{formatM(aged365Reserves)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{formatM(aged365Reserves)}</p>
               </div>
             </div>
 
@@ -875,7 +875,7 @@ export function ExecutiveCommandDashboardWrapper() {
             </div>
 
             {/* Aged Claims from Database */}
-            <div>
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
               <h4 className="text-sm font-semibold mb-3">Aged Claims Detail</h4>
               {loadingDrilldown ? (
                 <div className="flex items-center justify-center py-8">
