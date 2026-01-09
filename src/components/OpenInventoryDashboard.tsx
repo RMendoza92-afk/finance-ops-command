@@ -1598,6 +1598,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Days Open': c.days,
           'Age Bucket': c.ageBucket,
           'Team': c.teamGroup,
+          'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
           'Flags Present': flags.join(' | '),
           'BI Status': c.biStatus,
@@ -1608,7 +1609,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
         highRiskSheet['!cols'] = [
           { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
-          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
+          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
         ];
         XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
       }
@@ -1638,6 +1639,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Age Bucket': c.ageBucket,
           'Type Group': c.typeGroup,
           'Team': c.teamGroup,
+          'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
           'BI Status': c.biStatus,
           'Fatality': c.fatality ? 'YES' : '',
@@ -4765,6 +4767,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                               'Age Bucket': c.ageBucket,
                               'Type Group': c.typeGroup,
                               Team: c.teamGroup,
+                              'Total Paid': c.totalPaid,
                               'Open Reserves': c.openReserves,
                               'Overall CP1': c.overallCP1,
                               'BI Status': c.biStatus,

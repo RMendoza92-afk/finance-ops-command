@@ -13,6 +13,7 @@ export interface CP1CsvClaim {
   typeGroup: string;
   teamGroup: string;
   openReserves: number;
+  totalPaid: number;
   cp1Flag: string;
   overallCP1: string;
   biStatus: string;
@@ -194,6 +195,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const typeGroup = (r["Type Group"] || "").trim();
       const teamGroup = (r["Team Group"] || "").trim();
       const openReserves = parseCurrency(r["Open Reserves"]);
+      const totalPaid = parseCurrency(r["Total Paid"]);
 
       // CP1 flags (different exports sometimes vary slightly)
       const cp1Flag = (r["CP1 Claim Flag"] || "").trim();
@@ -210,6 +212,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         typeGroup,
         teamGroup,
         openReserves,
+        totalPaid,
         cp1Flag,
         overallCP1,
         biStatus,
