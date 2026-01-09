@@ -1581,19 +1581,23 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       ];
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(triggerFlagsData), 'Trigger Flags');
 
-      // Sheet 6: Raw Claims Data (BI/UM/UI) - for validation
+      // Sheet 6: Raw Claims Data (BI/UM/UI) - for validation (IN PROGRESS ONLY)
       if (data?.rawClaims && data.rawClaims.length > 0) {
         const extractTeamNumber = (teamGroup: string) => {
           const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
           return m?.[1] || '';
         };
 
+        const inProgressClaims = data.rawClaims.filter(
+          (c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress'
+        );
+
         const rawClaimsData = [
-          ['RAW CLAIMS DATA - BI/UM/UI (FILTERED NON-WORKABLE REMOVED)'],
-          [`Total Claims: ${data.rawClaims.length}`],
+          ['RAW CLAIMS DATA - BI/UM/UI (IN PROGRESS ONLY)'],
+          [`Total Claims: ${inProgressClaims.length}`],
           [],
           ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type', 'BI Status', 'Fatality', 'Surgery', 'Hospitalization', 'Meds>Limits', 'LOC', 'Agg Factors', 'Obj Injuries', 'Ped/Moto', 'Pregnancy', 'Life Care', 'Injections', 'EMS+Impact'],
-          ...data.rawClaims.map(claim => [
+          ...inProgressClaims.map(claim => [
             claim.claimNumber,
             claim.claimant,
             claim.coverage,
@@ -1628,9 +1632,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         XLSX.utils.book_append_sheet(workbook, rawClaimsSheet, 'Raw BI-UM-UI');
       }
 
-      // Sheet 7: Raw Claims Data (ALL coverages) - robust raw export
+      // Sheet 7: Raw Claims Data (ALL coverages) - robust raw export (IN PROGRESS ONLY)
       if (data?.allRawClaims && data.allRawClaims.length > 0) {
-        const allClaimsRows = data.allRawClaims.map(claim => ({
+        const inProgressAll = data.allRawClaims.filter(
+          (c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress'
+        );
+
+        const allClaimsRows = inProgressAll.map(claim => ({
           claimNumber: claim.claimNumber,
           claimant: claim.claimant,
           coverage: claim.coverage,
@@ -1662,7 +1670,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsRows);
         XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'Raw ALL');
 
-        // Bonus: CP1-only raw tab
+        // Bonus: CP1-only raw tab (still in-progress only)
         const cp1Only = allClaimsRows.filter(r => String(r.cp1Flag).toUpperCase() === 'YES');
         const cp1OnlySheet = XLSX.utils.json_to_sheet(cp1Only);
         XLSX.utils.book_append_sheet(workbook, cp1OnlySheet, 'Raw CP1 Only');
