@@ -1495,7 +1495,17 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const XLSX = await import('xlsx');
       const workbook = XLSX.utils.book_new();
 
-      // Sheet 1: Executive Summary
+      // IMPORTANT: CP1 Excel must use ONLY the CP1 CSV data source.
+      // Shadow the outer CP1_DATA to avoid "used before declaration" and prevent accidental mixing.
+      const CP1_DATA = cp1BoxData?.cp1Data || {
+        biByAge: [],
+        biTotal: { noCP: 0, yes: 0, total: 0 },
+        byCoverage: [],
+        totals: { noCP: 0, yes: 0, grandTotal: 0 },
+        cp1Rate: '0.0',
+        byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
+      };
+
       const summaryData = [
         ['CP1 ANALYSIS (CSV ONLY)'],
         [`Source: public/data/cp1-analysis.csv`],
@@ -1604,7 +1614,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     } finally {
       setGeneratingCP1Excel(false);
     }
-  }, [CP1_DATA, cp1BoxData]);
+  }, [cp1BoxData]);
 
   // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1)
   const generateCombinedBoardPackage = useCallback(async () => {
