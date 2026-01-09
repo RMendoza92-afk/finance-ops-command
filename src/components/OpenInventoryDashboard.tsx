@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react"; // Updated
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData, MultiPackSummary, MultiPackGroup } from "@/hooks/useOpenExposureData";
+import { useCP1AnalysisCsv } from "@/hooks/useCP1AnalysisCsv";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { getCurrentMonthlySpend } from "@/data/monthlySpendData";
@@ -103,6 +104,8 @@ interface OpenInventoryDashboardProps {
 
 export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: OpenInventoryDashboardProps) {
   const { data: rawData, loading, error } = useOpenExposureData();
+  // CP1 Analysis "box" uses ONLY the dedicated CP1 CSV (public/data/cp1-analysis.csv)
+  const { data: cp1BoxData, loading: cp1BoxLoading, error: cp1BoxError } = useCP1AnalysisCsv();
   const { data: solData } = useSOLBreachAnalysis();
   const { data: decisionsData } = useDecisionsPending();
   const { offers: lorOffers, stats: lorStats, refetch: refetchLOR } = useLOROffers();
@@ -1165,13 +1168,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     lastYear: { cp1Rate: 23.4, totalClaims: 24150, cp1Claims: 5651 },
   }), []);
 
-  // Generate Board-Ready Executive PDF for CP1 Analysis - Dark Theme with Logo
+  // Generate Board-Ready Executive PDF for CP1 Analysis - Dark Theme with Logo (THIS CSV ONLY)
   const generateCP1PDF = useCallback(async () => {
     setGeneratingCP1PDF(true);
     try {
       const { jsPDF } = await import('jspdf');
       const { default: loyaLogo } = await import('@/assets/fli_logo.jpg');
-      const { getReportContext, formatCurrency } = await import('@/lib/executivePDFFramework');
+      const { getReportContext } = await import('@/lib/executivePDFFramework');
       
       const doc = new jsPDF({ orientation: 'portrait' });
       const pw = doc.internal.pageSize.getWidth();
@@ -1196,8 +1199,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         gold: [212, 175, 55] as [number, number, number],
       };
 
-      // Use the latest computed CP1 data (avoid stale closure during initial load)
-      const CP1_DATA = data?.cp1Data || {
+      // Use CP1 data from the CP1 CSV ONLY
+      const CP1_DATA = cp1BoxData?.cp1Data || {
         biByAge: [],
         biTotal: { noCP: 0, yes: 0, total: 0 },
         byCoverage: [],
@@ -1206,10 +1209,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
       };
 
-      // CALCULATIONS - keep the same baseline as the dashboard trend series (~27k open exposures)
+      // CALCULATIONS (CSV baseline)
       const cp1ClaimCount = CP1_DATA.totals?.yes ?? 0;
-      const baselineTotal = historicalMetrics.lastWeek.totalClaims || 0;
-      const denom = baselineTotal > 0 ? baselineTotal : (CP1_DATA.totals?.grandTotal ?? 0);
+      const denom = CP1_DATA.totals?.grandTotal ?? 0;
       const cp1RateOfInventory = denom > 0 ? ((cp1ClaimCount / denom) * 100).toFixed(1) : CP1_DATA.cp1Rate;
 
       const currentCP1Rate = parseFloat(cp1RateOfInventory);
@@ -1484,9 +1486,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     } finally {
       setGeneratingCP1PDF(false);
     }
-  }, [historicalMetrics, data]);
+  }, [historicalMetrics, cp1BoxData]);
 
-  // Generate Excel for CP1 Analysis
+  // Generate Excel for CP1 Analysis (THIS CSV ONLY)
   const generateCP1Excel = useCallback(async () => {
     setGeneratingCP1Excel(true);
     try {
@@ -1495,7 +1497,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       // Sheet 1: Executive Summary
       const summaryData = [
-        ['CP1 ANALYSIS'],
+        ['CP1 ANALYSIS (CSV ONLY)'],
+        [`Source: public/data/cp1-analysis.csv`],
         [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
         [],
         ['EXECUTIVE SUMMARY'],
@@ -1504,10 +1507,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ['CP1', CP1_DATA.totals.yes],
         ['No CP', CP1_DATA.totals.noCP],
         ['CP1 Rate', `${CP1_DATA.cp1Rate}%`],
-        ['BI CP1 Rate', '34.2%'],
       ];
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summaryData), 'Executive Summary');
 
       // Sheet 2: BI Age Breakdown
       const biAgeData = [
@@ -1519,12 +1520,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           row.noCP,
           row.yes,
           row.total,
-          `${((row.yes / row.total) * 100).toFixed(1)}%`
+          row.total > 0 ? `${((row.yes / row.total) * 100).toFixed(1)}%` : '0.0%'
         ]),
-        ['BI Total', CP1_DATA.biTotal.noCP, CP1_DATA.biTotal.yes, CP1_DATA.biTotal.total, '34.2%'],
+        ['BI Total', CP1_DATA.biTotal.noCP, CP1_DATA.biTotal.yes, CP1_DATA.biTotal.total, CP1_DATA.biTotal.total > 0 ? `${((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)}%` : '0.0%'],
       ];
-      const biAgeSheet = XLSX.utils.aoa_to_sheet(biAgeData);
-      XLSX.utils.book_append_sheet(workbook, biAgeSheet, 'BI Age Breakdown');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(biAgeData), 'BI Age Breakdown');
 
       // Sheet 3: Coverage Summary
       const coverageData = [
@@ -1540,30 +1540,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         ]),
         ['GRAND TOTAL', CP1_DATA.totals.noCP, CP1_DATA.totals.yes, CP1_DATA.totals.grandTotal, `${CP1_DATA.cp1Rate}%`],
       ];
-      const coverageSheet = XLSX.utils.aoa_to_sheet(coverageData);
-      XLSX.utils.book_append_sheet(workbook, coverageSheet, 'Coverage Summary');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(coverageData), 'Coverage Summary');
 
-      // Sheet 4: Key Insights
-      const highestCoverage = [...CP1_DATA.byCoverage].sort((a, b) => b.cp1Rate - a.cp1Rate)[0];
-      const aged365Rate = CP1_DATA.biByAge[0]?.total > 0 ? ((CP1_DATA.biByAge[0].yes / CP1_DATA.biByAge[0].total) * 100).toFixed(1) : '0.0';
-      const under60Rate = CP1_DATA.biByAge[3]?.total > 0 ? ((CP1_DATA.biByAge[3].yes / CP1_DATA.biByAge[3].total) * 100).toFixed(1) : '0.0';
-      const biCP1Rate = CP1_DATA.biTotal.total > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1) : '0.0';
-      const insightsData = [
-        ['KEY INSIGHTS'],
-        [],
-        [`BI CP1 rate is ${biCP1Rate}% (${CP1_DATA.biTotal.yes.toLocaleString()} of ${CP1_DATA.biTotal.total.toLocaleString()} claims)`],
-        [`Aged 365+ BI claims have highest CP1 rate at ${aged365Rate}% (${CP1_DATA.biByAge[0]?.yes?.toLocaleString() || 0} claims)`],
-        [`${highestCoverage?.coverage || 'N/A'} coverage has highest CP1 rate at ${highestCoverage?.cp1Rate?.toFixed(1) || '0.0'}% (${highestCoverage?.yes || 0} of ${highestCoverage?.total || 0} claims)`],
-        [`Under 60 Days BI claims have lowest CP1 rate at ${under60Rate}% - early resolution opportunity`],
-      ];
-      const insightsSheet = XLSX.utils.aoa_to_sheet(insightsData);
-      XLSX.utils.book_append_sheet(workbook, insightsSheet, 'Key Insights');
-
-      // Sheet 5: CP1 Trigger Flags Summary
-      const fs = data?.fatalitySummary;
+      // Sheet 4: CP1 Trigger Flags Summary (CSV only)
+      const fs = cp1BoxData?.fatalitySummary;
       const triggerFlagsData = [
-        ['CP1 TRIGGER FLAGS SUMMARY'],
-        [`Data Date: ${data?.dataDate || ''}`],
+        ['CP1 TRIGGER FLAGS SUMMARY (CSV ONLY)'],
+        [`Data Date: ${cp1BoxData?.dataDate || ''}`],
         [],
         ['Flag', 'Count'],
         ['Fatality', fs?.fatalityCount || 0],
@@ -1581,110 +1564,47 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       ];
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(triggerFlagsData), 'Trigger Flags');
 
-      // Sheet 6: Raw Claims Data (BI/UM/UI) - for validation (IN PROGRESS ONLY)
-      if (data?.rawClaims && data.rawClaims.length > 0) {
-        const extractTeamNumber = (teamGroup: string) => {
-          const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
-          return m?.[1] || '';
-        };
+      // Sheet 5: Raw Claims Data (THIS CSV ONLY) - In Progress ONLY
+      const raw = cp1BoxData?.rawClaims || [];
+      const inProgress = raw.filter((c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress');
 
-        const inProgressClaims = data.rawClaims.filter(
-          (c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress'
-        );
+      const rawRows = inProgress.map((c) => ({
+        claimNumber: c.claimNumber,
+        claimant: c.claimant,
+        coverage: c.coverage,
+        days: c.days,
+        ageBucket: c.ageBucket,
+        typeGroup: c.typeGroup,
+        teamGroup: c.teamGroup,
+        openReserves: c.openReserves,
+        cp1ClaimFlag: c.cp1Flag,
+        overallCP1: c.overallCP1,
+        biStatus: c.biStatus,
+        fatality: c.fatality ? 'YES' : '',
+        surgery: c.surgery ? 'YES' : '',
+        hospitalization: c.hospitalization ? 'YES' : '',
+        medsVsLimits: c.medsVsLimits ? 'YES' : '',
+        lossOfConsciousness: c.lossOfConsciousness ? 'YES' : '',
+        aggravatingFactors: c.aggravatingFactors ? 'YES' : '',
+        objectiveInjuries: c.objectiveInjuries ? 'YES' : '',
+        pedestrianMotorcyclist: c.pedestrianMotorcyclist ? 'YES' : '',
+        pregnancy: c.pregnancy ? 'YES' : '',
+        lifeCarePlanner: c.lifeCarePlanner ? 'YES' : '',
+        injections: c.injections ? 'YES' : '',
+        emsHeavyImpact: c.emsHeavyImpact ? 'YES' : '',
+      }));
 
-        const rawClaimsData = [
-          ['RAW CLAIMS DATA - BI/UM/UI (IN PROGRESS ONLY)'],
-          [`Total Claims: ${inProgressClaims.length}`],
-          [],
-          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type', 'BI Status', 'Fatality', 'Surgery', 'Hospitalization', 'Meds>Limits', 'LOC', 'Agg Factors', 'Obj Injuries', 'Ped/Moto', 'Pregnancy', 'Life Care', 'Injections', 'EMS+Impact'],
-          ...inProgressClaims.map(claim => [
-            claim.claimNumber,
-            claim.claimant,
-            claim.coverage,
-            claim.days,
-            claim.ageBucket,
-            claim.typeGroup,
-            claim.teamGroup,
-            extractTeamNumber(claim.teamGroup),
-            claim.openReserves,
-            claim.lowEval,
-            claim.highEval,
-            claim.cp1Flag,
-            claim.overallCP1,
-            claim.evaluationPhase,
-            claim.demandType,
-            claim.biStatus,
-            claim.fatality ? 'YES' : '',
-            claim.surgery ? 'YES' : '',
-            claim.hospitalization ? 'YES' : '',
-            claim.medsVsLimits ? 'YES' : '',
-            claim.lossOfConsciousness ? 'YES' : '',
-            claim.aggravatingFactors ? 'YES' : '',
-            claim.objectiveInjuries ? 'YES' : '',
-            claim.pedestrianMotorcyclist ? 'YES' : '',
-            claim.pregnancy ? 'YES' : '',
-            claim.lifeCarePlanner ? 'YES' : '',
-            claim.injections ? 'YES' : '',
-            claim.emsHeavyImpact ? 'YES' : '',
-          ])
-        ];
-        const rawClaimsSheet = XLSX.utils.aoa_to_sheet(rawClaimsData);
-        XLSX.utils.book_append_sheet(workbook, rawClaimsSheet, 'Raw BI-UM-UI');
-      }
-
-      // Sheet 7: Raw Claims Data (ALL coverages) - robust raw export (IN PROGRESS ONLY)
-      if (data?.allRawClaims && data.allRawClaims.length > 0) {
-        const inProgressAll = data.allRawClaims.filter(
-          (c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress'
-        );
-
-        const allClaimsRows = inProgressAll.map(claim => ({
-          claimNumber: claim.claimNumber,
-          claimant: claim.claimant,
-          coverage: claim.coverage,
-          days: claim.days,
-          ageBucket: claim.ageBucket,
-          typeGroup: claim.typeGroup,
-          teamGroup: claim.teamGroup,
-          openReserves: claim.openReserves,
-          lowEval: claim.lowEval,
-          highEval: claim.highEval,
-          cp1Flag: claim.cp1Flag,
-          overallCP1: claim.overallCP1,
-          evaluationPhase: claim.evaluationPhase,
-          demandType: claim.demandType,
-          biStatus: claim.biStatus,
-          fatality: claim.fatality ? 'YES' : '',
-          surgery: claim.surgery ? 'YES' : '',
-          hospitalization: claim.hospitalization ? 'YES' : '',
-          medsVsLimits: claim.medsVsLimits ? 'YES' : '',
-          lossOfConsciousness: claim.lossOfConsciousness ? 'YES' : '',
-          aggravatingFactors: claim.aggravatingFactors ? 'YES' : '',
-          objectiveInjuries: claim.objectiveInjuries ? 'YES' : '',
-          pedestrianMotorcyclist: claim.pedestrianMotorcyclist ? 'YES' : '',
-          pregnancy: claim.pregnancy ? 'YES' : '',
-          lifeCarePlanner: claim.lifeCarePlanner ? 'YES' : '',
-          injections: claim.injections ? 'YES' : '',
-          emsHeavyImpact: claim.emsHeavyImpact ? 'YES' : '',
-        }));
-        const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsRows);
-        XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'Raw ALL');
-
-        // Bonus: CP1-only raw tab (still in-progress only)
-        const cp1Only = allClaimsRows.filter(r => String(r.cp1Flag).toUpperCase() === 'YES');
-        const cp1OnlySheet = XLSX.utils.json_to_sheet(cp1Only);
-        XLSX.utils.book_append_sheet(workbook, cp1OnlySheet, 'Raw CP1 Only');
-      }
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rawRows), 'Raw (In Progress Only)');
 
       XLSX.writeFile(workbook, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-      toast.success('CP1 Analysis Excel generated with raw data');
+      toast.success('CP1 Analysis Excel generated (CSV only)');
     } catch (err) {
       console.error('Error generating Excel:', err);
       toast.error('Failed to generate Excel');
     } finally {
       setGeneratingCP1Excel(false);
     }
-  }, [data]);
+  }, [CP1_DATA, cp1BoxData]);
 
   // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1)
   const generateCombinedBoardPackage = useCallback(async () => {
@@ -1877,15 +1797,15 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     closed: 0,
   }, [data]);
 
-  // Dynamic CP1 data from CSV - single source of truth
-  const CP1_DATA = useMemo(() => data?.cp1Data || {
+  // Dynamic CP1 data for the CP1 Analysis "box" — MUST come ONLY from the dedicated CP1 CSV
+  const CP1_DATA = useMemo(() => cp1BoxData?.cp1Data || {
     biByAge: [],
     biTotal: { noCP: 0, yes: 0, total: 0 },
     byCoverage: [],
     totals: { noCP: 0, yes: 0, grandTotal: 0 },
     cp1Rate: '0.0',
     byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
-  }, [data]);
+  }, [cp1BoxData]);
 
   // CP1 rate should be comparable to the same baseline used in the original build (~27k open exposures).
   // We use the historical baseline total until a full-inventory raw feed is available.
