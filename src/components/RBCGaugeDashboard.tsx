@@ -213,25 +213,113 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     return [...new Set(triangleData.filter(d => d.metric_type === 'loss_ratio').map(d => d.accident_year))].sort((a, b) => b - a);
   }, [triangleData]);
 
+  // Calculate LDF (Loss Development Factors) - Age-to-Age and Cumulative
+  const ldfData = useMemo(() => {
+    const lossRatioData = triangleData.filter(d => d.metric_type === 'loss_ratio');
+    const years = [...new Set(lossRatioData.map(d => d.accident_year))].sort((a, b) => a - b);
+    const allMonths = [...new Set(lossRatioData.map(d => d.development_months))].sort((a, b) => a - b);
+    
+    if (allMonths.length < 2) return { ataFactors: [], cdfFactors: [], allMonths: [], selectedATA: [], selectedCDF: [] };
+
+    // Build triangle matrix: triangleMatrix[year][monthIndex] = loss ratio
+    const triangleMatrix: Record<number, Record<number, number>> = {};
+    years.forEach(year => {
+      triangleMatrix[year] = {};
+      lossRatioData
+        .filter(d => d.accident_year === year)
+        .forEach(d => {
+          const monthIdx = allMonths.indexOf(d.development_months);
+          if (monthIdx >= 0) triangleMatrix[year][monthIdx] = d.amount;
+        });
+    });
+
+    // Calculate Age-to-Age factors for each development period transition
+    const ataFactors: { from: number; to: number; factors: (number | null)[]; avg: number | null; wtdAvg: number | null }[] = [];
+    
+    for (let i = 0; i < allMonths.length - 1; i++) {
+      const fromMonth = allMonths[i];
+      const toMonth = allMonths[i + 1];
+      const factors: (number | null)[] = [];
+      let sumFactors = 0;
+      let countFactors = 0;
+      let weightedSum = 0;
+      let weightSum = 0;
+
+      years.forEach(year => {
+        const fromVal = triangleMatrix[year]?.[i];
+        const toVal = triangleMatrix[year]?.[i + 1];
+        if (fromVal && toVal && fromVal > 0) {
+          const factor = toVal / fromVal;
+          factors.push(factor);
+          sumFactors += factor;
+          countFactors++;
+          // Weighted by the "from" value
+          weightedSum += factor * fromVal;
+          weightSum += fromVal;
+        } else {
+          factors.push(null);
+        }
+      });
+
+      ataFactors.push({
+        from: fromMonth,
+        to: toMonth,
+        factors,
+        avg: countFactors > 0 ? sumFactors / countFactors : null,
+        wtdAvg: weightSum > 0 ? weightedSum / weightSum : null,
+      });
+    }
+
+    // Selected ATA factors (use weighted average, fallback to simple average)
+    const selectedATA = ataFactors.map(ata => ata.wtdAvg ?? ata.avg ?? 1.000);
+
+    // Calculate Cumulative Development Factors (from each period to ultimate)
+    // CDF at period i = product of all ATA factors from i to ultimate
+    const selectedCDF: number[] = [];
+    for (let i = 0; i < selectedATA.length; i++) {
+      let cdf = 1;
+      for (let j = i; j < selectedATA.length; j++) {
+        cdf *= selectedATA[j];
+      }
+      selectedCDF.push(cdf);
+    }
+    // Add 1.000 for the ultimate period
+    selectedCDF.push(1.000);
+
+    return { ataFactors, cdfFactors: selectedCDF, allMonths, selectedATA, selectedCDF, years };
+  }, [triangleData]);
+
   // Build comprehensive triangle table for exports
   const triangleTableData = useMemo(() => {
     const lossRatioData = triangleData.filter(d => d.metric_type === 'loss_ratio');
     const years = [...new Set(lossRatioData.map(d => d.accident_year))].sort((a, b) => a - b);
     const allMonths = [...new Set(lossRatioData.map(d => d.development_months))].sort((a, b) => a - b);
     
+    // Include LDF data in export
+    const ldfRows: (string | number)[][] = [];
+    if (ldfData.ataFactors.length > 0) {
+      ldfRows.push(['', ...allMonths.slice(0, -1).map((m, i) => `${m}→${allMonths[i + 1]}M`)]);
+      ldfRows.push(['Wtd Avg ATA', ...ldfData.selectedATA.map(f => f.toFixed(4))]);
+      ldfRows.push(['Selected CDF', ...ldfData.selectedCDF.slice(0, -1).map(f => f.toFixed(4)), '1.0000']);
+    }
+
     return {
       columns: ['Accident Year', ...allMonths.map(m => `${m}M`)],
-      rows: years.map(year => {
-        const yearData = lossRatioData.filter(d => d.accident_year === year);
-        const row: (string | number)[] = [year];
-        allMonths.forEach(month => {
-          const point = yearData.find(d => d.development_months === month);
-          row.push(point ? `${point.amount.toFixed(2)}%` : '—');
-        });
-        return row;
-      })
+      rows: [
+        ...years.map(year => {
+          const yearData = lossRatioData.filter(d => d.accident_year === year);
+          const row: (string | number)[] = [year];
+          allMonths.forEach(month => {
+            const point = yearData.find(d => d.development_months === month);
+            row.push(point ? `${point.amount.toFixed(2)}%` : '—');
+          });
+          return row;
+        }),
+        [], // Empty row separator
+        ...ldfRows
+      ]
     };
-  }, [triangleData]);
+  }, [triangleData, ldfData]);
 
   // Export functions
   const handleExportPDF = async () => {
@@ -768,6 +856,103 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                 </tbody>
               </table>
             </div>
+            {/* LDF Table */}
+            {ldfData.ataFactors.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-border">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Loss Development Factors (LDF)
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Period</th>
+                        {ldfData.ataFactors.map((ata, i) => (
+                          <th key={i} className="text-right py-2 px-3 font-medium text-muted-foreground">
+                            {ata.from}→{ata.to}M
+                          </th>
+                        ))}
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Ultimate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Age-to-Age factors by year */}
+                      {ldfData.years?.slice().reverse().slice(0, 5).map((year, yi) => (
+                        <tr key={year} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-2 px-3 font-medium">AY {year}</td>
+                          {ldfData.ataFactors.map((ata, i) => (
+                            <td key={i} className="text-right py-2 px-3 tabular-nums">
+                              {ata.factors[ldfData.years!.indexOf(year)] !== null ? (
+                                <span className={cn(
+                                  ata.factors[ldfData.years!.indexOf(year)]! > 1.1 ? 'text-orange-500' :
+                                  ata.factors[ldfData.years!.indexOf(year)]! > 1.05 ? 'text-yellow-500' : 'text-emerald-500'
+                                )}>
+                                  {ata.factors[ldfData.years!.indexOf(year)]!.toFixed(4)}
+                                </span>
+                              ) : '—'}
+                            </td>
+                          ))}
+                          <td className="text-right py-2 px-3 tabular-nums text-muted-foreground">—</td>
+                        </tr>
+                      ))}
+                      {/* Separator */}
+                      <tr className="border-b-2 border-primary/30">
+                        <td colSpan={ldfData.ataFactors.length + 2} className="py-1"></td>
+                      </tr>
+                      {/* Simple Average */}
+                      <tr className="border-b border-border/50 bg-muted/20">
+                        <td className="py-2 px-3 font-medium text-muted-foreground">Simple Avg</td>
+                        {ldfData.ataFactors.map((ata, i) => (
+                          <td key={i} className="text-right py-2 px-3 tabular-nums">
+                            {ata.avg !== null ? ata.avg.toFixed(4) : '—'}
+                          </td>
+                        ))}
+                        <td className="text-right py-2 px-3 tabular-nums">1.0000</td>
+                      </tr>
+                      {/* Weighted Average */}
+                      <tr className="border-b border-border/50 bg-muted/20">
+                        <td className="py-2 px-3 font-medium text-muted-foreground">Wtd Avg</td>
+                        {ldfData.ataFactors.map((ata, i) => (
+                          <td key={i} className="text-right py-2 px-3 tabular-nums font-medium">
+                            {ata.wtdAvg !== null ? ata.wtdAvg.toFixed(4) : '—'}
+                          </td>
+                        ))}
+                        <td className="text-right py-2 px-3 tabular-nums font-medium">1.0000</td>
+                      </tr>
+                      {/* Selected ATA */}
+                      <tr className="border-b border-border bg-primary/10">
+                        <td className="py-2 px-3 font-semibold">Selected ATA</td>
+                        {ldfData.selectedATA.map((factor, i) => (
+                          <td key={i} className="text-right py-2 px-3 tabular-nums font-bold text-primary">
+                            {factor.toFixed(4)}
+                          </td>
+                        ))}
+                        <td className="text-right py-2 px-3 tabular-nums font-bold text-primary">1.0000</td>
+                      </tr>
+                      {/* Cumulative Development Factors */}
+                      <tr className="bg-primary/5">
+                        <td className="py-2 px-3 font-semibold">Cumulative CDF</td>
+                        {ldfData.selectedCDF.slice(0, -1).map((cdf, i) => (
+                          <td key={i} className="text-right py-2 px-3 tabular-nums font-bold">
+                            <span className={cn(
+                              cdf > 1.15 ? 'text-orange-500' :
+                              cdf > 1.05 ? 'text-yellow-500' : 'text-emerald-500'
+                            )}>
+                              {cdf.toFixed(4)}
+                            </span>
+                          </td>
+                        ))}
+                        <td className="text-right py-2 px-3 tabular-nums font-bold text-emerald-500">1.0000</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  ATA = Age-to-Age Factor (link ratio) • CDF = Cumulative Development Factor (to ultimate) • Selected uses weighted average
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
