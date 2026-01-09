@@ -4638,7 +4638,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               <div className="p-4 bg-success/10 rounded-lg border border-success/30">
                 <p className="text-xs text-muted-foreground uppercase">CP1</p>
                 <p className="text-2xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}</p>
-                <p className="text-xs text-success">{CP1_DATA.cp1Rate}% of claims</p>
               </div>
               <div className="p-4 bg-secondary/50 rounded-lg border border-border">
                 <p className="text-xs text-muted-foreground uppercase">Total Claims</p>
@@ -4646,102 +4645,113 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
             </div>
 
-            {/* CP1 Trigger Flags Breakdown - Sorted by count descending */}
+            {/* CP1 Trigger Flags Breakdown */}
             <div>
               <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 CP1 Trigger Flags
               </h4>
               <p className="text-[11px] text-muted-foreground mb-2">Sorted by count • Click any flag to export claims</p>
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {(() => {
                   // Use cp1BoxData for flags (CP1 CSV only)
                   const fs = cp1BoxData?.fatalitySummary;
                   const flagsList = [
-                    { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', critical: true },
-                    { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', critical: true },
                     { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', critical: false },
                     { label: 'Meds > Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', critical: true },
-                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
-                    { label: 'Aggravating Factors', key: 'aggravatingFactors', count: fs?.aggravatingFactorsCount || 0, icon: '⚠️', critical: true },
-                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
                     { label: 'Ped/Moto/Bicyclist', key: 'pedestrianMotorcyclist', count: fs?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: true },
+                    { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', critical: true },
+                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
+                    { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', critical: true },
                     { label: 'Pregnancy', key: 'pregnancy', count: fs?.pregnancyCount || 0, icon: '🤰', critical: true },
                     { label: 'Life Care Planner', key: 'lifeCarePlanner', count: fs?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
+                    { label: 'Aggravating Factors', key: 'aggravatingFactors', count: fs?.aggravatingFactorsCount || 0, icon: '⚠️', critical: true },
+                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
                     { label: 'Injections', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', critical: false },
                     { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', critical: false },
                   ];
-                  // Sort by count descending
-                  return flagsList
+
+                  // Hide zero-count flags to avoid implying data changed
+                  const nonZeroFlags = flagsList.filter((f) => f.count > 0);
+
+                  // Sort by count descending (display only)
+                  return nonZeroFlags
                     .sort((a, b) => b.count - a.count)
                     .map((flag) => (
-                    <div 
-                      key={flag.label} 
-                      className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
-                      onClick={() => {
-                        if (flag.count === 0) {
-                          toast.info(`No claims with ${flag.label} flag`);
-                          return;
-                        }
-                        // Export from cp1BoxData rawClaims
-                        import('xlsx').then((XLSX) => {
-                          const allClaims = cp1BoxData?.rawClaims || [];
-                          let filteredClaims = allClaims.filter(c => {
-                            switch (flag.key) {
-                              case 'fatality': return c.fatality;
-                              case 'surgery': return c.surgery;
-                              case 'hospitalization': return c.hospitalization;
-                              case 'medsVsLimits': return c.medsVsLimits;
-                              case 'lossOfConsciousness': return c.lossOfConsciousness;
-                              case 'aggravatingFactors': return c.aggravatingFactors;
-                              case 'objectiveInjuries': return c.objectiveInjuries;
-                              case 'pedestrianMotorcyclist': return c.pedestrianMotorcyclist;
-                              case 'pregnancy': return c.pregnancy;
-                              case 'lifeCarePlanner': return c.lifeCarePlanner;
-                              case 'injections': return c.injections;
-                              case 'emsHeavyImpact': return c.emsHeavyImpact;
-                              default: return false;
-                            }
+                      <div
+                        key={flag.label}
+                        className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${flag.critical ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
+                        onClick={() => {
+                          import('xlsx').then((XLSX) => {
+                            const allClaims = cp1BoxData?.rawClaims || [];
+                            const filteredClaims = allClaims.filter((c) => {
+                              switch (flag.key) {
+                                case 'fatality':
+                                  return c.fatality;
+                                case 'surgery':
+                                  return c.surgery;
+                                case 'hospitalization':
+                                  return c.hospitalization;
+                                case 'medsVsLimits':
+                                  return c.medsVsLimits;
+                                case 'lossOfConsciousness':
+                                  return c.lossOfConsciousness;
+                                case 'aggravatingFactors':
+                                  return c.aggravatingFactors;
+                                case 'objectiveInjuries':
+                                  return c.objectiveInjuries;
+                                case 'pedestrianMotorcyclist':
+                                  return c.pedestrianMotorcyclist;
+                                case 'pregnancy':
+                                  return c.pregnancy;
+                                case 'lifeCarePlanner':
+                                  return c.lifeCarePlanner;
+                                case 'injections':
+                                  return c.injections;
+                                case 'emsHeavyImpact':
+                                  return c.emsHeavyImpact;
+                                default:
+                                  return false;
+                              }
+                            });
+
+                            const rows = filteredClaims.map((c) => ({
+                              'Claim #': c.claimNumber,
+                              Claimant: c.claimant,
+                              Coverage: c.coverage,
+                              'Days Open': c.days,
+                              'Age Bucket': c.ageBucket,
+                              'Type Group': c.typeGroup,
+                              Team: c.teamGroup,
+                              'Open Reserves': c.openReserves,
+                              'Overall CP1': c.overallCP1,
+                              'BI Status': c.biStatus,
+                            }));
+
+                            const ws = XLSX.utils.json_to_sheet(rows);
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, `${flag.label} Claims`);
+                            XLSX.writeFile(wb, `CP1_${flag.key}_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                            toast.success(`Exported ${filteredClaims.length} ${flag.label} claims`);
                           });
-                          
-                          const rows = filteredClaims.map(c => ({
-                            'Claim #': c.claimNumber,
-                            'Claimant': c.claimant,
-                            'Coverage': c.coverage,
-                            'Days Open': c.days,
-                            'Age Bucket': c.ageBucket,
-                            'Type Group': c.typeGroup,
-                            'Team': c.teamGroup,
-                            'Open Reserves': c.openReserves,
-                            'Overall CP1': c.overallCP1,
-                            'BI Status': c.biStatus,
-                          }));
-                          
-                          const ws = XLSX.utils.json_to_sheet(rows);
-                          const wb = XLSX.utils.book_new();
-                          XLSX.utils.book_append_sheet(wb, ws, `${flag.label} Claims`);
-                          XLSX.writeFile(wb, `CP1_${flag.key}_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
-                          toast.success(`Exported ${filteredClaims.length} ${flag.label} claims`);
-                        });
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs">{flag.icon}</span>
-                          <span className="text-[10px] text-muted-foreground truncate">{flag.label}</span>
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs">{flag.icon}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">{flag.label}</span>
+                          </div>
+                          <Download className="h-3 w-3 text-muted-foreground opacity-50" />
                         </div>
-                        <Download className="h-3 w-3 text-muted-foreground opacity-50" />
+                        <p className={`text-base font-bold ${flag.critical ? 'text-destructive' : 'text-foreground'}`}>{flag.count.toLocaleString()}</p>
                       </div>
-                      <p className={`text-base font-bold ${flag.critical && flag.count > 0 ? 'text-destructive' : 'text-foreground'}`}>
-                        {flag.count.toLocaleString()}
-                      </p>
-                    </div>
-                  ));
+                    ));
                 })()}
               </div>
             </div>
 
-            {/* Flags by Age Chart */}
+            {/* Flags by Age Chart (top flags only, computed from same CP1 CSV) */}
             <div>
               <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-primary" />
@@ -4749,68 +4759,83 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </h4>
               <div className="h-56 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
+                  <BarChart
                     data={(() => {
                       const rawClaims = cp1BoxData?.rawClaims || [];
+                      const norm = (s: unknown) => String(s ?? '').trim().toLowerCase();
+
                       const ageOrder = ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'];
-                      
-                      const flagsByAge = ageOrder.map(age => {
-                        const claimsInAge = rawClaims.filter(c => c.ageBucket === age);
-                        return {
-                          age: age.replace(' Days', ''),
-                          fatality: claimsInAge.filter(c => c.fatality).length,
-                          surgery: claimsInAge.filter(c => c.surgery).length,
-                          hospitalization: claimsInAge.filter(c => c.hospitalization).length,
-                          medsVsLimits: claimsInAge.filter(c => c.medsVsLimits).length,
-                          lossOfConsciousness: claimsInAge.filter(c => c.lossOfConsciousness).length,
+                      const ageKeys = ageOrder.map((a) => ({ label: a, key: norm(a) }));
+
+                      const fs = cp1BoxData?.fatalitySummary;
+                      const allFlags = [
+                        { key: 'hospitalization', label: 'Hospitalization', count: fs?.hospitalizationCount || 0 },
+                        { key: 'medsVsLimits', label: 'Meds > Limits', count: fs?.medsVsLimitsCount || 0 },
+                        { key: 'pedestrianMotorcyclist', label: 'Ped/Moto/Bicyclist', count: fs?.pedestrianMotorcyclistCount || 0 },
+                        { key: 'fatality', label: 'Fatality', count: fs?.fatalityCount || 0 },
+                        { key: 'lossOfConsciousness', label: 'Loss of Consciousness', count: fs?.lossOfConsciousnessCount || 0 },
+                        { key: 'surgery', label: 'Surgery', count: fs?.surgeryCount || 0 },
+                        { key: 'pregnancy', label: 'Pregnancy', count: fs?.pregnancyCount || 0 },
+                        { key: 'lifeCarePlanner', label: 'Life Care Planner', count: fs?.lifeCarePlannerCount || 0 },
+                        { key: 'aggravatingFactors', label: 'Aggravating Factors', count: fs?.aggravatingFactorsCount || 0 },
+                        { key: 'objectiveInjuries', label: 'Objective Injuries', count: fs?.objectiveInjuriesCount || 0 },
+                        { key: 'injections', label: 'Injections', count: fs?.injectionsCount || 0 },
+                        { key: 'emsHeavyImpact', label: 'EMS + Heavy Impact', count: fs?.emsHeavyImpactCount || 0 },
+                      ];
+
+                      const topFlags = allFlags
+                        .filter((f) => f.count > 0)
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 5);
+
+                      return ageKeys.map(({ label, key }) => {
+                        const claimsInAge = rawClaims.filter((c) => norm(c.ageBucket) === key);
+
+                        const base: Record<string, string | number> = {
+                          age: label.replace(' Days', ''),
                           total: claimsInAge.length,
                         };
+
+                        for (const f of topFlags) {
+                          base[f.key] = claimsInAge.filter((c: any) => Boolean((c as any)[f.key])).length;
+                        }
+
+                        return base;
                       });
-                      return flagsByAge;
                     })()}
                     margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={10} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
-                        fontSize: '11px'
+                        fontSize: '11px',
                       }}
                     />
-                    <Bar dataKey="fatality" stackId="a" fill="hsl(var(--destructive))" name="Fatality" />
-                    <Bar dataKey="surgery" stackId="a" fill="hsl(var(--warning))" name="Surgery" />
+
+                    {/* Fixed palette for the top 5 flags */}
                     <Bar dataKey="hospitalization" stackId="a" fill="hsl(var(--primary))" name="Hospitalization" />
                     <Bar dataKey="medsVsLimits" stackId="a" fill="hsl(var(--accent))" name="Meds > Limits" />
+                    <Bar dataKey="pedestrianMotorcyclist" stackId="a" fill="hsl(var(--warning))" name="Ped/Moto/Bicyclist" />
+                    <Bar dataKey="fatality" stackId="a" fill="hsl(var(--destructive))" name="Fatality" />
                     <Bar dataKey="lossOfConsciousness" stackId="a" fill="hsl(var(--secondary-foreground))" name="Loss of Consciousness" />
+                    <Bar dataKey="surgery" stackId="a" fill="hsl(var(--secondary))" name="Surgery" />
+                    <Bar dataKey="pregnancy" stackId="a" fill="hsl(var(--muted))" name="Pregnancy" />
+                    <Bar dataKey="lifeCarePlanner" stackId="a" fill="hsl(var(--ring))" name="Life Care Planner" />
+                    <Bar dataKey="aggravatingFactors" stackId="a" fill="hsl(var(--chart-1))" name="Aggravating Factors" />
+                    <Bar dataKey="objectiveInjuries" stackId="a" fill="hsl(var(--chart-2))" name="Objective Injuries" />
+                    <Bar dataKey="injections" stackId="a" fill="hsl(var(--chart-3))" name="Injections" />
+                    <Bar dataKey="emsHeavyImpact" stackId="a" fill="hsl(var(--chart-4))" name="EMS + Heavy Impact" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border justify-center">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-destructive"></div>
-                  <span className="text-[10px] text-muted-foreground">Fatality</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-warning"></div>
-                  <span className="text-[10px] text-muted-foreground">Surgery</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-primary"></div>
-                  <span className="text-[10px] text-muted-foreground">Hospitalization</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded" style={{backgroundColor: 'hsl(var(--accent))'}}></div>
-                  <span className="text-[10px] text-muted-foreground">Meds {'>'} Limits</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded" style={{backgroundColor: 'hsl(var(--secondary-foreground))'}}></div>
-                  <span className="text-[10px] text-muted-foreground">Loss of Consciousness</span>
-                </div>
-              </div>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                Chart shows the top 5 trigger flags by total count, broken out by age bucket.
+              </p>
             </div>
 
             {/* BI Age Breakdown */}
