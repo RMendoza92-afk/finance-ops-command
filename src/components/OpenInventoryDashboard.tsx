@@ -1936,7 +1936,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       'BI3': 'BI3',
       'EBI': 'Early BI',
       'COVG': 'Coverage',
-      'SPD': 'Special',
       'LIM': 'Limits',
       'COV': 'Coverage',
     };

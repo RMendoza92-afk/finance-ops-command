@@ -59,14 +59,14 @@ function getLitigationStage(painLvl: number): 'Early' | 'Mid' | 'Late' | 'Very L
 }
 
 // Determine expert type from expense category
-// CSV uses codes: SPD, LIT, L3L, LIM, ATR, etc.
+// CSV uses codes: LIT, L3L, LIM, ATR, etc.
 function getExpertType(expCategory: string): string {
   if (!expCategory) return 'Other';
   const cat = expCategory.toUpperCase().trim();
   
   // Map CSV expense category codes to expert types
-  // SPD = Special/Expert spend, L3L = Level 3 Litigation (complex), LIM = Litigated/Limits
-  if (cat === 'SPD' || cat === 'L3L' || cat === 'LIM') return 'Consultant';
+  // L3L = Level 3 Litigation (complex), LIM = Litigated/Limits
+  if (cat === 'L3L' || cat === 'LIM') return 'Consultant';
   if (cat === 'MED' || cat.includes('MEDICAL')) return 'Medical';
   if (cat === 'LIT' || cat.includes('LEGAL') || cat.includes('ATTORNEY')) return 'Legal';
   if (cat === 'ATR') return 'Legal'; // Attorney related
