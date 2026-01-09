@@ -33,6 +33,16 @@ interface InventorySnapshot {
   total_low_eval: number | null;
 }
 
+interface AccidentYearSummary {
+  accident_year: number;
+  earned_premium: number;
+  net_paid: number;
+  reserves: number;
+  ibnr: number;
+  incurred: number;
+  loss_ratio: number;
+}
+
 const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -40,11 +50,12 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [metrics, setMetrics] = useState<ActuarialMetricsRow | null>(null);
   const [lossDev, setLossDev] = useState<LossDevelopmentRow | null>(null);
   const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
+  const [accidentYears, setAccidentYears] = useState<AccidentYearSummary[]>([]);
 
   const fetchData = async () => {
     setIsRefreshing(true);
     try {
-      const [metricsRes, lossRes, invRes] = await Promise.all([
+      const [metricsRes, lossRes, invRes, ayRes] = await Promise.all([
         supabase
           .from('actuarial_metrics')
           .select('loss_ratio, lae_ratio, total_expense_ratio, development_factor, trend_factor, ultimate_loss, credibility, selected_change, target_loss_ratio')
@@ -64,12 +75,50 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           .select('total_reserves, total_high_eval, total_low_eval')
           .order('snapshot_date', { ascending: false })
           .limit(1)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from('accident_year_development')
+          .select('accident_year, earned_premium, net_claim_payment, reserve_balance, incurred, incurred_pct_premium')
+          .gte('accident_year', 2023)
+          .order('accident_year', { ascending: false })
       ]);
 
       if (metricsRes.data) setMetrics(metricsRes.data);
       if (lossRes.data) setLossDev(lossRes.data);
       if (invRes.data) setInventory(invRes.data);
+      
+      // Aggregate accident year data
+      if (ayRes.data) {
+        const grouped = ayRes.data.reduce((acc, row) => {
+          const year = row.accident_year;
+          if (!acc[year]) {
+            acc[year] = { earned_premium: 0, net_paid: 0, reserves: 0, incurred: 0, loss_ratios: [] };
+          }
+          acc[year].earned_premium += row.earned_premium || 0;
+          acc[year].net_paid += row.net_claim_payment || 0;
+          acc[year].reserves += row.reserve_balance || 0;
+          acc[year].incurred += row.incurred || 0;
+          if (row.incurred_pct_premium) acc[year].loss_ratios.push(row.incurred_pct_premium);
+          return acc;
+        }, {} as Record<number, { earned_premium: number; net_paid: number; reserves: number; incurred: number; loss_ratios: number[] }>);
+        
+        const summaries: AccidentYearSummary[] = Object.entries(grouped).map(([year, data]) => {
+          const ibnr = Math.max(0, data.incurred - data.net_paid - data.reserves);
+          // Calculate loss ratio as incurred / earned premium
+          const lossRatio = data.earned_premium > 0 ? (data.incurred / data.earned_premium) * 100 : 0;
+          return {
+            accident_year: parseInt(year),
+            earned_premium: data.earned_premium,
+            net_paid: data.net_paid,
+            reserves: data.reserves,
+            ibnr,
+            incurred: data.incurred,
+            loss_ratio: lossRatio > 0 ? lossRatio : (data.loss_ratios.length > 0 ? data.loss_ratios.reduce((a, b) => a + b, 0) / data.loss_ratios.length : 0)
+          };
+        }).sort((a, b) => b.accident_year - a.accident_year);
+        
+        setAccidentYears(summaries);
+      }
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -406,6 +455,64 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           );
         })}
       </div>
+
+      {/* Accident Year Development Table */}
+      {accidentYears.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Accident Year Development
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">AY</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Earned Prem</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Net Paid</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Reserves</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">IBNR</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Incurred</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Loss Ratio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accidentYears.map((ay) => {
+                    const getLossRatioColor = (ratio: number) => {
+                      if (ratio <= 60) return 'bg-emerald-500';
+                      if (ratio <= 65) return 'bg-green-500';
+                      if (ratio <= 70) return 'bg-yellow-500';
+                      return 'bg-orange-500';
+                    };
+                    return (
+                      <tr key={ay.accident_year} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="py-3 px-4 font-semibold">{ay.accident_year}</td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(ay.earned_premium)}</td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(ay.net_paid)}</td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(ay.reserves)}</td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(ay.ibnr)}</td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(ay.incurred)}</td>
+                        <td className="py-3 px-4 text-right">
+                          <Badge className={cn(
+                            "font-mono",
+                            getLossRatioColor(ay.loss_ratio),
+                            "text-white border-0"
+                          )}>
+                            {ay.loss_ratio.toFixed(1)}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
