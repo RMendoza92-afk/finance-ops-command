@@ -308,7 +308,10 @@ export function useLitigationData() {
 
     if (fetchError) throw fetchError;
     
-    return (matters || []).map(transformDBRow);
+    // Filter out SPD (Settled Pending Docs) - these are not workable files
+    return (matters || [])
+      .map(transformDBRow)
+      .filter(m => m.expCategory !== 'SPD' && m.expCategory !== 'Settled Pending Docs');
   };
 
   const loadFromCSV = async (): Promise<LitigationMatter[]> => {
@@ -324,7 +327,10 @@ export function useLitigationData() {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          const allData = results.data.map((row, idx) => transformRow(row, idx));
+          // Filter out SPD (Settled Pending Docs) - these are not workable files
+          const allData = results.data
+            .map((row, idx) => transformRow(row, idx))
+            .filter(m => m.expCategory !== 'SPD' && m.expCategory !== 'Settled Pending Docs');
           resolve(allData);
         },
         error: (err) => reject(err)
