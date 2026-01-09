@@ -972,6 +972,117 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                   </div>
                 </div>
               </div>
+
+              {/* Path to 300% RBC */}
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="h-4 w-4 text-emerald-500" />
+                  <span className="font-semibold text-sm">Path to 300% RBC</span>
+                  <Badge variant="outline" className="ml-auto text-xs border-emerald-500/50 text-emerald-600 dark:text-emerald-400">
+                    Current: {rbcMetrics.rbcRatio}% → Target: 300%
+                  </Badge>
+                </div>
+                
+                {(() => {
+                  // Calculate what's needed to reach 300% RBC
+                  const currentRatio = rbcMetrics.rbcRatio;
+                  const targetRatio = 300;
+                  const currentSurplus = rbcMetrics.policyholderSurplus;
+                  const currentACL = rbcMetrics.authorizedControlLevel;
+                  const currentPremium = rbcMetrics.earnedPremium;
+                  const currentReserves = rbcMetrics.totalReserves + rbcMetrics.bulkIBNR;
+                  
+                  // Gap analysis
+                  const surplusNeededAtCurrentACL = (targetRatio / 100) * currentACL;
+                  const surplusGap = surplusNeededAtCurrentACL - currentSurplus;
+                  
+                  // Scenario 1: Premium growth only (increases surplus via retained earnings)
+                  // Assume 4% of premium flows to surplus annually
+                  const surplusPerPremiumDollar = 0.04;
+                  const additionalPremiumNeeded = surplusGap / surplusPerPremiumDollar;
+                  const premiumGrowthPct = (additionalPremiumNeeded / currentPremium) * 100;
+                  
+                  // Scenario 2: Reduce reserves/claims (reduces ACL R4 component)
+                  // R4 = reserves * 0.11, so reducing reserves lowers ACL
+                  const r4Factor = 0.11;
+                  const currentR4 = currentReserves * r4Factor;
+                  // Need: surplus / newACL = 3.0
+                  // Solve for reserve reduction needed
+                  const targetACLforCurrentSurplus = currentSurplus / (targetRatio / 100);
+                  const aclReductionNeeded = currentACL - targetACLforCurrentSurplus;
+                  const reserveReductionNeeded = aclReductionNeeded / r4Factor;
+                  const reserveReductionPct = (reserveReductionNeeded / currentReserves) * 100;
+                  
+                  // Scenario 3: Combined approach (50/50)
+                  const combinedPremiumGrowth = premiumGrowthPct * 0.5;
+                  const combinedReserveReduction = reserveReductionPct * 0.5;
+                  
+                  const formatM = (n: number) => `$${(n / 1000000).toFixed(0)}M`;
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Current Position Summary */}
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <div className="text-xs text-muted-foreground">Current Surplus</div>
+                          <div className="text-sm font-bold">{formatM(currentSurplus)}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <div className="text-xs text-muted-foreground">Surplus Needed</div>
+                          <div className="text-sm font-bold">{formatM(surplusNeededAtCurrentACL)}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <div className="text-xs text-muted-foreground">Gap to Close</div>
+                          <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{formatM(surplusGap)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Scenarios */}
+                      <div className="space-y-3">
+                        <div className="flex gap-3 items-start p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                            <TrendingUp className="h-3 w-3 text-blue-500" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-foreground">Scenario A: Premium Growth Only</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Grow premium by <span className="font-semibold text-blue-600 dark:text-blue-400">{formatM(additionalPremiumNeeded)}</span> ({premiumGrowthPct.toFixed(0)}% increase) 
+                              to generate {formatM(surplusGap)} in retained earnings over 2-3 years.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3 items-start p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                          <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                            <TrendingDown className="h-3 w-3 text-purple-500" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-foreground">Scenario B: Claims/Reserve Reduction</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Reduce reserves by <span className="font-semibold text-purple-600 dark:text-purple-400">{formatM(Math.abs(reserveReductionNeeded))}</span> ({Math.abs(reserveReductionPct).toFixed(0)}% reduction) 
+                              through accelerated settlements and improved loss ratios.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3 items-start p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="h-3 w-3 text-emerald-500" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-foreground">Scenario C: Balanced Approach (Recommended)</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Grow premium <span className="font-semibold text-emerald-600 dark:text-emerald-400">{combinedPremiumGrowth.toFixed(0)}%</span> + 
+                              reduce reserves <span className="font-semibold text-emerald-600 dark:text-emerald-400">{Math.abs(combinedReserveReduction).toFixed(0)}%</span>. 
+                              Achievable in 18-24 months with disciplined execution.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         </CardContent>
