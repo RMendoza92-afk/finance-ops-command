@@ -1322,10 +1322,10 @@ export function LitigationChat() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50 bg-gradient-to-br from-primary to-primary/80"
+        className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 h-11 w-11 sm:h-14 sm:w-14 rounded-full shadow-lg z-50 bg-gradient-to-br from-primary to-primary/80"
         size="icon"
       >
-        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
+        <Sparkles className="h-4 w-4 sm:h-6 sm:w-6" />
       </Button>
     );
   }
@@ -1333,8 +1333,8 @@ export function LitigationChat() {
   return (
     <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-primary/20 overflow-hidden ${
       isMinimized 
-        ? "bottom-4 right-4 sm:bottom-6 sm:right-6 w-64 sm:w-72 h-12 sm:h-14" 
-        : "inset-2 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh] max-h-[calc(100vh-1rem)]"
+        ? "bottom-2 right-2 sm:bottom-6 sm:right-6 w-56 sm:w-72 h-11 sm:h-14" 
+        : "bottom-0 left-0 right-0 top-12 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh] rounded-t-xl sm:rounded-xl"
     }`}>
       <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-card to-muted/30">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
