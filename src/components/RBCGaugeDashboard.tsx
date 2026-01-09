@@ -24,8 +24,8 @@ const simpleHash = (str: string): string => {
 };
 
 // Executive access password hash - change the password by updating this hash
-// Current password: "RBC2026" -> hash: "-1n5k8qx"
-const EXEC_ACCESS_HASH = "-1n5k8qx";
+// Current password: "rbc2026" (case-insensitive) -> hash: "xnl6bx"
+const EXEC_ACCESS_HASH = "xnl6bx";
 const SESSION_KEY = "rbc_exec_access";
 
 interface RBCGaugeDashboardProps {
@@ -86,7 +86,8 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (simpleHash(password) === EXEC_ACCESS_HASH) {
+    // Case-insensitive password check
+    if (simpleHash(password.toLowerCase()) === EXEC_ACCESS_HASH) {
       sessionStorage.setItem(SESSION_KEY, "true");
       setIsUnlocked(true);
       setPasswordError(false);
