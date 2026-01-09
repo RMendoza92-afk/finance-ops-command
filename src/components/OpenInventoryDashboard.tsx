@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react"; // Upd
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData, MultiPackSummary, MultiPackGroup } from "@/hooks/useOpenExposureData";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
+import { getCurrentMonthlySpend } from "@/data/monthlySpendData";
 import { CP1DrilldownModal } from "@/components/CP1DrilldownModal";
 import { ReviewerSettings } from "@/components/ReviewerSettings";
 import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
@@ -108,7 +109,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const { exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
-  // Apply filters to raw claims and recalculate all metrics
+  // Operations report (01-JAN-2026) spend figures
+  const monthlySpend = getCurrentMonthlySpend();
+  const biIndemnityJan2026 = monthlySpend.indemnities.byCoverage.find((c) => c.coverage === 'BI')?.costs ?? 0;
+  const biExpenseJan2026 = monthlySpend.expenses.byCoverage.find((c) => c.coverage === 'BI')?.costs ?? 0;
+  const biLitigationSpendJan2026 = biIndemnityJan2026 + biExpenseJan2026;
   const data = useMemo(() => {
     if (!rawData) return null;
     
@@ -3259,7 +3264,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">BI Litigation Spend</p>
               <div className="flex items-baseline gap-2 sm:gap-3 mt-0.5 sm:mt-1">
-                <p className="text-lg sm:text-2xl font-bold text-success">{formatCurrencyK(budgetMetrics.coverageBreakdown.bi.ytd2026)}<span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">Jan 2026</span></p>
+                <p className="text-lg sm:text-2xl font-bold text-success">{formatCurrencyK(biLitigationSpendJan2026)}<span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">Jan 2026</span></p>
               </div>
               <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 font-medium truncate text-muted-foreground">
                 2025 (Jan-Nov): {formatCurrencyK(budgetMetrics.coverageBreakdown.bi.ytd2025)}
