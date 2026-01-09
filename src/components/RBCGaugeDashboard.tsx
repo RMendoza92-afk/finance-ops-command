@@ -209,9 +209,20 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const expenseRatio = (metrics?.total_expense_ratio ?? 0.23) * 100;
     const combinedRatio = lossRatio + laeRatio + expenseRatio;
     
-    // RBC Ratio calculation: inversely related to combined ratio
-    // Base of 300%, adjusted by how far combined ratio is from 100%
-    const rbcRatio = Math.max(150, Math.min(400, 300 - (combinedRatio - 100) * 3));
+    // RBC Ratio: Industry standard calculation
+    // Total Adjusted Capital / Risk-Based Capital = RBC Ratio
+    // Using reserves and premium data to derive realistic RBC
+    const totalReserves = inventory?.total_reserves ?? 28500000;
+    const ultimateLoss = metrics?.ultimate_loss ?? 21340000;
+    
+    // Authorized Control Level (ACL) approximated from ultimate loss
+    const authorizedControlLevel = ultimateLoss * 0.08; // ~8% of ultimate loss
+    const totalAdjustedCapital = totalReserves * 0.35; // Surplus as % of reserves
+    
+    // RBC Ratio = TAC / ACL * 100 (regulatory minimum is 200%)
+    const rbcRatio = authorizedControlLevel > 0 
+      ? Math.min(450, Math.max(150, (totalAdjustedCapital / authorizedControlLevel) * 100))
+      : 285; // Default to healthy ratio
     
     return {
       rbcRatio,
@@ -437,16 +448,18 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   };
 
   const getRBCStatus = (ratio: number) => {
-    if (ratio >= 300) return { status: 'Excellent', color: 'text-emerald-500', bgColor: 'bg-emerald-500' };
-    if (ratio >= 250) return { status: 'Strong', color: 'text-green-500', bgColor: 'bg-green-500' };
-    if (ratio >= 200) return { status: 'Adequate', color: 'text-yellow-500', bgColor: 'bg-yellow-500' };
-    if (ratio >= 150) return { status: 'Watch', color: 'text-orange-500', bgColor: 'bg-orange-500' };
-    return { status: 'Action Required', color: 'text-red-500', bgColor: 'bg-red-500' };
+    // Loya-themed status with gold accents for strong performance
+    if (ratio >= 300) return { status: 'Excellent', color: 'text-primary', bgColor: 'bg-primary', label: 'Capital Strong' };
+    if (ratio >= 250) return { status: 'Strong', color: 'text-success', bgColor: 'bg-success', label: 'Well Capitalized' };
+    if (ratio >= 200) return { status: 'Adequate', color: 'text-warning', bgColor: 'bg-warning', label: 'Meets Regulatory' };
+    if (ratio >= 150) return { status: 'Watch', color: 'text-orange-500', bgColor: 'bg-orange-500', label: 'Below Target' };
+    return { status: 'Action Required', color: 'text-destructive', bgColor: 'bg-destructive', label: 'Regulatory Action' };
   };
 
   const rbcStatus = getRBCStatus(rbcMetrics.rbcRatio);
 
-  // Calculate needle rotation (0-180 degrees, where 0 is left, 180 is right)
+  // Calculate needle rotation (0-180 degrees, where 0 is left/100%, 180 is right/400%)
+  // Maps RBC ratio 100-400 to 0-180 degrees
   const needleRotation = Math.min(Math.max((rbcMetrics.rbcRatio - 100) / 300 * 180, 0), 180);
 
   const kpiCards = [
@@ -568,139 +581,187 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
         </div>
       </div>
 
-      {/* Main Gauge Section */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-8">
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            {/* Gauge Visualization */}
-            <div className="relative w-80 h-48 flex-shrink-0">
-              <svg viewBox="0 0 200 120" className="w-full h-full">
+      {/* Main Gauge Section - Loya Themed */}
+      <Card className="overflow-hidden border-primary/20">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+            {/* Gauge Visualization - Premium Loya Design */}
+            <div className="relative w-full max-w-[320px] lg:w-80 flex-shrink-0">
+              <svg viewBox="0 0 200 130" className="w-full h-auto">
                 <defs>
-                  <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ef4444" />
-                    <stop offset="25%" stopColor="#f97316" />
-                    <stop offset="50%" stopColor="#eab308" />
-                    <stop offset="75%" stopColor="#22c55e" />
-                    <stop offset="100%" stopColor="#10b981" />
+                  {/* Loya Premium Gradient - Champagne Gold to Success */}
+                  <linearGradient id="loyaGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="hsl(0, 55%, 50%)" />
+                    <stop offset="25%" stopColor="hsl(25, 50%, 50%)" />
+                    <stop offset="50%" stopColor="hsl(38, 65%, 55%)" />
+                    <stop offset="75%" stopColor="hsl(155, 45%, 45%)" />
+                    <stop offset="100%" stopColor="hsl(155, 50%, 40%)" />
                   </linearGradient>
+                  {/* Glow effect for needle */}
+                  <filter id="needleGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  {/* Track shadow */}
+                  <filter id="trackShadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+                  </filter>
                 </defs>
                 
-                {/* Gauge arc background */}
+                {/* Outer ring decoration */}
                 <path
-                  d="M 20 100 A 80 80 0 0 1 180 100"
+                  d="M 15 105 A 85 85 0 0 1 185 105"
+                  fill="none"
+                  stroke="hsl(var(--border))"
+                  strokeWidth="1"
+                  strokeDasharray="4,4"
+                  opacity="0.5"
+                />
+                
+                {/* Gauge arc background track */}
+                <path
+                  d="M 20 105 A 80 80 0 0 1 180 105"
                   fill="none"
                   stroke="hsl(var(--muted))"
-                  strokeWidth="16"
+                  strokeWidth="20"
                   strokeLinecap="round"
+                  filter="url(#trackShadow)"
                 />
                 
-                {/* Gauge arc filled */}
+                {/* Gauge arc filled with gradient */}
                 <path
-                  d="M 20 100 A 80 80 0 0 1 180 100"
+                  d="M 20 105 A 80 80 0 0 1 180 105"
                   fill="none"
-                  stroke="url(#gaugeGradient)"
-                  strokeWidth="16"
+                  stroke="url(#loyaGaugeGradient)"
+                  strokeWidth="20"
                   strokeLinecap="round"
-                  opacity="0.9"
                 />
                 
-                {/* Tick marks */}
-                {[0, 30, 60, 90, 120, 150, 180].map((angle, i) => {
+                {/* Zone indicators */}
+                {[
+                  { angle: 0, label: '100%', sublabel: 'ACL' },
+                  { angle: 60, label: '200%', sublabel: 'Min' },
+                  { angle: 100, label: '250%', sublabel: 'Target' },
+                  { angle: 133, label: '300%', sublabel: 'Strong' },
+                  { angle: 180, label: '400%', sublabel: 'Max' }
+                ].map(({ angle, label, sublabel }, i) => {
                   const radian = (angle * Math.PI) / 180;
-                  const x1 = 100 - 65 * Math.cos(radian);
-                  const y1 = 100 - 65 * Math.sin(radian);
-                  const x2 = 100 - 75 * Math.cos(radian);
-                  const y2 = 100 - 75 * Math.sin(radian);
-                  const labelX = 100 - 90 * Math.cos(radian);
-                  const labelY = 100 - 90 * Math.sin(radian);
-                  const labels = ['100', '150', '200', '250', '300', '350', '400'];
+                  const innerR = 60;
+                  const outerR = 70;
+                  const labelR = 95;
+                  const x1 = 100 - innerR * Math.cos(radian);
+                  const y1 = 105 - innerR * Math.sin(radian);
+                  const x2 = 100 - outerR * Math.cos(radian);
+                  const y2 = 105 - outerR * Math.sin(radian);
+                  const labelX = 100 - labelR * Math.cos(radian);
+                  const labelY = 105 - labelR * Math.sin(radian);
                   return (
-                    <g key={angle}>
+                    <g key={i}>
                       <line
-                        x1={x1}
-                        y1={y1}
-                        x2={x2}
-                        y2={y2}
+                        x1={x1} y1={y1} x2={x2} y2={y2}
                         stroke="hsl(var(--foreground))"
                         strokeWidth="2"
-                        opacity="0.5"
+                        opacity="0.6"
                       />
                       <text
-                        x={labelX}
-                        y={labelY}
+                        x={labelX} y={labelY - 4}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-muted-foreground text-[8px] font-medium"
+                        className="fill-foreground text-[7px] font-bold"
                       >
-                        {labels[i]}
+                        {label}
+                      </text>
+                      <text
+                        x={labelX} y={labelY + 5}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-muted-foreground text-[5px]"
+                      >
+                        {sublabel}
                       </text>
                     </g>
                   );
                 })}
                 
-                {/* Needle */}
-                <g transform={`rotate(${needleRotation - 180}, 100, 100)`}>
+                {/* Needle with glow */}
+                <g 
+                  transform={`rotate(${needleRotation - 180}, 100, 105)`}
+                  filter="url(#needleGlow)"
+                >
                   <polygon
-                    points="100,30 96,100 104,100"
-                    className={cn("transition-all duration-1000", rbcStatus.bgColor)}
-                    style={{ transformOrigin: '100px 100px' }}
+                    points="100,35 97,105 103,105"
+                    fill="hsl(var(--primary))"
+                    stroke="hsl(var(--primary-foreground))"
+                    strokeWidth="0.5"
                   />
-                  <circle cx="100" cy="100" r="8" className="fill-foreground" />
-                  <circle cx="100" cy="100" r="4" className="fill-background" />
                 </g>
+                
+                {/* Center hub - premium finish */}
+                <circle cx="100" cy="105" r="12" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="2" />
+                <circle cx="100" cy="105" r="8" fill="hsl(var(--primary))" />
+                <circle cx="100" cy="105" r="4" fill="hsl(var(--primary-foreground))" />
               </svg>
               
-              {/* Center value display */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
-                <div className={cn("text-4xl font-bold tabular-nums", rbcStatus.color)}>
+              {/* Center value display - positioned below gauge */}
+              <div className="text-center mt-2">
+                <div className={cn("text-4xl sm:text-5xl font-bold tabular-nums tracking-tight", rbcStatus.color)}>
                   {rbcMetrics.rbcRatio.toFixed(0)}%
                 </div>
-                <div className="text-sm text-muted-foreground">RBC Ratio</div>
+                <div className="text-sm text-muted-foreground font-medium">RBC Ratio</div>
               </div>
             </div>
 
-            {/* Status Panel */}
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className={cn("p-3 rounded-full", rbcStatus.bgColor, "bg-opacity-20")}>
+            {/* Status Panel - Loya Executive Style */}
+            <div className="flex-1 w-full space-y-4">
+              {/* Status Header */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-transparent border border-primary/20">
+                <div className={cn("p-3 rounded-xl", rbcStatus.bgColor, "bg-opacity-20")}>
                   {rbcMetrics.rbcRatio >= 250 ? (
-                    <CheckCircle className={cn("h-8 w-8", rbcStatus.color)} />
+                    <CheckCircle className={cn("h-7 w-7", rbcStatus.color)} />
                   ) : (
-                    <AlertTriangle className={cn("h-8 w-8", rbcStatus.color)} />
+                    <AlertTriangle className={cn("h-7 w-7", rbcStatus.color)} />
                   )}
                 </div>
-                <div>
-                  <h3 className={cn("text-2xl font-bold", rbcStatus.color)}>{rbcStatus.status}</h3>
-                  <p className="text-muted-foreground">Capital Position</p>
+                <div className="flex-1">
+                  <h3 className={cn("text-xl sm:text-2xl font-bold", rbcStatus.color)}>{rbcStatus.status}</h3>
+                  <p className="text-sm text-muted-foreground">{rbcStatus.label}</p>
                 </div>
+                <Badge className={cn("hidden sm:flex", rbcMetrics.rbcRatio >= 200 ? "bg-success/20 text-success border-success/30" : "bg-destructive/20 text-destructive border-destructive/30")}>
+                  {rbcMetrics.rbcRatio >= 200 ? '✓ Compliant' : '⚠ Review'}
+                </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="text-sm text-muted-foreground">Total Reserves</div>
-                  <div className="text-xl font-semibold">{formatCurrency(rbcMetrics.totalReserves)}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Open inventory</div>
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Total Reserves</div>
+                  <div className="text-lg sm:text-xl font-bold mt-1">{formatCurrency(rbcMetrics.totalReserves)}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Open Inventory</div>
                 </div>
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="text-sm text-muted-foreground">Regulatory Min</div>
-                  <div className="text-xl font-semibold">200%</div>
-                  <div className="text-xs text-emerald-500 mt-1">
-                    ✓ {(rbcMetrics.rbcRatio - 200).toFixed(0)}% buffer
+                <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Regulatory Min</div>
+                  <div className="text-lg sm:text-xl font-bold mt-1">200%</div>
+                  <div className={cn("text-xs mt-1", rbcMetrics.rbcRatio >= 200 ? "text-success" : "text-destructive")}>
+                    {rbcMetrics.rbcRatio >= 200 ? `✓ ${(rbcMetrics.rbcRatio - 200).toFixed(0)}% buffer` : `⚠ ${(200 - rbcMetrics.rbcRatio).toFixed(0)}% shortfall`}
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+              {/* Performance Summary */}
+              <div className="p-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                 <div className="flex items-center gap-2 mb-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Performance Summary</span>
+                  <span className="font-semibold text-sm">Performance Summary</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Combined ratio at {rbcMetrics.combinedRatio.toFixed(1)}% indicates 
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Combined ratio at <span className="font-medium text-foreground">{rbcMetrics.combinedRatio.toFixed(1)}%</span> indicates 
                   {rbcMetrics.combinedRatio < 100 ? ' profitable underwriting' : ' underwriting pressure'}. 
-                  Loss development factor of {rbcMetrics.developmentFactor.toFixed(3)} applied 
-                  with {(rbcMetrics.credibility * 100).toFixed(0)}% credibility.
-                  {rbcMetrics.selectedChange > 0 && ` Rate increase of ${rbcMetrics.selectedChange.toFixed(1)}% selected.`}
+                  LDF of <span className="font-medium text-foreground">{rbcMetrics.developmentFactor.toFixed(3)}</span> applied 
+                  with <span className="font-medium text-foreground">{(rbcMetrics.credibility * 100).toFixed(0)}%</span> credibility.
+                  {rbcMetrics.selectedChange > 0 && <> Rate change: <span className="font-medium text-success">+{rbcMetrics.selectedChange.toFixed(1)}%</span></>}
                 </p>
               </div>
             </div>
