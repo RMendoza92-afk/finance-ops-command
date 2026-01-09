@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useExportData } from '@/hooks/useExportData';
+import { format } from 'date-fns';
 
 interface RBCGaugeDashboardProps {
   className?: string;
@@ -60,6 +63,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
   const [accidentYears, setAccidentYears] = useState<AccidentYearSummary[]>([]);
   const [triangleData, setTriangleData] = useState<TriangleDataPoint[]>([]);
+  const { generatePDF, generateExcel } = useExportData();
 
   const fetchData = async () => {
     setIsRefreshing(true);
@@ -93,9 +97,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
         supabase
           .from('loss_development_triangles')
           .select('accident_year, development_months, metric_type, amount')
-          .in('metric_type', ['loss_ratio', 'net_paid_loss'])
-          .gte('accident_year', 2022)
-          .order('accident_year', { ascending: false })
+          .in('metric_type', ['loss_ratio', 'net_paid_loss', 'earned_premium', 'claim_reserves', 'bulk_ibnr', 'gross_paid'])
+          .gte('accident_year', 2017)
+          .order('accident_year', { ascending: true })
           .order('development_months', { ascending: true })
       ]);
 
@@ -209,6 +213,93 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     return [...new Set(triangleData.filter(d => d.metric_type === 'loss_ratio').map(d => d.accident_year))].sort((a, b) => b - a);
   }, [triangleData]);
 
+  // Build comprehensive triangle table for exports
+  const triangleTableData = useMemo(() => {
+    const lossRatioData = triangleData.filter(d => d.metric_type === 'loss_ratio');
+    const years = [...new Set(lossRatioData.map(d => d.accident_year))].sort((a, b) => a - b);
+    const allMonths = [...new Set(lossRatioData.map(d => d.development_months))].sort((a, b) => a - b);
+    
+    return {
+      columns: ['Accident Year', ...allMonths.map(m => `${m}M`)],
+      rows: years.map(year => {
+        const yearData = lossRatioData.filter(d => d.accident_year === year);
+        const row: (string | number)[] = [year];
+        allMonths.forEach(month => {
+          const point = yearData.find(d => d.development_months === month);
+          row.push(point ? `${point.amount.toFixed(2)}%` : '—');
+        });
+        return row;
+      })
+    };
+  }, [triangleData]);
+
+  // Export functions
+  const handleExportPDF = async () => {
+    const exportData = {
+      title: 'RBC Performance Monitor',
+      subtitle: 'Risk-Based Capital & Actuarial KPIs - Executive Briefing',
+      timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+      summary: {
+        'RBC Ratio': `${rbcMetrics.rbcRatio.toFixed(0)}%`,
+        'Loss Ratio': `${rbcMetrics.lossRatio.toFixed(1)}%`,
+        'LAE Ratio': `${rbcMetrics.laeRatio.toFixed(1)}%`,
+        'Combined Ratio': `${rbcMetrics.combinedRatio.toFixed(1)}%`,
+        'IBNR Reserve': formatCurrency(rbcMetrics.ibnr),
+      },
+      bulletInsights: [
+        `Capital position rated as "${rbcStatus.status}" with ${rbcMetrics.rbcRatio.toFixed(0)}% RBC ratio`,
+        `Combined ratio at ${rbcMetrics.combinedRatio.toFixed(1)}% indicates ${rbcMetrics.combinedRatio < 100 ? 'profitable underwriting' : 'underwriting pressure'}`,
+        `Loss development factor of ${rbcMetrics.developmentFactor.toFixed(3)} applied with ${(rbcMetrics.credibility * 100).toFixed(0)}% credibility`,
+        rbcMetrics.selectedChange > 0 ? `Rate increase of ${rbcMetrics.selectedChange.toFixed(1)}% selected for upcoming period` : 'No rate adjustment indicated',
+      ],
+      columns: triangleTableData.columns,
+      rows: triangleTableData.rows,
+    };
+    await generatePDF(exportData);
+  };
+
+  const handleExportExcel = () => {
+    const exportData = {
+      title: 'RBC Performance Monitor',
+      subtitle: 'Risk-Based Capital & Actuarial KPIs',
+      timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+      summary: {
+        'RBC Ratio': `${rbcMetrics.rbcRatio.toFixed(0)}%`,
+        'Loss Ratio': `${rbcMetrics.lossRatio.toFixed(1)}%`,
+        'LAE Ratio': `${rbcMetrics.laeRatio.toFixed(1)}%`,
+        'Combined Ratio': `${rbcMetrics.combinedRatio.toFixed(1)}%`,
+        'IBNR Reserve': formatCurrency(rbcMetrics.ibnr),
+        'Ultimate Loss': formatCurrency(rbcMetrics.ultimateLoss),
+        'Credibility': `${(rbcMetrics.credibility * 100).toFixed(0)}%`,
+        'Development Factor': rbcMetrics.developmentFactor.toFixed(3),
+        'Selected Rate Change': `${rbcMetrics.selectedChange >= 0 ? '+' : ''}${rbcMetrics.selectedChange.toFixed(1)}%`,
+      },
+      bulletInsights: [
+        `Capital position rated as "${rbcStatus.status}" with ${rbcMetrics.rbcRatio.toFixed(0)}% RBC ratio`,
+        `Combined ratio at ${rbcMetrics.combinedRatio.toFixed(1)}% indicates ${rbcMetrics.combinedRatio < 100 ? 'profitable underwriting' : 'underwriting pressure'}`,
+        `Loss development factor of ${rbcMetrics.developmentFactor.toFixed(3)} applied with ${(rbcMetrics.credibility * 100).toFixed(0)}% credibility`,
+      ],
+      columns: triangleTableData.columns,
+      rows: triangleTableData.rows,
+      rawClaimData: [
+        {
+          sheetName: 'Accident Year Summary',
+          columns: ['Accident Year', 'Earned Premium', 'Net Paid', 'Reserves', 'IBNR', 'Incurred', 'Loss Ratio'],
+          rows: accidentYears.map(ay => [
+            ay.accident_year,
+            ay.earned_premium,
+            ay.net_paid,
+            ay.reserves,
+            ay.ibnr,
+            ay.incurred,
+            `${ay.loss_ratio.toFixed(2)}%`
+          ])
+        }
+      ]
+    };
+    generateExcel(exportData);
+  };
+
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
@@ -316,7 +407,27 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
             <p className="text-sm text-muted-foreground">Risk-Based Capital & Actuarial KPIs</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportPDF}
+              className="gap-1.5"
+            >
+              <FileText className="h-4 w-4" />
+              PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportExcel}
+              className="gap-1.5"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Excel
+            </Button>
+          </div>
           <Badge variant="outline" className={cn("gap-1", isRefreshing && "animate-pulse")}>
             <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
             Auto-refresh: 30s
