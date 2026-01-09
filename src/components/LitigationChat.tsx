@@ -1339,12 +1339,7 @@ export function LitigationChat() {
       <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-card to-muted/30">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-bold">Litigation Oracle</span>
-          {dataReady && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {totalClaims.toLocaleString()} claims
-            </span>
-          )}
+          <span className="font-bold">FLI Oracle</span>
         </CardTitle>
         <div className="flex items-center gap-1">
           <Button
