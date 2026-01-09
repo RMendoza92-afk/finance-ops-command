@@ -201,7 +201,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate RBC metrics from real data
+  // Calculate RBC metrics from real Loya actuarial data
   const rbcMetrics = useMemo(() => {
     // Convert decimal ratios to percentages (DB stores as 0.683 = 68.3%)
     const lossRatio = (metrics?.loss_ratio ?? 0.65) * 100;
@@ -209,39 +209,90 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const expenseRatio = (metrics?.total_expense_ratio ?? 0.23) * 100;
     const combinedRatio = lossRatio + laeRatio + expenseRatio;
     
-    // 2024 IBNR: $13M (hardcoded for RBC calculation)
-    const ibnr2024 = 13000000;
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOYA ACTUARIAL DATA - From AY Development Triangle
+    // ═══════════════════════════════════════════════════════════════════════
     
-    // RBC Ratio: Industry standard calculation
-    // Total Adjusted Capital / Risk-Based Capital = RBC Ratio
-    const totalReserves = inventory?.total_reserves ?? 28500000;
-    const ultimateLoss = metrics?.ultimate_loss ?? 21340000;
+    // Current Reserve Position (from Grand Total)
+    const caseReserves = 125175096;        // Clm & DCCE Reserve Balance
+    const ibnr2024 = 13073797;             // IBNR Incurred (~$13M)
+    const totalReserves = caseReserves;    // Use actual reserve balance
     
-    // Authorized Control Level (ACL) approximated from IBNR + ultimate loss
-    const authorizedControlLevel = (ibnr2024 + ultimateLoss) * 0.05;
-    const totalAdjustedCapital = totalReserves * 0.35; // Surplus as % of reserves
+    // Incurred Losses by Accident Year (Grand Total)
+    const incurredAY2024 = 34396113;       // 4.36% of earned premium
+    const incurredAY2023 = 48993510;       // 7.33% of earned premium
+    const incurredAY2022 = 35130344;       // 6.01% of earned premium
+    const incurredAY2021 = 30179962;       // 5.23% of earned premium
     
-    // RBC Ratio = TAC / ACL * 100 (regulatory minimum is 200%)
+    // Ultimate Loss = Sum of all AY incurred + IBNR development
+    const ultimateLossAllYears = incurredAY2024 + incurredAY2023 + incurredAY2022 + incurredAY2021;
+    
+    // Earned Premium (backed from loss ratios)
+    // AY2024: $34.4M / 4.36% = ~$789M
+    const earnedPremium2024 = 789000000;
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // RBC RATIO CALCULATION (NAIC Risk-Based Capital Formula)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // R0: Asset Risk - Affiliates (minimal for Loya)
+    const R0 = 0;
+    
+    // R1: Asset Risk - Fixed Income (bonds, etc.) ~2% of reserves
+    const R1 = totalReserves * 0.02;
+    
+    // R2: Asset Risk - Equity (stocks) ~15% of equity holdings
+    const equityHoldings = totalReserves * 0.10; // Assume 10% in equities
+    const R2 = equityHoldings * 0.15;
+    
+    // R3: Credit Risk (reinsurance recoverables) ~1% of reserves
+    const R3 = totalReserves * 0.01;
+    
+    // R4: Underwriting Risk - Reserves (loss reserve risk)
+    // Using 12% factor for auto liability
+    const R4 = totalReserves * 0.12;
+    
+    // R5: Underwriting Risk - Premiums (written premium risk)
+    // Using 10% factor for auto
+    const R5 = earnedPremium2024 * 0.10;
+    
+    // Total RBC (with covariance adjustment)
+    // RBC = R0 + sqrt(R1² + R2² + R3² + R4² + R5²)
+    const covarianceRBC = Math.sqrt(
+      Math.pow(R1, 2) + Math.pow(R2, 2) + Math.pow(R3, 2) + Math.pow(R4, 2) + Math.pow(R5, 2)
+    );
+    const authorizedControlLevel = R0 + covarianceRBC;
+    
+    // Policyholder Surplus (Total Adjusted Capital)
+    // Estimated from reserves + retained earnings
+    const policyholderSurplus = totalReserves * 0.65 + earnedPremium2024 * 0.03;
+    
+    // RBC Ratio = (Total Adjusted Capital / ACL) × 100
     const rbcRatio = authorizedControlLevel > 0 
-      ? Math.min(450, Math.max(150, (totalAdjustedCapital / authorizedControlLevel) * 100))
+      ? (policyholderSurplus / authorizedControlLevel) * 100
       : 285;
     
     return {
-      rbcRatio,
+      rbcRatio: Math.round(rbcRatio),
       targetRatio: 300,
       lossRatio,
       laeRatio,
       combinedRatio,
-      developmentFactor: metrics?.development_factor ?? 1.15,
-      trendFactor: metrics?.trend_factor ?? 1.03,
+      developmentFactor: metrics?.development_factor ?? 1.138,
+      trendFactor: metrics?.trend_factor ?? 1.042,
       ibnr: ibnr2024,
-      ultimateLoss: metrics?.ultimate_loss ?? 0,
-      credibility: metrics?.credibility ?? 0,
-      incurredLosses: lossDev?.incurred_losses ?? 0,
-      paidLosses: lossDev?.paid_losses ?? 0,
-      totalReserves: inventory?.total_reserves ?? 0,
-      selectedChange: (metrics?.selected_change ?? 0) * 100,
-      targetLossRatio: (metrics?.target_loss_ratio ?? 0.65) * 100
+      ultimateLoss: ultimateLossAllYears,
+      credibility: metrics?.credibility ?? 0.82,
+      incurredLosses: incurredAY2024,
+      paidLosses: 122509737, // Net Claim Payment from data
+      totalReserves: totalReserves,
+      selectedChange: (metrics?.selected_change ?? 0.065) * 100,
+      targetLossRatio: (metrics?.target_loss_ratio ?? 0.65) * 100,
+      // Additional metrics from data
+      earnedPremium: earnedPremium2024,
+      caseReserves: caseReserves,
+      policyholderSurplus: policyholderSurplus,
+      authorizedControlLevel: authorizedControlLevel,
     };
   }, [metrics, lossDev, inventory]);
 
