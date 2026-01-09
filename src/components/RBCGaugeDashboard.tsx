@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3 } from 'lucide-react';
+import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface RBCGaugeDashboardProps {
   className?: string;
@@ -43,6 +44,13 @@ interface AccidentYearSummary {
   loss_ratio: number;
 }
 
+interface TriangleDataPoint {
+  accident_year: number;
+  development_months: number;
+  metric_type: string;
+  amount: number;
+}
+
 const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,11 +59,12 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [lossDev, setLossDev] = useState<LossDevelopmentRow | null>(null);
   const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
   const [accidentYears, setAccidentYears] = useState<AccidentYearSummary[]>([]);
+  const [triangleData, setTriangleData] = useState<TriangleDataPoint[]>([]);
 
   const fetchData = async () => {
     setIsRefreshing(true);
     try {
-      const [metricsRes, lossRes, invRes, ayRes] = await Promise.all([
+      const [metricsRes, lossRes, invRes, ayRes, triangleRes] = await Promise.all([
         supabase
           .from('actuarial_metrics')
           .select('loss_ratio, lae_ratio, total_expense_ratio, development_factor, trend_factor, ultimate_loss, credibility, selected_change, target_loss_ratio')
@@ -80,7 +89,14 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           .from('accident_year_development')
           .select('accident_year, earned_premium, net_claim_payment, reserve_balance, incurred, incurred_pct_premium')
           .gte('accident_year', 2023)
+          .order('accident_year', { ascending: false }),
+        supabase
+          .from('loss_development_triangles')
+          .select('accident_year, development_months, metric_type, amount')
+          .in('metric_type', ['loss_ratio', 'net_paid_loss'])
+          .gte('accident_year', 2022)
           .order('accident_year', { ascending: false })
+          .order('development_months', { ascending: true })
       ]);
 
       if (metricsRes.data) setMetrics(metricsRes.data);
@@ -118,6 +134,11 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
         }).sort((a, b) => b.accident_year - a.accident_year);
         
         setAccidentYears(summaries);
+      }
+      
+      // Set triangle data
+      if (triangleRes.data) {
+        setTriangleData(triangleRes.data as TriangleDataPoint[]);
       }
     } finally {
       setLoading(false);
@@ -162,6 +183,31 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       targetLossRatio: (metrics?.target_loss_ratio ?? 0.65) * 100
     };
   }, [metrics, lossDev, inventory]);
+
+  // Prepare triangle chart data
+  const triangleChartData = useMemo(() => {
+    // Get unique development months and sort them
+    const devMonths = [...new Set(triangleData.map(d => d.development_months))].sort((a, b) => a - b);
+    const years = [...new Set(triangleData.map(d => d.accident_year))].sort((a, b) => b - a);
+    
+    // Filter for loss_ratio data and create chart format
+    return devMonths.map(month => {
+      const point: Record<string, number | string> = { month: `${month}M` };
+      years.forEach(year => {
+        const dataPoint = triangleData.find(
+          d => d.accident_year === year && d.development_months === month && d.metric_type === 'loss_ratio'
+        );
+        if (dataPoint) {
+          point[`AY${year}`] = dataPoint.amount;
+        }
+      });
+      return point;
+    });
+  }, [triangleData]);
+
+  const triangleYears = useMemo(() => {
+    return [...new Set(triangleData.filter(d => d.metric_type === 'loss_ratio').map(d => d.accident_year))].sort((a, b) => b - a);
+  }, [triangleData]);
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
@@ -504,6 +550,107 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                             {ay.loss_ratio.toFixed(1)}%
                           </Badge>
                         </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loss Development Triangle Chart */}
+      {triangleChartData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Triangle className="h-5 w-5 text-primary" />
+              Loss Ratio Development Triangle
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Loss ratio emergence by accident year and development period
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={triangleChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => `${value}%`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    domain={[0, 'auto']}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+                  />
+                  <Legend />
+                  {triangleYears.map((year, index) => {
+                    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+                    return (
+                      <Line
+                        key={year}
+                        type="monotone"
+                        dataKey={`AY${year}`}
+                        name={`AY ${year}`}
+                        stroke={colors[index % colors.length]}
+                        strokeWidth={2}
+                        dot={{ fill: colors[index % colors.length], strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                        connectNulls
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            
+            {/* Triangle Table View */}
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">AY</th>
+                    {[...new Set(triangleData.filter(d => d.metric_type === 'loss_ratio').map(d => d.development_months))].sort((a, b) => a - b).map(month => (
+                      <th key={month} className="text-right py-2 px-3 font-medium text-muted-foreground">{month}M</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {triangleYears.map(year => {
+                    const yearData = triangleData.filter(d => d.accident_year === year && d.metric_type === 'loss_ratio');
+                    const allMonths = [...new Set(triangleData.filter(d => d.metric_type === 'loss_ratio').map(d => d.development_months))].sort((a, b) => a - b);
+                    return (
+                      <tr key={year} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-2 px-3 font-semibold">{year}</td>
+                        {allMonths.map(month => {
+                          const point = yearData.find(d => d.development_months === month);
+                          return (
+                            <td key={month} className="text-right py-2 px-3 tabular-nums">
+                              {point ? (
+                                <span className={cn(
+                                  point.amount <= 65 ? 'text-emerald-500' : 
+                                  point.amount <= 70 ? 'text-yellow-500' : 'text-orange-500'
+                                )}>
+                                  {point.amount.toFixed(1)}%
+                                </span>
+                              ) : '—'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}
