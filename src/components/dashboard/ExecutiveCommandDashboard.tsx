@@ -282,50 +282,50 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
   return (
     <div className="space-y-6 relative">
       {/* Executive Header */}
-      <div className="exec-card p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="exec-card p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Status */}
-            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-md bg-success/10 border border-success/20">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-success/10 border border-success/20">
               <div className="w-2 h-2 rounded-full bg-success" />
-              <span className="text-sm font-medium text-success">
+              <span className="text-xs sm:text-sm font-medium text-success">
                 Live
               </span>
             </div>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground truncate">
               {data.dataDate}
             </span>
           </div>
           
           {/* Export Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleExportPDF}
               disabled={generatingPDF}
-              className="gap-2 h-9"
+              className="gap-1.5 sm:gap-2 h-8 sm:h-9 flex-1 sm:flex-none text-xs sm:text-sm"
             >
               {generatingPDF ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3 sm:h-3.5 w-3 sm:w-3.5 animate-spin" />
               ) : (
-                <FileText className="h-3.5 w-3.5" />
+                <FileText className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               )}
-              Board Briefing
+              <span className="hidden xs:inline">Board</span> Briefing
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleExportExcel}
               disabled={generatingExcel}
-              className="gap-2 h-9"
+              className="gap-1.5 sm:gap-2 h-8 sm:h-9 flex-1 sm:flex-none text-xs sm:text-sm"
             >
               {generatingExcel ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3 sm:h-3.5 w-3 sm:w-3.5 animate-spin" />
               ) : (
-                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <FileSpreadsheet className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               )}
-              Export Data
+              Export
             </Button>
           </div>
         </div>
@@ -595,35 +595,35 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
 
             {/* Detailed Table */}
             {showAYDetails && (
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>AY</TableHead>
-                      <TableHead className="text-right">Earned Premium</TableHead>
-                      <TableHead className="text-right">Net Paid</TableHead>
-                      <TableHead className="text-right">Reserves</TableHead>
-                      <TableHead className="text-right">IBNR</TableHead>
-                      <TableHead className="text-right">Incurred</TableHead>
-                      <TableHead className="text-right">Loss Ratio</TableHead>
-                      <TableHead className="text-right">Dev Age</TableHead>
+                      <TableHead className="whitespace-nowrap">AY</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Earned Premium</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Net Paid</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Reserves</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">IBNR</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Incurred</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Loss Ratio</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Dev Age</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {triangleData.summaryByAY.map((row) => (
                       <TableRow key={row.accidentYear}>
-                        <TableCell className="font-medium">{row.accidentYear}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.earnedPremium)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.netPaidLoss)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.claimReserves)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.bulkIbnr)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(row.ultimateIncurred)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="font-medium whitespace-nowrap">{row.accidentYear}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.earnedPremium)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.netPaidLoss)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.claimReserves)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.bulkIbnr)}</TableCell>
+                        <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(row.ultimateIncurred)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
                           <Badge variant={row.lossRatio > 75 ? "destructive" : row.lossRatio > 70 ? "secondary" : "default"}>
                             {row.lossRatio.toFixed(1)}%
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">{row.developmentAge} mo</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{row.developmentAge} mo</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -695,7 +695,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             </div>
 
             {/* State Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-4">
               {stateFreqAverages.slice(0, 6).map((state) => (
                 <div
                   key={state.state}
@@ -730,14 +730,14 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             </div>
 
             {showFrequencyDetails && (
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>State</TableHead>
-                      <TableHead className="text-right">2024 Avg</TableHead>
-                      <TableHead className="text-right">2025 Avg</TableHead>
-                      <TableHead className="text-right">YoY Change</TableHead>
+                      <TableHead className="whitespace-nowrap">State</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">2024 Avg</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">2025 Avg</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">YoY Change</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -749,10 +749,10 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                           className={`cursor-pointer ${selectedFreqState === row.state ? 'bg-primary/5' : ''}`}
                           onClick={() => setSelectedFreqState(row.state)}
                         >
-                          <TableCell className="font-medium">{row.state}</TableCell>
-                          <TableCell className="text-right">{row.avg2024.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right font-semibold">{row.avg2025.toFixed(1)}%</TableCell>
-                          <TableCell className={`text-right ${yoyChange < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          <TableCell className="font-medium whitespace-nowrap">{row.state}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{row.avg2024.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right font-semibold whitespace-nowrap">{row.avg2025.toFixed(1)}%</TableCell>
+                          <TableCell className={`text-right whitespace-nowrap ${yoyChange < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                             {yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}%
                           </TableCell>
                         </TableRow>
@@ -877,15 +877,15 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             </div>
 
             {showPaymentsDetails && (
-              <div className="border-t pt-4 mt-4">
+              <div className="border-t pt-4 mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Coverage</TableHead>
-                      <TableHead className="text-right">2023 YTD</TableHead>
-                      <TableHead className="text-right">2024 YTD</TableHead>
-                      <TableHead className="text-right">2025 YTD</TableHead>
-                      <TableHead className="text-right">YoY Change</TableHead>
+                      <TableHead className="whitespace-nowrap">Coverage</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">2023 YTD</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">2024 YTD</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">2025 YTD</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">YoY Change</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -902,11 +902,11 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                           className={`cursor-pointer ${selectedPaymentCoverage === cov ? 'bg-primary/5' : ''} ${cov === 'TOTAL' ? 'font-bold border-t-2' : ''}`}
                           onClick={() => setSelectedPaymentCoverage(cov)}
                         >
-                          <TableCell className="font-medium">{cov}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(getYtd(2023))}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(getYtd(2024))}</TableCell>
-                          <TableCell className="text-right font-semibold">{formatCurrency(ytd2025)}</TableCell>
-                          <TableCell className={`text-right ${yoyChange > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          <TableCell className="font-medium whitespace-nowrap">{cov}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{formatCurrency(getYtd(2023))}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{formatCurrency(getYtd(2024))}</TableCell>
+                          <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(ytd2025)}</TableCell>
+                          <TableCell className={`text-right whitespace-nowrap ${yoyChange > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
                             {yoyChange !== 0 ? `${yoyChange >= 0 ? '+' : ''}${yoyChange.toFixed(1)}%` : '—'}
                           </TableCell>
                         </TableRow>
@@ -973,7 +973,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             </div>
 
             {/* By State */}
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-4">
               {Object.entries(
                 overLimitPayments.reduce((acc, p) => {
                   acc[p.state] = (acc[p.state] || 0) + p.overLimitAmount;
@@ -992,27 +992,27 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
 
             {/* Detail Table */}
             {showOverLimitDetails && (
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Claim #</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead className="text-right">Limit</TableHead>
-                      <TableHead className="text-right">Payment</TableHead>
-                      <TableHead className="text-right">Over Limit</TableHead>
+                      <TableHead className="whitespace-nowrap">Date</TableHead>
+                      <TableHead className="whitespace-nowrap">Claim #</TableHead>
+                      <TableHead className="whitespace-nowrap">State</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Limit</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Payment</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Over Limit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {overLimitPayments.slice(0, 10).map((row) => (
                       <TableRow key={row.id}>
-                        <TableCell>{row.paymentDate}</TableCell>
-                        <TableCell className="font-mono text-xs">{row.claimNumber}</TableCell>
+                        <TableCell className="whitespace-nowrap">{row.paymentDate}</TableCell>
+                        <TableCell className="font-mono text-xs whitespace-nowrap">{row.claimNumber}</TableCell>
                         <TableCell>{row.state}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.policyLimit)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.paymentAmount)}</TableCell>
-                        <TableCell className="text-right text-destructive font-semibold">
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.policyLimit)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(row.paymentAmount)}</TableCell>
+                        <TableCell className="text-right text-destructive font-semibold whitespace-nowrap">
                           {formatCurrency(row.overLimitAmount)}
                         </TableCell>
                       </TableRow>
@@ -1076,16 +1076,16 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
               };
 
               return (
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                   {stateData.map(({ state, avgFreq }) => (
                     <div
                       key={state}
-                      className={`p-3 rounded-lg text-center transition-all hover:scale-105 cursor-pointer ${getHeatColor(avgFreq)}`}
+                      className={`p-2 sm:p-3 rounded-lg text-center transition-all hover:scale-105 cursor-pointer ${getHeatColor(avgFreq)}`}
                       onClick={() => onDrilldown(`frequency-${state}`)}
                     >
-                      <div className="text-xs font-bold uppercase">{state}</div>
-                      <div className="text-lg font-bold">{(avgFreq * 100).toFixed(2)}%</div>
-                      <div className="text-[10px] opacity-80">avg freq</div>
+                      <div className="text-[10px] sm:text-xs font-bold uppercase">{state}</div>
+                      <div className="text-sm sm:text-lg font-bold">{(avgFreq * 100).toFixed(2)}%</div>
+                      <div className="text-[9px] sm:text-[10px] opacity-80">avg freq</div>
                     </div>
                   ))}
                 </div>
@@ -1093,22 +1093,22 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
             })()}
             
             {/* Heat Map Legend */}
-            <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-emerald-500/50" />
-                <span className="text-xs text-muted-foreground">Low Risk</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mt-4 pt-3 border-t">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 sm:w-4 h-3 sm:h-4 rounded bg-emerald-500/50" />
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Low</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-amber-500/60" />
-                <span className="text-xs text-muted-foreground">Medium</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 sm:w-4 h-3 sm:h-4 rounded bg-amber-500/60" />
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Medium</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-orange-500/70" />
-                <span className="text-xs text-muted-foreground">Elevated</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 sm:w-4 h-3 sm:h-4 rounded bg-orange-500/70" />
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Elevated</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-red-500/80" />
-                <span className="text-xs text-muted-foreground">High Risk</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 sm:w-4 h-3 sm:h-4 rounded bg-red-500/80" />
+                <span className="text-[10px] sm:text-xs text-muted-foreground">High</span>
               </div>
             </div>
           </CardContent>
