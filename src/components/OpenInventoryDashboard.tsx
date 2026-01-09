@@ -1183,20 +1183,20 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const m = { l: 12, r: 12, t: 12 };
       const cw = pw - m.l - m.r;
       
-      // PREMIUM COLORS
+      // LOYA OBSIDIAN EXECUTIVE COLORS (from design system)
       const C = {
-        bg: [15, 15, 20] as [number, number, number],
-        cardBg: [22, 22, 28] as [number, number, number],
-        headerBg: [28, 28, 35] as [number, number, number],
-        border: [50, 50, 60] as [number, number, number],
-        white: [255, 255, 255] as [number, number, number],
-        offWhite: [235, 235, 240] as [number, number, number],
-        muted: [130, 130, 145] as [number, number, number],
-        accent: [99, 102, 241] as [number, number, number], // indigo
-        green: [34, 197, 94] as [number, number, number],
-        red: [239, 68, 68] as [number, number, number],
-        orange: [249, 115, 22] as [number, number, number],
-        gold: [234, 179, 8] as [number, number, number],
+        bg: [10, 10, 12] as [number, number, number],          // --background: 240 10% 4%
+        cardBg: [18, 18, 22] as [number, number, number],      // --card: 240 8% 7%
+        headerBg: [13, 13, 16] as [number, number, number],    // --sidebar-background
+        border: [41, 41, 46] as [number, number, number],      // --border: 240 5% 16%
+        white: [247, 245, 242] as [number, number, number],    // --foreground: 40 15% 95%
+        offWhite: [235, 232, 225] as [number, number, number], // warm off-white
+        muted: [128, 128, 133] as [number, number, number],    // --muted-foreground
+        accent: [201, 155, 71] as [number, number, number],    // --primary: 38 65% 55% champagne gold
+        green: [94, 167, 125] as [number, number, number],     // --success: 155 45% 42%
+        red: [178, 69, 69] as [number, number, number],        // --destructive: 0 55% 50%
+        orange: [191, 109, 76] as [number, number, number],    // --accent: 15 45% 55% rose gold
+        gold: [201, 155, 71] as [number, number, number],      // champagne gold
       };
 
       const CP1_DATA = cp1BoxData?.cp1Data || {
@@ -1594,6 +1594,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Claimant': c.claimant,
           'Flag Count': flagCount,
           'Coverage': c.coverage,
+          'BI Phase': c.evaluationPhase || 'N/A',
           'Days Open': c.days,
           'Age Bucket': c.ageBucket,
           'Team': c.teamGroup,
@@ -1606,7 +1607,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       if (highRiskClaims.length > 0) {
         const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
         highRiskSheet['!cols'] = [
-          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
           { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
         ];
         XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
@@ -1632,6 +1633,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Claimant': c.claimant,
           'Flag Count': flagCount,
           'Coverage': c.coverage,
+          'BI Phase': c.evaluationPhase || 'N/A',
           'Days Open': c.days,
           'Age Bucket': c.ageBucket,
           'Type Group': c.typeGroup,
