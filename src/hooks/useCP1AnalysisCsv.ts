@@ -16,22 +16,18 @@ export interface CP1CsvClaim {
   cp1Flag: string;
   overallCP1: string;
   biStatus: string;
-  // Trigger flags (all from user's list)
+  // 11 uppercase trigger flags from CSV
   fatality: boolean;
   surgery: boolean;
   medsVsLimits: boolean;
   hospitalization: boolean;
   lossOfConsciousness: boolean;
-  lacerations: boolean;
-  pedestrianMotorcyclist: boolean;
-  duiDwiHitRun: boolean;
+  aggFactors: boolean;
+  objectiveInjuries: boolean;
+  pedestrianPregnancy: boolean;
   lifeCarePlanner: boolean;
-  confirmedFractures: boolean;
-  aggFactorsDui: boolean;
-  fledScene: boolean;
-  priorSurgery: boolean;
-  pregnancy: boolean;
-  ambulanceUsed: boolean;
+  injections: boolean;
+  emsHeavyImpact: boolean;
 }
 
 export interface CP1DataShape {
@@ -62,16 +58,12 @@ export interface CP1TriggerSummary {
   medsVsLimitsCount: number;
   hospitalizationCount: number;
   lossOfConsciousnessCount: number;
-  lacerationsCount: number;
-  pedestrianMotorcyclistCount: number;
-  duiDwiHitRunCount: number;
+  aggFactorsCount: number;
+  objectiveInjuriesCount: number;
+  pedestrianPregnancyCount: number;
   lifeCarePlannerCount: number;
-  confirmedFracturesCount: number;
-  aggFactorsDuiCount: number;
-  fledSceneCount: number;
-  priorSurgeryCount: number;
-  pregnancyCount: number;
-  ambulanceUsedCount: number;
+  injectionsCount: number;
+  emsHeavyImpactCount: number;
 }
 
 export interface CP1CsvAnalysis {
@@ -211,22 +203,18 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         overallCP1,
         biStatus,
 
-        // Trigger flags: use prefix-match so column-name noise/line-breaks don't break counts
-        fatality: yesish(getByPrefix(r, "Injury Incident - Fatality")),
-        surgery: yesish(getByPrefix(r, "Injury Incident - Surgery")),
-        medsVsLimits: yesish(getByPrefix(r, "Injury Incident - Meds Greater Than Policy Limits")),
-        hospitalization: yesish(getByPrefix(r, "Injury Incident - Hospitalization")),
-        lossOfConsciousness: yesish(getByPrefix(r, "Injury Incident - Loss of Consciousness")),
-        lacerations: yesish(getByPrefix(r, "Injury Incident - Lacerations")),
-        pedestrianMotorcyclist: yesish(getByPrefix(r, "Injury Incident - Pedestrian")),
-        duiDwiHitRun: yesish(getByPrefix(r, "Injury Incident - DUI")),
-        lifeCarePlanner: yesish(getByPrefix(r, "Injury Incident - Life Care Planner")),
-        confirmedFractures: yesish(getByPrefix(r, "Injury Incident - Confirmed Fractures")),
-        aggFactorsDui: yesish(getByPrefix(r, "Injury Incident - Agg Factors DUI")),
-        fledScene: yesish(getByPrefix(r, "Injury Incident - Fled Scene")),
-        priorSurgery: yesish(getByPrefix(r, "Injury Incident - Prior Surgery")),
-        pregnancy: yesish(getByPrefix(r, "Injury Incident - Pregnancy")),
-        ambulanceUsed: yesish(getByPrefix(r, "Injury Incident - Ambulance")),
+        // 11 UPPERCASE trigger flags from CSV (exact column names)
+        fatality: yesish(r["FATALITY"]),
+        surgery: yesish(r["SURGERY"]),
+        medsVsLimits: yesish(r["MEDS VS LIMITS"]),
+        hospitalization: yesish(r["HOSPITALIZATION"]),
+        lossOfConsciousness: yesish(r["LOSS OF CONSCIOUSNESS"]),
+        aggFactors: yesish(r["AGGRAVATING FACTORS"]),
+        objectiveInjuries: yesish(r["OBJECTIVE INJURIES"]),
+        pedestrianPregnancy: yesish(r["PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY"]),
+        lifeCarePlanner: yesish(r["LIFE CARE PLANNER"]),
+        injections: yesish(r["INJECTIONS"]),
+        emsHeavyImpact: yesish(r["EMS + HEAVY IMPACT"]),
       };
     });
 
@@ -318,16 +306,12 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       medsVsLimitsCount: claims.filter((c) => c.medsVsLimits).length,
       hospitalizationCount: claims.filter((c) => c.hospitalization).length,
       lossOfConsciousnessCount: claims.filter((c) => c.lossOfConsciousness).length,
-      lacerationsCount: claims.filter((c) => c.lacerations).length,
-      pedestrianMotorcyclistCount: claims.filter((c) => c.pedestrianMotorcyclist).length,
-      duiDwiHitRunCount: claims.filter((c) => c.duiDwiHitRun).length,
+      aggFactorsCount: claims.filter((c) => c.aggFactors).length,
+      objectiveInjuriesCount: claims.filter((c) => c.objectiveInjuries).length,
+      pedestrianPregnancyCount: claims.filter((c) => c.pedestrianPregnancy).length,
       lifeCarePlannerCount: claims.filter((c) => c.lifeCarePlanner).length,
-      confirmedFracturesCount: claims.filter((c) => c.confirmedFractures).length,
-      aggFactorsDuiCount: claims.filter((c) => c.aggFactorsDui).length,
-      fledSceneCount: claims.filter((c) => c.fledScene).length,
-      priorSurgeryCount: claims.filter((c) => c.priorSurgery).length,
-      pregnancyCount: claims.filter((c) => c.pregnancy).length,
-      ambulanceUsedCount: claims.filter((c) => c.ambulanceUsed).length,
+      injectionsCount: claims.filter((c) => c.injections).length,
+      emsHeavyImpactCount: claims.filter((c) => c.emsHeavyImpact).length,
     };
 
     const cp1Data: CP1DataShape = {
