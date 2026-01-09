@@ -12,20 +12,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useExportData } from '@/hooks/useExportData';
 import { format } from 'date-fns';
 
-// Simple hash function for password verification (not cryptographically secure, but sufficient for access gate)
-const simpleHash = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-};
-
-// Executive access password hash - change the password by updating this hash
-// Current password: "rbc2026" (case-insensitive) -> hash: "xnl6bx"
-const EXEC_ACCESS_HASH = "xnl6bx";
+// Executive access gate (lightweight, not for strong security)
+const EXEC_ACCESS_PASSWORD = "rbc2026"; // case-insensitive
 const SESSION_KEY = "rbc_exec_access";
 
 interface RBCGaugeDashboardProps {
@@ -86,8 +74,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Case-insensitive password check
-    if (simpleHash(password.toLowerCase()) === EXEC_ACCESS_HASH) {
+
+    const normalized = password.trim().toLowerCase();
+    if (normalized === EXEC_ACCESS_PASSWORD) {
       sessionStorage.setItem(SESSION_KEY, "true");
       setIsUnlocked(true);
       setPasswordError(false);
