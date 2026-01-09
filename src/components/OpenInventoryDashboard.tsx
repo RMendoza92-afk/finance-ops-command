@@ -862,8 +862,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   }, [pendingDecisions, decisionsData]);
 
   // Budget Burn Rate calculation - based on actual Loya Insurance Group claims data
-  // Source: 2026 YTD BI/UM/UI Paid (1/1/26 - 1/7/26) from GWCHKHIS03_1.8.26.xlsx
-  // 2025 Actuals: YTD December 31, 2025 (final)
+  // Source: 01-JAN-2026 Monthly Claim Indemnity & Expenses Report
   const budgetMetrics = useMemo(() => {
     // 2025 Actuals (full year final) - YTD December 31, 2025
     const bi2025Full = 344631765;  // BI Total: $344,631,765 (37,700 claims, avg $9,141)
@@ -871,12 +870,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     const ui2025Full = 23226040;   // UI Total: $23,226,040 (3,109 claims, avg $7,471)
     const total2025 = bi2025Full + um2025Full + ui2025Full; // $451,423,047
     
-    // 2026 YTD (1/1/26 - 1/7/26) - BI, UM, UI Payments from check history
-    // Source: GWCHKHIS03_1.8.26.xlsx - Paid status only (excludes Void)
-    const bi2026 = 5847291.33;  // BI Paid YTD (335 unique payments)
-    const um2026 = 101896.68;   // UM Paid YTD (Uninsured Motorist BI)
-    const ui2026 = 90000.00;    // UI Paid YTD (Underinsured Motorist BI)
-    const ytdPaid = bi2026 + um2026 + ui2026; // $6,039,188.01
+    // 2026 YTD (01-JAN-2026) - From Monthly Claim Indemnity & Expenses Report
+    // Indemnities: $9,835,934.96 (2,214 checks), Expenses: $268,869.38 (222 checks)
+    const biIndemnity2026 = monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'BI')?.costs ?? 0; // $5,421,500.48
+    const biExpense2026 = monthlySpend.expenses.byCoverage.find(c => c.coverage === 'BI')?.costs ?? 0;     // $213,683.75
+    const bi2026 = biIndemnity2026 + biExpense2026; // $5,635,184.23
+    
+    const umIndemnity2026 = monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'UM')?.costs ?? 0; // $85,220.00
+    const umExpense2026 = monthlySpend.expenses.byCoverage.find(c => c.coverage === 'UM')?.costs ?? 0;     // $472.90
+    const um2026 = umIndemnity2026 + umExpense2026; // $85,692.90
+    
+    const uiIndemnity2026 = monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'UI')?.costs ?? 0; // $30,000.00
+    const ui2026 = uiIndemnity2026; // $30,000.00 (no UI expenses in report)
+    
+    // Total indemnities + expenses from report
+    const totalIndemnities2026 = monthlySpend.indemnities.total; // $9,835,934.96
+    const totalExpenses2026 = monthlySpend.expenses.total;        // $268,869.38
+    const ytdPaid = totalIndemnities2026 + totalExpenses2026;     // $10,104,804.34
+    
+    // BI/UM/UI subset for litigation-focused view
+    const ytdBiUmUi = bi2026 + um2026 + ui2026; // $5,750,877.13
     
     // Annual budget based on 2025 actuals + 5% growth allowance
     const annualBudget = Math.round(total2025 * 1.05); // ~$474M
@@ -906,44 +919,53 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       { month: 'Dec', budget: avgMonthlyBudget, actual: 0, variance: avgMonthlyBudget },
     ];
 
-    // Coverage breakdown for drilldown (now BI, UM, UI instead of BI, CL, OC)
+    // Coverage breakdown for drilldown (BI, UM, UI) - now using monthlySpendData
+    const biCheckCount = (monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'BI')?.checkCount ?? 0) +
+                         (monthlySpend.expenses.byCoverage.find(c => c.coverage === 'BI')?.checkCount ?? 0);
+    const umCheckCount = (monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'UM')?.checkCount ?? 0) +
+                         (monthlySpend.expenses.byCoverage.find(c => c.coverage === 'UM')?.checkCount ?? 0);
+    const uiCheckCount = monthlySpend.indemnities.byCoverage.find(c => c.coverage === 'UI')?.checkCount ?? 0;
+    
     const coverageBreakdown = {
       bi: { 
         name: 'Bodily Injury', 
         ytd2026: bi2026, 
         ytd2025: bi2025Full, 
         change: bi2026 - bi2025Full,
-        claimCount2026: 335,
-        claimCount2025: 37700,  // 2025 actual claim count
-        avgPerClaim2026: Math.round(bi2026 / 335),
-        avgPerClaim2025: 9141,  // 2025 actual average
+        claimCount2026: biCheckCount, // 779 indemnity + 144 expense = 923
+        claimCount2025: 37700,
+        avgPerClaim2026: biCheckCount > 0 ? Math.round(bi2026 / biCheckCount) : 0,
+        avgPerClaim2025: 9141,
       },
       cl: { 
-        name: 'Uninsured Motorist BI', 
+        name: 'Underinsured Motorist', 
         ytd2026: um2026, 
         ytd2025: um2025Full, 
         change: um2026 - um2025Full,
-        claimCount2026: 7,
-        claimCount2025: 10998,  // 2025 actual claim count
-        avgPerClaim2026: Math.round(um2026 / 7),
-        avgPerClaim2025: 7598,  // 2025 actual average
+        claimCount2026: umCheckCount, // 8 indemnity + 2 expense = 10
+        claimCount2025: 10998,
+        avgPerClaim2026: umCheckCount > 0 ? Math.round(um2026 / umCheckCount) : 0,
+        avgPerClaim2025: 7598,
       },
       oc: { 
-        name: 'Underinsured Motorist BI', 
+        name: 'Uninsured (UI)', 
         ytd2026: ui2026, 
         ytd2025: ui2025Full, 
         change: ui2026 - ui2025Full,
-        claimCount2026: 3,
-        claimCount2025: 3109,   // 2025 actual claim count
-        avgPerClaim2026: Math.round(ui2026 / 3),
-        avgPerClaim2025: 7471,  // 2025 actual average
+        claimCount2026: uiCheckCount, // 1 check
+        claimCount2025: 3109,
+        avgPerClaim2026: uiCheckCount > 0 ? Math.round(ui2026 / uiCheckCount) : 0,
+        avgPerClaim2025: 7471,
       },
     };
 
     return {
       annualBudget,
       ytdPaid,
-      burnRate: Math.round(burnRate * 1000) / 1000, // More precision for small amounts
+      ytdBiUmUi,
+      totalIndemnities2026,
+      totalExpenses2026,
+      burnRate: Math.round(burnRate * 1000) / 1000,
       remaining,
       monthsRemaining,
       projectedBurn,
@@ -953,7 +975,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       coverageBreakdown,
       total2025,
     };
-  }, []);
+  }, [monthlySpend]);
 
 
   // Generate Board-Ready Executive PDF for Budget Burn Rate
@@ -4408,13 +4430,16 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.annualBudget)}</p>
               </div>
               <div className="p-4 bg-secondary/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground uppercase">2025 BI Paid (Jan-Nov)</p>
-                <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2025)}</p>
+                <p className="text-xs text-muted-foreground uppercase">2025 Full Year</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(budgetMetrics.total2025)}</p>
               </div>
               <div className={`p-4 rounded-lg border-2 ${budgetMetrics.onTrack ? 'bg-success/10 border-success/40' : 'bg-destructive/10 border-destructive/40'}`}>
-                <p className="text-xs text-muted-foreground uppercase">2026 YTD BI Paid</p>
+                <p className="text-xs text-muted-foreground uppercase">2026 YTD Total Paid</p>
                 <p className={`text-2xl font-bold ${budgetMetrics.onTrack ? 'text-success' : 'text-destructive'}`}>
-                  {formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2026)}
+                  {formatCurrency(budgetMetrics.ytdPaid)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Indemnities: {formatCurrency(budgetMetrics.totalIndemnities2026)} • Expenses: {formatCurrencyK(budgetMetrics.totalExpenses2026)}
                 </p>
               </div>
               <div className="p-4 bg-primary/10 rounded-lg border border-primary/40">
@@ -4427,7 +4452,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Budget Utilization</span>
-                <span className="font-medium">{budgetMetrics.burnRate < 1 ? '<0.01' : budgetMetrics.burnRate}% used</span>
+                <span className="font-medium">{budgetMetrics.burnRate.toFixed(3)}% used</span>
               </div>
               <div className="h-3 bg-secondary rounded-full overflow-hidden">
                 <div 
@@ -4440,54 +4465,49 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
             </div>
 
-            {/* Coverage Breakdown - YoY Comparison */}
+            {/* All Coverage Breakdown from Monthly Report */}
             <div>
-              <h4 className="text-sm font-semibold mb-3">BI/UM/UI Payments - YoY Comparison</h4>
+              <h4 className="text-sm font-semibold mb-3">All Coverage Payments - Jan 2026 (Indemnities + Expenses)</h4>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-xs">Coverage</TableHead>
-                      <TableHead className="text-xs text-right">2025 Full Year</TableHead>
-                      <TableHead className="text-xs text-right">2026 YTD</TableHead>
-                      <TableHead className="text-xs text-right">Claims</TableHead>
-                      <TableHead className="text-xs text-right">Avg/Claim</TableHead>
+                      <TableHead className="text-xs text-right">Indemnities</TableHead>
+                      <TableHead className="text-xs text-right">Expenses</TableHead>
+                      <TableHead className="text-xs text-right">Total</TableHead>
+                      <TableHead className="text-xs text-right">Checks</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Bodily Injury</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2025)}</TableCell>
-                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.bi.ytd2026)}</TableCell>
-                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.bi.claimCount2026.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.bi.avgPerClaim2026.toLocaleString()}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Uninsured Motorist BI</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.cl.ytd2025)}</TableCell>
-                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.cl.ytd2026)}</TableCell>
-                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.cl.claimCount2026.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.cl.avgPerClaim2026.toLocaleString()}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Underinsured Motorist BI</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.coverageBreakdown.oc.ytd2025)}</TableCell>
-                      <TableCell className="text-right text-success font-medium">{formatCurrency(budgetMetrics.coverageBreakdown.oc.ytd2026)}</TableCell>
-                      <TableCell className="text-right">{budgetMetrics.coverageBreakdown.oc.claimCount2026.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${budgetMetrics.coverageBreakdown.oc.avgPerClaim2026.toLocaleString()}</TableCell>
-                    </TableRow>
+                    {monthlySpend.indemnities.byCoverage.filter(c => c.coverage).map((cov) => {
+                      const expense = monthlySpend.expenses.byCoverage.find(e => e.coverage === cov.coverage);
+                      const expenseAmount = expense?.costs ?? 0;
+                      const expenseChecks = expense?.checkCount ?? 0;
+                      const total = cov.costs + expenseAmount;
+                      const totalChecks = cov.checkCount + expenseChecks;
+                      return (
+                        <TableRow key={cov.coverage}>
+                          <TableCell className="font-medium">{cov.coverage}</TableCell>
+                          <TableCell className="text-right">{formatCurrencyFull(cov.costs)}</TableCell>
+                          <TableCell className="text-right">{expenseAmount > 0 ? formatCurrencyFull(expenseAmount) : '-'}</TableCell>
+                          <TableCell className="text-right text-success font-medium">{formatCurrencyFull(total)}</TableCell>
+                          <TableCell className="text-right">{totalChecks.toLocaleString()}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                     <TableRow className="bg-muted/30 font-semibold">
                       <TableCell>TOTAL</TableCell>
-                      <TableCell className="text-right">{formatCurrency(budgetMetrics.total2025)}</TableCell>
-                      <TableCell className="text-right text-success">{formatCurrency(budgetMetrics.ytdPaid)}</TableCell>
-                      <TableCell className="text-right">345</TableCell>
-                      <TableCell className="text-right">${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{formatCurrencyFull(budgetMetrics.totalIndemnities2026)}</TableCell>
+                      <TableCell className="text-right">{formatCurrencyFull(budgetMetrics.totalExpenses2026)}</TableCell>
+                      <TableCell className="text-right text-success">{formatCurrencyFull(budgetMetrics.ytdPaid)}</TableCell>
+                      <TableCell className="text-right">{(monthlySpend.indemnities.totalChecks + monthlySpend.expenses.totalChecks).toLocaleString()}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Source: Loya Insurance Group - BI/UM/UI Payments 1/1/26 - 1/7/26
+                Source: Monthly Claim Indemnity & Expenses Report - 01-JAN 2026
               </p>
             </div>
 
