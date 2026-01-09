@@ -64,6 +64,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
   const [accidentYears, setAccidentYears] = useState<AccidentYearSummary[]>([]);
   const [triangleData, setTriangleData] = useState<TriangleDataPoint[]>([]);
+  const [gaugeAnimated, setGaugeAnimated] = useState(false);
   const { generatePDF, generateExcel } = useExportData();
 
   const fetchData = async () => {
@@ -200,6 +201,15 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Trigger gauge animation after data loads
+  useEffect(() => {
+    if (!loading) {
+      // Small delay to ensure DOM is ready, then animate
+      const timer = setTimeout(() => setGaugeAnimated(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   // Calculate RBC metrics from real Loya actuarial data (Triangle as of 9 Mo 2025)
   const rbcMetrics = useMemo(() => {
@@ -701,132 +711,140 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       <Card className="overflow-hidden border-primary/20">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
-            {/* Gauge Visualization - Premium Loya Design */}
-            <div className="relative w-full max-w-[320px] lg:w-80 flex-shrink-0">
-              <svg viewBox="0 0 200 130" className="w-full h-auto">
+            {/* Gauge Visualization - Clean Animated Design */}
+            <div className="relative w-full max-w-[300px] lg:max-w-[280px] flex-shrink-0">
+              {/* SVG Gauge */}
+              <svg viewBox="0 0 200 120" className="w-full h-auto overflow-visible">
                 <defs>
-                  {/* Loya Premium Gradient - Champagne Gold to Success */}
-                  <linearGradient id="loyaGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="hsl(0, 55%, 50%)" />
-                    <stop offset="25%" stopColor="hsl(25, 50%, 50%)" />
-                    <stop offset="50%" stopColor="hsl(38, 65%, 55%)" />
-                    <stop offset="75%" stopColor="hsl(155, 45%, 45%)" />
-                    <stop offset="100%" stopColor="hsl(155, 50%, 40%)" />
+                  {/* Gradient for the arc - Red to Gold to Green */}
+                  <linearGradient id="rbcGaugeGradient" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stopColor="#ef4444" />
+                    <stop offset="33%" stopColor="#f59e0b" />
+                    <stop offset="50%" stopColor="#d4a574" />
+                    <stop offset="75%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#10b981" />
                   </linearGradient>
-                  {/* Glow effect for needle */}
-                  <filter id="needleGlow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="2" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  {/* Track shadow */}
-                  <filter id="trackShadow" x="-10%" y="-10%" width="120%" height="120%">
-                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+                  {/* Shadow for depth */}
+                  <filter id="gaugeShadow">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.2" />
                   </filter>
                 </defs>
                 
-                {/* Outer ring decoration */}
+                {/* Background arc (gray track) */}
                 <path
-                  d="M 15 105 A 85 85 0 0 1 185 105"
-                  fill="none"
-                  stroke="hsl(var(--border))"
-                  strokeWidth="1"
-                  strokeDasharray="4,4"
-                  opacity="0.5"
-                />
-                
-                {/* Gauge arc background track */}
-                <path
-                  d="M 20 105 A 80 80 0 0 1 180 105"
+                  d="M 20 100 A 80 80 0 0 1 180 100"
                   fill="none"
                   stroke="hsl(var(--muted))"
-                  strokeWidth="20"
+                  strokeWidth="16"
                   strokeLinecap="round"
-                  filter="url(#trackShadow)"
                 />
                 
-                {/* Gauge arc filled with gradient */}
+                {/* Colored arc (gradient) */}
                 <path
-                  d="M 20 105 A 80 80 0 0 1 180 105"
+                  d="M 20 100 A 80 80 0 0 1 180 100"
                   fill="none"
-                  stroke="url(#loyaGaugeGradient)"
-                  strokeWidth="20"
+                  stroke="url(#rbcGaugeGradient)"
+                  strokeWidth="16"
                   strokeLinecap="round"
+                  filter="url(#gaugeShadow)"
                 />
                 
-                {/* Zone indicators */}
+                {/* Tick marks and labels */}
                 {[
-                  { angle: 0, label: '100%', sublabel: 'ACL' },
-                  { angle: 60, label: '200%', sublabel: 'Min' },
-                  { angle: 100, label: '250%', sublabel: 'Target' },
-                  { angle: 133, label: '300%', sublabel: 'Strong' },
-                  { angle: 180, label: '400%', sublabel: 'Max' }
-                ].map(({ angle, label, sublabel }, i) => {
-                  const radian = (angle * Math.PI) / 180;
-                  const innerR = 60;
-                  const outerR = 70;
-                  const labelR = 95;
-                  const x1 = 100 - innerR * Math.cos(radian);
-                  const y1 = 105 - innerR * Math.sin(radian);
-                  const x2 = 100 - outerR * Math.cos(radian);
-                  const y2 = 105 - outerR * Math.sin(radian);
-                  const labelX = 100 - labelR * Math.cos(radian);
-                  const labelY = 105 - labelR * Math.sin(radian);
+                  { pct: 0, val: '100%' },
+                  { pct: 0.33, val: '200%' },
+                  { pct: 0.5, val: '250%' },
+                  { pct: 0.67, val: '300%' },
+                  { pct: 1, val: '400%' }
+                ].map(({ pct, val }, i) => {
+                  const angle = Math.PI * (1 - pct); // 180° to 0°
+                  const cx = 100, cy = 100, r = 80;
+                  const x = cx + r * Math.cos(angle);
+                  const y = cy - r * Math.sin(angle);
+                  const tickX1 = cx + (r - 12) * Math.cos(angle);
+                  const tickY1 = cy - (r - 12) * Math.sin(angle);
+                  const tickX2 = cx + (r + 4) * Math.cos(angle);
+                  const tickY2 = cy - (r + 4) * Math.sin(angle);
+                  const labelX = cx + (r + 16) * Math.cos(angle);
+                  const labelY = cy - (r + 16) * Math.sin(angle);
                   return (
                     <g key={i}>
                       <line
-                        x1={x1} y1={y1} x2={x2} y2={y2}
+                        x1={tickX1} y1={tickY1} x2={tickX2} y2={tickY2}
                         stroke="hsl(var(--foreground))"
                         strokeWidth="2"
-                        opacity="0.6"
+                        opacity="0.7"
                       />
                       <text
-                        x={labelX} y={labelY - 4}
+                        x={labelX}
+                        y={labelY}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-foreground text-[7px] font-bold"
+                        className="fill-muted-foreground"
+                        style={{ fontSize: '8px', fontWeight: 600 }}
                       >
-                        {label}
-                      </text>
-                      <text
-                        x={labelX} y={labelY + 5}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-muted-foreground text-[5px]"
-                      >
-                        {sublabel}
+                        {val}
                       </text>
                     </g>
                   );
                 })}
                 
-                {/* Needle with glow */}
+                {/* Needle - animated with CSS transition */}
                 <g 
-                  transform={`rotate(${needleRotation - 180}, 100, 105)`}
-                  filter="url(#needleGlow)"
+                  style={{
+                    transformOrigin: '100px 100px',
+                    transform: `rotate(${gaugeAnimated ? (-90 + needleRotation) : -90}deg)`,
+                    transition: 'transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}
                 >
+                  {/* Needle shadow */}
                   <polygon
-                    points="100,35 97,105 103,105"
+                    points="100,28 96,100 104,100"
+                    fill="rgba(0,0,0,0.2)"
+                    transform="translate(2, 2)"
+                  />
+                  {/* Needle body */}
+                  <polygon
+                    points="100,28 96,100 104,100"
+                    fill="hsl(var(--foreground))"
+                  />
+                  {/* Needle tip highlight */}
+                  <polygon
+                    points="100,32 98,85 102,85"
                     fill="hsl(var(--primary))"
-                    stroke="hsl(var(--primary-foreground))"
-                    strokeWidth="0.5"
                   />
                 </g>
                 
-                {/* Center hub - premium finish */}
-                <circle cx="100" cy="105" r="12" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="2" />
-                <circle cx="100" cy="105" r="8" fill="hsl(var(--primary))" />
-                <circle cx="100" cy="105" r="4" fill="hsl(var(--primary-foreground))" />
+                {/* Center hub */}
+                <circle cx="100" cy="100" r="14" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="2" />
+                <circle cx="100" cy="100" r="10" fill="hsl(var(--muted))" />
+                <circle cx="100" cy="100" r="6" fill="hsl(var(--primary))" />
+                <circle cx="100" cy="100" r="3" fill="hsl(var(--primary-foreground))" />
               </svg>
               
-              {/* Center value display - positioned below gauge */}
-              <div className="text-center mt-2">
-                <div className={cn("text-4xl sm:text-5xl font-bold tabular-nums tracking-tight", rbcStatus.color)}>
-                  {rbcMetrics.rbcRatio.toFixed(0)}%
+              {/* Value display below gauge */}
+              <div className="text-center mt-4">
+                <div 
+                  className={cn(
+                    "text-5xl sm:text-6xl font-bold tabular-nums tracking-tighter transition-all duration-500",
+                    rbcStatus.color
+                  )}
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {rbcMetrics.rbcRatio}%
                 </div>
-                <div className="text-sm text-muted-foreground font-medium">RBC Ratio</div>
+                <div className="text-sm text-muted-foreground font-medium mt-1">RBC Ratio</div>
+                <div className={cn(
+                  "inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-xs font-semibold",
+                  rbcStatus.bgColor, "bg-opacity-20", rbcStatus.color
+                )}>
+                  {rbcMetrics.rbcRatio >= 250 ? (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  {rbcStatus.status}
+                </div>
               </div>
             </div>
 
