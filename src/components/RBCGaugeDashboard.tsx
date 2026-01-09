@@ -869,6 +869,21 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                 </Badge>
               </div>
 
+              {/* Additional Surplus Required - 6.5 LR Points */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-amber-600/5 border border-amber-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide font-medium">Additional Surplus Required</div>
+                    <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">$57.5M</div>
+                    <div className="text-xs text-muted-foreground mt-1">6.5 Loss Ratio Points @ ~$7.9M/pt</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">Range</div>
+                    <div className="text-sm font-semibold text-foreground">$55M – $60M</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Key Metrics Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
