@@ -4719,7 +4719,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 CP1 Trigger Flags
               </h4>
-              <p className="text-xs text-muted-foreground mb-3">Click any flag to view claims and export report</p>
+              <p className="text-[11px] text-muted-foreground mb-2">Click any flag to view claims and export report</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { label: 'Fatality', key: 'fatality', count: data?.fatalitySummary?.fatalityCount || 0, icon: '💀', critical: true },
@@ -4737,7 +4737,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 ].map((flag) => (
                   <div 
                     key={flag.label} 
-                    className={`p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
+                    className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
                     onClick={() => {
                       // Export claims with this flag to Excel
                       if (flag.count === 0) {
@@ -4792,13 +4792,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     }}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{flag.icon}</span>
-                        <span className="text-xs text-muted-foreground truncate">{flag.label}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs">{flag.icon}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{flag.label}</span>
                       </div>
                       <Download className="h-3 w-3 text-muted-foreground opacity-50" />
                     </div>
-                    <p className={`text-lg font-bold ${flag.critical && flag.count > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                    <p className={`text-base font-bold ${flag.critical && flag.count > 0 ? 'text-destructive' : 'text-foreground'}`}>
                       {flag.count.toLocaleString()}
                     </p>
                   </div>

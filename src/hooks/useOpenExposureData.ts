@@ -612,10 +612,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const isLifeCarePlanner = parseYesNo(row['LIFE CARE PLANNER']);
     const isInjections = parseYesNo(row['INJECTIONS']);
     const isEmsHeavyImpact = parseYesNo(row['EMS + HEAVY IMPACT']);
-    const isPregnancy = isPedestrianMotorcyclist && (() => {
-      const desc = (row['Description of Accident'] || '').toString().toLowerCase();
-      return desc.includes('pregnan') || desc.includes('expecting');
-    })();
+
+    // Pregnancy is tracked in Injury Severity (e.g., "PREGNANCY") in the raw export
+    const injurySeverity = (row['Injury Severity'] || '').toString().toLowerCase();
+    const isPregnancy = injurySeverity.includes('pregnan');
     
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
@@ -1266,11 +1266,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const pedMotoPreg = (row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY'] as string || '').toString().toLowerCase().trim();
     if (pedMotoPreg === 'yes' || pedMotoPreg === 'y' || pedMotoPreg === 'true' || pedMotoPreg === '1') {
       pedestrianMotorcyclistCount++;
-      // Check description for pregnancy indicators
-      const desc = (row['Description of Accident'] as string || '').toLowerCase();
-      if (desc.includes('pregnan') || desc.includes('expecting')) {
-        pregnancyCount++;
-      }
+    }
+
+    const injurySeverity = (row['Injury Severity'] as string || '').toString().toLowerCase();
+    if (injurySeverity.includes('pregnan')) {
+      pregnancyCount++;
     }
     if (parseYesNo(row['LIFE CARE PLANNER'] as string)) lifeCarePlannerCount++;
     if (parseYesNo(row['INJECTIONS'] as string)) injectionsCount++;
