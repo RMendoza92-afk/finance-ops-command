@@ -171,6 +171,12 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
     // CP1 box must ONLY reflect this CSV.
     const workable = rows.filter((r) => !isNonWorkableRow(r));
 
+    const getByPrefix = (row: Record<string, string>, prefix: string): string => {
+      const p = normalize(prefix);
+      const key = Object.keys(row).find((k) => normalize(k).startsWith(p));
+      return key ? row[key] : "";
+    };
+
     const claims: CP1CsvClaim[] = workable.map((r) => {
       const claimNumber = r["Claim#"] || "";
       const claimant = r["Claimant"] || "";
@@ -180,6 +186,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const typeGroup = (r["Type Group"] || "").trim();
       const teamGroup = (r["Team Group"] || "").trim();
       const openReserves = parseCurrency(r["Open Reserves"]);
+
+      // CP1 flags (different exports sometimes vary slightly)
       const cp1Flag = (r["CP1 Claim Flag"] || "").trim();
       const overallCP1 = (r["Overall CP1 Flag"] || "").trim();
       const biStatus = (r["BI Status"] || "").trim();
@@ -196,24 +204,29 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         cp1Flag,
         overallCP1,
         biStatus,
-        fatality: yesish(r["Injury Incident - Fatality"]),
-        surgery: yesish(r["Injury Incident - Surgery"]),
-        medsVsLimits: yesish(r["Injury Incident - Meds Greater Than Policy Limits"]),
-        hospitalization: yesish(r["Injury Incident - Hospitalization and Hospitalized"]),
-        lossOfConsciousness: yesish(r["Injury Incident - Loss of Consciousness"]),
-        aggravatingFactors: yesish(r["Injury Incident - Aggravating Factors"]),
-        objectiveInjuries: yesish(r["Injury Incident - Objective Injuries"]),
-        pedestrianMotorcyclist: yesish(r["Injury Incident - Pedestrian and Motorcyclist"]),
-        pregnancy: yesish(r["Injury Incident - Pregnancy"]),
-        lifeCarePlanner: yesish(r["Injury Incident - Life Care Planner"]),
-        injections: yesish(r["Injury Incident - Injections"]),
-        emsHeavyImpact: yesish(r["Injury Incident - EMS + Heavy Impact"]),
+
+        // Trigger flags: use prefix-match so column-name noise/line-breaks don't break counts
+        fatality: yesish(getByPrefix(r, "Injury Incident - Fatality")),
+        surgery: yesish(getByPrefix(r, "Injury Incident - Surgery")),
+        medsVsLimits: yesish(getByPrefix(r, "Injury Incident - Meds Greater Than Policy Limits")),
+        hospitalization: yesish(getByPrefix(r, "Injury Incident - Hospitalization")),
+        lossOfConsciousness: yesish(getByPrefix(r, "Injury Incident - Loss of Consciousness")),
+        aggravatingFactors: yesish(getByPrefix(r, "Injury Incident - Aggravating Factors")),
+        objectiveInjuries: yesish(getByPrefix(r, "Injury Incident - Objective Injuries")),
+        pedestrianMotorcyclist: yesish(getByPrefix(r, "Injury Incident - Pedestrian")),
+        pregnancy: yesish(getByPrefix(r, "Injury Incident - Pregnancy")),
+        lifeCarePlanner: yesish(getByPrefix(r, "Injury Incident - Life Care Planner")),
+        injections: yesish(getByPrefix(r, "Injury Incident - Injections")),
+        emsHeavyImpact: yesish(getByPrefix(r, "Injury Incident - EMS")),
       };
     });
 
+    // IMPORTANT per your request:
+    // This CP1 Analysis view is CP1-only and should not surface "No CP" anywhere.
+    // So totals treat ALL rows as CP1.
     const total = claims.length;
-    const cp1Yes = claims.filter((c) => normalize(c.overallCP1) === "yes").length;
-    const cp1No = total - cp1Yes;
+    const cp1Yes = total;
+    const cp1No = 0;
 
     const byCoverageMap = new Map<string, { coverage: string; yes: number; noCP: number; total: number; reserves: number }>();
     for (const c of claims) {
@@ -222,18 +235,17 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const acc = byCoverageMap.get(key)!;
       acc.total += 1;
       acc.reserves += c.openReserves;
-      if (normalize(c.overallCP1) === "yes") acc.yes += 1;
-      else acc.noCP += 1;
+      acc.yes += 1;
     }
 
     const byCoverage = Array.from(byCoverageMap.values())
       .map((r) => ({
         coverage: r.coverage,
         count: r.total,
-        noCP: r.noCP,
-        yes: r.yes,
+        noCP: 0,
+        yes: r.total,
         total: r.total,
-        cp1Rate: r.total > 0 ? Number(((r.yes / r.total) * 100).toFixed(1)) : 0,
+        cp1Rate: r.total > 0 ? 100 : 0,
         reserves: r.reserves,
       }))
       .sort((a, b) => b.total - a.total);
@@ -247,8 +259,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       if (!biAgeMap.has(ageKey)) biAgeMap.set(ageKey, { noCP: 0, yes: 0, total: 0 });
       const acc = biAgeMap.get(ageKey)!;
       acc.total += 1;
-      if (normalize(c.overallCP1) === "yes") acc.yes += 1;
-      else acc.noCP += 1;
+      acc.yes += 1;
     }
 
     const biByAge = Array.from(biAgeMap.entries())
@@ -275,7 +286,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       }));
 
     const biTotal = {
-      noCP: biByAge.reduce((s, r) => s + r.noCP, 0),
+      noCP: 0,
       yes: biByAge.reduce((s, r) => s + r.yes, 0),
       total: biByAge.reduce((s, r) => s + r.total, 0),
     };
@@ -311,8 +322,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       byCoverage,
       biByAge,
       biTotal,
-      totals: { noCP: cp1No, yes: cp1Yes, grandTotal: total },
-      cp1Rate: total > 0 ? ((cp1Yes / total) * 100).toFixed(1) : "0.0",
+      totals: { noCP: 0, yes: cp1Yes, grandTotal: total },
+      cp1Rate: total > 0 ? "100.0" : "0.0",
       byStatus,
     };
 
