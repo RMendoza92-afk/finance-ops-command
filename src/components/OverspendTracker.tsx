@@ -138,13 +138,14 @@ export function OverspendTracker() {
         // At-Risk Claims from pattern matching - PRIORITY SHEET
         {
           sheetName: 'At-Risk Claims (Pattern Match)',
-          columns: ['Risk Level', 'Score', 'Claim#', 'Team', 'State', 'Reserves', 'Policy Limit', 'Reserve %', 'Age', 'Type Group', 'Accident Description', 'In Litigation', 'CP1', 'Pattern Matches', 'Risk Factors'],
+          columns: ['Risk Level', 'Score', 'Claim#', 'Team', 'State', 'Total Paid', 'Reserves', 'Policy Limit', 'Reserve %', 'Age', 'Type Group', 'Accident Description', 'In Litigation', 'CP1', 'Pattern Matches', 'Risk Factors'],
           rows: atRiskClaims.map(c => [
             c.riskLevel,
             c.riskScore,
             c.claimNumber,
             c.teamGroup,
             c.state,
+            formatCurrencyFull(c.totalPaid),
             formatCurrencyFull(c.reserves),
             formatCurrencyFull(c.policyLimit),
             `${(c.reserveToLimitRatio * 100).toFixed(0)}%`,
@@ -424,6 +425,7 @@ export function OverspendTracker() {
                     <TableHead className="text-xs">Claim#</TableHead>
                     <TableHead className="text-xs">Team</TableHead>
                     <TableHead className="text-xs">State</TableHead>
+                    <TableHead className="text-xs text-right">Total Paid</TableHead>
                     <TableHead className="text-xs text-right">Reserves</TableHead>
                     <TableHead className="text-xs text-right">Limit</TableHead>
                     <TableHead className="text-xs">Accident Description</TableHead>
@@ -444,6 +446,7 @@ export function OverspendTracker() {
                       <TableCell className="font-mono">{claim.claimNumber}</TableCell>
                       <TableCell className="text-muted-foreground">{claim.teamGroup}</TableCell>
                       <TableCell>{claim.state}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.totalPaid)}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(claim.reserves)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.policyLimit)}</TableCell>
                       <TableCell className="text-muted-foreground text-[10px] max-w-[180px] truncate" title={claim.accidentDescription}>
