@@ -465,6 +465,12 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // Skip header row or empty rows
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
     
+    // ═══════════════════════════════════════════════════════════════════
+    // FILTER OUT SPD (Settled Pending Docs) - not workable files
+    // ═══════════════════════════════════════════════════════════════════
+    const exposureCategory = (row['Exposure Category'] || '').trim().toUpperCase();
+    if (exposureCategory === 'SPD' || exposureCategory === 'SETTLED PENDING DOCS') continue;
+    
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
 
