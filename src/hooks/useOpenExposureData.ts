@@ -490,6 +490,8 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // ═══════════════════════════════════════════════════════════════════
     const exposureCategory = (row['Exposure Category'] || '').trim();
     const biStatusRaw = (row['BI Status'] || '').trim();
+    const evalPhaseRaw = (row['Evaluation Phase'] || '').trim();
+    const statusRaw = (row['Status'] || '').trim();
 
     const norm = (s: string) =>
       (s || '')
@@ -500,6 +502,8 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
 
     const exposureCategoryN = norm(exposureCategory);
     const biStatusN = norm(biStatusRaw);
+    const evalPhaseN = norm(evalPhaseRaw);
+    const statusN = norm(statusRaw);
 
     const nonWorkableTokens = [
       'spd',
@@ -518,9 +522,17 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       'spd lit',
     ];
 
-    const isNonWorkable = (v: string) => nonWorkableTokens.some(t => v === t || v.includes(t));
+    const isNonWorkable = (v: string) => nonWorkableTokens.some((t) => v === t || v.includes(t));
 
-    if (isNonWorkable(exposureCategoryN) || isNonWorkable(biStatusN)) continue;
+    // Exclude any non-workable/settled rows regardless of which column they land in
+    if (
+      isNonWorkable(exposureCategoryN) ||
+      isNonWorkable(biStatusN) ||
+      isNonWorkable(evalPhaseN) ||
+      isNonWorkable(statusN)
+    ) {
+      continue;
+    }
     
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
