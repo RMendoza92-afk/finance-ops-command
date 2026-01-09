@@ -4641,6 +4641,43 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
             </div>
 
+            {/* CP1 Trigger Flags Breakdown */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                CP1 Trigger Flags
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">Claims flagged with high-severity indicators that trigger CP1 status</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { label: 'Fatality', count: data?.fatalitySummary?.fatalityCount || 0, icon: '💀', critical: true },
+                  { label: 'Surgery', count: data?.fatalitySummary?.surgeryCount || 0, icon: '🏥', critical: true },
+                  { label: 'Hospitalization', count: data?.fatalitySummary?.hospitalizationCount || 0, icon: '🛏️', critical: false },
+                  { label: 'Meds > Limits', count: data?.fatalitySummary?.medsVsLimitsCount || 0, icon: '💊', critical: true },
+                  { label: 'Loss of Consciousness', count: data?.fatalitySummary?.lossOfConsciousnessCount || 0, icon: '😵', critical: false },
+                  { label: 'Aggravating Factors', count: data?.fatalitySummary?.aggravatingFactorsCount || 0, icon: '⚠️', critical: false },
+                  { label: 'Objective Injuries', count: data?.fatalitySummary?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
+                  { label: 'Pedestrian/Motorcycle', count: data?.fatalitySummary?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: false },
+                  { label: 'Life Care Planner', count: data?.fatalitySummary?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
+                  { label: 'Injections', count: data?.fatalitySummary?.injectionsCount || 0, icon: '💉', critical: false },
+                  { label: 'EMS + Heavy Impact', count: data?.fatalitySummary?.emsHeavyImpactCount || 0, icon: '🚑', critical: false },
+                ].map((flag) => (
+                  <div 
+                    key={flag.label} 
+                    className={`p-3 rounded-lg border ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-secondary/50 border-border'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">{flag.icon}</span>
+                      <span className="text-xs text-muted-foreground truncate">{flag.label}</span>
+                    </div>
+                    <p className={`text-lg font-bold ${flag.critical && flag.count > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                      {flag.count.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* 12-Month CP1 Rate Trend Chart */}
             <div>
               <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
