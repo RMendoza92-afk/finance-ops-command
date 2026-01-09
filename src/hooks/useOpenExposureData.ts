@@ -476,10 +476,30 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     if (!row['Claim#'] || row['Claim#'] === 'Claim#') continue;
     
     // ═══════════════════════════════════════════════════════════════════
-    // FILTER OUT SPD (Settled Pending Docs) - not workable files
+    // FILTER OUT non-workable files (settled statuses, pending docs, etc.)
     // ═══════════════════════════════════════════════════════════════════
     const exposureCategory = (row['Exposure Category'] || '').trim().toUpperCase();
+    const biStatusRaw = (row['BI Status'] || '').trim().toLowerCase();
+    
+    // Exclude Exposure Categories that are non-workable
     if (exposureCategory === 'SPD' || exposureCategory === 'SETTLED PENDING DOCS') continue;
+    
+    // Exclude BI Statuses that indicate settled/pending non-workable claims
+    const excludedBiStatuses = [
+      'settled pending docs',
+      'conditional',
+      'court approval pending',
+      'settled pending drafting instructions',
+      'pending friendly suits',
+      'pending payment',
+      'future medical release',
+      'past medical release',
+      'spd-lit',
+      'spd - lit',
+      'passed/future medical release',
+      'past/future medical release',
+    ];
+    if (excludedBiStatuses.some(s => biStatusRaw === s || biStatusRaw.includes(s))) continue;
     
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
