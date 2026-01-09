@@ -226,13 +226,14 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const ay2025_lossRatio = 63.59;
     const ay2025_reportedLossRatio = 67.09;
     
-    // AY 2024 @ Ultimate (21 Mo)
+    // AY 2024 @ 18 Mo (May 31, 2025 - from development file)
+    // Updated with 18-month development from triangle
     const ay2024_earnedPremium = 789289565;
-    const ay2024_netPaidLoss = 396567848;
-    const ay2024_claimReserves = 84166727;
-    const ay2024_dcceReserves = 5040000;
-    const ay2024_bulkIBNR = 8363370;
-    const ay2024_lossRatio = 71.92;
+    const ay2024_netPaidLoss = 363653237;  // 18 Mo from triangle
+    const ay2024_claimReserves = 117222096; // 18 Mo from triangle  
+    const ay2024_dcceReserves = 7953000;    // 18 Mo from triangle
+    const ay2024_bulkIBNR = 2790499;        // 18 Mo from triangle
+    const ay2024_lossRatio = 72.24;         // 18 Mo from triangle
     
     // AY 2023 @ 33 Mo
     const ay2023_earnedPremium = 668532911;
