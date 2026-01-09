@@ -5,6 +5,7 @@ import { useExportData, ExportableData } from "@/hooks/useExportData";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Download } from "lucide-react";
+import { getCurrentMonthlySpend } from "@/data/monthlySpendData";
 
 interface Stats {
   totalMatters: number;
@@ -58,20 +59,23 @@ export function LitigationDisciplineDashboard({ data, stats }: LitigationDiscipl
   const [activeTab, setActiveTab] = useState<TabType>('posture-roi');
   const { exportBoth } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
+  
+  // Get current monthly spend data from operations report (Jan 2026)
+  const monthlySpend = getCurrentMonthlySpend();
 
-  // Use real stats from loaded data
-  const totalExpense = stats.totalExpenses;
-  const totalIndemnities = stats.totalIndemnities;
-  const totalNet = stats.totalNet;
+  // Use January 2026 operations report figures
+  const totalExpense = monthlySpend.expenses.total;       // $268,869.38
+  const totalIndemnities = monthlySpend.indemnities.total; // $9,835,934.96
+  const totalNet = totalIndemnities + totalExpense;        // $10,104,804.34
 
   const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(2)}M`;
+    if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}K`;
     return `$${amount.toLocaleString()}`;
   };
 
   const formatCurrencyFull = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
   };
 
   const tabs: { id: TabType; label: string }[] = [
