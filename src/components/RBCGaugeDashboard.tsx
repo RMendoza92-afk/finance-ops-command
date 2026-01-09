@@ -915,7 +915,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                 </p>
               </div>
 
-              {/* Operational Recommendations */}
+              {/* Operational Recommendations - Data Driven */}
               <div className="p-4 rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-transparent">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -924,6 +924,71 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                     YoY Reserve Δ: $521M → Current
                   </Badge>
                 </div>
+                
+                {/* State-Specific Rate Actions */}
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-2">🎯 Priority Rate Increases by State</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex justify-between p-2 bg-background/50 rounded">
+                      <span className="font-medium">Nevada</span>
+                      <span className="text-red-600 dark:text-red-400 font-bold">+8-10%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded">
+                      <span className="font-medium">California</span>
+                      <span className="text-red-600 dark:text-red-400 font-bold">+6-8%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded">
+                      <span className="font-medium">Texas</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">+5-7%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded">
+                      <span className="font-medium">New Mexico</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">+5-6%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded">
+                      <span className="font-medium">Georgia</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">+4-5%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded">
+                      <span className="font-medium">Colorado</span>
+                      <span className="text-yellow-600 dark:text-yellow-400 font-bold">+3-4%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Based on YTD overspend: NV $5.6M (34 claims), CA $5.0M (30), TX $4.5M (42), NM $2.1M (4)</p>
+                </div>
+
+                {/* Frequency Hotspots */}
+                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-2">📊 Frequency Hotspots (Claims per 1,000 policies)</div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-red-600">31.4</div>
+                      <div className="text-muted-foreground">Georgia</div>
+                    </div>
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-red-600">26.1</div>
+                      <div className="text-muted-foreground">Nevada</div>
+                    </div>
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-amber-600">24.2</div>
+                      <div className="text-muted-foreground">Indiana</div>
+                    </div>
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-amber-600">23.2</div>
+                      <div className="text-muted-foreground">Ohio</div>
+                    </div>
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-amber-600">22.5</div>
+                      <div className="text-muted-foreground">Colorado</div>
+                    </div>
+                    <div className="text-center p-2 bg-background/50 rounded">
+                      <div className="font-bold text-yellow-600">21.9</div>
+                      <div className="text-muted-foreground">Arizona</div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Consider underwriting tightening in GA, NV. Review loss mitigation programs in high-frequency territories.</p>
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex gap-3 items-start">
                     <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -931,7 +996,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                     </div>
                     <div>
                       <div className="text-sm font-medium text-foreground">Stabilize Reserve Volatility</div>
-                      <p className="text-xs text-muted-foreground">Implement quarterly reserve reviews with actuarial sign-off. Large swings signal potential reserving methodology gaps or claim development surprises.</p>
+                      <p className="text-xs text-muted-foreground">Implement quarterly reserve reviews with actuarial sign-off. $521M→current swing requires tighter development monitoring on AY 2024/2025.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
@@ -940,7 +1005,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                     </div>
                     <div>
                       <div className="text-sm font-medium text-foreground">Address App Count Decline</div>
-                      <p className="text-xs text-muted-foreground">Review underwriting guidelines for over-tightening. Consider geographic expansion or product diversification to restore premium growth.</p>
+                      <p className="text-xs text-muted-foreground">TX policies down from 2.4M→2.3M, CA from 1.6M→1.5M. Review underwriting for over-tightening; consider targeted growth in lower-frequency states.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
@@ -948,22 +1013,13 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                       <span className="text-xs font-bold text-blue-500">3</span>
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-foreground">Strengthen Claims Management</div>
-                      <p className="text-xs text-muted-foreground">Accelerate settlements on aged claims (365+ days). Implement early intervention protocols to reduce severity development on high-exposure matters.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-xs font-bold text-emerald-500">4</span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-foreground">Rate Adequacy Review</div>
-                      <p className="text-xs text-muted-foreground">Target 3-5% rate increases in loss-leading states. Focus on CA, FL, TX where BI limits are under pressure from over-limit exposures.</p>
+                      <div className="text-sm font-medium text-foreground">BI Coverage Focus</div>
+                      <p className="text-xs text-muted-foreground">TX leads with $67.5K over-limit (3 claims), CA at $35K (1 claim). Prioritize BI rate filings in these states ahead of limit increases.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 items-start">
                     <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-xs font-bold text-purple-500">5</span>
+                      <span className="text-xs font-bold text-purple-500">4</span>
                     </div>
                     <div>
                       <div className="text-sm font-medium text-foreground">Capital Efficiency</div>
