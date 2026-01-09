@@ -4642,9 +4642,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       {/* CP1 Analysis Drawer */}
       <Sheet open={showCP1Drawer} onOpenChange={setShowCP1Drawer}>
-        <SheetContent className="w-[650px] sm:max-w-[650px] overflow-y-auto">
+        <SheetContent className="w-full sm:w-[650px] sm:max-w-[650px] overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <SheetTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-success" />
                 CP1 Analysis
@@ -4655,6 +4655,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   size="sm"
                   onClick={generateCP1PDF}
                   disabled={generatingCP1PDF}
+                  className="flex-1 sm:flex-none"
                 >
                   {generatingCP1PDF ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -4668,6 +4669,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   size="sm"
                   onClick={generateCP1Excel}
                   disabled={generatingCP1Excel}
+                  className="flex-1 sm:flex-none"
                 >
                   {generatingCP1Excel ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -4693,17 +4695,17 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Executive Summary</span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-4xl font-bold text-foreground">{CP1_DATA.totals.grandTotal.toLocaleString()}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="text-center sm:text-left">
+                    <p className="text-3xl sm:text-4xl font-bold text-foreground">{CP1_DATA.totals.grandTotal.toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground mt-1">Total CP1 Claims</p>
                   </div>
-                  <div>
-                    <p className="text-4xl font-bold text-destructive">{cp1BoxData?.totalFlagInstances?.toLocaleString() || 0}</p>
+                  <div className="text-center sm:text-left">
+                    <p className="text-3xl sm:text-4xl font-bold text-destructive">{cp1BoxData?.totalFlagInstances?.toLocaleString() || 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">Active Trigger Flags</p>
                   </div>
-                  <div>
-                    <p className="text-4xl font-bold text-orange-500">
+                  <div className="text-center sm:text-left">
+                    <p className="text-3xl sm:text-4xl font-bold text-orange-500">
                       {cp1BoxData?.multiFlagGroups?.filter(g => g.flagCount >= 2).reduce((sum, g) => sum + g.claimCount, 0).toLocaleString() || 0}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">Multi-Flag Claims</p>
@@ -4714,12 +4716,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
             {/* Critical Flags - Visual Cards */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <h4 className="text-sm font-bold flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                   Critical Trigger Flags
                 </h4>
-                <span className="text-[10px] text-muted-foreground">Click to export • Sorted by severity</span>
+                <span className="text-[10px] text-muted-foreground">Tap to export • Sorted by severity</span>
               </div>
 
               <div className="grid grid-cols-1 gap-2">
@@ -4783,21 +4785,21 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                           style={{ width: `${barWidth}%` }}
                         />
                         
-                        <div className="relative flex items-center justify-between p-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{flag.icon}</span>
-                            <div>
-                              <p className="text-sm font-medium">{flag.label}</p>
-                              <p className="text-[10px] text-muted-foreground">{pct}% of inventory</p>
+                        <div className="relative flex items-center justify-between p-3 gap-2">
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <span className="text-base sm:text-lg flex-shrink-0">{flag.icon}</span>
+                            <div className="min-w-0">
+                              <p className="text-xs sm:text-sm font-medium truncate">{flag.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{pct}%</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <p className={`text-xl font-bold ${
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <p className={`text-lg sm:text-xl font-bold ${
                               flag.tier === 1 ? 'text-destructive' : flag.tier === 2 ? 'text-orange-500' : 'text-primary'
                             }`}>
                               {flag.count.toLocaleString()}
                             </p>
-                            <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                           </div>
                         </div>
                       </div>
@@ -4810,11 +4812,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             {/* Multi-Flag Severity Analysis */}
             {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
               <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="bg-gradient-to-r from-destructive/10 to-orange-500/10 px-4 py-3 border-b border-border">
-                  <div className="flex items-center justify-between">
+                <div className="bg-gradient-to-r from-destructive/10 to-orange-500/10 px-3 sm:px-4 py-3 border-b border-border">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h4 className="text-sm font-bold flex items-center gap-2">
                       <Layers className="h-4 w-4 text-destructive" />
-                      Multi-Flag Risk Concentration
+                      Multi-Flag Risk
                     </h4>
                     <div className="flex items-center gap-2 text-[10px]">
                       <span className="bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-medium">
@@ -4861,7 +4863,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       return (
                         <div
                           key={group.flagCount}
-                          className="group flex items-center justify-between p-4 hover:bg-accent/30 cursor-pointer transition-all"
+                          className="group flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 hover:bg-accent/30 cursor-pointer transition-all gap-3"
                           onClick={() => {
                             import('xlsx').then((XLSX) => {
                               const rows = group.claims.map((c) => ({
@@ -4887,8 +4889,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                             });
                           }}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className={`flex items-center justify-center w-12 h-12 rounded-xl font-bold text-xl ${
+                          <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                            <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl font-bold text-lg sm:text-xl flex-shrink-0 ${
                               group.flagCount >= 4 ? 'bg-destructive text-destructive-foreground' :
                               group.flagCount === 3 ? 'bg-destructive/80 text-destructive-foreground' :
                               group.flagCount === 2 ? 'bg-orange-500 text-white' :
@@ -4896,26 +4898,29 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                             }`}>
                               {group.flagCount}
                             </div>
-                            <div>
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-lg font-bold">{group.claimCount.toLocaleString()}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="text-base sm:text-lg font-bold">{group.claimCount.toLocaleString()}</span>
                                 <span className="text-xs text-muted-foreground">claims</span>
                                 <span className="text-[10px] text-muted-foreground">({pct}%)</span>
                               </div>
-                              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                {topFlags.map((f) => (
+                              <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1.5">
+                                {topFlags.slice(0, 3).map((f) => (
                                   <span 
                                     key={f.label} 
-                                    className="inline-flex items-center gap-1 text-[10px] bg-muted px-2 py-0.5 rounded-full"
+                                    className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] bg-muted px-1.5 sm:px-2 py-0.5 rounded-full"
                                   >
                                     {f.label}
                                     <span className="text-muted-foreground">({f.count})</span>
                                   </span>
                                 ))}
+                                {topFlags.length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground">+{topFlags.length - 3} more</span>
+                                )}
                               </div>
                             </div>
                           </div>
-                          <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
                         </div>
                       );
                     })}
@@ -4925,7 +4930,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
             {/* Multi-Flag Risk Spectrum - 100% Stacked Bar */}
             {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
-              <div className="rounded-xl border border-border bg-card p-5">
+              <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
                 {(() => {
                   const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
                   const total = groups.reduce((s, g) => s + g.claimCount, 0);
@@ -4984,11 +4989,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       </div>
                       
                       {/* Compact legend */}
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
                         {riskBands.map((band) => (
                           <div key={band.label} className="flex items-center gap-1.5">
-                            <div className={`w-2 h-2 rounded-full ${band.dotColor}`} />
-                            <span>{band.label}</span>
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${band.dotColor}`} />
+                            <span className="truncate">{band.label}</span>
                             <span className="font-medium text-foreground">{band.count.toLocaleString()}</span>
                           </div>
                         ))}
@@ -4996,10 +5001,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       
                       {/* Bold annotation */}
                       <div className="pt-2 border-t border-border">
-                        <p className="text-sm">
-                          <span className="font-bold text-destructive text-lg">{highRiskPct}%</span>
-                          <span className="text-muted-foreground ml-2">of claims carry 3+ flags — </span>
-                          <span className="font-semibold text-foreground">{highRiskCount.toLocaleString()} require executive review</span>
+                        <p className="text-xs sm:text-sm">
+                          <span className="font-bold text-destructive text-base sm:text-lg">{highRiskPct}%</span>
+                          <span className="text-muted-foreground ml-1 sm:ml-2">carry 3+ flags — </span>
+                          <span className="font-semibold text-foreground">{highRiskCount.toLocaleString()} need review</span>
                         </p>
                       </div>
                     </div>
@@ -5025,9 +5030,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       {/* Multi-Pack Claims Drawer */}
       <Sheet open={showMultiPackDrawer} onOpenChange={setShowMultiPackDrawer}>
-        <SheetContent className="w-[700px] sm:max-w-[700px] overflow-y-auto">
-          <SheetHeader className="mb-6">
-            <div className="flex items-center justify-between">
+        <SheetContent className="w-full sm:w-[700px] sm:max-w-[700px] overflow-y-auto">
+          <SheetHeader className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <SheetTitle className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-purple-500" />
                 Multi-Pack Claims
@@ -5089,18 +5094,18 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
           <div className="space-y-6">
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/30">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-purple-500/10 rounded-lg p-3 sm:p-4 border border-purple-500/30">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Groups</p>
-                <p className="text-2xl font-bold text-purple-500 mt-1">{data?.multiPackData?.totalMultiPackGroups || 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-500 mt-1">{data?.multiPackData?.totalMultiPackGroups || 0}</p>
               </div>
-              <div className="bg-muted/30 rounded-lg p-4 border border-border">
+              <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Claims in Packs</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{data?.multiPackData?.totalClaimsInPacks || 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{data?.multiPackData?.totalClaimsInPacks || 0}</p>
               </div>
-              <div className="bg-muted/30 rounded-lg p-4 border border-border">
+              <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Reserves</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
+                <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">
                   {formatCurrency(data?.multiPackData?.groups.reduce((sum, g) => sum + g.totalReserves, 0) || 0)}
                 </p>
               </div>
