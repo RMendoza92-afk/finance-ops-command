@@ -533,7 +533,12 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     ) {
       continue;
     }
-    
+
+    // HARD RULE: Workable inventory = BI Status must be "In Progress".
+    // This is intentionally strict to prevent any settled/pending-docs items from leaking into counts/exports.
+    if (biStatusN !== 'in progress') {
+      continue;
+    }
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
 
@@ -1422,9 +1427,9 @@ export function useOpenExposureData() {
     const loadData = async () => {
       try {
         // Load current raw data (Jan 8)
-        const currentRes = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
+        // Cache-bust so users never see stale counts after a CSV refresh
+        const currentRes = await fetch(`/data/open-exposure-raw-jan8.csv?v=${Date.now()}`);
         let currentCsv = await currentRes.text();
-        
         // Handle CSVs with metadata rows at the top (e.g., "Details for Count..." header)
         // Split into lines and check if first line is not a valid header
         const lines = currentCsv.split('\n');
