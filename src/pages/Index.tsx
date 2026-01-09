@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { SalesTickerBanner } from "@/components/SalesTickerBanner";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
+import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send, HelpCircle } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -220,7 +221,8 @@ const Index = () => {
               <h1 className="text-sm sm:text-xl font-bold tracking-tight text-foreground">Discipline Command Center</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {filters.inventoryStatus === 'operations' ? 'Open Inventory' : 
-                 filters.inventoryStatus === 'executive' ? 'Executive View' : '2025 EOY Portfolio'}
+                 filters.inventoryStatus === 'executive' ? 'Executive View' : 
+                 filters.inventoryStatus === 'rbc' ? 'RBC Performance' : '2025 EOY Portfolio'}
               </p>
             </div>
           </div>
@@ -275,6 +277,8 @@ const Index = () => {
           <OpenInventoryDashboard filters={filters} />
         ) : filters.inventoryStatus === 'executive' ? (
           <ExecutiveCommandDashboardWrapper />
+        ) : filters.inventoryStatus === 'rbc' ? (
+          <RBCGaugeDashboard />
         ) : (
           <div className="space-y-6">
             <ExecutiveDashboard 
