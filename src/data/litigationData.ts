@@ -137,8 +137,10 @@ export const classes = [...new Set(litigationData.map(d => d.class))].sort();
 export const departments = [...new Set(litigationData.map(d => d.dept))].sort();
 export const teams = [...new Set(litigationData.map(d => d.team))].sort();
 export const adjusters = [...new Set(litigationData.map(d => d.adjusterName))].sort();
-// Filter to only CWP (Closed With Payment) records
-export const litigationDataFiltered = litigationData.filter(d => d.cwpCwn === 'CWP');
+// Filter to only CWP (Closed With Payment) records AND exclude SPD (Settled Pending Docs)
+export const litigationDataFiltered = litigationData
+  .filter(d => d.cwpCwn === 'CWP')
+  .filter(d => d.expCategory !== 'SPD' && d.expCategory !== 'Settled Pending Docs');
 
 export const expCategories = [...new Set(litigationDataFiltered.map(d => d.expCategory))].sort();
 export const coverages = [...new Set(litigationDataFiltered.map(d => d.coverage))].sort();
