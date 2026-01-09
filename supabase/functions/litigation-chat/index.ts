@@ -587,6 +587,25 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - high_exposure_sample[]: claim_id, coverage, days_open, reserves_usd, cp1_status, evaluation_phase, days_since_negotiation
 - no_eval_sample[]: claim_id, coverage, evaluation_phase
 
+## CP1 FLAG TYPES (What triggers a CP1 flag):
+CP1 flags are triggered by ANY of these injury/incident indicators:
+- Fatality - Claimant death
+- Surgery - Claimant required surgery
+- Meds Greater Than Policy Limits - Medical costs exceed policy limits
+- Hospitalization / Hospitalized - Claimant was hospitalized
+- Loss of Consciousness - Claimant lost consciousness
+- Lacerations - Significant laceration injuries
+- Pedestrian and Motorcyclist - Vulnerable road user involved
+- DUI / DWI / Hit and Run - Impaired driving or fled scene
+- Life Care Planner - Long-term care needs identified
+- Confirmed Fractures - Bone fractures confirmed
+- Agg Factors DUI - Aggravating DUI factors
+- Fled Scene - At-fault party left scene
+- Prior Surgery - Pre-existing surgical history
+- Pregnancy - Pregnant claimant
+- Ambulance Used - Emergency transport required
+When users ask about CP1 flags, explain that CP1 indicates high-severity claims with one or more of these indicators.
+
 ## MULTI-PACK & LOR DATA:
 - multi_pack_claims.open_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
 - multi_pack_claims.closed_claims_multi_pack: total_multi_pack_groups, total_claims_in_packs, by_pack_size[], top_multi_pack_groups[]
