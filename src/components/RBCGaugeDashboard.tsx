@@ -45,6 +45,7 @@ interface AccidentYearSummary {
   ibnr: number;
   incurred: number;
   loss_ratio: number;
+  has_paid_reserve_data: boolean;
 }
 
 interface TriangleDataPoint {
@@ -121,22 +122,65 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           if (row.incurred_pct_premium) acc[year].loss_ratios.push(row.incurred_pct_premium);
           return acc;
         }, {} as Record<number, { earned_premium: number; net_paid: number; reserves: number; incurred: number; loss_ratios: number[] }>);
-        
-        const summaries: AccidentYearSummary[] = Object.entries(grouped).map(([year, data]) => {
-          const ibnr = Math.max(0, data.incurred - data.net_paid - data.reserves);
-          // Calculate loss ratio as incurred / earned premium
-          const lossRatio = data.earned_premium > 0 ? (data.incurred / data.earned_premium) * 100 : 0;
-          return {
-            accident_year: parseInt(year),
-            earned_premium: data.earned_premium,
-            net_paid: data.net_paid,
-            reserves: data.reserves,
-            ibnr,
-            incurred: data.incurred,
-            loss_ratio: lossRatio > 0 ? lossRatio : (data.loss_ratios.length > 0 ? data.loss_ratios.reduce((a, b) => a + b, 0) / data.loss_ratios.length : 0)
-          };
-        }).sort((a, b) => b.accident_year - a.accident_year);
-        
+
+        // Build fallback map from development triangles (latest available dev month per AY)
+        const triangleByYear = (triangleRes.data ?? []).reduce((acc, row) => {
+          const year = (row as any).accident_year as number;
+          const month = (row as any).development_months as number;
+          const metric = (row as any).metric_type as string;
+          const amount = (row as any).amount as number;
+
+          if (!acc[year]) acc[year] = {};
+          // keep the latest month for each metric
+          const existing = acc[year][metric];
+          if (!existing || month >= existing.month) {
+            acc[year][metric] = { month, amount };
+          }
+          return acc;
+        }, {} as Record<number, Record<string, { month: number; amount: number }>>);
+
+        const summaries: AccidentYearSummary[] = Object.entries(grouped)
+          .map(([yearStr, data]) => {
+            const year = parseInt(yearStr);
+            const tri = triangleByYear[year] ?? {};
+
+            const triEarned = tri.earned_premium?.amount ?? 0;
+            const triPaid = tri.net_paid_loss?.amount ?? 0;
+            const triRes = tri.claim_reserves?.amount ?? 0;
+            const triIbnr = tri.bulk_ibnr?.amount ?? 0;
+            const triLR = tri.loss_ratio?.amount ?? 0;
+
+            // Prefer accident_year_development values when present; otherwise fall back to triangles
+            const earnedPremium = data.earned_premium || triEarned;
+            const netPaid = data.net_paid || triPaid;
+            const reserves = data.reserves || triRes;
+
+            const hasPaidReserveData = netPaid > 0 || reserves > 0 || triIbnr > 0;
+
+            // Incurred: use DB incurred if present; otherwise approximate only if we have paid/reserve components
+            const incurred = data.incurred > 0 ? data.incurred : (hasPaidReserveData ? (netPaid + reserves + triIbnr) : 0);
+
+            const ibnr = hasPaidReserveData
+              ? Math.max(0, (incurred - netPaid - reserves))
+              : 0;
+
+            // Loss ratio: use incurred/earned if available; otherwise fall back to triangle loss ratio
+            const lossRatioCalc = earnedPremium > 0 && incurred > 0 ? (incurred / earnedPremium) * 100 : 0;
+            const lossRatio = lossRatioCalc > 0 ? lossRatioCalc : (triLR > 0 ? triLR : (data.loss_ratios.length > 0 ? data.loss_ratios.reduce((a, b) => a + b, 0) / data.loss_ratios.length : 0));
+
+            return {
+              accident_year: year,
+              earned_premium: earnedPremium,
+              net_paid: netPaid,
+              reserves,
+              ibnr,
+              incurred,
+              loss_ratio: lossRatio,
+              has_paid_reserve_data: hasPaidReserveData,
+            };
+          })
+          .sort((a, b) => b.accident_year - a.accident_year);
+
         setAccidentYears(summaries);
       }
       
@@ -293,12 +337,12 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     const years = [...new Set(lossRatioData.map(d => d.accident_year))].sort((a, b) => a - b);
     const allMonths = [...new Set(lossRatioData.map(d => d.development_months))].sort((a, b) => a - b);
     
-    // Include LDF data in export
+    // Include LDF data in export (standard periods only)
     const ldfRows: (string | number)[][] = [];
     if (ldfData.ataFactors.length > 0) {
-      ldfRows.push(['', ...allMonths.slice(0, -1).map((m, i) => `${m}→${allMonths[i + 1]}M`)]);
-      ldfRows.push(['Wtd Avg ATA', ...ldfData.selectedATA.map(f => f.toFixed(4))]);
-      ldfRows.push(['Selected CDF', ...ldfData.selectedCDF.slice(0, -1).map(f => f.toFixed(4)), '1.0000']);
+      ldfRows.push(['LDF (standard 12-month)', ...ldfData.ataFactors.map((f) => `${f.from}→${f.to}`), 'Ultimate']);
+      ldfRows.push(['Wtd Avg ATA', ...ldfData.selectedATA.map(f => f.toFixed(4)), '1.0000']);
+      ldfRows.push(['Selected CDF', ...ldfData.selectedCDF.map(f => f.toFixed(4))]);
     }
 
     return {
@@ -313,7 +357,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           });
           return row;
         }),
-        [], // Empty row separator
+        [''], // spacer row (prevents Excel auto-zeros)
         ...ldfRows
       ]
     };
@@ -734,10 +778,10 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                       <tr key={ay.accident_year} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-semibold">{ay.accident_year}</td>
                         <td className="py-3 px-4 text-right font-medium">{formatCurrency(ay.earned_premium)}</td>
-                        <td className="py-3 px-4 text-right">{formatCurrency(ay.net_paid)}</td>
-                        <td className="py-3 px-4 text-right">{formatCurrency(ay.reserves)}</td>
-                        <td className="py-3 px-4 text-right">{formatCurrency(ay.ibnr)}</td>
-                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(ay.incurred)}</td>
+                        <td className="py-3 px-4 text-right">{ay.has_paid_reserve_data ? formatCurrency(ay.net_paid) : '—'}</td>
+                        <td className="py-3 px-4 text-right">{ay.has_paid_reserve_data ? formatCurrency(ay.reserves) : '—'}</td>
+                        <td className="py-3 px-4 text-right">{ay.has_paid_reserve_data ? formatCurrency(ay.ibnr) : '—'}</td>
+                        <td className="py-3 px-4 text-right font-medium">{ay.incurred > 0 ? formatCurrency(ay.incurred) : '—'}</td>
                         <td className="py-3 px-4 text-right">
                           <Badge className={cn(
                             "font-mono",
