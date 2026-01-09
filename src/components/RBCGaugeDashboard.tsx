@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText, Map } from 'lucide-react';
+import StatePerformanceMap from './StatePerformanceMap';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -1144,17 +1145,167 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
         </CardContent>
       </Card>
 
-      {/* State-by-State Profitability Breakdown */}
+      {/* State Performance Map */}
       <Card className={cn("", isRefreshing && "animate-pulse")}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
+              <Map className="h-5 w-5 text-primary" />
+              State Performance Map
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">
+              Territory Health
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <StatePerformanceMap
+            data={[
+              { state: 'Texas', stateCode: 'TX', policies: 2312106, policyChange: -3.8, claims: 35353, frequency: 15.3, overspend: 4478135, action: 'Rate +5-7%' },
+              { state: 'California', stateCode: 'CA', policies: 1465299, policyChange: -10.4, claims: 24828, frequency: 16.9, overspend: 5015063, action: 'Rate +6-8%' },
+              { state: 'Colorado', stateCode: 'CO', policies: 564876, policyChange: 8.5, claims: 11484, frequency: 20.3, overspend: 80009, action: 'Monitor Growth' },
+              { state: 'New Mexico', stateCode: 'NM', policies: 196515, policyChange: -4.6, claims: 2836, frequency: 14.4, overspend: 2139992, action: 'Rate +5-6%' },
+              { state: 'Arizona', stateCode: 'AZ', policies: 121017, policyChange: -1.4, claims: 2444, frequency: 20.2, overspend: 0, action: 'Maintain' },
+              { state: 'Nevada', stateCode: 'NV', policies: 97369, policyChange: -23.8, claims: 2183, frequency: 22.4, overspend: 5583306, action: 'Rate +8-10%' },
+              { state: 'Illinois', stateCode: 'IL', policies: 88632, policyChange: -13.4, claims: 1768, frequency: 19.9, overspend: 0, action: 'Review UW' },
+              { state: 'Oklahoma', stateCode: 'OK', policies: 66229, policyChange: 5.1, claims: 1122, frequency: 16.9, overspend: 0, action: 'Monitor Growth' },
+              { state: 'Georgia', stateCode: 'GA', policies: 63615, policyChange: -13.1, claims: 1811, frequency: 28.5, overspend: 570714, action: 'UW Tighten' },
+              { state: 'Alabama', stateCode: 'AL', policies: 51370, policyChange: -11.6, claims: 848, frequency: 16.5, overspend: 413812, action: 'Rate +4-5%' },
+              { state: 'Indiana', stateCode: 'IN', policies: 32506, policyChange: 12.7, claims: 649, frequency: 20.0, overspend: 0, action: 'Monitor Growth' },
+              { state: 'Ohio', stateCode: 'OH', policies: 13675, policyChange: -8.0, claims: 309, frequency: 22.6, overspend: 0, action: 'Maintain' },
+            ]}
+            onStateClick={(state) => console.log('State clicked:', state)}
+          />
+        </CardContent>
+      </Card>
+
+      {/* State-by-State Profitability Breakdown */}
+      <Card className={cn("", isRefreshing && "animate-pulse")}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
               State Profitability Breakdown
             </CardTitle>
-            <Badge variant="outline" className="text-xs">
-              2024 vs 2025 YTD
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                2024 vs 2025 YTD
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => {
+                  const stateData = [
+                    { state: 'Texas', policies2025: 2312106, policies2024: 2402479, claims2025: 35353, frequency: 15.3, overspend: 4478135, action: 'Rate +5-7%' },
+                    { state: 'California', policies2025: 1465299, policies2024: 1635935, claims2025: 24828, frequency: 16.9, overspend: 5015063, action: 'Rate +6-8%' },
+                    { state: 'Colorado', policies2025: 564876, policies2024: 520849, claims2025: 11484, frequency: 20.3, overspend: 80009, action: 'Monitor Growth' },
+                    { state: 'New Mexico', policies2025: 196515, policies2024: 205951, claims2025: 2836, frequency: 14.4, overspend: 2139992, action: 'Rate +5-6%' },
+                    { state: 'Arizona', policies2025: 121017, policies2024: 122680, claims2025: 2444, frequency: 20.2, overspend: 0, action: 'Maintain' },
+                    { state: 'Nevada', policies2025: 97369, policies2024: 127829, claims2025: 2183, frequency: 22.4, overspend: 5583306, action: 'Rate +8-10%' },
+                    { state: 'Illinois', policies2025: 88632, policies2024: 102383, claims2025: 1768, frequency: 19.9, overspend: 0, action: 'Review UW' },
+                    { state: 'Oklahoma', policies2025: 66229, policies2024: 62999, claims2025: 1122, frequency: 16.9, overspend: 0, action: 'Monitor Growth' },
+                    { state: 'Georgia', policies2025: 63615, policies2024: 73213, claims2025: 1811, frequency: 28.5, overspend: 570714, action: 'UW Tighten' },
+                    { state: 'Alabama', policies2025: 51370, policies2024: 58094, claims2025: 848, frequency: 16.5, overspend: 413812, action: 'Rate +4-5%' },
+                    { state: 'Indiana', policies2025: 32506, policies2024: 28846, claims2025: 649, frequency: 20.0, overspend: 0, action: 'Monitor Growth' },
+                    { state: 'Ohio', policies2025: 13675, policies2024: 14872, claims2025: 309, frequency: 22.6, overspend: 0, action: 'Maintain' },
+                  ];
+                  
+                  const totalOverspend = stateData.reduce((sum, s) => sum + s.overspend, 0);
+                  const totalPolicies = stateData.reduce((sum, s) => sum + s.policies2025, 0);
+                  const criticalStates = stateData.filter(s => s.overspend > 2000000);
+                  
+                  generatePDF({
+                    title: 'State Profitability & Rate Recommendations',
+                    subtitle: 'Executive Territory Performance Analysis - CFO/CEO Briefing',
+                    timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+                    summary: {
+                      'Total Policies': totalPolicies.toLocaleString(),
+                      'Total Overspend': '$' + (totalOverspend / 1000000).toFixed(1) + 'M',
+                      'Critical States': criticalStates.length.toString(),
+                      'Avg Frequency': (stateData.reduce((sum, s) => sum + s.frequency, 0) / stateData.length).toFixed(1) + '/1K',
+                      'Rate Action Required': stateData.filter(s => s.action.includes('Rate')).length + ' states',
+                    },
+                    bulletInsights: [
+                      `NEVADA: Highest overspend at $5.6M with 34 claims - recommend immediate 8-10% rate increase`,
+                      `CALIFORNIA: $5.0M overspend, 10.4% policy decline - file for 6-8% rate increase, review UW guidelines`,
+                      `TEXAS: Largest book at 2.3M policies with $4.5M overspend - target 5-7% rate increase`,
+                      `GEORGIA: Highest frequency at 28.5/1K - implement underwriting tightening measures`,
+                      `COLORADO, OKLAHOMA, INDIANA: Growing territories (+5-13%) - monitor for profitability`,
+                    ],
+                    columns: ['State', 'Policies 2025', 'YoY Change', 'Claims', 'Frequency', 'Overspend', 'Recommended Action'],
+                    rows: stateData.map(s => [
+                      s.state,
+                      s.policies2025.toLocaleString(),
+                      ((s.policies2025 - s.policies2024) / s.policies2024 * 100).toFixed(1) + '%',
+                      s.claims2025.toLocaleString(),
+                      s.frequency.toFixed(1),
+                      s.overspend > 0 ? '$' + (s.overspend / 1000000).toFixed(1) + 'M' : '-',
+                      s.action,
+                    ]),
+                  });
+                }}
+              >
+                <FileText className="h-3 w-3" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => {
+                  const stateData = [
+                    { state: 'Texas', policies2025: 2312106, policies2024: 2402479, claims2025: 35353, claims2024: 39061, frequency: 15.3, overspend: 4478135, action: 'Rate +5-7%', priority: 'High' },
+                    { state: 'California', policies2025: 1465299, policies2024: 1635935, claims2025: 24828, claims2024: 30111, frequency: 16.9, overspend: 5015063, action: 'Rate +6-8%', priority: 'Critical' },
+                    { state: 'Colorado', policies2025: 564876, policies2024: 520849, claims2025: 11484, claims2024: 11724, frequency: 20.3, overspend: 80009, action: 'Monitor Growth', priority: 'Low' },
+                    { state: 'New Mexico', policies2025: 196515, policies2024: 205951, claims2025: 2836, claims2024: 3581, frequency: 14.4, overspend: 2139992, action: 'Rate +5-6%', priority: 'High' },
+                    { state: 'Arizona', policies2025: 121017, policies2024: 122680, claims2025: 2444, claims2024: 2691, frequency: 20.2, overspend: 0, action: 'Maintain', priority: 'Low' },
+                    { state: 'Nevada', policies2025: 97369, policies2024: 127829, claims2025: 2183, claims2024: 3338, frequency: 22.4, overspend: 5583306, action: 'Rate +8-10%', priority: 'Critical' },
+                    { state: 'Illinois', policies2025: 88632, policies2024: 102383, claims2025: 1768, claims2024: 2066, frequency: 19.9, overspend: 0, action: 'Review UW', priority: 'Medium' },
+                    { state: 'Oklahoma', policies2025: 66229, policies2024: 62999, claims2025: 1122, claims2024: 1295, frequency: 16.9, overspend: 0, action: 'Monitor Growth', priority: 'Low' },
+                    { state: 'Georgia', policies2025: 63615, policies2024: 73213, claims2025: 1811, claims2024: 2296, frequency: 28.5, overspend: 570714, action: 'UW Tighten', priority: 'High' },
+                    { state: 'Alabama', policies2025: 51370, policies2024: 58094, claims2025: 848, claims2024: 1063, frequency: 16.5, overspend: 413812, action: 'Rate +4-5%', priority: 'Medium' },
+                    { state: 'Indiana', policies2025: 32506, policies2024: 28846, claims2025: 649, claims2024: 697, frequency: 20.0, overspend: 0, action: 'Monitor Growth', priority: 'Low' },
+                    { state: 'Ohio', policies2025: 13675, policies2024: 14872, claims2025: 309, claims2024: 345, frequency: 22.6, overspend: 0, action: 'Maintain', priority: 'Low' },
+                  ];
+                  
+                  generateExcel({
+                    title: 'State Profitability & Rate Recommendations',
+                    subtitle: 'Executive Territory Performance Analysis',
+                    timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
+                    summary: {
+                      'Report Type': 'CFO/CEO Territory Briefing',
+                      'Period': '2024 vs 2025 YTD',
+                      'Total States Analyzed': stateData.length.toString(),
+                      'Total Policies': stateData.reduce((sum, s) => sum + s.policies2025, 0).toLocaleString(),
+                      'Total Overspend': '$' + (stateData.reduce((sum, s) => sum + s.overspend, 0) / 1000000).toFixed(1) + 'M',
+                    },
+                    bulletInsights: [
+                      'Critical: Nevada ($5.6M overspend) and California ($5.0M) require immediate rate action',
+                      'High Priority: Texas, New Mexico, Georgia need rate increases or UW changes',
+                      'Growth Watch: Colorado (+8.5%), Oklahoma (+5.1%), Indiana (+12.7%) growing profitably',
+                      'Frequency Alert: Georgia (28.5/1K) significantly above portfolio average',
+                    ],
+                    columns: ['State', 'Policies 2025', 'Policies 2024', 'YoY Change %', 'Claims 2025', 'Claims 2024', 'Frequency /1K', 'YTD Overspend', 'Recommended Action', 'Priority'],
+                    rows: stateData.map(s => [
+                      s.state,
+                      s.policies2025,
+                      s.policies2024,
+                      Number(((s.policies2025 - s.policies2024) / s.policies2024 * 100).toFixed(1)),
+                      s.claims2025,
+                      s.claims2024,
+                      s.frequency,
+                      s.overspend,
+                      s.action,
+                      s.priority,
+                    ]),
+                  });
+                }}
+              >
+                <FileSpreadsheet className="h-3 w-3" />
+                Excel
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
