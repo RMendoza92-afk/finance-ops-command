@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { Download, FileText, FileSpreadsheet, Calendar, Filter, ArrowLeft, RefreshCw } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Calendar, Filter, ArrowLeft, RefreshCw, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "react-router-dom";
 import loyaLogo from "@/assets/fli_logo.jpg";
+import { generateChangelogPDF } from "@/lib/changelogPDFGenerator";
 
 interface ReportDownload {
   id: string;
@@ -73,12 +74,23 @@ const AdminDownloads = () => {
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Report export tracking</p>
             </div>
           </div>
-          <Link to="/">
-            <Button variant="outline" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="gap-2"
+              onClick={() => generateChangelogPDF()}
+            >
+              <ScrollText className="h-4 w-4" />
+              <span className="hidden sm:inline">Export Changelog PDF</span>
             </Button>
-          </Link>
+            <Link to="/">
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 

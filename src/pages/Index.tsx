@@ -12,8 +12,9 @@ import { SalesTickerBanner } from "@/components/SalesTickerBanner";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
 import { Button } from "@/components/ui/button";
-import { Loader2, Send, HelpCircle } from "lucide-react";
+import { Loader2, Send, HelpCircle, ScrollText } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
+import { generateChangelogPDF } from "@/lib/changelogPDFGenerator";
 import { 
   getLitigationStage, 
   getExpertType, 
@@ -236,6 +237,16 @@ const Index = () => {
             >
               <HelpCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Help</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => generateChangelogPDF()}
+              className="gap-2 h-8 sm:h-9"
+              title="Export development changelog"
+            >
+              <ScrollText className="h-4 w-4" />
+              <span className="hidden sm:inline">Changelog</span>
             </Button>
             <Button
               variant="outline"
