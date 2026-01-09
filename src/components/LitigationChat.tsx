@@ -259,13 +259,39 @@ export function LitigationChat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMatter, setSelectedMatter] = useState<AggregatedMatter | null>(null);
+  const [dataLastUpdated, setDataLastUpdated] = useState<Date | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const { data: litigationData, multiPackData: closedMultiPackData } = useLitigationData();
   const { data: openExposureData } = useOpenExposureData();
   const { offers: lorOffers, stats: lorStats } = useLOROffers();
   const { generatePDF, generateExcel } = useExportData();
   const { data: actuarialData } = useActuarialData(2025);
+
+  // Track data freshness
+  useEffect(() => {
+    if (openExposureData || litigationData) {
+      setDataLastUpdated(new Date());
+    }
+  }, [openExposureData, litigationData]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [messages, isLoading]);
+
+  // Focus input when chat opens
+  useEffect(() => {
+    if (isOpen && !isMinimized && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen, isMinimized]);
 
   // Build a lookup map for quick claim resolution
   const claimLookup = useMemo(() => {
@@ -1317,35 +1343,76 @@ export function LitigationChat() {
 
   const dataReady = dataContext || openExposureContext;
   const totalClaims = (openExposureContext?.totals?.grandTotal || 0) + (dataContext?.totalMatters || 0);
+  const totalReserves = openExposureContext?.financials?.totalOpenReserves || 0;
+
+  // Format data freshness
+  const getDataFreshness = () => {
+    if (!dataLastUpdated) return null;
+    const now = new Date();
+    const diffMs = now.getTime() - dataLastUpdated.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return `${Math.floor(diffMins / 60)}h ago`;
+  };
 
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 h-11 w-11 sm:h-14 sm:w-14 rounded-full shadow-lg z-50 bg-gradient-to-br from-primary to-primary/80"
+        className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-2xl z-50 
+          bg-gradient-to-br from-[#d4af37] via-[#c9a227] to-[#b8962e] hover:from-[#e0bc47] hover:to-[#c9a227]
+          border border-[#d4af37]/50 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
         size="icon"
       >
-        <Sparkles className="h-4 w-4 sm:h-6 sm:w-6" />
+        <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-[#0c0c0c]" />
       </Button>
     );
   }
 
   return (
-    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-primary/20 overflow-hidden ${
+    <Card className={`fixed z-50 shadow-2xl transition-all duration-300 border-[#d4af37]/30 overflow-hidden bg-[#0a0a0a] ${
       isMinimized 
-        ? "bottom-2 right-2 sm:bottom-6 sm:right-6 w-56 sm:w-72 h-11 sm:h-14" 
-        : "bottom-0 left-0 right-0 top-12 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:h-[700px] sm:max-h-[85vh] rounded-t-xl sm:rounded-xl"
+        ? "bottom-2 right-2 sm:bottom-6 sm:right-6 w-60 sm:w-80 h-12 sm:h-14" 
+        : "bottom-0 left-0 right-0 top-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[520px] sm:h-[750px] sm:max-h-[90vh] rounded-none sm:rounded-2xl"
     }`}>
-      <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-card to-muted/30">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-bold">FLI Oracle</span>
+      {/* Premium Header */}
+      <CardHeader className="py-3 px-4 border-b border-[#2d2d2d] flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-[#0c0c0c] via-[#111111] to-[#0c0c0c]">
+        <CardTitle className="text-sm font-medium flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center shadow-lg">
+            <Sparkles className="h-4 w-4 text-[#0c0c0c]" />
+          </div>
+          <div>
+            <span className="font-bold text-[#f0f0f0] tracking-tight">FLI Oracle</span>
+            {dataReady && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="flex items-center gap-1 text-[10px] text-[#6c6c6c]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {totalClaims.toLocaleString()} claims
+                </span>
+                {getDataFreshness() && (
+                  <span className="text-[10px] text-[#4c4c4c]">• {getDataFreshness()}</span>
+                )}
+              </div>
+            )}
+          </div>
         </CardTitle>
         <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[#6c6c6c] hover:text-[#d4af37] hover:bg-[#1a1a1a]"
+              onClick={() => setMessages([])}
+              title="Clear chat"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-8 w-8 text-[#8c8c8c] hover:text-[#d4af37] hover:bg-[#1a1a1a]"
             onClick={() => setIsMinimized(!isMinimized)}
           >
             {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
@@ -1353,7 +1420,7 @@ export function LitigationChat() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-8 w-8 text-[#8c8c8c] hover:text-destructive hover:bg-[#1a1a1a]"
             onClick={() => setIsOpen(false)}
           >
             <X className="h-4 w-4" />
@@ -1362,19 +1429,24 @@ export function LitigationChat() {
       </CardHeader>
       
       {!isMinimized && (
-        <CardContent className="p-0 flex flex-col h-[calc(100%-56px)]">
+        <CardContent className="p-0 flex flex-col h-[calc(100%-56px)] bg-[#0a0a0a]">
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 && (
-              <div className="space-y-3">
-                {/* Executive Header */}
-                <div className="bg-[#161616] rounded-lg p-3 border border-[#2d2d2d]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-[#0c0c0c]" />
+              <div className="space-y-4">
+                {/* Executive Header - Premium */}
+                <div className="bg-gradient-to-br from-[#161616] to-[#0c0c0c] rounded-xl p-4 border border-[#2d2d2d] shadow-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center shadow-lg">
+                      <Sparkles className="h-6 w-6 text-[#0c0c0c]" />
                     </div>
                     <div>
-                      <p className="font-bold text-[#f0f0f0] text-sm tracking-tight">Litigation Oracle</p>
-                      <p className="text-[10px] text-[#8c8c8c]">Board-Ready Intelligence Reports</p>
+                      <p className="font-bold text-[#f0f0f0] text-base tracking-tight">Litigation Oracle</p>
+                      <p className="text-xs text-[#8c8c8c]">Board-Ready Intelligence • Real-Time Analysis</p>
+                      {dataReady && (
+                        <p className="text-[10px] text-[#d4af37] mt-1 font-medium">
+                          ${(totalReserves / 1000000).toFixed(1)}M Total Exposure Loaded
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1391,29 +1463,30 @@ export function LitigationChat() {
                     }
                   }}
                   disabled={!dataReady}
-                  className="w-full p-3 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#b8962e] 
-                    text-[#0c0c0c] font-bold text-sm shadow-lg hover:shadow-xl hover:scale-[1.01] 
-                    transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                    flex items-center justify-center gap-2 border border-[#d4af37]/50"
+                  className="w-full p-4 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c9a227] to-[#b8962e] 
+                    text-[#0c0c0c] font-bold text-sm shadow-xl hover:shadow-2xl hover:scale-[1.02] 
+                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
+                    flex items-center justify-center gap-3 border border-[#d4af37]/50
+                    hover:from-[#e0bc47] hover:to-[#c9a227]"
                 >
-                  <BarChart3 className="h-4 w-4" />
-                  ⚡ QUICK STATS - Instant Portfolio Snapshot
+                  <BarChart3 className="h-5 w-5" />
+                  <span>⚡ QUICK STATS - Instant Portfolio Snapshot</span>
                 </button>
 
                 {/* Quick Insights - Executive Questions */}
-                <div className="bg-[#0c0c0c] rounded-lg p-3 border border-[#d4af37]/30">
-                  <p className="text-[10px] font-bold text-[#d4af37] mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="h-3 w-3" />
-                    Quick Insights
+                <div className="bg-gradient-to-br from-[#0c0c0c] to-[#080808] rounded-xl p-4 border border-[#d4af37]/20 shadow-lg">
+                  <p className="text-xs font-bold text-[#d4af37] mb-3 uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Executive Quick Insights
                   </p>
-                  <div className="grid grid-cols-1 gap-1.5">
+                  <div className="grid grid-cols-1 gap-2">
                     {QUICK_INSIGHTS.map((insight) => (
                       <button
                         key={insight.id}
                         onClick={() => handleQuickAction(insight.query)}
                         disabled={isLoading || !dataReady}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg bg-gradient-to-r ${insight.gradient} 
-                          text-white font-semibold text-xs shadow-lg hover:shadow-xl hover:scale-[1.02] 
+                        className={`w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r ${insight.gradient} 
+                          text-white font-semibold text-sm shadow-lg hover:shadow-xl hover:scale-[1.01] 
                           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
                           disabled:hover:scale-100 disabled:hover:shadow-lg`}
                       >
@@ -1424,18 +1497,22 @@ export function LitigationChat() {
                 </div>
                 
                 {/* Tabbed Report Selector - Executive Dark Theme */}
-                <Tabs defaultValue="trending" className="w-full">
-                  <TabsList className="w-full grid grid-cols-5 h-auto p-0.5 bg-[#121212] border border-[#2d2d2d] rounded-lg">
+                <Tabs defaultValue="executive" className="w-full">
+                  <TabsList className="w-full grid grid-cols-5 h-auto p-1 bg-[#0c0c0c] border border-[#2d2d2d] rounded-xl">
                     {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
                       const category = REPORT_CATEGORIES[cat];
                       return (
                         <TabsTrigger
                           key={cat}
                           value={cat}
-                          className="text-[10px] px-1 py-2 flex flex-col gap-0.5 rounded-md text-[#8c8c8c] data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-[#d4af37] data-[state=active]:border-t data-[state=active]:border-[#d4af37]/50 transition-all"
+                          className="text-[10px] px-1.5 py-2.5 flex flex-col gap-1 rounded-lg text-[#6c6c6c] 
+                            data-[state=active]:bg-gradient-to-b data-[state=active]:from-[#1a1a1a] data-[state=active]:to-[#141414] 
+                            data-[state=active]:text-[#d4af37] data-[state=active]:shadow-lg
+                            data-[state=active]:border data-[state=active]:border-[#d4af37]/30
+                            hover:text-[#8c8c8c] transition-all duration-200"
                         >
-                          <category.icon className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline font-medium">{category.label}</span>
+                          <category.icon className="h-4 w-4" />
+                          <span className="hidden sm:inline font-semibold">{category.label}</span>
                         </TabsTrigger>
                       );
                     })}
@@ -1444,28 +1521,28 @@ export function LitigationChat() {
                   {(Object.keys(REPORT_CATEGORIES) as ReportCategory[]).map((cat) => {
                     const category = REPORT_CATEGORIES[cat];
                     return (
-                      <TabsContent key={cat} value={cat} className="mt-2 space-y-1">
+                      <TabsContent key={cat} value={cat} className="mt-3 space-y-2">
                         {category.reports.map((report, idx) => (
                           <button
                             key={report.id}
                             onClick={() => !report.disabled && handleQuickAction(report.query)}
                             disabled={isLoading || !dataReady || report.disabled}
-                            className={`w-full text-left p-2.5 rounded-lg border transition-all group disabled:opacity-50 disabled:cursor-not-allowed
-                              ${idx % 2 === 0 ? 'bg-[#121212]' : 'bg-[#181818]'}
-                              ${report.disabled ? 'border-[#1a1a1a] opacity-40' : 'border-[#2d2d2d] hover:border-[#d4af37]/40 hover:bg-[#1a1a1a]'}
+                            className={`w-full text-left p-3 rounded-xl border transition-all duration-200 group disabled:opacity-40 disabled:cursor-not-allowed
+                              bg-gradient-to-br from-[#121212] to-[#0c0c0c]
+                              ${report.disabled ? 'border-[#1a1a1a]' : 'border-[#2d2d2d] hover:border-[#d4af37]/50 hover:shadow-lg hover:shadow-[#d4af37]/5'}
                             `}
                           >
-                            <div className="flex items-start gap-2.5">
-                              <div className={`w-7 h-7 rounded flex-shrink-0 flex items-center justify-center bg-[#0c0c0c] border ${report.disabled ? 'border-[#1a1a1a]' : 'border-[#2d2d2d] group-hover:border-[#d4af37]/30'}`}>
-                                <report.icon className={`h-3.5 w-3.5 ${report.disabled ? 'text-muted-foreground' : report.color} ${!report.disabled && 'group-hover:text-[#d4af37]'} transition-colors`} />
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center bg-[#0a0a0a] border ${report.disabled ? 'border-[#1a1a1a]' : 'border-[#2d2d2d] group-hover:border-[#d4af37]/40 group-hover:bg-[#d4af37]/5'} transition-all`}>
+                                <report.icon className={`h-4 w-4 ${report.disabled ? 'text-[#4c4c4c]' : report.color} ${!report.disabled && 'group-hover:text-[#d4af37]'} transition-colors`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className={`text-xs font-semibold block ${report.disabled ? 'text-muted-foreground' : 'text-[#f0f0f0] group-hover:text-[#d4af37]'} transition-colors`}>{report.label}</span>
-                                <span className={`text-[10px] block leading-tight mt-0.5 ${report.disabled ? 'text-muted-foreground/60 italic' : 'text-[#8c8c8c]'}`}>{report.description}</span>
+                                <span className={`text-sm font-semibold block ${report.disabled ? 'text-[#4c4c4c]' : 'text-[#f0f0f0] group-hover:text-[#d4af37]'} transition-colors`}>{report.label}</span>
+                                <span className={`text-[11px] block leading-snug mt-0.5 ${report.disabled ? 'text-[#3c3c3c] italic' : 'text-[#7c7c7c]'}`}>{report.description}</span>
                               </div>
                               {!report.disabled && (
-                                <div className="text-[#2d2d2d] group-hover:text-[#d4af37] transition-colors">
-                                  <Send className="h-3 w-3" />
+                                <div className="text-[#3c3c3c] group-hover:text-[#d4af37] transition-colors">
+                                  <Send className="h-4 w-4" />
                                 </div>
                               )}
                             </div>
@@ -1630,35 +1707,49 @@ export function LitigationChat() {
             ))}
             
             {isLoading && (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded-lg px-4 py-3">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span>Analyzing {totalClaims.toLocaleString()} claims...</span>
+              <div className="flex items-center gap-3 text-sm bg-gradient-to-r from-[#1a1a1a] to-[#121212] rounded-xl px-4 py-4 border border-[#2d2d2d] shadow-lg">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8962e] flex items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0c0c0c]" />
+                </div>
+                <div>
+                  <p className="text-[#f0f0f0] font-medium">Analyzing portfolio...</p>
+                  <p className="text-[10px] text-[#6c6c6c]">{totalClaims.toLocaleString()} claims • ${(totalReserves / 1000000).toFixed(1)}M exposure</p>
+                </div>
               </div>
             )}
           </ScrollArea>
           
-          <div className="p-4 border-t bg-muted/20">
+          {/* Premium Input Area */}
+          <div className="p-4 border-t border-[#2d2d2d] bg-gradient-to-b from-[#0c0c0c] to-[#0a0a0a]">
             <div className="flex gap-2">
               <Input
+                ref={inputRef}
                 placeholder="Ask the Oracle anything..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                disabled={isLoading}
-                className="flex-1"
+                disabled={isLoading || !dataReady}
+                className="flex-1 bg-[#121212] border-[#2d2d2d] text-[#f0f0f0] placeholder:text-[#4c4c4c] focus:border-[#d4af37]/50 focus:ring-[#d4af37]/20"
               />
               <Button
                 size="icon"
                 onClick={() => sendMessage()}
-                disabled={isLoading || !input.trim()}
-                className="bg-primary hover:bg-primary/90"
+                disabled={isLoading || !input.trim() || !dataReady}
+                className="bg-gradient-to-br from-[#d4af37] to-[#b8962e] hover:from-[#e0bc47] hover:to-[#c9a227] text-[#0c0c0c] shadow-lg disabled:opacity-40"
               >
-                <Send className="h-4 w-4" />
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2 text-center">
-              Click "Export PDF" on any response for a board-ready report
-            </p>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-[10px] text-[#4c4c4c]">
+                {!dataReady ? 'Loading data...' : 'Press Enter to send • Click responses to export PDF'}
+              </p>
+              {dataReady && (
+                <p className="text-[10px] text-[#d4af37] font-medium">
+                  ⚡ Ready
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       )}
