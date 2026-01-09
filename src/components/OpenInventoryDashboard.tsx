@@ -1168,7 +1168,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     lastYear: { cp1Rate: 23.4, totalClaims: 24150, cp1Claims: 5651 },
   }), []);
 
-  // Generate Board-Ready Executive PDF for CP1 Analysis - Dark Theme with Logo (THIS CSV ONLY)
+  // Generate Board-Ready Executive PDF for CP1 Analysis - Premium Dark Theme
   const generateCP1PDF = useCallback(async () => {
     setGeneratingCP1PDF(true);
     try {
@@ -1180,432 +1180,483 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const pw = doc.internal.pageSize.getWidth();
       const ph = doc.internal.pageSize.getHeight();
       const ctx = getReportContext();
-      const m = { l: 10, r: 10, t: 10 };
+      const m = { l: 12, r: 12, t: 12 };
       const cw = pw - m.l - m.r;
       
-      // COLORS - EXECUTIVE DARK THEME
+      // PREMIUM COLORS
       const C = {
-        bg: [12, 12, 12] as [number, number, number],
-        headerBg: [22, 22, 22] as [number, number, number],
-        rowDark: [18, 18, 18] as [number, number, number],
-        rowLight: [24, 24, 24] as [number, number, number],
-        border: [45, 45, 45] as [number, number, number],
+        bg: [15, 15, 20] as [number, number, number],
+        cardBg: [22, 22, 28] as [number, number, number],
+        headerBg: [28, 28, 35] as [number, number, number],
+        border: [50, 50, 60] as [number, number, number],
         white: [255, 255, 255] as [number, number, number],
-        offWhite: [240, 240, 240] as [number, number, number],
-        muted: [140, 140, 140] as [number, number, number],
-        green: [16, 185, 129] as [number, number, number],
-        red: [220, 38, 38] as [number, number, number],
-        amber: [245, 158, 11] as [number, number, number],
-        gold: [212, 175, 55] as [number, number, number],
+        offWhite: [235, 235, 240] as [number, number, number],
+        muted: [130, 130, 145] as [number, number, number],
+        accent: [99, 102, 241] as [number, number, number], // indigo
+        green: [34, 197, 94] as [number, number, number],
+        red: [239, 68, 68] as [number, number, number],
+        orange: [249, 115, 22] as [number, number, number],
+        gold: [234, 179, 8] as [number, number, number],
       };
 
-      // Use CP1 data from the CP1 CSV ONLY
       const CP1_DATA = cp1BoxData?.cp1Data || {
-        biByAge: [],
-        biTotal: { noCP: 0, yes: 0, total: 0 },
-        byCoverage: [],
-        totals: { noCP: 0, yes: 0, grandTotal: 0 },
-        cp1Rate: '0.0',
+        biByAge: [], biTotal: { noCP: 0, yes: 0, total: 0 }, byCoverage: [],
+        totals: { noCP: 0, yes: 0, grandTotal: 0 }, cp1Rate: '0.0',
         byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
       };
-
-      // CALCULATIONS (CSV baseline)
-      const cp1ClaimCount = CP1_DATA.totals?.yes ?? 0;
-      const denom = CP1_DATA.totals?.grandTotal ?? 0;
-      const cp1RateOfInventory = denom > 0 ? ((cp1ClaimCount / denom) * 100).toFixed(1) : CP1_DATA.cp1Rate;
-
-      const currentCP1Rate = parseFloat(cp1RateOfInventory);
-      const status = currentCP1Rate > 30 ? 'CRITICAL' : currentCP1Rate > 27 ? 'ELEVATED' : 'STABLE';
-      
-      // Note: These are claim counts, not dollar exposure (we don't have per-claim financials)
-      const agedBIClaimCount = CP1_DATA.biByAge?.[0]?.yes ?? 0;
+      const fs = cp1BoxData?.fatalitySummary;
+      const multiFlagGroups = cp1BoxData?.multiFlagGroups || [];
+      const totalFlags = cp1BoxData?.totalFlagInstances || 0;
+      const totalClaims = CP1_DATA.totals.grandTotal;
+      const multiFlag2Plus = multiFlagGroups.filter(g => g.flagCount >= 2).reduce((s, g) => s + g.claimCount, 0);
+      const multiFlag3Plus = multiFlagGroups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0);
 
       // BACKGROUND
       doc.setFillColor(...C.bg);
       doc.rect(0, 0, pw, ph, 'F');
       let y = m.t;
 
-      // HEADER WITH LOGO
+      // HEADER BAR
       doc.setFillColor(...C.headerBg);
-      doc.rect(0, 0, pw, 24, 'F');
-      doc.setFillColor(...C.gold);
-      doc.rect(0, 24, pw, 0.5, 'F');
+      doc.rect(0, 0, pw, 28, 'F');
+      doc.setFillColor(...C.accent);
+      doc.rect(0, 28, pw, 1, 'F');
 
-      try {
-        doc.addImage(loyaLogo, 'JPEG', m.l + 2, 4, 14, 14);
-      } catch (e) { /* Logo failed */ }
+      try { doc.addImage(loyaLogo, 'JPEG', m.l, 5, 16, 16); } catch {}
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
+      doc.setFontSize(14);
       doc.setTextColor(...C.white);
-      doc.text('CP1 ANALYSIS', m.l + 20, 10);
+      doc.text('CP1 TRIGGER FLAGS ANALYSIS', m.l + 22, 12);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(...C.muted);
-      doc.text('Policy Limits Risk Assessment', m.l + 20, 16);
+      doc.text('Executive Risk Summary • Policy Limits Exposure', m.l + 22, 19);
+      doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 15, { align: 'right' });
+      y = 35;
 
+      // EXECUTIVE SUMMARY METRICS - 3 big cards
+      const cardW = (cw - 8) / 3;
+      const cardH = 28;
+
+      // Card 1: Total Claims
+      doc.setFillColor(...C.cardBg);
+      doc.roundedRect(m.l, y, cardW, cardH, 2, 2, 'F');
+      doc.setFillColor(...C.accent);
+      doc.rect(m.l, y, 3, cardH, 'F');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
-      doc.text(`${ctx.reportPeriod}  |  Q${ctx.quarter} FY${ctx.fiscalYear}`, pw - m.r, 13, { align: 'right' });
-      y = 28;
-
-      // STATUS BANNER
-      const bannerColor = status === 'CRITICAL' ? C.red : status === 'ELEVATED' ? C.amber : C.green;
-      doc.setFillColor(...bannerColor);
-      doc.roundedRect(m.l, y, cw, 10, 1, 1, 'F');
+      doc.setTextColor(...C.muted);
+      doc.text('TOTAL CP1 CLAIMS', m.l + 8, y + 8);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(18);
       doc.setTextColor(...C.white);
-      doc.text(`STATUS: ${status}  |  ${cp1ClaimCount.toLocaleString()} CLAIMS AT LIMITS  |  ${cp1RateOfInventory}% CP1 RATE`, pw / 2, y + 7, { align: 'center' });
-      y += 14;
+      doc.text(totalClaims.toLocaleString(), m.l + 8, y + 20);
 
-      // KEY METRICS ROW
-      doc.setFont('helvetica', 'bold');
+      // Card 2: Active Flags
+      doc.setFillColor(...C.cardBg);
+      doc.roundedRect(m.l + cardW + 4, y, cardW, cardH, 2, 2, 'F');
+      doc.setFillColor(...C.red);
+      doc.rect(m.l + cardW + 4, y, 3, cardH, 'F');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
-      doc.setTextColor(...C.gold);
-      doc.text('KEY METRICS', m.l, y + 3);
+      doc.setTextColor(...C.muted);
+      doc.text('ACTIVE TRIGGER FLAGS', m.l + cardW + 12, y + 8);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(...C.red);
+      doc.text(totalFlags.toLocaleString(), m.l + cardW + 12, y + 20);
+
+      // Card 3: Multi-Flag Claims
+      doc.setFillColor(...C.cardBg);
+      doc.roundedRect(m.l + (cardW + 4) * 2, y, cardW, cardH, 2, 2, 'F');
+      doc.setFillColor(...C.orange);
+      doc.rect(m.l + (cardW + 4) * 2, y, 3, cardH, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...C.muted);
+      doc.text('MULTI-FLAG CLAIMS (2+)', m.l + (cardW + 4) * 2 + 8, y + 8);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(...C.orange);
+      doc.text(multiFlag2Plus.toLocaleString(), m.l + (cardW + 4) * 2 + 8, y + 20);
+      y += cardH + 8;
+
+      // TRIGGER FLAGS BREAKDOWN
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...C.accent);
+      doc.text('TRIGGER FLAGS BY TYPE', m.l, y + 4);
+      y += 8;
+
+      const flagsList = [
+        { label: 'Fatality', count: fs?.fatalityCount || 0, tier: 1 },
+        { label: 'Surgery', count: fs?.surgeryCount || 0, tier: 1 },
+        { label: 'Meds vs Limits', count: fs?.medsVsLimitsCount || 0, tier: 1 },
+        { label: 'Life Care Planner', count: fs?.lifeCarePlannerCount || 0, tier: 1 },
+        { label: 'Hospitalization', count: fs?.hospitalizationCount || 0, tier: 2 },
+        { label: 'Loss of Consciousness', count: fs?.lossOfConsciousnessCount || 0, tier: 2 },
+        { label: 'Aggravating Factors', count: fs?.aggFactorsCount || 0, tier: 2 },
+        { label: 'Objective Injuries', count: fs?.objectiveInjuriesCount || 0, tier: 2 },
+        { label: 'Ped/Moto/Bike/Pregnancy', count: fs?.pedestrianPregnancyCount || 0, tier: 2 },
+        { label: 'Injections', count: fs?.injectionsCount || 0, tier: 3 },
+        { label: 'EMS + Heavy Impact', count: fs?.emsHeavyImpactCount || 0, tier: 3 },
+      ].filter(f => f.count > 0).sort((a, b) => b.count - a.count);
+
+      const maxFlagCount = Math.max(...flagsList.map(f => f.count), 1);
+      const rowH = 7;
+      const flagsColW = [70, 25, cw - 95];
+
+      // Header
+      doc.setFillColor(...C.headerBg);
+      doc.rect(m.l, y, cw, rowH, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      doc.text('FLAG TYPE', m.l + 3, y + 5);
+      doc.text('COUNT', m.l + flagsColW[0] + 3, y + 5);
+      doc.text('DISTRIBUTION', m.l + flagsColW[0] + flagsColW[1] + 3, y + 5);
+      y += rowH;
+
+      flagsList.forEach((flag, i) => {
+        const tierColor = flag.tier === 1 ? C.red : flag.tier === 2 ? C.orange : C.accent;
+        const barWidth = (flag.count / maxFlagCount) * (flagsColW[2] - 6);
+        
+        doc.setFillColor(...(i % 2 === 0 ? C.cardBg : C.bg));
+        doc.rect(m.l, y, cw, rowH, 'F');
+        
+        doc.setFontSize(6.5);
+        doc.setTextColor(...C.offWhite);
+        doc.setFont('helvetica', 'normal');
+        doc.text(flag.label, m.l + 3, y + 5);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...tierColor);
+        doc.text(flag.count.toLocaleString(), m.l + flagsColW[0] + 3, y + 5);
+        
+        // Progress bar
+        doc.setFillColor(...C.border);
+        doc.roundedRect(m.l + flagsColW[0] + flagsColW[1] + 3, y + 2, flagsColW[2] - 6, 3, 1, 1, 'F');
+        doc.setFillColor(...tierColor);
+        doc.roundedRect(m.l + flagsColW[0] + flagsColW[1] + 3, y + 2, barWidth, 3, 1, 1, 'F');
+        
+        y += rowH;
+      });
       y += 6;
 
-      const metricBoxW = cw / 4 - 2;
-      const biRate = CP1_DATA.biTotal?.total > 0
-        ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)
-        : '0.0';
-      const agedBIPct = cp1ClaimCount > 0 ? ((agedBIClaimCount / cp1ClaimCount) * 100).toFixed(0) : '0';
-      const metrics = [
-        { label: 'CP1 CLAIMS', value: cp1ClaimCount.toLocaleString(), sub: 'At Policy Limits' },
-        { label: 'CP1 RATE', value: cp1RateOfInventory + '%', sub: 'of Total Inventory' },
-        { label: 'BI CP1 RATE', value: biRate + '%', sub: 'Highest by Coverage' },
-        { label: 'AGED BI', value: agedBIClaimCount.toLocaleString(), sub: `${agedBIPct}% of CP1 (365+)` },
-      ];
+      // MULTI-FLAG RISK CONCENTRATION
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...C.accent);
+      doc.text('MULTI-FLAG RISK CONCENTRATION', m.l, y + 4);
+      y += 8;
 
-      metrics.forEach((met, i) => {
-        const x = m.l + i * (metricBoxW + 2);
-        doc.setFillColor(...C.rowDark);
-        doc.roundedRect(x, y, metricBoxW, 18, 1, 1, 'F');
-        doc.setFontSize(6);
-        doc.setTextColor(...C.muted);
-        doc.text(met.label, x + 3, y + 5);
-        doc.setFontSize(11);
-        doc.setTextColor(...C.white);
-        doc.setFont('helvetica', 'bold');
-        doc.text(met.value, x + 3, y + 12);
-        doc.setFontSize(5);
-        doc.setTextColor(...C.muted);
-        doc.setFont('helvetica', 'normal');
-        doc.text(met.sub, x + 3, y + 16);
-      });
-      y += 22;
+      // Header
+      doc.setFillColor(...C.headerBg);
+      doc.rect(m.l, y, cw, rowH, 'F');
+      doc.setFontSize(6);
+      doc.setTextColor(...C.muted);
+      doc.text('FLAGS', m.l + 3, y + 5);
+      doc.text('CLAIMS', m.l + 25, y + 5);
+      doc.text('% OF TOTAL', m.l + 55, y + 5);
+      doc.text('TOP FLAGS IN GROUP', m.l + 85, y + 5);
+      y += rowH;
 
-      // EXECUTIVE SUMMARY BOX
-      doc.setFillColor(...C.rowDark);
-      doc.roundedRect(m.l, y, cw, 22, 1, 1, 'F');
-      doc.setFillColor(...C.gold);
-      doc.rect(m.l, y, 1.5, 22, 'F');
+      const flagLabels: Record<string, string> = {
+        fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
+        hospitalization: 'Hospital', lossOfConsciousness: 'LOC', aggFactors: 'Agg',
+        objectiveInjuries: 'Obj Inj', pedestrianPregnancy: 'Ped/Preg',
+        lifeCarePlanner: 'Life Care', injections: 'Inj', emsHeavyImpact: 'EMS',
+      };
+
+      multiFlagGroups
+        .filter(g => g.flagCount > 0)
+        .sort((a, b) => b.flagCount - a.flagCount)
+        .forEach((group, i) => {
+          const pct = totalClaims > 0 ? ((group.claimCount / totalClaims) * 100).toFixed(1) : '0.0';
+          const tierColor = group.flagCount >= 4 ? C.red : group.flagCount === 3 ? C.red : group.flagCount === 2 ? C.orange : C.accent;
+          
+          // Get top flags in this group
+          const flagCounts: Record<string, number> = {};
+          group.claims.forEach(c => {
+            if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
+            if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
+            if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
+            if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
+            if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
+            if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
+            if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
+            if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
+            if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
+            if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
+            if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+          });
+          const topFlags = Object.entries(flagCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([k]) => flagLabels[k] || k)
+            .join(', ');
+
+          doc.setFillColor(...(i % 2 === 0 ? C.cardBg : C.bg));
+          doc.rect(m.l, y, cw, rowH, 'F');
+          
+          doc.setFillColor(...tierColor);
+          doc.roundedRect(m.l + 3, y + 1.5, 16, 4, 1, 1, 'F');
+          doc.setFontSize(5.5);
+          doc.setTextColor(...C.white);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${group.flagCount} FLAGS`, m.l + 11, y + 4.5, { align: 'center' });
+          
+          doc.setFontSize(6.5);
+          doc.setTextColor(...C.offWhite);
+          doc.setFont('helvetica', 'bold');
+          doc.text(group.claimCount.toLocaleString(), m.l + 25, y + 5);
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...C.muted);
+          doc.text(`${pct}%`, m.l + 55, y + 5);
+          
+          doc.setTextColor(...C.offWhite);
+          doc.text(topFlags, m.l + 85, y + 5);
+          
+          y += rowH;
+        });
+      y += 8;
+
+      // EXECUTIVE ACTION BOX
+      doc.setFillColor(...C.cardBg);
+      doc.roundedRect(m.l, y, cw, 24, 2, 2, 'F');
+      doc.setFillColor(...C.red);
+      doc.rect(m.l, y, 3, 24, 'F');
       
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(...C.gold);
-      doc.text('EXECUTIVE SUMMARY', m.l + 5, y + 5);
+      doc.setFontSize(8);
+      doc.setTextColor(...C.red);
+      doc.text('EXECUTIVE ACTION REQUIRED', m.l + 8, y + 7);
       
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
+      doc.setFontSize(7);
       doc.setTextColor(...C.offWhite);
-      const bottomLine = `${cp1ClaimCount.toLocaleString()} claims (${CP1_DATA.cp1Rate}%) at policy limits. BI drives ${biRate}% CP1 rate. Aged BI (365+ days) = ${agedBIClaimCount.toLocaleString()} claims (${agedBIPct}% of all CP1). ${status === 'CRITICAL' ? 'INTERVENTION REQUIRED.' : status === 'ELEVATED' ? 'CLOSE MONITORING NEEDED.' : 'MAINTAIN CURRENT PROTOCOLS.'}`;
-      const lines = doc.splitTextToSize(bottomLine, cw - 12);
-      doc.text(lines, m.l + 5, y + 11);
-      y += 26;
-
-      // CP1 BY COVERAGE TABLE
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(...C.gold);
-      doc.text('CP1 BY LINE OF BUSINESS', m.l, y + 3);
-      y += 6;
-
-      const covColW = [45, 35, 35, 25, cw - 140];
-      const rowH = 8;
-
-      // Header
-      doc.setFillColor(...C.headerBg);
-      doc.rect(m.l, y, cw, rowH, 'F');
-      doc.setFontSize(6);
-      doc.setTextColor(...C.muted);
-      const covHeaders = ['COVERAGE', 'CP1 CLAIMS', 'TOTAL', 'RATE', 'STATUS'];
-      let xPos = m.l + 3;
-      covHeaders.forEach((h, i) => {
-        doc.text(h, xPos, y + 5.5);
-        xPos += covColW[i];
-      });
-      y += rowH;
-
-      // Data rows
-      doc.setFontSize(6.5);
-      CP1_DATA.byCoverage.forEach((row, i) => {
-        const rowStatus = row.cp1Rate > 40 ? 'CRITICAL' : row.cp1Rate > 30 ? 'ELEVATED' : 'STABLE';
-        const statusColor = rowStatus === 'CRITICAL' ? C.red : rowStatus === 'ELEVATED' ? C.amber : C.green;
-        
-        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
-        doc.rect(m.l, y, cw, rowH, 'F');
-        
-        xPos = m.l + 3;
-        doc.setTextColor(...C.offWhite);
-        doc.setFont('helvetica', 'bold');
-        doc.text(row.coverage, xPos, y + 5.5);
-        xPos += covColW[0];
-        
-        doc.setFont('helvetica', 'normal');
-        doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
-        xPos += covColW[1];
-        doc.text(row.total.toLocaleString(), xPos, y + 5.5);
-        xPos += covColW[2];
-        doc.text(`${row.cp1Rate}%`, xPos, y + 5.5);
-        xPos += covColW[3];
-        doc.setTextColor(...statusColor);
-        doc.setFont('helvetica', 'bold');
-        doc.text(rowStatus, xPos, y + 5.5);
-        
-        y += rowH;
-      });
-
-      // Total row
-      doc.setFillColor(...C.headerBg);
-      doc.rect(m.l, y, cw, rowH, 'F');
-      xPos = m.l + 3;
-      doc.setTextColor(...C.gold);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL', xPos, y + 5.5);
-      xPos += covColW[0];
-      doc.setTextColor(...C.white);
-      doc.text(CP1_DATA.totals.yes.toLocaleString(), xPos, y + 5.5);
-      xPos += covColW[1];
-      doc.text(CP1_DATA.totals.grandTotal.toLocaleString(), xPos, y + 5.5);
-      xPos += covColW[2];
-      doc.text(CP1_DATA.cp1Rate + '%', xPos, y + 5.5);
-      y += rowH + 6;
-
-      // BI AGING TABLE
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(...C.gold);
-      doc.text('BI AGING RISK (365+ DAYS = HIGHEST PRIORITY)', m.l, y + 3);
-      y += 6;
-
-      // Header
-      doc.setFillColor(...C.headerBg);
-      doc.rect(m.l, y, cw, rowH, 'F');
-      doc.setFontSize(6);
-      doc.setTextColor(...C.muted);
-      const ageHeaders = ['AGE BUCKET', 'CP1 CLAIMS', 'TOTAL', 'CP1 RATE', 'PRIORITY'];
-      xPos = m.l + 3;
-      ageHeaders.forEach((h, i) => {
-        doc.text(h, xPos, y + 5.5);
-        xPos += covColW[i];
-      });
-      y += rowH;
-
-      // Age rows
-      doc.setFontSize(6.5);
-      CP1_DATA.biByAge.forEach((row, i) => {
-        const rate = ((row.yes / row.total) * 100).toFixed(0);
-        const priority = i === 0 ? 'URGENT' : i === 1 ? 'HIGH' : 'NORMAL';
-        const priorityColor = i === 0 ? C.red : i === 1 ? C.amber : C.green;
-        
-        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
-        doc.rect(m.l, y, cw, rowH, 'F');
-        
-        xPos = m.l + 3;
-        doc.setTextColor(...C.offWhite);
-        doc.setFont('helvetica', 'bold');
-        doc.text(row.age, xPos, y + 5.5);
-        xPos += covColW[0];
-        
-        doc.setFont('helvetica', 'normal');
-        doc.text(row.yes.toLocaleString(), xPos, y + 5.5);
-        xPos += covColW[1];
-        doc.text(row.total.toLocaleString(), xPos, y + 5.5);
-        xPos += covColW[2];
-        doc.text(`${rate}%`, xPos, y + 5.5);
-        xPos += covColW[3];
-        doc.setTextColor(...priorityColor);
-        doc.setFont('helvetica', 'bold');
-        doc.text(priority, xPos, y + 5.5);
-        
-        y += rowH;
-      });
-      y += 6;
-
-      // ACTION ITEMS
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(...C.gold);
-      doc.text('EXECUTIVE ACTIONS', m.l, y + 3);
-      y += 6;
-
-      const actions = [
-        { priority: 'IMMEDIATE', action: `Prioritize resolution of ${agedBIClaimCount.toLocaleString()} aged BI claims (365+ days)` },
-        { priority: 'STRATEGIC', action: 'Implement early limits evaluation at 60-day mark' },
-        { priority: 'PROCESS', action: 'Review BI settlement authority and escalation thresholds' },
-      ];
-
-      actions.forEach((a, i) => {
-        const priorityColor = i === 0 ? C.red : i === 1 ? C.amber : C.muted;
-        doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
-        doc.rect(m.l, y, cw, 8, 'F');
-        doc.setFillColor(...priorityColor);
-        doc.rect(m.l, y, 2, 8, 'F');
-        
-        doc.setFontSize(6);
-        doc.setTextColor(...priorityColor);
-        doc.setFont('helvetica', 'bold');
-        doc.text(a.priority, m.l + 5, y + 5.5);
-        
-        doc.setTextColor(...C.offWhite);
-        doc.setFont('helvetica', 'normal');
-        doc.text(a.action, m.l + 28, y + 5.5);
-        y += 8;
-      });
+      const actionText = `${multiFlag3Plus.toLocaleString()} claims (${((multiFlag3Plus / totalClaims) * 100).toFixed(1)}%) have 3+ trigger flags and require immediate priority review. Focus on fatalities (${fs?.fatalityCount || 0}), surgery cases (${fs?.surgeryCount || 0}), and life care planner involvement (${fs?.lifeCarePlannerCount || 0}).`;
+      const actionLines = doc.splitTextToSize(actionText, cw - 16);
+      doc.text(actionLines, m.l + 8, y + 14);
 
       // FOOTER
       doc.setFillColor(...C.headerBg);
-      doc.rect(0, ph - 10, pw, 10, 'F');
-      doc.setFillColor(...C.gold);
-      doc.rect(0, ph - 10, pw, 0.3, 'F');
+      doc.rect(0, ph - 12, pw, 12, 'F');
+      doc.setFillColor(...C.accent);
+      doc.rect(0, ph - 12, pw, 0.5, 'F');
       doc.setFontSize(6);
       doc.setTextColor(...C.muted);
-      doc.text('CONFIDENTIAL', m.l, ph - 3);
-      doc.text('Fred Loya Insurance', pw / 2, ph - 3, { align: 'center' });
-      doc.text('Page 1 of 1', pw - m.r, ph - 3, { align: 'right' });
+      doc.text('CONFIDENTIAL • EXECUTIVE USE ONLY', m.l, ph - 4);
+      doc.text('Fred Loya Insurance', pw / 2, ph - 4, { align: 'center' });
+      doc.text(`Generated ${format(new Date(), 'MMM d, yyyy h:mm a')}`, pw - m.r, ph - 4, { align: 'right' });
 
-      // SAVE
-      const filename = `CP1_Analysis_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      doc.save(filename);
-      toast.success('CP1 Analysis report generated');
+      doc.save(`CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('Executive PDF generated');
     } catch (err) {
       console.error('Error generating PDF:', err);
       toast.error('Failed to generate PDF');
     } finally {
       setGeneratingCP1PDF(false);
     }
-  }, [historicalMetrics, cp1BoxData]);
+  }, [cp1BoxData]);
 
-  // Generate Excel for CP1 Analysis (THIS CSV ONLY)
+  // Generate Excel for CP1 Analysis - Executive Ready
   const generateCP1Excel = useCallback(async () => {
     setGeneratingCP1Excel(true);
     try {
       const XLSX = await import('xlsx');
       const workbook = XLSX.utils.book_new();
 
-      // IMPORTANT: CP1 Excel must use ONLY the CP1 CSV data source.
-      // Shadow the outer CP1_DATA to avoid "used before declaration" and prevent accidental mixing.
       const CP1_DATA = cp1BoxData?.cp1Data || {
-        biByAge: [],
-        biTotal: { noCP: 0, yes: 0, total: 0 },
-        byCoverage: [],
-        totals: { noCP: 0, yes: 0, grandTotal: 0 },
-        cp1Rate: '0.0',
+        biByAge: [], biTotal: { noCP: 0, yes: 0, total: 0 }, byCoverage: [],
+        totals: { noCP: 0, yes: 0, grandTotal: 0 }, cp1Rate: '0.0',
         byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
       };
+      const fs = cp1BoxData?.fatalitySummary;
+      const multiFlagGroups = cp1BoxData?.multiFlagGroups || [];
+      const totalFlags = cp1BoxData?.totalFlagInstances || 0;
+      const totalClaims = CP1_DATA.totals.grandTotal;
+      const multiFlag2Plus = multiFlagGroups.filter(g => g.flagCount >= 2).reduce((s, g) => s + g.claimCount, 0);
+      const multiFlag3Plus = multiFlagGroups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0);
 
-      const summaryData = [
-        ['CP1 ANALYSIS (CSV ONLY)'],
-        [`Source: public/data/cp1-analysis.csv`],
+      // Sheet 1: Executive Dashboard
+      const execSummary = [
+        ['CP1 TRIGGER FLAGS - EXECUTIVE SUMMARY'],
         [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
         [],
-        ['EXECUTIVE SUMMARY'],
-        ['Metric', 'Value'],
-        ['Total Claims', CP1_DATA.totals.grandTotal],
-        ['CP1', CP1_DATA.totals.yes],
-        ['No CP', CP1_DATA.totals.noCP],
-        ['CP1 Rate', `${CP1_DATA.cp1Rate}%`],
-      ];
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summaryData), 'Executive Summary');
-
-      // Sheet 2: BI Age Breakdown
-      const biAgeData = [
-        ['BODILY INJURY - CP1 BY AGE'],
+        ['KEY METRICS'],
+        ['Metric', 'Value', 'Notes'],
+        ['Total CP1 Claims', totalClaims, 'Claims at or near policy limits'],
+        ['Active Trigger Flags', totalFlags, 'Total flag instances across all claims'],
+        ['Multi-Flag Claims (2+)', multiFlag2Plus, `${((multiFlag2Plus / totalClaims) * 100).toFixed(1)}% of inventory`],
+        ['High-Risk Claims (3+)', multiFlag3Plus, `${((multiFlag3Plus / totalClaims) * 100).toFixed(1)}% - Priority review required`],
         [],
-        ['Age Bucket', 'No CP', 'CP1 Yes', 'Total', 'CP1 Rate'],
-        ...CP1_DATA.biByAge.map(row => [
-          row.age,
-          row.noCP,
-          row.yes,
-          row.total,
-          row.total > 0 ? `${((row.yes / row.total) * 100).toFixed(1)}%` : '0.0%'
-        ]),
-        ['BI Total', CP1_DATA.biTotal.noCP, CP1_DATA.biTotal.yes, CP1_DATA.biTotal.total, CP1_DATA.biTotal.total > 0 ? `${((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)}%` : '0.0%'],
+        ['TRIGGER FLAGS BREAKDOWN'],
+        ['Flag Type', 'Count', '% of Claims', 'Tier'],
+        ['Fatality', fs?.fatalityCount || 0, `${((fs?.fatalityCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        ['Surgery', fs?.surgeryCount || 0, `${((fs?.surgeryCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        ['Meds vs Limits', fs?.medsVsLimitsCount || 0, `${((fs?.medsVsLimitsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        ['Life Care Planner', fs?.lifeCarePlannerCount || 0, `${((fs?.lifeCarePlannerCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        ['Hospitalization', fs?.hospitalizationCount || 0, `${((fs?.hospitalizationCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, `${((fs?.lossOfConsciousnessCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Aggravating Factors', fs?.aggFactorsCount || 0, `${((fs?.aggFactorsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Objective Injuries', fs?.objectiveInjuriesCount || 0, `${((fs?.objectiveInjuriesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Ped/Moto/Bike/Pregnancy', fs?.pedestrianPregnancyCount || 0, `${((fs?.pedestrianPregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Injections', fs?.injectionsCount || 0, `${((fs?.injectionsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MEDIUM'],
+        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, `${((fs?.emsHeavyImpactCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MEDIUM'],
       ];
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(biAgeData), 'BI Age Breakdown');
+      const summarySheet = XLSX.utils.aoa_to_sheet(execSummary);
+      summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
 
-      // Sheet 3: Coverage Summary
-      const coverageData = [
-        ['CP1 BY COVERAGE TYPE'],
+      // Sheet 2: Multi-Flag Risk Analysis
+      const flagLabels: Record<string, string> = {
+        fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
+        hospitalization: 'Hospital', lossOfConsciousness: 'LOC', aggFactors: 'Agg Factors',
+        objectiveInjuries: 'Obj Injuries', pedestrianPregnancy: 'Ped/Preg',
+        lifeCarePlanner: 'Life Care', injections: 'Injections', emsHeavyImpact: 'EMS/Impact',
+      };
+      
+      const multiFlagData = [
+        ['MULTI-FLAG RISK CONCENTRATION'],
         [],
-        ['Coverage', 'No CP', 'CP1 Yes', 'Total', 'CP1 Rate'],
-        ...CP1_DATA.byCoverage.map(row => [
-          row.coverage,
-          row.noCP,
-          row.yes,
-          row.total,
-          `${row.cp1Rate}%`
-        ]),
-        ['GRAND TOTAL', CP1_DATA.totals.noCP, CP1_DATA.totals.yes, CP1_DATA.totals.grandTotal, `${CP1_DATA.cp1Rate}%`],
+        ['Flag Count', 'Claims', '% of Total', 'Risk Level', 'Top Flags'],
       ];
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(coverageData), 'Coverage Summary');
+      
+      multiFlagGroups
+        .filter(g => g.flagCount > 0)
+        .sort((a, b) => b.flagCount - a.flagCount)
+        .forEach(group => {
+          const pct = ((group.claimCount / totalClaims) * 100).toFixed(1);
+          const risk = group.flagCount >= 4 ? 'CRITICAL' : group.flagCount === 3 ? 'HIGH' : group.flagCount === 2 ? 'ELEVATED' : 'STANDARD';
+          
+          const flagCounts: Record<string, number> = {};
+          group.claims.forEach(c => {
+            if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
+            if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
+            if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
+            if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
+            if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
+            if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
+            if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
+            if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
+            if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
+            if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
+            if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+          });
+          const topFlags = Object.entries(flagCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([k]) => flagLabels[k])
+            .join(', ');
+          
+          multiFlagData.push([`${group.flagCount} Flags`, group.claimCount.toString(), `${pct}%`, risk, topFlags]);
+        });
 
-      // Sheet 4: CP1 Trigger Flags Summary (CSV only)
-      const fs = cp1BoxData?.fatalitySummary;
-      const triggerFlagsData = [
-        ['CP1 TRIGGER FLAGS SUMMARY (CSV ONLY)'],
-        [`Data Date: ${cp1BoxData?.dataDate || ''}`],
-        [],
-        ['Flag', 'Count'],
-        ['Fatality', fs?.fatalityCount || 0],
-        ['Surgery', fs?.surgeryCount || 0],
-        ['Meds vs Limits', fs?.medsVsLimitsCount || 0],
-        ['Hospitalization', fs?.hospitalizationCount || 0],
-        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0],
-        ['Aggravating Factors', fs?.aggFactorsCount || 0],
-        ['Objective Injuries', fs?.objectiveInjuriesCount || 0],
-        ['Ped/Moto/Bike/Pregnancy', fs?.pedestrianPregnancyCount || 0],
-        ['Life Care Planner', fs?.lifeCarePlannerCount || 0],
-        ['Injections', fs?.injectionsCount || 0],
-        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0],
-      ];
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(triggerFlagsData), 'Trigger Flags');
+      const multiFlagSheet = XLSX.utils.aoa_to_sheet(multiFlagData);
+      multiFlagSheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 50 }];
+      XLSX.utils.book_append_sheet(workbook, multiFlagSheet, 'Multi-Flag Analysis');
 
-      // Sheet 5: Raw Claims Data (THIS CSV ONLY) - In Progress ONLY
-      const raw = cp1BoxData?.rawClaims || [];
-      const inProgress = raw.filter((c) => String(c.biStatus || '').trim().toLowerCase() === 'in progress');
+      // Sheet 3: High-Risk Claims (3+ flags)
+      const highRiskClaims = (cp1BoxData?.rawClaims || []).filter(c => {
+        let flagCount = 0;
+        if (c.fatality) flagCount++;
+        if (c.surgery) flagCount++;
+        if (c.medsVsLimits) flagCount++;
+        if (c.hospitalization) flagCount++;
+        if (c.lossOfConsciousness) flagCount++;
+        if (c.aggFactors) flagCount++;
+        if (c.objectiveInjuries) flagCount++;
+        if (c.pedestrianPregnancy) flagCount++;
+        if (c.lifeCarePlanner) flagCount++;
+        if (c.injections) flagCount++;
+        if (c.emsHeavyImpact) flagCount++;
+        return flagCount >= 3;
+      }).map(c => {
+        let flagCount = 0;
+        const flags: string[] = [];
+        if (c.fatality) { flagCount++; flags.push('Fatality'); }
+        if (c.surgery) { flagCount++; flags.push('Surgery'); }
+        if (c.medsVsLimits) { flagCount++; flags.push('Meds>Limits'); }
+        if (c.hospitalization) { flagCount++; flags.push('Hospital'); }
+        if (c.lossOfConsciousness) { flagCount++; flags.push('LOC'); }
+        if (c.aggFactors) { flagCount++; flags.push('Agg Factors'); }
+        if (c.objectiveInjuries) { flagCount++; flags.push('Obj Injuries'); }
+        if (c.pedestrianPregnancy) { flagCount++; flags.push('Ped/Preg'); }
+        if (c.lifeCarePlanner) { flagCount++; flags.push('Life Care'); }
+        if (c.injections) { flagCount++; flags.push('Injections'); }
+        if (c.emsHeavyImpact) { flagCount++; flags.push('EMS/Impact'); }
+        
+        return {
+          'Claim #': c.claimNumber,
+          'Claimant': c.claimant,
+          'Flag Count': flagCount,
+          'Coverage': c.coverage,
+          'Days Open': c.days,
+          'Age Bucket': c.ageBucket,
+          'Team': c.teamGroup,
+          'Open Reserves': c.openReserves,
+          'Flags Present': flags.join(' | '),
+          'BI Status': c.biStatus,
+        };
+      }).sort((a, b) => (b['Flag Count'] as number) - (a['Flag Count'] as number));
 
-      const rawRows = inProgress.map((c) => ({
-        claimNumber: c.claimNumber,
-        claimant: c.claimant,
-        coverage: c.coverage,
-        days: c.days,
-        ageBucket: c.ageBucket,
-        typeGroup: c.typeGroup,
-        teamGroup: c.teamGroup,
-        openReserves: c.openReserves,
-        cp1ClaimFlag: c.cp1Flag,
-        overallCP1: c.overallCP1,
-        biStatus: c.biStatus,
-        fatality: c.fatality ? 'YES' : '',
-        surgery: c.surgery ? 'YES' : '',
-        medsVsLimits: c.medsVsLimits ? 'YES' : '',
-        hospitalization: c.hospitalization ? 'YES' : '',
-        lossOfConsciousness: c.lossOfConsciousness ? 'YES' : '',
-        aggFactors: c.aggFactors ? 'YES' : '',
-        objectiveInjuries: c.objectiveInjuries ? 'YES' : '',
-        pedestrianPregnancy: c.pedestrianPregnancy ? 'YES' : '',
-        lifeCarePlanner: c.lifeCarePlanner ? 'YES' : '',
-        injections: c.injections ? 'YES' : '',
-        emsHeavyImpact: c.emsHeavyImpact ? 'YES' : '',
-      }));
+      if (highRiskClaims.length > 0) {
+        const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
+        highRiskSheet['!cols'] = [
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
+          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
+        ];
+        XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
+      }
 
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rawRows), 'Raw (In Progress Only)');
+      // Sheet 4: All Claims with Flag Details
+      const allClaimsData = (cp1BoxData?.rawClaims || []).map(c => {
+        let flagCount = 0;
+        if (c.fatality) flagCount++;
+        if (c.surgery) flagCount++;
+        if (c.medsVsLimits) flagCount++;
+        if (c.hospitalization) flagCount++;
+        if (c.lossOfConsciousness) flagCount++;
+        if (c.aggFactors) flagCount++;
+        if (c.objectiveInjuries) flagCount++;
+        if (c.pedestrianPregnancy) flagCount++;
+        if (c.lifeCarePlanner) flagCount++;
+        if (c.injections) flagCount++;
+        if (c.emsHeavyImpact) flagCount++;
+        
+        return {
+          'Claim #': c.claimNumber,
+          'Claimant': c.claimant,
+          'Flag Count': flagCount,
+          'Coverage': c.coverage,
+          'Days Open': c.days,
+          'Age Bucket': c.ageBucket,
+          'Type Group': c.typeGroup,
+          'Team': c.teamGroup,
+          'Open Reserves': c.openReserves,
+          'BI Status': c.biStatus,
+          'Fatality': c.fatality ? 'YES' : '',
+          'Surgery': c.surgery ? 'YES' : '',
+          'Meds vs Limits': c.medsVsLimits ? 'YES' : '',
+          'Hospitalization': c.hospitalization ? 'YES' : '',
+          'Loss of Consciousness': c.lossOfConsciousness ? 'YES' : '',
+          'Aggravating Factors': c.aggFactors ? 'YES' : '',
+          'Objective Injuries': c.objectiveInjuries ? 'YES' : '',
+          'Ped/Moto/Bike/Preg': c.pedestrianPregnancy ? 'YES' : '',
+          'Life Care Planner': c.lifeCarePlanner ? 'YES' : '',
+          'Injections': c.injections ? 'YES' : '',
+          'EMS + Heavy Impact': c.emsHeavyImpact ? 'YES' : '',
+        };
+      }).sort((a, b) => (b['Flag Count'] as number) - (a['Flag Count'] as number));
 
-      XLSX.writeFile(workbook, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-      toast.success('CP1 Analysis Excel generated (CSV only)');
+      const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsData);
+      XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'All Claims Detail');
+
+      XLSX.writeFile(workbook, `CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      toast.success('Executive Excel report generated');
     } catch (err) {
       console.error('Error generating Excel:', err);
       toast.error('Failed to generate Excel');
