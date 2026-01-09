@@ -154,62 +154,62 @@ export function SalesTickerBanner() {
 
       {/* Expanded Detail Sheet */}
       <Sheet open={isExpanded} onOpenChange={setIsExpanded}>
-        <SheetContent side="top" className="h-auto max-h-[80vh] overflow-y-auto">
-          <SheetHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
-                <SheetTitle className="text-xl font-bold">
+        <SheetContent side="top" className="h-auto max-h-[85vh] overflow-y-auto p-3 sm:p-6">
+          <SheetHeader className="pb-3 sm:pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-emerald-400 animate-pulse" />
+                <SheetTitle className="text-base sm:text-xl font-bold">
                   FLI Sales Dashboard
                 </SheetTitle>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {salesData.period}
                 </span>
               </div>
             </div>
           </SheetHeader>
           
-          <div className="py-6 space-y-8">
+          <div className="py-4 sm:py-6 space-y-4 sm:space-y-8">
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Net Written Premium</p>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Net Written Premium</p>
+                <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-0.5 sm:mt-1">
                   {formatCurrency(salesData.netWrittenPremium)}
                 </p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Policies Sold</p>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">
+              <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Policies Sold</p>
+                <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-0.5 sm:mt-1">
                   {salesData.policiesSold.toLocaleString()}
                 </p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Closing Rate</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
+              <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Closing Rate</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground mt-0.5 sm:mt-1">
                   {salesData.closingPercent}%
                 </p>
               </div>
-              <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">6-Mo Renewal Rate</p>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">
+              <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">6-Mo Renewal Rate</p>
+                <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-0.5 sm:mt-1">
                   {salesData.renewalPercent6Mo}%
                 </p>
               </div>
             </div>
 
             {/* Detail Sections */}
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {detailSections.map((section, sectionIndex) => (
-                <div key={sectionIndex} className="bg-card border border-border rounded-lg p-4">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-4 pb-2 border-b border-border">
+                <div key={sectionIndex} className="bg-card border border-border rounded-lg p-3 sm:p-4">
+                  <h3 className="font-semibold text-xs sm:text-sm uppercase tracking-wider text-muted-foreground mb-3 sm:mb-4 pb-2 border-b border-border">
                     {section.title}
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {section.items.map((item, itemIndex) => (
-                      <div key={itemIndex} className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">{item.label}</span>
-                        <span className={`font-semibold ${getTypeStyles(item.type)}`}>
+                      <div key={itemIndex} className="flex justify-between items-center gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">{item.label}</span>
+                        <span className={`font-semibold text-sm sm:text-base ${getTypeStyles(item.type)}`}>
                           {item.value}
                         </span>
                       </div>
@@ -220,52 +220,52 @@ export function SalesTickerBanner() {
             </div>
 
             {/* Trend Indicators */}
-            <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-4 pb-2 border-b border-border">
+            <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
+              <h3 className="font-semibold text-xs sm:text-sm uppercase tracking-wider text-muted-foreground mb-3 sm:mb-4 pb-2 border-b border-border">
                 Key Insights
               </h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <TrendingUp className="h-5 w-5 text-emerald-400" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Strong Renewal Performance</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      6-month renewal rate at {salesData.renewalPercent6Mo}% indicates healthy customer retention
+                  <div className="min-w-0">
+                    <p className="font-medium text-xs sm:text-sm">Strong Renewal Performance</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      6-month renewal rate at {salesData.renewalPercent6Mo}%
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Users className="h-5 w-5 text-amber-400" />
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-amber-500/10 shrink-0">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Zero Production Agents</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {salesData.numberOfZeros.toLocaleString()} agents with zero sales require attention
+                  <div className="min-w-0">
+                    <p className="font-medium text-xs sm:text-sm">Zero Production Agents</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      {salesData.numberOfZeros.toLocaleString()} agents with zero sales
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-red-500/10">
-                    <TrendingDown className="h-5 w-5 text-red-400" />
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 shrink-0">
+                    <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Cancellation Impact</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatPercent(salesData.cancellationPercent)} cancellation rate impacting net premium
+                  <div className="min-w-0">
+                    <p className="font-medium text-xs sm:text-sm">Cancellation Impact</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      {formatPercent(salesData.cancellationPercent)} cancellation rate
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <DollarSign className="h-5 w-5 text-emerald-400" />
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Premium Growth</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Gross written premium of {formatCurrency(salesData.grossWrittenPremium)} for period
+                  <div className="min-w-0">
+                    <p className="font-medium text-xs sm:text-sm">Premium Growth</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      {formatCurrency(salesData.grossWrittenPremium)} GWP
                     </p>
                   </div>
                 </div>

@@ -50,13 +50,13 @@ export function GlobalFilterPanel({
   onFilterChange
 }: GlobalFilterPanelProps) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+    <div className="bg-card border border-border rounded-xl p-2 sm:p-4 mb-3 sm:mb-6">
       <div className="flex items-center justify-center">
-        {/* View Toggle */}
-        <div className="flex rounded-lg overflow-hidden border border-border">
+        {/* View Toggle - Mobile Responsive */}
+        <div className="flex flex-wrap justify-center gap-1 sm:gap-0 sm:rounded-lg sm:overflow-hidden sm:border sm:border-border w-full sm:w-auto">
           <button
             onClick={() => onFilterChange('inventoryStatus', 'eoy')}
-            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
+            className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
               filters.inventoryStatus === 'eoy'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
@@ -66,7 +66,7 @@ export function GlobalFilterPanel({
           </button>
           <button
             onClick={() => onFilterChange('inventoryStatus', 'operations')}
-            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
+            className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
               filters.inventoryStatus === 'operations'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
@@ -76,7 +76,7 @@ export function GlobalFilterPanel({
           </button>
           <button
             onClick={() => onFilterChange('inventoryStatus', 'executive')}
-            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-sm sm:text-base font-medium transition-colors ${
+            className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
               filters.inventoryStatus === 'executive'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
