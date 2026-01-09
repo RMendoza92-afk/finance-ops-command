@@ -4717,6 +4717,82 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     ));
                 })()}
               </div>
+
+              {/* Multi-Flag Grouping */}
+              {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                      <Layers className="h-3.5 w-3.5" />
+                      Claims by Flag Count
+                    </h5>
+                    <span className="text-[10px] text-muted-foreground">
+                      {cp1BoxData.totalFlagInstances.toLocaleString()} total flag instances across {(cp1BoxData.rawClaims?.length || 0).toLocaleString()} claims
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {cp1BoxData.multiFlagGroups.map((group) => (
+                      <div
+                        key={group.flagCount}
+                        className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${
+                          group.flagCount >= 3 
+                            ? 'bg-destructive/15 border-destructive/40 hover:bg-destructive/25' 
+                            : group.flagCount === 2 
+                              ? 'bg-warning/15 border-warning/40 hover:bg-warning/25' 
+                              : 'bg-secondary/50 border-border hover:bg-secondary/70'
+                        }`}
+                        onClick={() => {
+                          import('xlsx').then((XLSX) => {
+                            const rows = group.claims.map((c) => ({
+                              'Claim #': c.claimNumber,
+                              Claimant: c.claimant,
+                              Coverage: c.coverage,
+                              'Days Open': c.days,
+                              'Age Bucket': c.ageBucket,
+                              'Type Group': c.typeGroup,
+                              Team: c.teamGroup,
+                              'Open Reserves': c.openReserves,
+                              'Overall CP1': c.overallCP1,
+                              'BI Status': c.biStatus,
+                              'Fatality': c.fatality ? 'Yes' : '',
+                              'Surgery': c.surgery ? 'Yes' : '',
+                              'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
+                              'Hospitalization': c.hospitalization ? 'Yes' : '',
+                              'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
+                              'Aggravating Factors': c.aggFactors ? 'Yes' : '',
+                              'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
+                              'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
+                              'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
+                              'Injections': c.injections ? 'Yes' : '',
+                              'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
+                            }));
+
+                            const ws = XLSX.utils.json_to_sheet(rows);
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
+                            XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                            toast.success(`Exported ${group.claimCount} claims with ${group.flagCount} flag(s)`);
+                          });
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[10px] font-medium ${
+                            group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-warning' : 'text-muted-foreground'
+                          }`}>
+                            {group.label}
+                          </span>
+                          <Download className="h-3 w-3 text-muted-foreground opacity-50" />
+                        </div>
+                        <p className={`text-base font-bold ${
+                          group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-warning' : 'text-foreground'
+                        }`}>
+                          {group.claimCount.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Flags by Age Chart (top flags only, computed from same CP1 CSV) */}
