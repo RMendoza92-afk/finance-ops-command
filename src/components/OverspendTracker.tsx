@@ -3,6 +3,7 @@ import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBIL
 import { useOverLimitPaymentsDB } from "@/hooks/useOverLimitPaymentsDB";
 import { useLitigationData } from "@/hooks/useLitigationData";
 import { useAtRiskClaims } from "@/hooks/useAtRiskClaims";
+import { usePatternBacktest } from "@/hooks/usePatternBacktest";
 import { 
   TrendingUp, 
   AlertTriangle, 
@@ -16,7 +17,9 @@ import {
   Activity,
   ExternalLink,
   Target,
-  ShieldAlert
+  ShieldAlert,
+  FlaskConical,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +56,7 @@ export function OverspendTracker() {
   const { data: litigationData, loading: dataLoading } = useLitigationData();
   const { byState: dbStateMetrics, totals: dbTotals, loading: dbLoading, getClaimsByState, data: dbData } = useOverLimitPaymentsDB();
   const { atRiskClaims, summary: atRiskSummary, patterns, loading: atRiskLoading } = useAtRiskClaims();
+  const { backtestResults, loading: backtestLoading } = usePatternBacktest();
   const [showDetails, setShowDetails] = useState(false);
   const [showClaims, setShowClaims] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ytd");
@@ -163,6 +167,45 @@ export function OverspendTracker() {
             ['Total Exposure (Reserves)', formatCurrencyFull(atRiskSummary.totalExposure)],
             ['Potential Over-Limit', formatCurrencyFull(atRiskSummary.potentialOverLimit)],
             ['Avg Risk Score', atRiskSummary.avgRiskScore.toFixed(1)],
+          ],
+        },
+        // Backtest Validation Results
+        {
+          sheetName: 'Pattern Backtest Validation',
+          columns: ['Pattern', 'Description', 'Historical Hits', 'Prevalence %', 'Avg Over-Limit', 'Current Weight', 'Recommended Weight'],
+          rows: backtestResults?.patternStats.map(p => [
+            p.pattern,
+            p.description,
+            p.truePositives,
+            `${p.prevalenceRate.toFixed(1)}%`,
+            formatCurrencyFull(p.avgOverLimitWhenPresent),
+            p.weightUsed,
+            p.recommendedWeight,
+          ]) || [['No backtest data', '', '', '', '', '', '']],
+        },
+        // Backtest State Analysis
+        {
+          sheetName: 'Historical State Analysis',
+          columns: ['State', 'Historical Over-Limit Claims', 'Total Over-Limit $', 'Avg Over-Limit', 'Prevalence %'],
+          rows: backtestResults?.stateStats.map(s => [
+            s.state,
+            s.count,
+            formatCurrencyFull(s.totalOverLimit),
+            formatCurrencyFull(s.avgOverLimit),
+            `${s.prevalenceRate.toFixed(1)}%`,
+          ]) || [['No historical data', '', '', '', '']],
+        },
+        // Model Accuracy Summary
+        {
+          sheetName: 'Model Accuracy',
+          columns: ['Metric', 'Value', 'Interpretation'],
+          rows: [
+            ['Historical Claims Analyzed', backtestResults?.totalHistoricalOverLimit || 0, `${backtestResults?.dateRange.earliest || ''} to ${backtestResults?.dateRange.latest || ''}`],
+            ['High-Risk State Capture Rate', `${(backtestResults?.modelAccuracy.highRiskStatePredictiveValue || 0).toFixed(1)}%`, 'Claims in TX/NV/CA/GA/NM/CO/AL'],
+            ['Overall Pattern Capture', `${(backtestResults?.modelAccuracy.overallCaptureRate || 0).toFixed(1)}%`, 'Claims matching at least one pattern'],
+            ['', '', ''],
+            ['RECOMMENDATIONS', '', ''],
+            ...(backtestResults?.recommendations.map(r => ['', r, '']) || []),
           ],
         },
         // At-Risk by State
@@ -344,10 +387,14 @@ export function OverspendTracker() {
       {/* Detailed Views */}
       {showDetails && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-3 mb-3">
+          <TabsList className="grid w-full grid-cols-4 mb-3">
             <TabsTrigger value="atrisk" className="text-xs">
               <ShieldAlert className="h-3 w-3 mr-1" />
               At-Risk ({atRiskSummary.totalAtRisk})
+            </TabsTrigger>
+            <TabsTrigger value="backtest" className="text-xs">
+              <FlaskConical className="h-3 w-3 mr-1" />
+              Validation
             </TabsTrigger>
             <TabsTrigger value="ytd" className="text-xs">
               YTD 2025 ({dbTotals.claimCount})
@@ -406,6 +453,116 @@ export function OverspendTracker() {
               <p className="text-xs text-muted-foreground text-center">
                 Showing top 50 of {atRiskSummary.totalAtRisk} at-risk claims. Export to Excel for full list.
               </p>
+            )}
+          </TabsContent>
+
+          {/* Backtest Validation Tab */}
+          <TabsContent value="backtest" className="space-y-3">
+            {backtestLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-pulse text-muted-foreground text-sm">Loading validation data...</div>
+              </div>
+            ) : backtestResults ? (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">Back-tested against {backtestResults.totalHistoricalOverLimit} historical over-limit claims</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {backtestResults.dateRange.earliest} to {backtestResults.dateRange.latest}
+                  </Badge>
+                </div>
+
+                {/* Accuracy Metrics */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase">High-Risk State Capture</p>
+                    <p className="text-xl font-bold text-green-600">
+                      {backtestResults.modelAccuracy.highRiskStatePredictiveValue.toFixed(0)}%
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">TX/NV/CA/GA/NM/CO/AL</p>
+                  </div>
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase">Historical Claims</p>
+                    <p className="text-xl font-bold text-blue-600">{backtestResults.totalHistoricalOverLimit}</p>
+                    <p className="text-[10px] text-muted-foreground">2015-2024 data</p>
+                  </div>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                    <p className="text-[10px] text-muted-foreground uppercase">Pattern Capture</p>
+                    <p className="text-xl font-bold text-amber-600">
+                      {backtestResults.modelAccuracy.overallCaptureRate.toFixed(0)}%
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Claims w/ 1+ pattern</p>
+                  </div>
+                </div>
+
+                {/* Pattern Validation Table */}
+                <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-muted z-10">
+                      <TableRow>
+                        <TableHead className="text-xs">Pattern</TableHead>
+                        <TableHead className="text-xs text-right">Historical Hits</TableHead>
+                        <TableHead className="text-xs text-right">Prevalence</TableHead>
+                        <TableHead className="text-xs text-right">Avg Over-Limit</TableHead>
+                        <TableHead className="text-xs text-right">Weight</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {backtestResults.patternStats.map((p, idx) => (
+                        <TableRow key={idx} className="text-xs">
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{p.pattern}</span>
+                              <span className="text-[10px] text-muted-foreground">{p.description}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{p.truePositives}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge 
+                              variant={p.prevalenceRate > 50 ? 'default' : p.prevalenceRate > 20 ? 'secondary' : 'outline'}
+                              className="text-[9px]"
+                            >
+                              {p.prevalenceRate.toFixed(0)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatCurrency(p.avgOverLimitWhenPresent)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={p.recommendedWeight > p.weightUsed ? 'text-amber-600' : 'text-green-600'}>
+                              {p.weightUsed}
+                            </span>
+                            {p.recommendedWeight !== p.weightUsed && (
+                              <span className="text-muted-foreground text-[10px]"> → {p.recommendedWeight}</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Recommendations */}
+                {backtestResults.recommendations.length > 0 && (
+                  <div className="border border-border rounded-lg p-3 bg-muted/30">
+                    <p className="text-xs font-medium mb-2 flex items-center gap-1">
+                      <Target className="h-3 w-3" /> Recommendations
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      {backtestResults.recommendations.map((rec, idx) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-green-500 mt-0.5">•</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No historical validation data available
+              </div>
             )}
           </TabsContent>
 
