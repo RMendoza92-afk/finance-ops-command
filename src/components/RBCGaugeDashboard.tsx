@@ -217,47 +217,47 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const ldfData = useMemo(() => {
     const lossRatioData = triangleData.filter(d => d.metric_type === 'loss_ratio');
     const years = [...new Set(lossRatioData.map(d => d.accident_year))].sort((a, b) => a - b);
-    const allMonths = [...new Set(lossRatioData.map(d => d.development_months))].sort((a, b) => a - b);
     
-    if (allMonths.length < 2) return { ataFactors: [], cdfFactors: [], allMonths: [], selectedATA: [], selectedCDF: [] };
+    // Use standard development periods for proper triangle structure
+    const standardMonths = [12, 24, 36, 48, 60, 72, 84, 96];
+    
+    if (years.length < 2) return { ataFactors: [], cdfFactors: [], allMonths: standardMonths, selectedATA: [], selectedCDF: [], years: [] };
 
-    // Build triangle matrix: triangleMatrix[year][monthIndex] = loss ratio
+    // Build triangle matrix: triangleMatrix[year][month] = loss ratio (using actual month values)
     const triangleMatrix: Record<number, Record<number, number>> = {};
     years.forEach(year => {
       triangleMatrix[year] = {};
       lossRatioData
         .filter(d => d.accident_year === year)
         .forEach(d => {
-          const monthIdx = allMonths.indexOf(d.development_months);
-          if (monthIdx >= 0) triangleMatrix[year][monthIdx] = d.amount;
+          triangleMatrix[year][d.development_months] = d.amount;
         });
     });
 
-    // Calculate Age-to-Age factors for each development period transition
-    const ataFactors: { from: number; to: number; factors: (number | null)[]; avg: number | null; wtdAvg: number | null }[] = [];
+    // Calculate Age-to-Age factors for standard development period transitions
+    const ataFactors: { from: number; to: number; factors: { year: number; factor: number | null }[]; avg: number | null; wtdAvg: number | null }[] = [];
     
-    for (let i = 0; i < allMonths.length - 1; i++) {
-      const fromMonth = allMonths[i];
-      const toMonth = allMonths[i + 1];
-      const factors: (number | null)[] = [];
+    for (let i = 0; i < standardMonths.length - 1; i++) {
+      const fromMonth = standardMonths[i];
+      const toMonth = standardMonths[i + 1];
+      const factors: { year: number; factor: number | null }[] = [];
       let sumFactors = 0;
       let countFactors = 0;
       let weightedSum = 0;
       let weightSum = 0;
 
       years.forEach(year => {
-        const fromVal = triangleMatrix[year]?.[i];
-        const toVal = triangleMatrix[year]?.[i + 1];
-        if (fromVal && toVal && fromVal > 0) {
+        const fromVal = triangleMatrix[year]?.[fromMonth];
+        const toVal = triangleMatrix[year]?.[toMonth];
+        if (fromVal && fromVal > 0 && toVal && toVal > 0) {
           const factor = toVal / fromVal;
-          factors.push(factor);
+          factors.push({ year, factor });
           sumFactors += factor;
           countFactors++;
-          // Weighted by the "from" value
           weightedSum += factor * fromVal;
           weightSum += fromVal;
         } else {
-          factors.push(null);
+          factors.push({ year, factor: null });
         }
       });
 
@@ -270,11 +270,10 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       });
     }
 
-    // Selected ATA factors (use weighted average, fallback to simple average)
+    // Selected ATA factors (use weighted average, fallback to simple average, fallback to 1.000)
     const selectedATA = ataFactors.map(ata => ata.wtdAvg ?? ata.avg ?? 1.000);
 
     // Calculate Cumulative Development Factors (from each period to ultimate)
-    // CDF at period i = product of all ATA factors from i to ultimate
     const selectedCDF: number[] = [];
     for (let i = 0; i < selectedATA.length; i++) {
       let cdf = 1;
@@ -283,10 +282,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       }
       selectedCDF.push(cdf);
     }
-    // Add 1.000 for the ultimate period
-    selectedCDF.push(1.000);
+    selectedCDF.push(1.000); // Ultimate
 
-    return { ataFactors, cdfFactors: selectedCDF, allMonths, selectedATA, selectedCDF, years };
+    return { ataFactors, cdfFactors: selectedCDF, allMonths: standardMonths, selectedATA, selectedCDF, years };
   }, [triangleData]);
 
   // Build comprehensive triangle table for exports
@@ -878,21 +876,25 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                     </thead>
                     <tbody>
                       {/* Age-to-Age factors by year */}
-                      {ldfData.years?.slice().reverse().slice(0, 5).map((year, yi) => (
+                      {ldfData.years?.slice().reverse().slice(0, 5).map((year) => (
                         <tr key={year} className="border-b border-border/50 hover:bg-muted/30">
                           <td className="py-2 px-3 font-medium">AY {year}</td>
-                          {ldfData.ataFactors.map((ata, i) => (
-                            <td key={i} className="text-right py-2 px-3 tabular-nums">
-                              {ata.factors[ldfData.years!.indexOf(year)] !== null ? (
-                                <span className={cn(
-                                  ata.factors[ldfData.years!.indexOf(year)]! > 1.1 ? 'text-orange-500' :
-                                  ata.factors[ldfData.years!.indexOf(year)]! > 1.05 ? 'text-yellow-500' : 'text-emerald-500'
-                                )}>
-                                  {ata.factors[ldfData.years!.indexOf(year)]!.toFixed(4)}
-                                </span>
-                              ) : '—'}
-                            </td>
-                          ))}
+                          {ldfData.ataFactors.map((ata, i) => {
+                            const factorEntry = ata.factors.find(f => f.year === year);
+                            const factor = factorEntry?.factor;
+                            return (
+                              <td key={i} className="text-right py-2 px-3 tabular-nums">
+                                {factor !== null && factor !== undefined ? (
+                                  <span className={cn(
+                                    factor > 1.1 ? 'text-orange-500' :
+                                    factor > 1.05 ? 'text-yellow-500' : 'text-emerald-500'
+                                  )}>
+                                    {factor.toFixed(4)}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                            );
+                          })}
                           <td className="text-right py-2 px-3 tabular-nums text-muted-foreground">—</td>
                         </tr>
                       ))}
