@@ -1543,10 +1543,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       };
 
       const getSeverityTier = (score: number) => {
-        if (score >= 200) return 'IMMEDIATE SETTLEMENT';
-        if (score >= 100) return 'EARLY AUTHORITY';
-        if (score >= 50) return 'MONITOR CLOSELY';
-        return 'STANDARD';
+        if (score >= 200) return 'HEAVY';
+        if (score >= 100) return 'MODERATE';
+        if (score >= 50) return 'LIGHT';
+        return 'MINIMAL';
       };
 
       // Sheet 2: Multi-Flag Risk Analysis
