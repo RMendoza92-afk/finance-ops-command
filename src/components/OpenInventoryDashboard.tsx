@@ -1634,6 +1634,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.lifeCarePlanner) flagCount++;
         if (c.injections) flagCount++;
         if (c.emsHeavyImpact) flagCount++;
+        if (c.confirmedFractures) flagCount++;
+        if (c.lacerations) flagCount++;
+        if (c.priorSurgery) flagCount++;
+        if (c.pregnancy) flagCount++;
+        if (c.painLevel5Plus) flagCount++;
+        if (c.eggshell69Plus) flagCount++;
         return flagCount >= 3;
       }).map(c => {
         let flagCount = 0;
@@ -1641,14 +1647,20 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.fatality) { flagCount++; flags.push('Fatality'); }
         if (c.surgery) { flagCount++; flags.push('Surgery'); }
         if (c.medsVsLimits) { flagCount++; flags.push('Meds>Limits'); }
-        if (c.hospitalization) { flagCount++; flags.push('Hospital'); }
-        if (c.lossOfConsciousness) { flagCount++; flags.push('LOC'); }
-        if (c.aggFactors) { flagCount++; flags.push('Agg Factors'); }
-        if (c.objectiveInjuries) { flagCount++; flags.push('Obj Injuries'); }
-        if (c.pedestrianPregnancy) { flagCount++; flags.push('Ped/Preg'); }
         if (c.lifeCarePlanner) { flagCount++; flags.push('Life Care'); }
+        if (c.confirmedFractures) { flagCount++; flags.push('Fractures'); }
+        if (c.hospitalization) { flagCount++; flags.push('Hospital'); }
+        if (c.lossOfConsciousness) { flagCount++; flags.push('LOC/TBI'); }
+        if (c.aggFactors) { flagCount++; flags.push('Re-aggravation'); }
+        if (c.objectiveInjuries) { flagCount++; flags.push('MRI/CT'); }
+        if (c.pedestrianPregnancy) { flagCount++; flags.push('Ped/Moto/Bike'); }
+        if (c.priorSurgery) { flagCount++; flags.push('Surg Rec'); }
         if (c.injections) { flagCount++; flags.push('Injections'); }
         if (c.emsHeavyImpact) { flagCount++; flags.push('EMS/Impact'); }
+        if (c.lacerations) { flagCount++; flags.push('Lacerations'); }
+        if (c.painLevel5Plus) { flagCount++; flags.push('Pain 5+'); }
+        if (c.pregnancy) { flagCount++; flags.push('Pregnancy'); }
+        if (c.eggshell69Plus) { flagCount++; flags.push('Eggshell 69+'); }
         
         const impactScore = calculateImpactScore(c);
         const severityTier = getSeverityTier(impactScore);
@@ -1682,7 +1694,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
       }
 
-      // Sheet 4: All Claims with Flag Details + Impact Severity
       const allClaimsData = (cp1BoxData?.rawClaims || []).map(c => {
         let flagCount = 0;
         if (c.fatality) flagCount++;
@@ -1696,6 +1707,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.lifeCarePlanner) flagCount++;
         if (c.injections) flagCount++;
         if (c.emsHeavyImpact) flagCount++;
+        if (c.confirmedFractures) flagCount++;
+        if (c.lacerations) flagCount++;
+        if (c.priorSurgery) flagCount++;
+        if (c.pregnancy) flagCount++;
+        if (c.painLevel5Plus) flagCount++;
+        if (c.eggshell69Plus) flagCount++;
         
         const impactScore = calculateImpactScore(c);
         const severityTier = getSeverityTier(impactScore);
@@ -1717,17 +1734,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
           'BI Status': c.biStatus,
+          // Tier 1 - Highest Severity (100 pts)
           'Fatality (100)': c.fatality ? 'YES' : '',
           'Surgery (100)': c.surgery ? 'YES' : '',
           'Meds vs Limits (100)': c.medsVsLimits ? 'YES' : '',
           'Life Care (100)': c.lifeCarePlanner ? 'YES' : '',
+          // Tier 2 - High Severity (70-80 pts)
+          'Fractures (80)': c.confirmedFractures ? 'YES' : '',
           'Hospital (80)': c.hospitalization ? 'YES' : '',
-          'LOC (80)': c.lossOfConsciousness ? 'YES' : '',
-          'Agg Factors (70)': c.aggFactors ? 'YES' : '',
-          'Obj Injuries (70)': c.objectiveInjuries ? 'YES' : '',
-          'Ped/Preg (70)': c.pedestrianPregnancy ? 'YES' : '',
+          'LOC/TBI (80)': c.lossOfConsciousness ? 'YES' : '',
+          'Re-aggravation (70)': c.aggFactors ? 'YES' : '',
+          'MRI/CT Confirmed (70)': c.objectiveInjuries ? 'YES' : '',
+          'Ped/Moto/Bike (70)': c.pedestrianPregnancy ? 'YES' : '',
+          'Surg Rec (70)': c.priorSurgery ? 'YES' : '',
+          // Tier 3 - Moderate Severity (50-60 pts)
           'Injections (60)': c.injections ? 'YES' : '',
           'EMS/Impact (50)': c.emsHeavyImpact ? 'YES' : '',
+          'Lacerations (50)': c.lacerations ? 'YES' : '',
+          'Pain 5+ (50)': c.painLevel5Plus ? 'YES' : '',
+          'Pregnancy (50)': c.pregnancy ? 'YES' : '',
+          'Eggshell 69+ (50)': c.eggshell69Plus ? 'YES' : '',
         };
       }).sort((a, b) => (b['Impact Score'] as number) - (a['Impact Score'] as number));
 
