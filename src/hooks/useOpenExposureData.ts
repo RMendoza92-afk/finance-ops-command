@@ -503,6 +503,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
 
     const nonWorkableTokens = [
       'spd',
+      'settled',
       'settled pending docs',
       'settled pending drafting instructions',
       'court approval pending',
