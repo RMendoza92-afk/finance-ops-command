@@ -402,7 +402,7 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       };
     })(),
     
-    // === FATALITY & SEVERITY ANALYSIS ===
+    // === FATALITY & SEVERITY ANALYSIS (All CP1 Trigger Flags) ===
     fatality_severity: exp.fatalitySummary ? {
       fatality_count: exp.fatalitySummary.fatalityCount || 0,
       fatality_reserves_usd: exp.fatalitySummary.fatalityReserves || 0,
@@ -410,6 +410,15 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       fatality_high_eval_usd: exp.fatalitySummary.fatalityHighEval || 0,
       surgery_count: exp.fatalitySummary.surgeryCount || 0,
       hospitalization_count: exp.fatalitySummary.hospitalizationCount || 0,
+      // Additional CP1 trigger flags
+      meds_vs_limits_count: exp.fatalitySummary.medsVsLimitsCount || 0,
+      loss_of_consciousness_count: exp.fatalitySummary.lossOfConsciousnessCount || 0,
+      aggravating_factors_count: exp.fatalitySummary.aggravatingFactorsCount || 0,
+      objective_injuries_count: exp.fatalitySummary.objectiveInjuriesCount || 0,
+      pedestrian_motorcyclist_count: exp.fatalitySummary.pedestrianMotorcyclistCount || 0,
+      life_care_planner_count: exp.fatalitySummary.lifeCarePlannerCount || 0,
+      injections_count: exp.fatalitySummary.injectionsCount || 0,
+      ems_heavy_impact_count: exp.fatalitySummary.emsHeavyImpactCount || 0,
       fatality_claims_sample: (exp.fatalitySummary.fatalityClaims || []).slice(0, 15).map((c: any) => ({
         claim_id: c.claimNumber,
         claimant: c.claimant,
@@ -430,6 +439,14 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       fatality_high_eval_usd: 0,
       surgery_count: 0,
       hospitalization_count: 0,
+      meds_vs_limits_count: 0,
+      loss_of_consciousness_count: 0,
+      aggravating_factors_count: 0,
+      objective_injuries_count: 0,
+      pedestrian_motorcyclist_count: 0,
+      life_care_planner_count: 0,
+      injections_count: 0,
+      ems_heavy_impact_count: 0,
       fatality_claims_sample: [],
     },
   };
@@ -616,6 +633,20 @@ When users ask about CP1 flags, explain that CP1 indicates high-severity claims 
 
 ## RESERVE ADEQUACY DATA:
 - reserve_adequacy: claims_with_reserve_change, avg_reserve_change_pct, over_reserved_count, under_reserved_count, over_reserved_sample[], under_reserved_sample[]
+
+## FATALITY & SEVERITY DATA (CP1 Trigger Flag Counts):
+- fatality_severity.fatality_count, fatality_reserves_usd, fatality_low_eval_usd, fatality_high_eval_usd
+- fatality_severity.surgery_count, hospitalization_count
+- fatality_severity.meds_vs_limits_count (medical costs > policy limits)
+- fatality_severity.loss_of_consciousness_count
+- fatality_severity.aggravating_factors_count (DUI, fled scene, etc.)
+- fatality_severity.objective_injuries_count (fractures, documented injuries)
+- fatality_severity.pedestrian_motorcyclist_count (vulnerable road users + pregnancy)
+- fatality_severity.life_care_planner_count (long-term care needs)
+- fatality_severity.injections_count
+- fatality_severity.ems_heavy_impact_count (ambulance + heavy collision)
+- fatality_claims_sample[] for claim-level fatality details
+Use these to answer questions like "how many fatality claims", "surgery count", "claims with life care planner", etc.
 
 ## LITIGATION/TRIAL DATA:
 - litigation_status: in_litigation_count, with_cause_number_count, by_matter_status[], by_case_type[], litigation_sample[]
