@@ -1559,7 +1559,29 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const insightsSheet = XLSX.utils.aoa_to_sheet(insightsData);
       XLSX.utils.book_append_sheet(workbook, insightsSheet, 'Key Insights');
 
-      // Sheet 5: Raw Claims Data (for validation)
+      // Sheet 5: CP1 Trigger Flags Summary
+      const fs = data?.fatalitySummary;
+      const triggerFlagsData = [
+        ['CP1 TRIGGER FLAGS SUMMARY'],
+        [`Data Date: ${data?.dataDate || ''}`],
+        [],
+        ['Flag', 'Count'],
+        ['Fatality', fs?.fatalityCount || 0],
+        ['Surgery', fs?.surgeryCount || 0],
+        ['Hospitalization', fs?.hospitalizationCount || 0],
+        ['Meds > Limits', fs?.medsVsLimitsCount || 0],
+        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0],
+        ['Aggravating Factors', fs?.aggravatingFactorsCount || 0],
+        ['Objective Injuries', fs?.objectiveInjuriesCount || 0],
+        ['Ped/Moto/Bicyclist', fs?.pedestrianMotorcyclistCount || 0],
+        ['Pregnancy', fs?.pregnancyCount || 0],
+        ['Life Care Planner', fs?.lifeCarePlannerCount || 0],
+        ['Injections', fs?.injectionsCount || 0],
+        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0],
+      ];
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(triggerFlagsData), 'Trigger Flags');
+
+      // Sheet 6: Raw Claims Data (BI/UM/UI) - for validation
       if (data?.rawClaims && data.rawClaims.length > 0) {
         const extractTeamNumber = (teamGroup: string) => {
           const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
@@ -1567,10 +1589,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         };
 
         const rawClaimsData = [
-          ['RAW CLAIMS DATA - CP1 VALIDATION'],
-          [`Total Claims: ${data.rawClaims.length} (BI/UM/UI coverages only)`],
+          ['RAW CLAIMS DATA - BI/UM/UI (FILTERED NON-WORKABLE REMOVED)'],
+          [`Total Claims: ${data.rawClaims.length}`],
           [],
-          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type', 'Fatality', 'Surgery', 'Hospitalization'],
+          ['Claim#', 'Claimant', 'Coverage', 'Days', 'Age Bucket', 'Type Group', 'Team Group', 'Team #', 'Open Reserves', 'Low Eval', 'High Eval', 'CP1 Flag', 'Overall CP1', 'Eval Phase', 'Demand Type', 'BI Status', 'Fatality', 'Surgery', 'Hospitalization', 'Meds>Limits', 'LOC', 'Agg Factors', 'Obj Injuries', 'Ped/Moto', 'Pregnancy', 'Life Care', 'Injections', 'EMS+Impact'],
           ...data.rawClaims.map(claim => [
             claim.claimNumber,
             claim.claimant,
@@ -1587,13 +1609,63 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             claim.overallCP1,
             claim.evaluationPhase,
             claim.demandType,
+            claim.biStatus,
             claim.fatality ? 'YES' : '',
             claim.surgery ? 'YES' : '',
             claim.hospitalization ? 'YES' : '',
+            claim.medsVsLimits ? 'YES' : '',
+            claim.lossOfConsciousness ? 'YES' : '',
+            claim.aggravatingFactors ? 'YES' : '',
+            claim.objectiveInjuries ? 'YES' : '',
+            claim.pedestrianMotorcyclist ? 'YES' : '',
+            claim.pregnancy ? 'YES' : '',
+            claim.lifeCarePlanner ? 'YES' : '',
+            claim.injections ? 'YES' : '',
+            claim.emsHeavyImpact ? 'YES' : '',
           ])
         ];
         const rawClaimsSheet = XLSX.utils.aoa_to_sheet(rawClaimsData);
-        XLSX.utils.book_append_sheet(workbook, rawClaimsSheet, 'Raw Claims Data');
+        XLSX.utils.book_append_sheet(workbook, rawClaimsSheet, 'Raw BI-UM-UI');
+      }
+
+      // Sheet 7: Raw Claims Data (ALL coverages) - robust raw export
+      if (data?.allRawClaims && data.allRawClaims.length > 0) {
+        const allClaimsRows = data.allRawClaims.map(claim => ({
+          claimNumber: claim.claimNumber,
+          claimant: claim.claimant,
+          coverage: claim.coverage,
+          days: claim.days,
+          ageBucket: claim.ageBucket,
+          typeGroup: claim.typeGroup,
+          teamGroup: claim.teamGroup,
+          openReserves: claim.openReserves,
+          lowEval: claim.lowEval,
+          highEval: claim.highEval,
+          cp1Flag: claim.cp1Flag,
+          overallCP1: claim.overallCP1,
+          evaluationPhase: claim.evaluationPhase,
+          demandType: claim.demandType,
+          biStatus: claim.biStatus,
+          fatality: claim.fatality ? 'YES' : '',
+          surgery: claim.surgery ? 'YES' : '',
+          hospitalization: claim.hospitalization ? 'YES' : '',
+          medsVsLimits: claim.medsVsLimits ? 'YES' : '',
+          lossOfConsciousness: claim.lossOfConsciousness ? 'YES' : '',
+          aggravatingFactors: claim.aggravatingFactors ? 'YES' : '',
+          objectiveInjuries: claim.objectiveInjuries ? 'YES' : '',
+          pedestrianMotorcyclist: claim.pedestrianMotorcyclist ? 'YES' : '',
+          pregnancy: claim.pregnancy ? 'YES' : '',
+          lifeCarePlanner: claim.lifeCarePlanner ? 'YES' : '',
+          injections: claim.injections ? 'YES' : '',
+          emsHeavyImpact: claim.emsHeavyImpact ? 'YES' : '',
+        }));
+        const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsRows);
+        XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'Raw ALL');
+
+        // Bonus: CP1-only raw tab
+        const cp1Only = allClaimsRows.filter(r => String(r.cp1Flag).toUpperCase() === 'YES');
+        const cp1OnlySheet = XLSX.utils.json_to_sheet(cp1Only);
+        XLSX.utils.book_append_sheet(workbook, cp1OnlySheet, 'Raw CP1 Only');
       }
 
       XLSX.writeFile(workbook, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);

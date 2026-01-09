@@ -163,10 +163,19 @@ export interface RawClaimExport {
   matterStatus: string;
   settledDate: string;
   daysSinceSettled: number | null;
-  // Fatality and severity flags
+  // CP1 trigger flags
   fatality: boolean;
   surgery: boolean;
   hospitalization: boolean;
+  medsVsLimits: boolean;
+  lossOfConsciousness: boolean;
+  aggravatingFactors: boolean;
+  objectiveInjuries: boolean;
+  pedestrianMotorcyclist: boolean;
+  pregnancy: boolean;
+  lifeCarePlanner: boolean;
+  injections: boolean;
+  emsHeavyImpact: boolean;
 }
 
 export interface CP1ByTypeGroup {
@@ -477,29 +486,40 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     // ═══════════════════════════════════════════════════════════════════
     // FILTER OUT non-workable files (settled statuses, pending docs, etc.)
+    // Applies globally across all dashboards that consume this dataset.
     // ═══════════════════════════════════════════════════════════════════
-    const exposureCategory = (row['Exposure Category'] || '').trim().toUpperCase();
-    const biStatusRaw = (row['BI Status'] || '').trim().toLowerCase();
-    
-    // Exclude Exposure Categories that are non-workable
-    if (exposureCategory === 'SPD' || exposureCategory === 'SETTLED PENDING DOCS') continue;
-    
-    // Exclude BI Statuses that indicate settled/pending non-workable claims
-    const excludedBiStatuses = [
+    const exposureCategory = (row['Exposure Category'] || '').trim();
+    const biStatusRaw = (row['BI Status'] || '').trim();
+
+    const norm = (s: string) =>
+      (s || '')
+        .toLowerCase()
+        .replace(/[\.,\-_/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const exposureCategoryN = norm(exposureCategory);
+    const biStatusN = norm(biStatusRaw);
+
+    const nonWorkableTokens = [
+      'spd',
       'settled pending docs',
-      'conditional',
-      'court approval pending',
       'settled pending drafting instructions',
+      'court approval pending',
       'pending friendly suits',
       'pending payment',
+      'conditional',
       'future medical release',
       'past medical release',
-      'spd-lit',
-      'spd - lit',
-      'passed/future medical release',
-      'past/future medical release',
+      'past future medical release',
+      'passed future medical release',
+      'global',
+      'spd lit',
     ];
-    if (excludedBiStatuses.some(s => biStatusRaw === s || biStatusRaw.includes(s))) continue;
+
+    const isNonWorkable = (v: string) => nonWorkableTokens.some(t => v === t || v.includes(t));
+
+    if (isNonWorkable(exposureCategoryN) || isNonWorkable(biStatusN)) continue;
     
     const claimNum = row['Claim#']?.trim() || '';
     const typeGroup = row['Type Group']?.trim() || 'Unknown';
@@ -576,7 +596,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const daysSinceSettledStr = row['Days Since Settled?']?.trim() || '';
     const daysSinceSettled = daysSinceSettledStr ? parseInt(daysSinceSettledStr, 10) || null : null;
     
-    // Parse fatality and severity flags (all CP1 trigger types)
+    // Parse CP1 trigger flags
     const parseYesNo = (val: string) => {
       const v = (val || '').toString().toLowerCase().trim();
       return v === 'yes' || v === 'y' || v === 'true' || v === '1';
@@ -592,6 +612,10 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const isLifeCarePlanner = parseYesNo(row['LIFE CARE PLANNER']);
     const isInjections = parseYesNo(row['INJECTIONS']);
     const isEmsHeavyImpact = parseYesNo(row['EMS + HEAVY IMPACT']);
+    const isPregnancy = isPedestrianMotorcyclist && (() => {
+      const desc = (row['Description of Accident'] || '').toString().toLowerCase();
+      return desc.includes('pregnan') || desc.includes('expecting');
+    })();
     
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
@@ -638,8 +662,17 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       fatality: isFatality,
       surgery: isSurgery,
       hospitalization: isHospitalization,
+      medsVsLimits: isMedsVsLimits,
+      lossOfConsciousness: isLossOfConsciousness,
+      aggravatingFactors: isAggravatingFactors,
+      objectiveInjuries: isObjectiveInjuries,
+      pedestrianMotorcyclist: isPedestrianMotorcyclist,
+      pregnancy: isPregnancy,
+      lifeCarePlanner: isLifeCarePlanner,
+      injections: isInjections,
+      emsHeavyImpact: isEmsHeavyImpact,
     });
-    
+
     // Track CP1 for ALL coverages (for grand total)
     if (isCP1) {
       cp1AllCoverages.yes++;
@@ -696,8 +729,17 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       fatality: isFatality,
       surgery: isSurgery,
       hospitalization: isHospitalization,
+      medsVsLimits: isMedsVsLimits,
+      lossOfConsciousness: isLossOfConsciousness,
+      aggravatingFactors: isAggravatingFactors,
+      objectiveInjuries: isObjectiveInjuries,
+      pedestrianMotorcyclist: isPedestrianMotorcyclist,
+      pregnancy: isPregnancy,
+      lifeCarePlanner: isLifeCarePlanner,
+      injections: isInjections,
+      emsHeavyImpact: isEmsHeavyImpact,
     });
-    
+
     // Update grand totals (claim counts)
     grandTotals[ageBucket]++;
     grandTotals.grandTotal++;
