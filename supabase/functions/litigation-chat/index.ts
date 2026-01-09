@@ -416,6 +416,7 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       aggravating_factors_count: exp.fatalitySummary.aggravatingFactorsCount || 0,
       objective_injuries_count: exp.fatalitySummary.objectiveInjuriesCount || 0,
       pedestrian_motorcyclist_count: exp.fatalitySummary.pedestrianMotorcyclistCount || 0,
+      pregnancy_count: exp.fatalitySummary.pregnancyCount || 0,
       life_care_planner_count: exp.fatalitySummary.lifeCarePlannerCount || 0,
       injections_count: exp.fatalitySummary.injectionsCount || 0,
       ems_heavy_impact_count: exp.fatalitySummary.emsHeavyImpactCount || 0,
@@ -444,6 +445,7 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
       aggravating_factors_count: 0,
       objective_injuries_count: 0,
       pedestrian_motorcyclist_count: 0,
+      pregnancy_count: 0,
       life_care_planner_count: 0,
       injections_count: 0,
       ems_heavy_impact_count: 0,
@@ -641,12 +643,13 @@ When users ask about CP1 flags, explain that CP1 indicates high-severity claims 
 - fatality_severity.loss_of_consciousness_count
 - fatality_severity.aggravating_factors_count (DUI, fled scene, etc.)
 - fatality_severity.objective_injuries_count (fractures, documented injuries)
-- fatality_severity.pedestrian_motorcyclist_count (vulnerable road users + pregnancy)
+- fatality_severity.pedestrian_motorcyclist_count (vulnerable road users)
+- fatality_severity.pregnancy_count (pregnant claimants)
 - fatality_severity.life_care_planner_count (long-term care needs)
 - fatality_severity.injections_count
 - fatality_severity.ems_heavy_impact_count (ambulance + heavy collision)
 - fatality_claims_sample[] for claim-level fatality details
-Use these to answer questions like "how many fatality claims", "surgery count", "claims with life care planner", etc.
+Use these to answer questions like "how many fatality claims", "surgery count", "pregnancy claims", "claims with life care planner", etc.
 
 ## LITIGATION/TRIAL DATA:
 - litigation_status: in_litigation_count, with_cause_number_count, by_matter_status[], by_case_type[], litigation_sample[]

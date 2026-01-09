@@ -316,6 +316,7 @@ export interface OpenExposureData {
     aggravatingFactorsCount: number;
     objectiveInjuriesCount: number;
     pedestrianMotorcyclistCount: number;
+    pregnancyCount: number;
     lifeCarePlannerCount: number;
     injectionsCount: number;
     emsHeavyImpactCount: number;
@@ -1185,6 +1186,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   let aggravatingFactorsCount = 0;
   let objectiveInjuriesCount = 0;
   let pedestrianMotorcyclistCount = 0;
+  let pregnancyCount = 0;
   let lifeCarePlannerCount = 0;
   let injectionsCount = 0;
   let emsHeavyImpactCount = 0;
@@ -1199,7 +1201,15 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     if (parseYesNo(row['LOSS OF CONSCIOUSNESS'] as string)) lossOfConsciousnessCount++;
     if (parseYesNo(row['AGGRAVATING FACTORS'] as string)) aggravatingFactorsCount++;
     if (parseYesNo(row['OBJECTIVE INJURIES'] as string)) objectiveInjuriesCount++;
-    if (parseYesNo(row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY'] as string)) pedestrianMotorcyclistCount++;
+    const pedMotoPreg = (row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY'] as string || '').toString().toLowerCase().trim();
+    if (pedMotoPreg === 'yes' || pedMotoPreg === 'y' || pedMotoPreg === 'true' || pedMotoPreg === '1') {
+      pedestrianMotorcyclistCount++;
+      // Check description for pregnancy indicators
+      const desc = (row['Description of Accident'] as string || '').toLowerCase();
+      if (desc.includes('pregnan') || desc.includes('expecting')) {
+        pregnancyCount++;
+      }
+    }
     if (parseYesNo(row['LIFE CARE PLANNER'] as string)) lifeCarePlannerCount++;
     if (parseYesNo(row['INJECTIONS'] as string)) injectionsCount++;
     if (parseYesNo(row['EMS + HEAVY IMPACT'] as string)) emsHeavyImpactCount++;
@@ -1222,6 +1232,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     aggravatingFactorsCount,
     objectiveInjuriesCount,
     pedestrianMotorcyclistCount,
+    pregnancyCount,
     lifeCarePlannerCount,
     injectionsCount,
     emsHeavyImpactCount,

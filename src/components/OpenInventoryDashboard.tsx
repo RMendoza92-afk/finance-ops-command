@@ -4647,101 +4647,90 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 CP1 Trigger Flags
               </h4>
-              <p className="text-xs text-muted-foreground mb-3">Claims flagged with high-severity indicators that trigger CP1 status</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <p className="text-xs text-muted-foreground mb-3">Click any flag to view claims and export report</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { label: 'Fatality', count: data?.fatalitySummary?.fatalityCount || 0, icon: '💀', critical: true },
-                  { label: 'Surgery', count: data?.fatalitySummary?.surgeryCount || 0, icon: '🏥', critical: true },
-                  { label: 'Hospitalization', count: data?.fatalitySummary?.hospitalizationCount || 0, icon: '🛏️', critical: false },
-                  { label: 'Meds > Limits', count: data?.fatalitySummary?.medsVsLimitsCount || 0, icon: '💊', critical: true },
-                  { label: 'Loss of Consciousness', count: data?.fatalitySummary?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
-                  { label: 'Aggravating Factors', count: data?.fatalitySummary?.aggravatingFactorsCount || 0, icon: '⚠️', critical: true },
-                  { label: 'Objective Injuries', count: data?.fatalitySummary?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
-                  { label: 'Ped/Moto/Pregnancy', count: data?.fatalitySummary?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: true },
-                  { label: 'Life Care Planner', count: data?.fatalitySummary?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
-                  { label: 'Injections', count: data?.fatalitySummary?.injectionsCount || 0, icon: '💉', critical: false },
-                  { label: 'EMS + Heavy Impact', count: data?.fatalitySummary?.emsHeavyImpactCount || 0, icon: '🚑', critical: false },
+                  { label: 'Fatality', key: 'fatality', count: data?.fatalitySummary?.fatalityCount || 0, icon: '💀', critical: true },
+                  { label: 'Surgery', key: 'surgery', count: data?.fatalitySummary?.surgeryCount || 0, icon: '🏥', critical: true },
+                  { label: 'Hospitalization', key: 'hospitalization', count: data?.fatalitySummary?.hospitalizationCount || 0, icon: '🛏️', critical: false },
+                  { label: 'Meds > Limits', key: 'medsVsLimits', count: data?.fatalitySummary?.medsVsLimitsCount || 0, icon: '💊', critical: true },
+                  { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: data?.fatalitySummary?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
+                  { label: 'Aggravating Factors', key: 'aggravatingFactors', count: data?.fatalitySummary?.aggravatingFactorsCount || 0, icon: '⚠️', critical: true },
+                  { label: 'Objective Injuries', key: 'objectiveInjuries', count: data?.fatalitySummary?.objectiveInjuriesCount || 0, icon: '🦴', critical: false },
+                  { label: 'Ped/Moto/Bicyclist', key: 'pedestrianMotorcyclist', count: data?.fatalitySummary?.pedestrianMotorcyclistCount || 0, icon: '🚶', critical: true },
+                  { label: 'Pregnancy', key: 'pregnancy', count: data?.fatalitySummary?.pregnancyCount || 0, icon: '🤰', critical: true },
+                  { label: 'Life Care Planner', key: 'lifeCarePlanner', count: data?.fatalitySummary?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
+                  { label: 'Injections', key: 'injections', count: data?.fatalitySummary?.injectionsCount || 0, icon: '💉', critical: false },
+                  { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: data?.fatalitySummary?.emsHeavyImpactCount || 0, icon: '🚑', critical: false },
                 ].map((flag) => (
                   <div 
                     key={flag.label} 
-                    className={`p-3 rounded-lg border ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-secondary/50 border-border'}`}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${flag.critical && flag.count > 0 ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
+                    onClick={() => {
+                      // Export claims with this flag to Excel
+                      if (flag.count === 0) {
+                        toast.info(`No claims with ${flag.label} flag`);
+                        return;
+                      }
+                      import('xlsx').then((XLSX) => {
+                        const allClaims = data?.allRawClaims || [];
+                        // Filter claims based on flag type
+                        let filteredClaims: typeof allClaims = [];
+                        switch (flag.key) {
+                          case 'fatality':
+                            filteredClaims = allClaims.filter(c => c.fatality);
+                            break;
+                          case 'surgery':
+                            filteredClaims = allClaims.filter(c => c.surgery);
+                            break;
+                          case 'hospitalization':
+                            filteredClaims = allClaims.filter(c => c.hospitalization);
+                            break;
+                          default:
+                            // For other flags, we need to re-parse from raw - show toast for now
+                            toast.info(`${flag.label}: ${flag.count} claims flagged. Detailed export coming soon.`);
+                            return;
+                        }
+                        
+                        const rows = filteredClaims.map(c => ({
+                          'Claim #': c.claimNumber,
+                          'Claimant': c.claimant,
+                          'Coverage': c.coverage,
+                          'Days Open': c.days,
+                          'Age Bucket': c.ageBucket,
+                          'Type Group': c.typeGroup,
+                          'Team': c.teamGroup,
+                          'Open Reserves': c.openReserves,
+                          'Low Eval': c.lowEval,
+                          'High Eval': c.highEval,
+                          'CP1 Flag': c.cp1Flag,
+                          'Eval Phase': c.evaluationPhase,
+                          'BI Status': c.biStatus,
+                          'Fatality': c.fatality ? 'Yes' : 'No',
+                          'Surgery': c.surgery ? 'Yes' : 'No',
+                          'Hospitalization': c.hospitalization ? 'Yes' : 'No',
+                        }));
+                        
+                        const ws = XLSX.utils.json_to_sheet(rows);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, `${flag.label} Claims`);
+                        XLSX.writeFile(wb, `CP1_${flag.key}_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                        toast.success(`Exported ${filteredClaims.length} ${flag.label} claims`);
+                      });
+                    }}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm">{flag.icon}</span>
-                      <span className="text-xs text-muted-foreground truncate">{flag.label}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{flag.icon}</span>
+                        <span className="text-xs text-muted-foreground truncate">{flag.label}</span>
+                      </div>
+                      <Download className="h-3 w-3 text-muted-foreground opacity-50" />
                     </div>
                     <p className={`text-lg font-bold ${flag.critical && flag.count > 0 ? 'text-destructive' : 'text-foreground'}`}>
                       {flag.count.toLocaleString()}
                     </p>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* 12-Month CP1 Rate Trend Chart */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                CP1 Rate Trend (12 Months)
-              </h4>
-              <div className="border rounded-lg p-4 bg-card">
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={CP1_MONTHLY_TREND} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="cp1Gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                    <XAxis 
-                      dataKey="month" 
-                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      domain={[22, 28]}
-                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                      tickLine={false}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'cp1Rate') return [`${value}%`, 'CP1 Rate'];
-                        return [value.toLocaleString(), name];
-                      }}
-                      labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="cp1Rate" 
-                      stroke="hsl(var(--success))" 
-                      strokeWidth={2}
-                      fill="url(#cp1Gradient)"
-                      dot={{ fill: 'hsl(var(--success))', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 5, fill: 'hsl(var(--success))' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-warning" />
-                    <span className="text-xs text-muted-foreground">
-                      +{(CP1_MONTHLY_TREND[CP1_MONTHLY_TREND.length - 1].cp1Rate - CP1_MONTHLY_TREND[0].cp1Rate).toFixed(1)}% YoY (Feb '25: 24.2% → Jan '26: {CP1_MONTHLY_TREND[CP1_MONTHLY_TREND.length - 1].cp1Rate}%)
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    Upward Trend
-                  </Badge>
-                </div>
               </div>
             </div>
 
