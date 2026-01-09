@@ -329,6 +329,66 @@ export type Database = {
         }
         Relationships: []
       }
+      cp1_snapshots: {
+        Row: {
+          age_181_365: number
+          age_365_plus: number
+          age_61_180: number
+          age_under_60: number
+          bi_claims: number
+          bi_cp1_rate: number
+          coverage_breakdown: Json | null
+          cp1_rate: number
+          created_at: string
+          flag_breakdown: Json | null
+          high_risk_claims: number
+          id: string
+          snapshot_date: string
+          total_claims: number
+          total_flags: number
+          total_reserves: number
+          updated_at: string
+        }
+        Insert: {
+          age_181_365?: number
+          age_365_plus?: number
+          age_61_180?: number
+          age_under_60?: number
+          bi_claims?: number
+          bi_cp1_rate?: number
+          coverage_breakdown?: Json | null
+          cp1_rate?: number
+          created_at?: string
+          flag_breakdown?: Json | null
+          high_risk_claims?: number
+          id?: string
+          snapshot_date: string
+          total_claims?: number
+          total_flags?: number
+          total_reserves?: number
+          updated_at?: string
+        }
+        Update: {
+          age_181_365?: number
+          age_365_plus?: number
+          age_61_180?: number
+          age_under_60?: number
+          bi_claims?: number
+          bi_cp1_rate?: number
+          coverage_breakdown?: Json | null
+          cp1_rate?: number
+          created_at?: string
+          flag_breakdown?: Json | null
+          high_risk_claims?: number
+          id?: string
+          snapshot_date?: string
+          total_claims?: number
+          total_flags?: number
+          total_reserves?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_snapshots: {
         Row: {
           age_181_365: number

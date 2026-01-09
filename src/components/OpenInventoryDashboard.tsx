@@ -4905,6 +4905,127 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </SheetHeader>
 
           <div className="space-y-6 pt-6">
+            {/* Week-over-Week Progress Tracker */}
+            {cp1BoxData?.weekOverWeek?.hasValidPrior && (
+              <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-green-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Week-over-Week Progress</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">
+                    vs {cp1BoxData.weekOverWeek.priorSnapshotDate}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Total Claims Delta */}
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <div className="flex items-center justify-center gap-1">
+                      {cp1BoxData.weekOverWeek.totalClaims.delta < 0 ? (
+                        <ArrowDownRight className="h-3 w-3 text-green-500" />
+                      ) : cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-destructive" />
+                      ) : null}
+                      <span className={`text-lg font-bold ${
+                        cp1BoxData.weekOverWeek.totalClaims.delta < 0 ? 'text-green-500' : 
+                        cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        {cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? '+' : ''}{cp1BoxData.weekOverWeek.totalClaims.delta}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Claims</p>
+                  </div>
+                  
+                  {/* 365+ Age Delta */}
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <div className="flex items-center justify-center gap-1">
+                      {cp1BoxData.weekOverWeek.age365Plus.delta < 0 ? (
+                        <ArrowDownRight className="h-3 w-3 text-green-500" />
+                      ) : cp1BoxData.weekOverWeek.age365Plus.delta > 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-destructive" />
+                      ) : null}
+                      <span className={`text-lg font-bold ${
+                        cp1BoxData.weekOverWeek.age365Plus.delta < 0 ? 'text-green-500' : 
+                        cp1BoxData.weekOverWeek.age365Plus.delta > 0 ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        {cp1BoxData.weekOverWeek.age365Plus.delta > 0 ? '+' : ''}{cp1BoxData.weekOverWeek.age365Plus.delta}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">365+ Days</p>
+                  </div>
+                  
+                  {/* High Risk Claims Delta */}
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <div className="flex items-center justify-center gap-1">
+                      {cp1BoxData.weekOverWeek.highRiskClaims.delta < 0 ? (
+                        <ArrowDownRight className="h-3 w-3 text-green-500" />
+                      ) : cp1BoxData.weekOverWeek.highRiskClaims.delta > 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-destructive" />
+                      ) : null}
+                      <span className={`text-lg font-bold ${
+                        cp1BoxData.weekOverWeek.highRiskClaims.delta < 0 ? 'text-green-500' : 
+                        cp1BoxData.weekOverWeek.highRiskClaims.delta > 0 ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        {cp1BoxData.weekOverWeek.highRiskClaims.delta > 0 ? '+' : ''}{cp1BoxData.weekOverWeek.highRiskClaims.delta}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">High-Risk (3+)</p>
+                  </div>
+                  
+                  {/* Total Flags Delta */}
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <div className="flex items-center justify-center gap-1">
+                      {cp1BoxData.weekOverWeek.totalFlags.delta < 0 ? (
+                        <ArrowDownRight className="h-3 w-3 text-green-500" />
+                      ) : cp1BoxData.weekOverWeek.totalFlags.delta > 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-destructive" />
+                      ) : null}
+                      <span className={`text-lg font-bold ${
+                        cp1BoxData.weekOverWeek.totalFlags.delta < 0 ? 'text-green-500' : 
+                        cp1BoxData.weekOverWeek.totalFlags.delta > 0 ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        {cp1BoxData.weekOverWeek.totalFlags.delta > 0 ? '+' : ''}{cp1BoxData.weekOverWeek.totalFlags.delta}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Total Flags</p>
+                  </div>
+                </div>
+                
+                {/* Progress Insight */}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {cp1BoxData.weekOverWeek.totalClaims.delta < 0 ? (
+                      <>
+                        <span className="inline-flex h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-green-600 font-medium">Improving:</span>
+                        <span>Inventory reduced by {Math.abs(cp1BoxData.weekOverWeek.totalClaims.delta)} claims ({Math.abs(cp1BoxData.weekOverWeek.totalClaims.pctChange).toFixed(1)}%)</span>
+                      </>
+                    ) : cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? (
+                      <>
+                        <span className="inline-flex h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                        <span className="text-destructive font-medium">Attention:</span>
+                        <span>Inventory grew by {cp1BoxData.weekOverWeek.totalClaims.delta} claims (+{cp1BoxData.weekOverWeek.totalClaims.pctChange.toFixed(1)}%)</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex h-2 w-2 rounded-full bg-muted-foreground" />
+                        <span className="font-medium">Stable:</span>
+                        <span>No net change in inventory</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* No Prior Data Notice */}
+            {cp1BoxData?.weekOverWeek && !cp1BoxData.weekOverWeek.hasValidPrior && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  Week-over-week tracking will be available after the first week of data collection.
+                </p>
+              </div>
+            )}
+
             {/* Executive Summary Header */}
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-destructive/5 via-background to-primary/5 border border-border p-5">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
