@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { KPICard } from "./KPICard";
 import { LitigationMatter } from "@/hooks/useLitigationData";
+import { getCurrentMonthlySpend } from "@/data/monthlySpendData";
 
 interface Stats {
   totalMatters: number;
@@ -25,16 +26,19 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
-  // Portfolio-level totals from actual pivot data
+  // Get current monthly spend data from operations report
+  const monthlySpend = getCurrentMonthlySpend();
+  
+  // Use January 2026 operations report figures
   const PORTFOLIO_TOTALS = {
-    totalExposures: 26000,
-    totalIndemnities: 354000000,
-    totalExpenses: 21000000,
-    totalAmount: 375000000,
-    totalNet: 375000000,
-    openExposures: 26000,
-    closedWithPayment: 15000,
-    closedNoPayment: 11000,
+    totalExposures: monthlySpend.indemnities.totalChecks + monthlySpend.expenses.totalChecks,
+    totalIndemnities: monthlySpend.indemnities.total,
+    totalExpenses: monthlySpend.expenses.total,
+    totalAmount: monthlySpend.indemnities.total + monthlySpend.expenses.total,
+    totalNet: monthlySpend.indemnities.total + monthlySpend.expenses.total,
+    openExposures: monthlySpend.indemnities.totalChecks,
+    closedWithPayment: monthlySpend.indemnities.totalChecks,
+    closedNoPayment: 0,
   };
 
   // Calculate metrics from filtered data
@@ -43,9 +47,10 @@ export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
   const highPainMatters = data.filter(m => m.endPainLvl >= 8).length;
   const criticalMatters = data.filter(m => m.endPainLvl >= 9).length;
   
-  // Use real stats from loaded data
-  const totalIndemnities = stats.totalIndemnities;
-  const totalNet = stats.totalNet;
+  // Use operations report figures for indemnities and expenses
+  const totalIndemnities = PORTFOLIO_TOTALS.totalIndemnities;
+  const totalExpenses = PORTFOLIO_TOTALS.totalExpenses;
+  const totalNet = totalIndemnities + totalExpenses;
   
   // Unique adjusters and teams
   const uniqueAdjusters = new Set(data.map(m => m.adjusterName)).size;
@@ -53,7 +58,7 @@ export function SummaryCards({ data, view, stats }: SummaryCardsProps) {
 
   const formatLargeCurrency = (amount: number) => {
     if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
+      return `$${(amount / 1000000).toFixed(2)}M`;
     }
     if (amount >= 1000) {
       return `$${(amount / 1000).toFixed(0)}K`;
