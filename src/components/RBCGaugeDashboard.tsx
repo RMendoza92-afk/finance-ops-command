@@ -164,8 +164,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
             const triIbnr = tri.bulk_ibnr?.amount ?? 0;
             const triLR = tri.loss_ratio?.amount ?? 0;
 
-            // Prefer accident_year_development values when present; otherwise fall back to triangles
-            const earnedPremium = data.earned_premium || triEarned;
+            // Use triangle earned premium as the source of truth (DB aggregated values are inflated)
+            // Triangle data is more reliable for actuarial calculations
+            const earnedPremium = triEarned > 0 ? triEarned : data.earned_premium;
             const netPaid = data.net_paid || triPaid;
             const reserves = data.reserves || triRes;
 
@@ -178,9 +179,15 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
               ? Math.max(0, (incurred - netPaid - reserves))
               : 0;
 
-            // Loss ratio: use incurred/earned if available; otherwise fall back to triangle loss ratio
-            const lossRatioCalc = earnedPremium > 0 && incurred > 0 ? (incurred / earnedPremium) * 100 : 0;
-            const lossRatio = lossRatioCalc > 0 ? lossRatioCalc : (triLR > 0 ? triLR : (data.loss_ratios.length > 0 ? data.loss_ratios.reduce((a, b) => a + b, 0) / data.loss_ratios.length : 0));
+            // ALWAYS prefer triangle loss ratio - it's the actuarially accurate value
+            // Only calculate from incurred/earned as a last resort
+            let lossRatio = triLR;
+            if (lossRatio <= 0 && data.loss_ratios.length > 0) {
+              lossRatio = data.loss_ratios.reduce((a, b) => a + b, 0) / data.loss_ratios.length;
+            }
+            if (lossRatio <= 0 && earnedPremium > 0 && incurred > 0) {
+              lossRatio = (incurred / earnedPremium) * 100;
+            }
 
             return {
               accident_year: year,
