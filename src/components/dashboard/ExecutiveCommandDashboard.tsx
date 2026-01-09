@@ -28,6 +28,7 @@ import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { useExportData } from "@/hooks/useExportData";
 import { toast } from "sonner";
 import { generateClaimsInventoryReport, generateCostCurveReport } from "@/lib/executiveVisualReport";
+import { generatePremiumBoardBriefing } from "@/lib/premiumBoardBriefing";
 
 interface ExecutiveCommandDashboardProps {
   data: {
@@ -124,13 +125,16 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
   const handleExportPDF = async () => {
     setGeneratingPDF(true);
     try {
-      await generateCSuiteBriefing({
+      await generatePremiumBoardBriefing({
         totalClaims: data.totalClaims,
         totalReserves: data.totalReserves,
+        lowEval: data.lowEval,
+        highEval: data.highEval,
         cp1Rate: data.cp1Rate,
         cp1Count: data.cp1Count,
         aged365Plus: data.aged365Plus,
         aged365Reserves: data.aged365Reserves,
+        aged181to365: data.aged181to365,
         noEvalCount: data.noEvalCount,
         noEvalReserves: data.noEvalReserves,
         decisionsCount: data.decisionsCount,
@@ -144,7 +148,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         surgeryCount: data.surgeryCount,
         hospitalizationCount: data.hospitalizationCount,
       });
-      toast.success('C-Suite Briefing PDF generated');
+      toast.success('Board Briefing PDF generated');
     } catch (err) {
       console.error('PDF generation error:', err);
       toast.error('Failed to generate PDF');
