@@ -122,11 +122,13 @@ function buildVerifiedPayload(ctx: any, exp: any, now: Date, multiPackPayload: a
     
     // CP1 exposure - COMPLETE DATA
     cp1: {
-      total: exp.cp1Data?.total || 0,
-      cp1_rate_pct: parseFloat(exp.cp1Data?.cp1Rate) || 0,
-      evaluated_total: exp.cp1Data?.totals?.grandTotal || 0,
+      total_claims_evaluated: exp.cp1Data?.totals?.grandTotal || 0,
       yes_cp1: exp.cp1Data?.totals?.yes || 0,
       no_cp1: exp.cp1Data?.totals?.noCP || 0,
+      cp1_rate_pct: parseFloat(exp.cp1Data?.cp1Rate) || 0,
+      bi_cp1_total: exp.cp1Data?.biTotal?.yes || 0,
+      bi_evaluated_total: exp.cp1Data?.biTotal?.total || 0,
+      by_status: exp.cp1Data?.byStatus || { inProgress: 0, settled: 0, inProgressPct: '0', settledPct: '0' },
     },
     
     // Financial exposure
@@ -563,7 +565,10 @@ DO NOT extrapolate beyond this data. DO NOT invent numbers.
 - evaluation: with_eval, without_eval, pct_without_eval
 - open_inventory: grand_total, atr_claims, lit_claims, bi3_claims
 - aging: age_365_plus, age_181_to_365, age_61_to_180, age_under_60
-- cp1: total, cp1_rate_pct, evaluated_total, yes_cp1, no_cp1
+- cp1: yes_cp1 (CP1 flagged claims), no_cp1, total_claims_evaluated, cp1_rate_pct, bi_cp1_total, bi_evaluated_total, by_status (inProgress, settled with counts and percentages)
+- cp1_by_coverage[]: coverage, total, yes, no_cp, cp1_rate_pct, reserves_usd (FULL breakdown of CP1 by each coverage type)
+- cp1_by_type_group[]: type_group, total, yes, no_cp, cp1_rate_pct (CP1 flags by ATR, LIT, BI3, etc.)
+- cp1_bi_by_age[]: age_bucket, yes, no_cp, total (BI coverage CP1 breakdown by age)
 - financials: total_open_reserves_usd, total_low_eval_usd, total_high_eval_usd, no_eval_count, no_eval_reserves_usd
 - team_summaries[]: team, count, closed, total_paid_usd
 - category_summaries[]: category, count, with_eval, without_eval, total_paid_usd
@@ -696,7 +701,7 @@ serve(async (req) => {
       question: userQuestion.slice(0, 100),
       portfolioSize: verifiedPayload.portfolio.total_open_matters,
       openInventory: verifiedPayload.open_inventory.grand_total,
-      cp1Total: verifiedPayload.cp1.total,
+      cp1Total: verifiedPayload.cp1.yes_cp1,
       multiPackGroups: multiPackPayload?.open_claims_multi_pack?.total_multi_pack_groups || 0,
       lorOffers: lorPayload?.total_count || 0,
       hasActuarialData: !!actuarialContext,
