@@ -532,6 +532,7 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       'passed future medical release',
       'global',
       'spd lit',
+      'limits tendered cp1', // Exclude Limits Tendered CP1 from workable claims
     ];
 
     const isNonWorkable = (v: string) => nonWorkableTokens.some((t) => v === t || v.includes(t));
