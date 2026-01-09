@@ -4721,75 +4721,120 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               {/* Multi-Flag Grouping */}
               {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                      <Layers className="h-3.5 w-3.5" />
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="text-xs font-semibold flex items-center gap-2">
+                      <Layers className="h-3.5 w-3.5 text-primary" />
                       Claims by Flag Count
                     </h5>
-                    <span className="text-[10px] text-muted-foreground">
-                      {cp1BoxData.totalFlagInstances.toLocaleString()} total flag instances across {(cp1BoxData.rawClaims?.length || 0).toLocaleString()} claims
+                    <span className="text-[10px] text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
+                      {cp1BoxData.totalFlagInstances.toLocaleString()} flags → {(cp1BoxData.rawClaims?.length || 0).toLocaleString()} claims
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {cp1BoxData.multiFlagGroups.map((group) => (
-                      <div
-                        key={group.flagCount}
-                        className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${
-                          group.flagCount >= 3 
-                            ? 'bg-destructive/15 border-destructive/40 hover:bg-destructive/25' 
-                            : group.flagCount === 2 
-                              ? 'bg-warning/15 border-warning/40 hover:bg-warning/25' 
-                              : 'bg-secondary/50 border-border hover:bg-secondary/70'
-                        }`}
-                        onClick={() => {
-                          import('xlsx').then((XLSX) => {
-                            const rows = group.claims.map((c) => ({
-                              'Claim #': c.claimNumber,
-                              Claimant: c.claimant,
-                              Coverage: c.coverage,
-                              'Days Open': c.days,
-                              'Age Bucket': c.ageBucket,
-                              'Type Group': c.typeGroup,
-                              Team: c.teamGroup,
-                              'Open Reserves': c.openReserves,
-                              'Overall CP1': c.overallCP1,
-                              'BI Status': c.biStatus,
-                              'Fatality': c.fatality ? 'Yes' : '',
-                              'Surgery': c.surgery ? 'Yes' : '',
-                              'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
-                              'Hospitalization': c.hospitalization ? 'Yes' : '',
-                              'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
-                              'Aggravating Factors': c.aggFactors ? 'Yes' : '',
-                              'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
-                              'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
-                              'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
-                              'Injections': c.injections ? 'Yes' : '',
-                              'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
-                            }));
+                  <div className="space-y-2">
+                    {cp1BoxData.multiFlagGroups
+                      .filter(g => g.flagCount > 0)
+                      .sort((a, b) => b.flagCount - a.flagCount)
+                      .map((group) => {
+                        // Count which flags appear in this group
+                        const flagCounts: Record<string, number> = {};
+                        const flagLabels: Record<string, string> = {
+                          fatality: 'Fatality',
+                          surgery: 'Surgery',
+                          medsVsLimits: 'Meds>Limits',
+                          hospitalization: 'Hospital',
+                          lossOfConsciousness: 'LOC',
+                          aggFactors: 'Agg Factors',
+                          objectiveInjuries: 'Obj Injuries',
+                          pedestrianPregnancy: 'Ped/Preg',
+                          lifeCarePlanner: 'Life Care',
+                          injections: 'Injections',
+                          emsHeavyImpact: 'EMS/Impact',
+                        };
+                        
+                        for (const c of group.claims) {
+                          if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
+                          if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
+                          if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
+                          if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
+                          if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
+                          if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
+                          if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
+                          if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
+                          if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
+                          if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
+                          if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+                        }
+                        
+                        const topFlags = Object.entries(flagCounts)
+                          .sort((a, b) => b[1] - a[1])
+                          .slice(0, 4)
+                          .map(([key]) => flagLabels[key]);
 
-                            const ws = XLSX.utils.json_to_sheet(rows);
-                            const wb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
-                            XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
-                            toast.success(`Exported ${group.claimCount} claims with ${group.flagCount} flag(s)`);
-                          });
-                        }}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={`text-[10px] font-medium ${
-                            group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-warning' : 'text-muted-foreground'
-                          }`}>
-                            {group.label}
-                          </span>
-                          <Download className="h-3 w-3 text-muted-foreground opacity-50" />
-                        </div>
-                        <p className={`text-base font-bold ${
-                          group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-warning' : 'text-foreground'
-                        }`}>
-                          {group.claimCount.toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
+                        return (
+                          <div
+                            key={group.flagCount}
+                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex items-center justify-between ${
+                              group.flagCount >= 3 
+                                ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' 
+                                : group.flagCount === 2 
+                                  ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20' 
+                                  : 'bg-secondary/50 border-border hover:bg-secondary/70'
+                            }`}
+                            onClick={() => {
+                              import('xlsx').then((XLSX) => {
+                                const rows = group.claims.map((c) => ({
+                                  'Claim #': c.claimNumber,
+                                  Claimant: c.claimant,
+                                  Coverage: c.coverage,
+                                  'Days Open': c.days,
+                                  'Age Bucket': c.ageBucket,
+                                  'Type Group': c.typeGroup,
+                                  Team: c.teamGroup,
+                                  'Open Reserves': c.openReserves,
+                                  'Overall CP1': c.overallCP1,
+                                  'BI Status': c.biStatus,
+                                  'Fatality': c.fatality ? 'Yes' : '',
+                                  'Surgery': c.surgery ? 'Yes' : '',
+                                  'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
+                                  'Hospitalization': c.hospitalization ? 'Yes' : '',
+                                  'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
+                                  'Aggravating Factors': c.aggFactors ? 'Yes' : '',
+                                  'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
+                                  'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
+                                  'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
+                                  'Injections': c.injections ? 'Yes' : '',
+                                  'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
+                                }));
+
+                                const ws = XLSX.utils.json_to_sheet(rows);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
+                                XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                                toast.success(`Exported ${group.claimCount} claims with ${group.flagCount} flag(s)`);
+                              });
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`text-xl font-bold min-w-[2.5rem] text-center ${
+                                group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-orange-600' : 'text-foreground'
+                              }`}>
+                                {group.flagCount}
+                              </div>
+                              <div className="border-l border-border pl-3">
+                                <div className="text-xs font-medium">{group.claimCount.toLocaleString()} claims</div>
+                                <div className="text-[10px] text-muted-foreground flex flex-wrap gap-1 mt-0.5">
+                                  {topFlags.map((flag, i) => (
+                                    <span key={flag} className="bg-background/50 px-1.5 py-0.5 rounded text-[9px]">
+                                      {flag}{i < topFlags.length - 1 ? '' : ''}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <Download className="h-4 w-4 text-muted-foreground opacity-60" />
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}
