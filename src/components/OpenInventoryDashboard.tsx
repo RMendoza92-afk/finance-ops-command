@@ -1495,17 +1495,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         [],
         ['TRIGGER FLAGS BREAKDOWN'],
         ['Flag Type', 'Count', '% of Claims', 'Tier'],
+        // Tier 1 - Critical (100 pts)
         ['Fatality', fs?.fatalityCount || 0, `${((fs?.fatalityCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
         ['Surgery', fs?.surgeryCount || 0, `${((fs?.surgeryCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
         ['Meds vs Limits', fs?.medsVsLimitsCount || 0, `${((fs?.medsVsLimitsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
         ['Life Care Planner', fs?.lifeCarePlannerCount || 0, `${((fs?.lifeCarePlannerCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        // Tier 2 - High (80-70 pts)
+        ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, `${((fs?.confirmedFracturesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
         ['Hospitalization', fs?.hospitalizationCount || 0, `${((fs?.hospitalizationCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
         ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, `${((fs?.lossOfConsciousnessCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
         ['Aggravating Factors', fs?.aggFactorsCount || 0, `${((fs?.aggFactorsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Objective Injuries', fs?.objectiveInjuriesCount || 0, `${((fs?.objectiveInjuriesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Ped/Moto/Bike/Pregnancy', fs?.pedestrianPregnancyCount || 0, `${((fs?.pedestrianPregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Injections', fs?.injectionsCount || 0, `${((fs?.injectionsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MEDIUM'],
-        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, `${((fs?.emsHeavyImpactCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MEDIUM'],
+        ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, `${((fs?.objectiveInjuriesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, `${((fs?.pedestrianPregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Surgical Recommendation', fs?.priorSurgeryCount || 0, `${((fs?.priorSurgeryCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        // Tier 3 - Moderate (60-50 pts)
+        ['Injections (ESI, Facet)', fs?.injectionsCount || 0, `${((fs?.injectionsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, `${((fs?.emsHeavyImpactCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['Lacerations/Scarring', fs?.lacerationsCount || 0, `${((fs?.lacerationsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['Pain Level 5+', fs?.painLevel5PlusCount || 0, `${((fs?.painLevel5PlusCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['Pregnancy', fs?.pregnancyCount || 0, `${((fs?.pregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['Eggshell 69+', fs?.eggshell69PlusCount || 0, `${((fs?.eggshell69PlusCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(execSummary);
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
