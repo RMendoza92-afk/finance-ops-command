@@ -4817,19 +4817,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       }}
                     />
 
-                    {/* Fixed palette for the top 5 flags */}
+                    {/* Render only the 5 dataKeys we generate (avoid undefined theme tokens) */}
                     <Bar dataKey="hospitalization" stackId="a" fill="hsl(var(--primary))" name="Hospitalization" />
                     <Bar dataKey="medsVsLimits" stackId="a" fill="hsl(var(--accent))" name="Meds > Limits" />
                     <Bar dataKey="pedestrianMotorcyclist" stackId="a" fill="hsl(var(--warning))" name="Ped/Moto/Bicyclist" />
                     <Bar dataKey="fatality" stackId="a" fill="hsl(var(--destructive))" name="Fatality" />
                     <Bar dataKey="lossOfConsciousness" stackId="a" fill="hsl(var(--secondary-foreground))" name="Loss of Consciousness" />
-                    <Bar dataKey="surgery" stackId="a" fill="hsl(var(--secondary))" name="Surgery" />
-                    <Bar dataKey="pregnancy" stackId="a" fill="hsl(var(--muted))" name="Pregnancy" />
-                    <Bar dataKey="lifeCarePlanner" stackId="a" fill="hsl(var(--ring))" name="Life Care Planner" />
-                    <Bar dataKey="aggravatingFactors" stackId="a" fill="hsl(var(--chart-1))" name="Aggravating Factors" />
-                    <Bar dataKey="objectiveInjuries" stackId="a" fill="hsl(var(--chart-2))" name="Objective Injuries" />
-                    <Bar dataKey="injections" stackId="a" fill="hsl(var(--chart-3))" name="Injections" />
-                    <Bar dataKey="emsHeavyImpact" stackId="a" fill="hsl(var(--chart-4))" name="EMS + Heavy Impact" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -4878,7 +4871,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       <TableCell className="text-right text-success">{CP1_DATA.biTotal.yes.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{CP1_DATA.biTotal.total.toLocaleString()}</TableCell>
                       <TableCell className="text-right">
-                        <Badge className="text-xs">34.2%</Badge>
+                        <Badge className="text-xs">
+                          {CP1_DATA.biTotal.total > 0 ? ((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1) : '0.0'}%
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   </TableBody>
