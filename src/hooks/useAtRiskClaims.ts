@@ -28,6 +28,8 @@ export interface AtRiskClaim {
   areaNumber: string;
   triggerTotal: number;
   biStatus: string;
+  accidentDescription: string;
+  teamGroup: string;
 }
 
 export interface RiskPattern {
@@ -316,6 +318,8 @@ export function useAtRiskClaims() {
           areaNumber: row['Area#'] || '',
           triggerTotal,
           biStatus,
+          accidentDescription: row['Description of Accident'] || '',
+          teamGroup: row['Team Group'] || '',
         });
       }
     }

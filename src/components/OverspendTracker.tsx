@@ -138,17 +138,19 @@ export function OverspendTracker() {
         // At-Risk Claims from pattern matching - PRIORITY SHEET
         {
           sheetName: 'At-Risk Claims (Pattern Match)',
-          columns: ['Risk Level', 'Score', 'Claim#', 'State', 'Reserves', 'Policy Limit', 'Reserve %', 'Age', 'Type Group', 'In Litigation', 'CP1', 'Pattern Matches', 'Risk Factors'],
+          columns: ['Risk Level', 'Score', 'Claim#', 'Team', 'State', 'Reserves', 'Policy Limit', 'Reserve %', 'Age', 'Type Group', 'Accident Description', 'In Litigation', 'CP1', 'Pattern Matches', 'Risk Factors'],
           rows: atRiskClaims.map(c => [
             c.riskLevel,
             c.riskScore,
             c.claimNumber,
+            c.teamGroup,
             c.state,
             formatCurrencyFull(c.reserves),
             formatCurrencyFull(c.policyLimit),
             `${(c.reserveToLimitRatio * 100).toFixed(0)}%`,
             c.age,
             c.typeGroup,
+            c.accidentDescription,
             c.inLitigation ? 'Yes' : 'No',
             c.cp1Flag ? 'Yes' : 'No',
             c.patternMatches.join(', '),
@@ -420,9 +422,11 @@ export function OverspendTracker() {
                   <TableRow>
                     <TableHead className="text-xs">Risk</TableHead>
                     <TableHead className="text-xs">Claim#</TableHead>
+                    <TableHead className="text-xs">Team</TableHead>
                     <TableHead className="text-xs">State</TableHead>
                     <TableHead className="text-xs text-right">Reserves</TableHead>
                     <TableHead className="text-xs text-right">Limit</TableHead>
+                    <TableHead className="text-xs">Accident Description</TableHead>
                     <TableHead className="text-xs">Pattern Matches</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -438,10 +442,14 @@ export function OverspendTracker() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono">{claim.claimNumber}</TableCell>
+                      <TableCell className="text-muted-foreground">{claim.teamGroup}</TableCell>
                       <TableCell>{claim.state}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(claim.reserves)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.policyLimit)}</TableCell>
-                      <TableCell className="text-muted-foreground text-[10px] max-w-[200px] truncate">
+                      <TableCell className="text-muted-foreground text-[10px] max-w-[180px] truncate" title={claim.accidentDescription}>
+                        {claim.accidentDescription}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[10px] max-w-[150px] truncate">
                         {claim.patternMatches.slice(0, 3).join(', ')}
                       </TableCell>
                     </TableRow>
