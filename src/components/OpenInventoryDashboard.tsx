@@ -4923,14 +4923,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
             )}
 
-            {/* Multi-Flag Risk Spectrum - Horizontal Bar Chart */}
+            {/* Multi-Flag Risk Spectrum - 100% Stacked Bar */}
             {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-5">
-                <h4 className="text-sm font-bold flex items-center gap-2 mb-5">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Risk Spectrum by Flag Count
-                </h4>
-                
                 {(() => {
                   const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
                   const total = groups.reduce((s, g) => s + g.claimCount, 0);
@@ -4939,110 +4934,73 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     { 
                       label: '1 Flag', 
                       count: groups.filter(g => g.flagCount === 1).reduce((s, g) => s + g.claimCount, 0),
-                      color: 'bg-primary',
                       barColor: 'hsl(var(--primary))',
-                      desc: 'Standard monitoring'
+                      dotColor: 'bg-primary'
                     },
                     { 
                       label: '2 Flags', 
                       count: groups.filter(g => g.flagCount === 2).reduce((s, g) => s + g.claimCount, 0),
-                      color: 'bg-orange-500',
                       barColor: 'hsl(35, 92%, 50%)',
-                      desc: 'Elevated attention'
+                      dotColor: 'bg-orange-500'
                     },
                     { 
                       label: '3 Flags', 
                       count: groups.filter(g => g.flagCount === 3).reduce((s, g) => s + g.claimCount, 0),
-                      color: 'bg-destructive',
                       barColor: 'hsl(var(--destructive))',
-                      desc: 'Priority review'
+                      dotColor: 'bg-destructive'
                     },
                     { 
                       label: '4+ Flags', 
                       count: groups.filter(g => g.flagCount >= 4).reduce((s, g) => s + g.claimCount, 0),
-                      color: 'bg-red-800',
                       barColor: 'hsl(0, 72%, 35%)',
-                      desc: 'Critical escalation'
+                      dotColor: 'bg-red-800'
                     },
                   ].filter(b => b.count > 0);
                   
-                  const maxCount = Math.max(...riskBands.map(b => b.count));
-                  const highRiskCount = riskBands.filter(b => b.label === '3 Flags' || b.label === '4+ Flags').reduce((s, b) => s + b.count, 0);
+                  const highRiskCount = groups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0);
+                  const highRiskPct = ((highRiskCount / total) * 100).toFixed(0);
                   
                   return (
-                    <div className="space-y-5">
-                      {/* Stacked bar summary at top */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                          <span>Total Flagged Claims</span>
-                          <span className="font-semibold text-foreground">{total.toLocaleString()}</span>
-                        </div>
-                        <div className="h-8 rounded-lg overflow-hidden flex bg-muted/30">
-                          {riskBands.map((band, idx) => {
-                            const widthPct = (band.count / total) * 100;
-                            return (
-                              <div
-                                key={band.label}
-                                className="h-full flex items-center justify-center text-[10px] font-bold text-white transition-all hover:opacity-90"
-                                style={{ 
-                                  width: `${widthPct}%`, 
-                                  backgroundColor: band.barColor,
-                                  minWidth: widthPct > 0 ? '24px' : '0'
-                                }}
-                                title={`${band.label}: ${band.count.toLocaleString()} (${widthPct.toFixed(1)}%)`}
-                              >
-                                {widthPct > 8 ? `${widthPct.toFixed(0)}%` : ''}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      
-                      {/* Individual horizontal bars */}
-                      <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* 100% Stacked Bar */}
+                      <div className="h-10 rounded-lg overflow-hidden flex">
                         {riskBands.map((band) => {
-                          const pct = (band.count / total) * 100;
-                          const barWidth = (band.count / maxCount) * 100;
-                          
+                          const widthPct = (band.count / total) * 100;
                           return (
-                            <div key={band.label} className="group">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2.5 h-2.5 rounded-full ${band.color}`} />
-                                  <span className="text-sm font-medium">{band.label}</span>
-                                  <span className="text-[10px] text-muted-foreground hidden sm:inline">— {band.desc}</span>
-                                </div>
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-base font-bold">{band.count.toLocaleString()}</span>
-                                  <span className="text-[10px] text-muted-foreground">({pct.toFixed(1)}%)</span>
-                                </div>
-                              </div>
-                              <div className="h-5 bg-muted/40 rounded-md overflow-hidden">
-                                <div
-                                  className="h-full rounded-md transition-all duration-500 ease-out group-hover:opacity-80"
-                                  style={{ 
-                                    width: `${barWidth}%`, 
-                                    backgroundColor: band.barColor 
-                                  }}
-                                />
-                              </div>
+                            <div
+                              key={band.label}
+                              className="h-full flex items-center justify-center text-xs font-bold text-white/90 transition-all hover:brightness-110 cursor-default"
+                              style={{ 
+                                width: `${widthPct}%`, 
+                                backgroundColor: band.barColor,
+                                minWidth: widthPct > 0 ? '20px' : '0'
+                              }}
+                              title={`${band.label}: ${band.count.toLocaleString()} (${widthPct.toFixed(1)}%)`}
+                            >
+                              {widthPct > 6 ? `${widthPct.toFixed(0)}%` : ''}
                             </div>
                           );
                         })}
                       </div>
                       
-                      {/* Executive insight callout */}
-                      <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-destructive/10 to-orange-500/10 border border-destructive/20">
-                        <div className="flex items-start gap-3">
-                          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Executive Attention Required</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              <span className="font-bold text-destructive">{highRiskCount.toLocaleString()}</span> claims 
-                              ({((highRiskCount / total) * 100).toFixed(1)}%) carry 3+ risk flags and require immediate leadership review.
-                            </p>
+                      {/* Compact legend */}
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                        {riskBands.map((band) => (
+                          <div key={band.label} className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-full ${band.dotColor}`} />
+                            <span>{band.label}</span>
+                            <span className="font-medium text-foreground">{band.count.toLocaleString()}</span>
                           </div>
-                        </div>
+                        ))}
+                      </div>
+                      
+                      {/* Bold annotation */}
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-sm">
+                          <span className="font-bold text-destructive text-lg">{highRiskPct}%</span>
+                          <span className="text-muted-foreground ml-2">of claims carry 3+ flags — </span>
+                          <span className="font-semibold text-foreground">{highRiskCount.toLocaleString()} require executive review</span>
+                        </p>
                       </div>
                     </div>
                   );
