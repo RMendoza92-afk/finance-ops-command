@@ -85,7 +85,10 @@ export function useLossTriangleData() {
           const claimReserves = getLatest("claim_reserves");
           const bulkIbnr = getLatest("bulk_ibnr");
           const ultimateIncurred = netPaidLoss + claimReserves + bulkIbnr;
-          // Calculate loss ratio from ultimate incurred / earned premium
+          
+          // PREFER stored loss_ratio (actuarially selected) over calculated
+          // Only fall back to calculation if no stored value exists
+          const storedLossRatio = getLatest("loss_ratio");
           const calculatedLossRatio = earnedPremium > 0 ? (ultimateIncurred / earnedPremium) * 100 : 0;
 
           return {
@@ -95,7 +98,7 @@ export function useLossTriangleData() {
             netPaidLoss,
             claimReserves,
             bulkIbnr,
-            lossRatio: calculatedLossRatio || getLatest("loss_ratio"),
+            lossRatio: storedLossRatio > 0 ? storedLossRatio : calculatedLossRatio,
             reportedLossRatio: getLatest("reported_loss_ratio"),
             grossPaid,
             paidAlae: getLatest("paid_alae"),
