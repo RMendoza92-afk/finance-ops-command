@@ -144,37 +144,127 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="flex items-center gap-3">
-            <span className="text-xl font-bold">{coverage} Coverage</span>
-            <Badge className="text-sm">{coverageData.cp1Rate}% CP1 Rate</Badge>
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {coverageData.yes.toLocaleString()} CP1 claims of {coverageData.total.toLocaleString()} total
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-3">
+                <span className="text-xl font-bold">{coverage} Coverage</span>
+                <Badge className="text-sm bg-primary/10 text-primary border-primary/30">{coverageData.cp1Rate}% CP1 Rate</Badge>
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {coverageData.yes.toLocaleString()} CP1 claims of {coverageData.total.toLocaleString()} total
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSelectedClaimForSMS(null);
+                  setSmsDialogOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Alert Team
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  const extractTeamNumber = (team: string | null): string => {
+                    const m = String(team || '').match(/\b(\d{1,3})\b/);
+                    return m?.[1] || '';
+                  };
+                  const exportData = claimsWithReview.map(c => ({
+                    'Matter ID': c.matter_id,
+                    'Review Level': c.executiveReview.level,
+                    'Score': c.executiveReview.score,
+                    'Claimant': c.claimant || '',
+                    'Lead': c.matter_lead || '',
+                    'Team': c.team || '',
+                    'Team #': extractTeamNumber(c.team),
+                    'Location': c.location || '',
+                    'Days Open': c.days_open || 0,
+                    'Claim Age (Years)': c.claimAge,
+                    'Exposure': c.total_amount || 0,
+                    'Severity': c.severity || '',
+                    'Filing Date': c.filing_date || '',
+                    'Reasons': c.executiveReview.reasons.join(' | '),
+                  }));
+                  const ws = XLSX.utils.json_to_sheet(exportData);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
+                  ws['!cols'] = [
+                    { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 25 }, 
+                    { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
+                    { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 50 }
+                  ];
+                  XLSX.writeFile(wb, `CP1_${coverage}_Executive_Review_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                }}
+                className="gap-1.5"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
-        {/* Quick Stats Row */}
-        <div className="grid grid-cols-5 gap-3 py-4 border-b">
-          <div className="bg-destructive/10 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">🔥 CRITICAL</p>
-            <p className="text-xl font-bold text-destructive">{stats.criticalCount}</p>
+        {/* Executive Summary Bar */}
+        <div className="bg-gradient-to-r from-destructive/5 via-background to-primary/5 rounded-xl p-4 border border-border">
+          <div className="grid grid-cols-5 gap-4">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-destructive/15 mb-2">
+                <Flame className="h-5 w-5 text-destructive" />
+              </div>
+              <p className="text-2xl font-bold text-destructive">{stats.criticalCount}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Critical</p>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/15 mb-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-bold text-orange-500">{stats.requiredCount}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Required</p>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 mb-2">
+                <Clock className="h-5 w-5 text-destructive" />
+              </div>
+              <p className="text-2xl font-bold text-destructive">{stats.aged365Plus}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">365+ Days</p>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/10 mb-2">
+                <Clock className="h-5 w-5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-bold text-orange-500">{stats.aged181To365}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">181-365 Days</p>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-2">
+                <span className="text-lg">💰</span>
+              </div>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalExposure)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Exposure</p>
+            </div>
           </div>
-          <div className="bg-amber-500/10 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">⚠️ REQUIRED</p>
-            <p className="text-xl font-bold text-amber-600">{stats.requiredCount}</p>
-          </div>
-          <div className="bg-destructive/10 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">365+ Days</p>
-            <p className="text-xl font-bold text-destructive">{stats.aged365Plus}</p>
-          </div>
-          <div className="bg-warning/10 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">181-365 Days</p>
-            <p className="text-xl font-bold text-warning">{stats.aged181To365}</p>
-          </div>
-          <div className="bg-primary/10 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Total Exposure</p>
-            <p className="text-xl font-bold text-primary">{formatCurrency(stats.totalExposure)}</p>
-          </div>
+          
+          {/* Executive Insight */}
+          {(stats.criticalCount > 0 || stats.aged365Plus > 0) && (
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <span className="inline-flex h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                <span className="font-medium text-foreground">Action Required:</span>
+                {stats.criticalCount > 0 && (
+                  <span>{stats.criticalCount} claims need immediate executive review. </span>
+                )}
+                {stats.aged365Plus > 0 && (
+                  <span>{stats.aged365Plus} claims aged 365+ days represent {((stats.aged365Plus / claims.length) * 100).toFixed(0)}% of inventory.</span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Claims Table */}
@@ -290,67 +380,15 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
         {/* Footer */}
         {claims.length > 0 && (
           <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-            <span>Showing {claimsWithReview.length} claims • Double-click row to send SMS</span>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  setSelectedClaimForSMS(null);
-                  setSmsDialogOpen(true);
-                }}
-                className="gap-1.5"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                Send SMS
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  const extractTeamNumber = (team: string | null): string => {
-                    const m = String(team || '').match(/\b(\d{1,3})\b/);
-                    return m?.[1] || '';
-                  };
-                  const exportData = claimsWithReview.map(c => ({
-                    'Matter ID': c.matter_id,
-                    'Review Level': c.executiveReview.level,
-                    'Score': c.executiveReview.score,
-                    'Claimant': c.claimant || '',
-                    'Lead': c.matter_lead || '',
-                    'Team': c.team || '',
-                    'Team #': extractTeamNumber(c.team),
-                    'Location': c.location || '',
-                    'Days Open': c.days_open || 0,
-                    'Claim Age (Years)': c.claimAge,
-                    'Exposure': c.total_amount || 0,
-                    'Severity': c.severity || '',
-                    'Filing Date': c.filing_date || '',
-                    'Reasons': c.executiveReview.reasons.join(' | '),
-                  }));
-                  
-                  const ws = XLSX.utils.json_to_sheet(exportData);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
-                  
-                  // Set column widths
-                  ws['!cols'] = [
-                    { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 25 }, 
-                    { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
-                    { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 50 }
-                  ];
-                  
-                  XLSX.writeFile(wb, `CP1_${coverage}_Executive_Review_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-                }}
-                className="gap-1.5"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export Excel
-              </Button>
-              <Button variant="outline" size="sm" onClick={onClose}>
-                Close
-              </Button>
+              <span className="inline-flex h-2 w-2 rounded-full bg-green-500" />
+              <span>Showing {claimsWithReview.length} claims</span>
+              <span className="text-muted-foreground/50">•</span>
+              <span>Double-click any row to send SMS alert</span>
             </div>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Close
+            </Button>
           </div>
         )}
 

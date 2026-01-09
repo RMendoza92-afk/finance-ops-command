@@ -4870,6 +4870,165 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
             )}
 
+            {/* Multi-Flag Donut Chart */}
+            {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h4 className="text-sm font-bold flex items-center gap-2 mb-4">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Risk Distribution by Flag Count
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Donut Chart */}
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={(() => {
+                            const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
+                            
+                            // Consolidate: 1 flag, 2 flags, 3 flags, 4+ flags
+                            const consolidated = [
+                              { 
+                                name: '1 Flag', 
+                                value: groups.filter(g => g.flagCount === 1).reduce((s, g) => s + g.claimCount, 0),
+                                fill: 'hsl(var(--primary))',
+                                severity: 'low'
+                              },
+                              { 
+                                name: '2 Flags', 
+                                value: groups.filter(g => g.flagCount === 2).reduce((s, g) => s + g.claimCount, 0),
+                                fill: 'hsl(35, 92%, 50%)', // orange
+                                severity: 'medium'
+                              },
+                              { 
+                                name: '3 Flags', 
+                                value: groups.filter(g => g.flagCount === 3).reduce((s, g) => s + g.claimCount, 0),
+                                fill: 'hsl(var(--destructive))',
+                                severity: 'high'
+                              },
+                              { 
+                                name: '4+ Flags', 
+                                value: groups.filter(g => g.flagCount >= 4).reduce((s, g) => s + g.claimCount, 0),
+                                fill: 'hsl(0, 84%, 40%)', // dark red
+                                severity: 'critical'
+                              },
+                            ].filter(d => d.value > 0);
+                            
+                            return consolidated;
+                          })()}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                          labelLine={false}
+                          label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                        >
+                          {(() => {
+                            const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
+                            const data = [
+                              { fill: 'hsl(var(--primary))', value: groups.filter(g => g.flagCount === 1).reduce((s, g) => s + g.claimCount, 0) },
+                              { fill: 'hsl(35, 92%, 50%)', value: groups.filter(g => g.flagCount === 2).reduce((s, g) => s + g.claimCount, 0) },
+                              { fill: 'hsl(var(--destructive))', value: groups.filter(g => g.flagCount === 3).reduce((s, g) => s + g.claimCount, 0) },
+                              { fill: 'hsl(0, 84%, 40%)', value: groups.filter(g => g.flagCount >= 4).reduce((s, g) => s + g.claimCount, 0) },
+                            ].filter(d => d.value > 0);
+                            return data.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} stroke="hsl(var(--background))" strokeWidth={2} />
+                            ));
+                          })()}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                          }}
+                          formatter={(value: number) => [value.toLocaleString() + ' claims', '']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  {/* Legend & Stats */}
+                  <div className="flex flex-col justify-center space-y-3">
+                    {(() => {
+                      const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
+                      const total = groups.reduce((s, g) => s + g.claimCount, 0);
+                      
+                      const stats = [
+                        { 
+                          label: '1 Flag', 
+                          count: groups.filter(g => g.flagCount === 1).reduce((s, g) => s + g.claimCount, 0),
+                          color: 'bg-primary',
+                          textColor: 'text-primary',
+                          desc: 'Lower complexity'
+                        },
+                        { 
+                          label: '2 Flags', 
+                          count: groups.filter(g => g.flagCount === 2).reduce((s, g) => s + g.claimCount, 0),
+                          color: 'bg-orange-500',
+                          textColor: 'text-orange-500',
+                          desc: 'Elevated attention'
+                        },
+                        { 
+                          label: '3 Flags', 
+                          count: groups.filter(g => g.flagCount === 3).reduce((s, g) => s + g.claimCount, 0),
+                          color: 'bg-destructive',
+                          textColor: 'text-destructive',
+                          desc: 'High priority'
+                        },
+                        { 
+                          label: '4+ Flags', 
+                          count: groups.filter(g => g.flagCount >= 4).reduce((s, g) => s + g.claimCount, 0),
+                          color: 'bg-red-800',
+                          textColor: 'text-red-700',
+                          desc: 'Critical review'
+                        },
+                      ].filter(s => s.count > 0);
+                      
+                      return stats.map((stat) => (
+                        <div key={stat.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${stat.color}`} />
+                            <div>
+                              <p className="text-sm font-medium">{stat.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{stat.desc}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${stat.textColor}`}>{stat.count.toLocaleString()}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {((stat.count / total) * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                    
+                    {/* Summary insight */}
+                    <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-xs font-medium text-destructive flex items-center gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Executive Focus
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {(() => {
+                          const groups = cp1BoxData.multiFlagGroups.filter(g => g.flagCount > 0);
+                          const highRisk = groups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0);
+                          const total = groups.reduce((s, g) => s + g.claimCount, 0);
+                          const pct = ((highRisk / total) * 100).toFixed(1);
+                          return `${highRisk.toLocaleString()} claims (${pct}%) have 3+ flags and require priority review.`;
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* (Removed) BI Age Breakdown / Coverage tables / Key Insights per request */}
           </div>
         </SheetContent>
