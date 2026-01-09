@@ -1144,6 +1144,121 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
         </CardContent>
       </Card>
 
+      {/* State-by-State Profitability Breakdown */}
+      <Card className={cn("", isRefreshing && "animate-pulse")}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              State Profitability Breakdown
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">
+              2024 vs 2025 YTD
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-2 font-medium text-muted-foreground">State</th>
+                  <th className="text-right py-3 px-2 font-medium text-muted-foreground">Policies</th>
+                  <th className="text-right py-3 px-2 font-medium text-muted-foreground">Δ YoY</th>
+                  <th className="text-right py-3 px-2 font-medium text-muted-foreground">Claims</th>
+                  <th className="text-right py-3 px-2 font-medium text-muted-foreground">Frequency</th>
+                  <th className="text-right py-3 px-2 font-medium text-muted-foreground">Overspend</th>
+                  <th className="text-left py-3 px-2 font-medium text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { state: 'Texas', policies2025: 2312106, policies2024: 2402479, claims2025: 35353, claims2024: 39061, overspend: 4478135, overspendClaims: 42 },
+                  { state: 'California', policies2025: 1465299, policies2024: 1635935, claims2025: 24828, claims2024: 30111, overspend: 5015063, overspendClaims: 30 },
+                  { state: 'Colorado', policies2025: 564876, policies2024: 520849, claims2025: 11484, claims2024: 11724, overspend: 80009, overspendClaims: 2 },
+                  { state: 'New Mexico', policies2025: 196515, policies2024: 205951, claims2025: 2836, claims2024: 3581, overspend: 2139992, overspendClaims: 4 },
+                  { state: 'Arizona', policies2025: 121017, policies2024: 122680, claims2025: 2444, claims2024: 2691, overspend: 0, overspendClaims: 0 },
+                  { state: 'Nevada', policies2025: 97369, policies2024: 127829, claims2025: 2183, claims2024: 3338, overspend: 5583306, overspendClaims: 34 },
+                  { state: 'Illinois', policies2025: 88632, policies2024: 102383, claims2025: 1768, claims2024: 2066, overspend: 0, overspendClaims: 0 },
+                  { state: 'Oklahoma', policies2025: 66229, policies2024: 62999, claims2025: 1122, claims2024: 1295, overspend: 0, overspendClaims: 0 },
+                  { state: 'Georgia', policies2025: 63615, policies2024: 73213, claims2025: 1811, claims2024: 2296, overspend: 570714, overspendClaims: 9 },
+                  { state: 'Alabama', policies2025: 51370, policies2024: 58094, claims2025: 848, claims2024: 1063, overspend: 413812, overspendClaims: 2 },
+                  { state: 'Indiana', policies2025: 32506, policies2024: 28846, claims2025: 649, claims2024: 697, overspend: 0, overspendClaims: 0 },
+                  { state: 'Ohio', policies2025: 13675, policies2024: 14872, claims2025: 309, claims2024: 345, overspend: 0, overspendClaims: 0 },
+                ].map((row) => {
+                  const policyChange = ((row.policies2025 - row.policies2024) / row.policies2024) * 100;
+                  const frequency = (row.claims2025 / row.policies2025) * 1000;
+                  const getFrequencyColor = (freq: number) => {
+                    if (freq >= 25) return 'text-red-600 dark:text-red-400';
+                    if (freq >= 20) return 'text-amber-600 dark:text-amber-400';
+                    return 'text-foreground';
+                  };
+                  const getAction = () => {
+                    if (row.overspend > 2000000) return { text: 'Rate +6-10%', color: 'bg-red-500/20 text-red-600 dark:text-red-400' };
+                    if (row.overspend > 500000) return { text: 'Rate +4-6%', color: 'bg-amber-500/20 text-amber-600 dark:text-amber-400' };
+                    if (frequency >= 25) return { text: 'UW Tighten', color: 'bg-orange-500/20 text-orange-600 dark:text-orange-400' };
+                    if (policyChange > 5) return { text: 'Monitor Growth', color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400' };
+                    if (policyChange < -10) return { text: 'Review UW', color: 'bg-purple-500/20 text-purple-600 dark:text-purple-400' };
+                    return { text: 'Maintain', color: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' };
+                  };
+                  const action = getAction();
+                  
+                  return (
+                    <tr key={row.state} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-2 font-medium">{row.state}</td>
+                      <td className="py-3 px-2 text-right font-mono">
+                        {(row.policies2025 / 1000).toFixed(0)}K
+                      </td>
+                      <td className={cn("py-3 px-2 text-right font-mono", policyChange >= 0 ? "text-emerald-600" : "text-red-600")}>
+                        {policyChange >= 0 ? '+' : ''}{policyChange.toFixed(1)}%
+                      </td>
+                      <td className="py-3 px-2 text-right font-mono">
+                        {(row.claims2025 / 1000).toFixed(1)}K
+                      </td>
+                      <td className={cn("py-3 px-2 text-right font-mono font-semibold", getFrequencyColor(frequency))}>
+                        {frequency.toFixed(1)}
+                      </td>
+                      <td className="py-3 px-2 text-right font-mono">
+                        {row.overspend > 0 ? (
+                          <span className="text-red-600 dark:text-red-400">${(row.overspend / 1000000).toFixed(1)}M</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2">
+                        <Badge className={cn("text-xs font-medium", action.color)}>
+                          {action.text}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border/50">
+            <div className="flex flex-wrap gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <span className="text-muted-foreground">Rate +6-10%: High overspend (&gt;$2M)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span className="text-muted-foreground">Rate +4-6%: Moderate overspend</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                <span className="text-muted-foreground">UW Tighten: High frequency (&gt;25)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <span className="text-muted-foreground">Maintain: Profitable territory</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpiCards.map((kpi, index) => {
