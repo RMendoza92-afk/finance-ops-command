@@ -1423,7 +1423,15 @@ export function useOpenExposureData() {
       try {
         // Load current raw data (Jan 8)
         const currentRes = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
-        const currentCsv = await currentRes.text();
+        let currentCsv = await currentRes.text();
+        
+        // Handle CSVs with metadata rows at the top (e.g., "Details for Count..." header)
+        // Split into lines and check if first line is not a valid header
+        const lines = currentCsv.split('\n');
+        if (lines.length > 2 && !lines[0].includes('Claim#')) {
+          // Skip first two lines (metadata + blank) if headers aren't on line 1
+          currentCsv = lines.slice(2).join('\n');
+        }
         
         // Parse current raw data
         const parsed = Papa.parse<RawClaimRow>(currentCsv, {
@@ -1444,6 +1452,7 @@ export function useOpenExposureData() {
           console.log('Sample reserves value:', firstRow['Open Reserves']);
           console.log('Sample Coverage:', firstRow['Coverage']);
           console.log('Sample CP1 Flag:', firstRow['Overall CP1 Flag']);
+          console.log('Sample BI Status:', firstRow['BI Status']);
         }
         
         const currentData = processRawClaims(parsed.data);
