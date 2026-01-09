@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TrendingUp, TrendingDown, DollarSign, Users, AlertTriangle, FileText, X, Activity, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, AlertTriangle, FileText, X, Activity, Target, Scale } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import Papa from 'papaparse';
 
 interface StateData {
   state: string;
@@ -32,16 +33,23 @@ interface OverLimitClaim {
   classification: string | null;
 }
 
-interface LitigationMatter {
-  id: string;
-  matter_id: string;
-  claimant: string | null;
-  type: string | null;
-  status: string | null;
-  days_open: number | null;
-  indemnities_amount: number | null;
-  total_amount: number | null;
-  filing_date: string | null;
+interface OpenExposureClaim {
+  claimNumber: string;
+  claimant: string;
+  status: string;
+  daysOpen: number;
+  ageBucket: string;
+  reserves: number;
+  lowEval: number;
+  highEval: number;
+  inLitigation: boolean;
+  typeGroup: string;
+  team: string;
+  adjuster: string;
+  injurySeverity: string;
+  biStatus: string;
+  state: string;
+  city: string;
 }
 
 interface StateDrilldownModalProps {
@@ -52,20 +60,21 @@ interface StateDrilldownModalProps {
 
 export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDrilldownModalProps) {
   const [overLimitClaims, setOverLimitClaims] = useState<OverLimitClaim[]>([]);
-  const [litigationMatters, setLitigationMatters] = useState<LitigationMatter[]>([]);
+  const [openExposureClaims, setOpenExposureClaims] = useState<OpenExposureClaim[]>([]);
+  const [litigationClaims, setLitigationClaims] = useState<OpenExposureClaim[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (open && stateData) {
-      fetchStateData(stateData.state);
+      fetchStateData(stateData.state, stateData.stateCode);
     }
   }, [open, stateData]);
 
-  const fetchStateData = async (stateName: string) => {
+  const fetchStateData = async (stateName: string, stateCode: string) => {
     setLoading(true);
     try {
-      // Fetch over-limit claims for this state
+      // Fetch over-limit claims from database
       const { data: olClaims } = await supabase
         .from('over_limit_payments')
         .select('*')
@@ -75,16 +84,47 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
 
       if (olClaims) setOverLimitClaims(olClaims);
 
-      // Fetch litigation matters for this state (using location field)
-      const { data: matters } = await supabase
-        .from('litigation_matters')
-        .select('*')
-        .or(`location.ilike.%${stateName}%,matter_id.ilike.%${stateData?.stateCode}%`)
-        .eq('status', 'Open')
-        .order('indemnities_amount', { ascending: false })
-        .limit(50);
+      // Fetch open exposure data from CSV (Jan 8, 2026 file)
+      const response = await fetch('/data/open-exposure-raw-jan8.csv');
+      const csvText = await response.text();
+      
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const allClaims: OpenExposureClaim[] = results.data
+            .filter((row: any) => {
+              const claimState = (row['Accident Location State'] || '').toUpperCase();
+              return claimState.includes(stateName.toUpperCase()) || claimState === stateCode.toUpperCase();
+            })
+            .map((row: any) => ({
+              claimNumber: row['Claim#'] || '',
+              claimant: row['Claimant'] || '',
+              status: row['Status'] || '',
+              daysOpen: parseInt(row['Open/Closed Days'] || '0', 10),
+              ageBucket: row['Age'] || '',
+              reserves: parseFloat((row['Open Reserves'] || '0').replace(/,/g, '')) || 0,
+              lowEval: parseFloat((row['Low'] || '0').replace(/,/g, '')) || 0,
+              highEval: parseFloat((row['High'] || '0').replace(/,/g, '')) || 0,
+              inLitigation: (row['In Litigation Indicator'] || '').toLowerCase().includes('litigation'),
+              typeGroup: row['Type Group'] || '',
+              team: row['Team Group'] || '',
+              adjuster: row['Adjuster Assigned'] || '',
+              injurySeverity: row['Injury Severity'] || '',
+              biStatus: row['BI Status'] || '',
+              state: row['Accident Location State'] || '',
+              city: row['Accident Location City'] || '',
+            }));
 
-      if (matters) setLitigationMatters(matters);
+          // Filter for open claims only
+          const openClaims = allClaims.filter(c => c.status === 'Open');
+          setOpenExposureClaims(openClaims);
+          
+          // Filter for litigation claims
+          const litClaims = openClaims.filter(c => c.inLitigation);
+          setLitigationClaims(litClaims);
+        }
+      });
     } catch (error) {
       console.error('Error fetching state data:', error);
     } finally {
@@ -115,7 +155,7 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
   };
 
   const totalOverLimitAmount = overLimitClaims.reduce((sum, c) => sum + (c.over_limit_amount || 0), 0);
-  const totalLitigationExposure = litigationMatters.reduce((sum, m) => sum + (m.indemnities_amount || 0), 0);
+  const totalLitigationExposure = litigationClaims.reduce((sum, c) => sum + (c.reserves || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,7 +181,7 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="overlimit">Over-Limit Claims ({overLimitClaims.length})</TabsTrigger>
-            <TabsTrigger value="litigation">Open Litigation ({litigationMatters.length})</TabsTrigger>
+            <TabsTrigger value="litigation">In Litigation ({litigationClaims.length})</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-[500px] mt-4">
@@ -195,7 +235,7 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
                       <span className="text-xs text-muted-foreground">Open Litigation</span>
                     </div>
                     <div className="text-2xl font-bold mt-1">{formatCurrency(totalLitigationExposure)}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{litigationMatters.length} matters</div>
+                    <div className="text-xs text-muted-foreground mt-1">{litigationClaims.length} matters</div>
                   </CardContent>
                 </Card>
               </div>
@@ -314,40 +354,44 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : litigationMatters.length === 0 ? (
+              ) : litigationClaims.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No open litigation found for {stateData.state}</p>
+                  <Scale className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No litigation claims found for {stateData.state}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-muted-foreground">Total Exposure: <span className="font-semibold text-foreground">{formatCurrency(totalLitigationExposure)}</span></p>
+                    <p className="text-sm text-muted-foreground">Total Reserves: <span className="font-semibold text-foreground">{formatCurrency(totalLitigationExposure)}</span></p>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-2 font-medium text-muted-foreground">Matter ID</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Claim #</th>
                         <th className="text-left py-2 font-medium text-muted-foreground">Claimant</th>
                         <th className="text-left py-2 font-medium text-muted-foreground">Type</th>
                         <th className="text-right py-2 font-medium text-muted-foreground">Days Open</th>
-                        <th className="text-right py-2 font-medium text-muted-foreground">Indemnity</th>
-                        <th className="text-left py-2 font-medium text-muted-foreground">Filed</th>
+                        <th className="text-right py-2 font-medium text-muted-foreground">Reserves</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {litigationMatters.map((matter) => (
-                        <tr key={matter.id} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="py-2 font-mono text-xs">{matter.matter_id}</td>
-                          <td className="py-2">{matter.claimant || '-'}</td>
+                      {litigationClaims.slice(0, 50).map((claim, idx) => (
+                        <tr key={`${claim.claimNumber}-${idx}`} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-2 font-mono text-xs">{claim.claimNumber}</td>
+                          <td className="py-2">{claim.claimant || '-'}</td>
                           <td className="py-2">
-                            <Badge variant="outline" className="text-xs">{matter.type || 'BI'}</Badge>
+                            <Badge variant="outline" className="text-xs">{claim.typeGroup || 'LIT'}</Badge>
                           </td>
-                          <td className={cn("py-2 text-right font-mono", (matter.days_open || 0) > 365 ? "text-red-600" : (matter.days_open || 0) > 180 ? "text-amber-600" : "")}>
-                            {matter.days_open || 0}
+                          <td className={cn("py-2 text-right font-mono", claim.daysOpen > 365 ? "text-red-600" : claim.daysOpen > 180 ? "text-amber-600" : "")}>
+                            {claim.daysOpen}
                           </td>
-                          <td className="py-2 text-right font-mono">{formatCurrency(matter.indemnities_amount)}</td>
-                          <td className="py-2 text-muted-foreground">{formatDate(matter.filing_date)}</td>
+                          <td className="py-2 text-right font-mono">{formatCurrency(claim.reserves)}</td>
+                          <td className="py-2">
+                            <Badge variant="outline" className="text-xs bg-purple-500/20 text-purple-600 border-purple-500/30">
+                              {claim.biStatus || 'In Litigation'}
+                            </Badge>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
