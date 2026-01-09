@@ -16,6 +16,7 @@ export interface CP1CsvClaim {
   cp1Flag: string;
   overallCP1: string;
   biStatus: string;
+  evaluationPhase: string;
   // 11 uppercase trigger flags from CSV
   fatality: boolean;
   surgery: boolean;
@@ -198,6 +199,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const cp1Flag = (r["CP1 Claim Flag"] || "").trim();
       const overallCP1 = (r["Overall CP1 Flag"] || "").trim();
       const biStatus = (r["BI Status"] || "").trim();
+      const evaluationPhase = (r["Evaluation Phase"] || "").trim();
 
       return {
         claimNumber,
@@ -211,6 +213,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         cp1Flag,
         overallCP1,
         biStatus,
+        evaluationPhase,
 
         // 11 UPPERCASE trigger flags from CSV (exact column names)
         fatality: yesish(r["FATALITY"]),
