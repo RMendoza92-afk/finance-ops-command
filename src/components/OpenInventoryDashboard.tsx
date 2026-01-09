@@ -4631,59 +4631,77 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </SheetHeader>
 
           <div className="space-y-6 pt-6">
-            {/* Summary Cards - Only show CP1 and Total */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-success/10 rounded-lg border border-success/30">
-                <p className="text-xs text-muted-foreground uppercase">CP1</p>
-                <p className="text-2xl font-bold text-success">{CP1_DATA.totals.yes.toLocaleString()}</p>
-              </div>
-              <div className="p-4 bg-secondary/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground uppercase">Total Claims</p>
-                <p className="text-2xl font-bold text-foreground">{CP1_DATA.totals.grandTotal.toLocaleString()}</p>
+            {/* Executive Summary Header */}
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-destructive/5 via-background to-primary/5 border border-border p-5">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Executive Summary</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-4xl font-bold text-foreground">{CP1_DATA.totals.grandTotal.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total CP1 Claims</p>
+                  </div>
+                  <div>
+                    <p className="text-4xl font-bold text-destructive">{cp1BoxData?.totalFlagInstances?.toLocaleString() || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Active Trigger Flags</p>
+                  </div>
+                  <div>
+                    <p className="text-4xl font-bold text-orange-500">
+                      {cp1BoxData?.multiFlagGroups?.filter(g => g.flagCount >= 2).reduce((sum, g) => sum + g.claimCount, 0).toLocaleString() || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Multi-Flag Claims</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* CP1 Trigger Flags Breakdown */}
+            {/* Critical Flags - Visual Cards */}
             <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                CP1 Trigger Flags
-              </h4>
-              <p className="text-[11px] text-muted-foreground mb-2">Sorted by count • Click any flag to export claims</p>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  Critical Trigger Flags
+                </h4>
+                <span className="text-[10px] text-muted-foreground">Click to export • Sorted by severity</span>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {(() => {
-                  // Use cp1BoxData for flags (CP1 CSV only)
                   const fs = cp1BoxData?.fatalitySummary;
+                  const total = cp1BoxData?.rawClaims?.length || 1;
                   const flagsList = [
-                    { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', critical: true },
-                    { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', critical: true },
-                    { label: 'Meds vs Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', critical: true },
-                    { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', critical: true },
-                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', critical: true },
-                    { label: 'Aggravating Factors', key: 'aggFactors', count: fs?.aggFactorsCount || 0, icon: '⚠️', critical: true },
-                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🩹', critical: true },
-                    { label: 'Ped/Moto/Bike/Pregnancy', key: 'pedestrianPregnancy', count: fs?.pedestrianPregnancyCount || 0, icon: '🚶', critical: true },
-                    { label: 'Life Care Planner', key: 'lifeCarePlanner', count: fs?.lifeCarePlannerCount || 0, icon: '📋', critical: true },
-                    { label: 'Injections', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', critical: true },
-                    { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', critical: true },
+                    { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', tier: 1 },
+                    { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', tier: 1 },
+                    { label: 'Meds vs Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', tier: 1 },
+                    { label: 'Life Care Planner', key: 'lifeCarePlanner', count: fs?.lifeCarePlannerCount || 0, icon: '📋', tier: 1 },
+                    { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', tier: 2 },
+                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', tier: 2 },
+                    { label: 'Aggravating Factors', key: 'aggFactors', count: fs?.aggFactorsCount || 0, icon: '⚠️', tier: 2 },
+                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🩹', tier: 2 },
+                    { label: 'Ped/Moto/Bike/Pregnancy', key: 'pedestrianPregnancy', count: fs?.pedestrianPregnancyCount || 0, icon: '🚶', tier: 2 },
+                    { label: 'Injections', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', tier: 3 },
+                    { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', tier: 3 },
                   ];
 
-                  // Hide zero-count flags to avoid implying data changed
-                  const nonZeroFlags = flagsList.filter((f) => f.count > 0);
+                  const nonZeroFlags = flagsList.filter((f) => f.count > 0).sort((a, b) => b.count - a.count);
+                  const maxCount = Math.max(...nonZeroFlags.map(f => f.count), 1);
 
-                  // Sort by count descending (display only)
-                  return nonZeroFlags
-                    .sort((a, b) => b.count - a.count)
-                    .map((flag) => (
+                  return nonZeroFlags.map((flag) => {
+                    const pct = ((flag.count / total) * 100).toFixed(1);
+                    const barWidth = (flag.count / maxCount) * 100;
+                    
+                    return (
                       <div
                         key={flag.label}
-                        className={`p-2 rounded-md border cursor-pointer transition-all hover:shadow-md ${flag.critical ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' : 'bg-secondary/50 border-border hover:bg-secondary/70'}`}
+                        className="group relative rounded-lg border border-border bg-card hover:bg-accent/50 cursor-pointer transition-all hover:shadow-lg overflow-hidden"
                         onClick={() => {
                           import('xlsx').then((XLSX) => {
                             const allClaims = cp1BoxData?.rawClaims || [];
                             const filteredClaims = allClaims.filter((c) => (c as any)[flag.key]);
-
                             const rows = filteredClaims.map((c) => ({
                               'Claim #': c.claimNumber,
                               Claimant: c.claimant,
@@ -4696,7 +4714,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                               'Overall CP1': c.overallCP1,
                               'BI Status': c.biStatus,
                             }));
-
                             const ws = XLSX.utils.json_to_sheet(rows);
                             const wb = XLSX.utils.book_new();
                             XLSX.utils.book_append_sheet(wb, ws, `${flag.label} Claims`);
@@ -4705,219 +4722,153 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                           });
                         }}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs">{flag.icon}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">{flag.label}</span>
+                        {/* Progress bar background */}
+                        <div 
+                          className={`absolute inset-y-0 left-0 transition-all ${
+                            flag.tier === 1 ? 'bg-destructive/15' : flag.tier === 2 ? 'bg-orange-500/15' : 'bg-primary/15'
+                          }`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                        
+                        <div className="relative flex items-center justify-between p-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{flag.icon}</span>
+                            <div>
+                              <p className="text-sm font-medium">{flag.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{pct}% of inventory</p>
+                            </div>
                           </div>
-                          <Download className="h-3 w-3 text-muted-foreground opacity-50" />
+                          <div className="flex items-center gap-3">
+                            <p className={`text-xl font-bold ${
+                              flag.tier === 1 ? 'text-destructive' : flag.tier === 2 ? 'text-orange-500' : 'text-primary'
+                            }`}>
+                              {flag.count.toLocaleString()}
+                            </p>
+                            <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
-                        <p className={`text-base font-bold ${flag.critical ? 'text-destructive' : 'text-foreground'}`}>{flag.count.toLocaleString()}</p>
                       </div>
-                    ));
+                    );
+                  });
                 })()}
               </div>
+            </div>
 
-              {/* Multi-Flag Grouping */}
-              {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="text-xs font-semibold flex items-center gap-2">
-                      <Layers className="h-3.5 w-3.5 text-primary" />
-                      Claims by Flag Count
-                    </h5>
-                    <span className="text-[10px] text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
-                      {cp1BoxData.totalFlagInstances.toLocaleString()} flags → {(cp1BoxData.rawClaims?.length || 0).toLocaleString()} claims
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {cp1BoxData.multiFlagGroups
-                      .filter(g => g.flagCount > 0)
-                      .sort((a, b) => b.flagCount - a.flagCount)
-                      .map((group) => {
-                        // Count which flags appear in this group
-                        const flagCounts: Record<string, number> = {};
-                        const flagLabels: Record<string, string> = {
-                          fatality: 'Fatality',
-                          surgery: 'Surgery',
-                          medsVsLimits: 'Meds>Limits',
-                          hospitalization: 'Hospital',
-                          lossOfConsciousness: 'LOC',
-                          aggFactors: 'Agg Factors',
-                          objectiveInjuries: 'Obj Injuries',
-                          pedestrianPregnancy: 'Ped/Preg',
-                          lifeCarePlanner: 'Life Care',
-                          injections: 'Injections',
-                          emsHeavyImpact: 'EMS/Impact',
-                        };
-                        
-                        for (const c of group.claims) {
-                          if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
-                          if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
-                          if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
-                          if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
-                          if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
-                          if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
-                          if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
-                          if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
-                          if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
-                          if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
-                          if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
-                        }
-                        
-                        const topFlags = Object.entries(flagCounts)
-                          .sort((a, b) => b[1] - a[1])
-                          .slice(0, 4)
-                          .map(([key]) => flagLabels[key]);
-
-                        return (
-                          <div
-                            key={group.flagCount}
-                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex items-center justify-between ${
-                              group.flagCount >= 3 
-                                ? 'bg-destructive/10 border-destructive/30 hover:bg-destructive/20' 
-                                : group.flagCount === 2 
-                                  ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20' 
-                                  : 'bg-secondary/50 border-border hover:bg-secondary/70'
-                            }`}
-                            onClick={() => {
-                              import('xlsx').then((XLSX) => {
-                                const rows = group.claims.map((c) => ({
-                                  'Claim #': c.claimNumber,
-                                  Claimant: c.claimant,
-                                  Coverage: c.coverage,
-                                  'Days Open': c.days,
-                                  'Age Bucket': c.ageBucket,
-                                  'Type Group': c.typeGroup,
-                                  Team: c.teamGroup,
-                                  'Open Reserves': c.openReserves,
-                                  'Overall CP1': c.overallCP1,
-                                  'BI Status': c.biStatus,
-                                  'Fatality': c.fatality ? 'Yes' : '',
-                                  'Surgery': c.surgery ? 'Yes' : '',
-                                  'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
-                                  'Hospitalization': c.hospitalization ? 'Yes' : '',
-                                  'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
-                                  'Aggravating Factors': c.aggFactors ? 'Yes' : '',
-                                  'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
-                                  'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
-                                  'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
-                                  'Injections': c.injections ? 'Yes' : '',
-                                  'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
-                                }));
-
-                                const ws = XLSX.utils.json_to_sheet(rows);
-                                const wb = XLSX.utils.book_new();
-                                XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
-                                XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
-                                toast.success(`Exported ${group.claimCount} claims with ${group.flagCount} flag(s)`);
-                              });
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`text-xl font-bold min-w-[2.5rem] text-center ${
-                                group.flagCount >= 3 ? 'text-destructive' : group.flagCount === 2 ? 'text-orange-600' : 'text-foreground'
-                              }`}>
-                                {group.flagCount}
-                              </div>
-                              <div className="border-l border-border pl-3">
-                                <div className="text-xs font-medium">{group.claimCount.toLocaleString()} claims</div>
-                                <div className="text-[10px] text-muted-foreground flex flex-wrap gap-1 mt-0.5">
-                                  {topFlags.map((flag, i) => (
-                                    <span key={flag} className="bg-background/50 px-1.5 py-0.5 rounded text-[9px]">
-                                      {flag}{i < topFlags.length - 1 ? '' : ''}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <Download className="h-4 w-4 text-muted-foreground opacity-60" />
-                          </div>
-                        );
-                      })}
+            {/* Multi-Flag Severity Analysis */}
+            {cp1BoxData?.multiFlagGroups && cp1BoxData.multiFlagGroups.length > 0 && (
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="bg-gradient-to-r from-destructive/10 to-orange-500/10 px-4 py-3 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-destructive" />
+                      Multi-Flag Risk Concentration
+                    </h4>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-medium">
+                        {cp1BoxData.multiFlagGroups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0).toLocaleString()} high-risk
+                      </span>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+                
+                <div className="divide-y divide-border">
+                  {cp1BoxData.multiFlagGroups
+                    .filter(g => g.flagCount > 0)
+                    .sort((a, b) => b.flagCount - a.flagCount)
+                    .map((group) => {
+                      const flagCounts: Record<string, number> = {};
+                      const flagLabels: Record<string, string> = {
+                        fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
+                        hospitalization: 'Hospital', lossOfConsciousness: 'LOC', aggFactors: 'Agg Factors',
+                        objectiveInjuries: 'Obj Injuries', pedestrianPregnancy: 'Ped/Preg',
+                        lifeCarePlanner: 'Life Care', injections: 'Injections', emsHeavyImpact: 'EMS/Impact',
+                      };
+                      
+                      for (const c of group.claims) {
+                        if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
+                        if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
+                        if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
+                        if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
+                        if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
+                        if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
+                        if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
+                        if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
+                        if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
+                        if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
+                        if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+                      }
+                      
+                      const topFlags = Object.entries(flagCounts)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 5)
+                        .map(([key, cnt]) => ({ label: flagLabels[key], count: cnt }));
 
-            {/* Flags by Age Chart (top flags only, computed from same CP1 CSV) */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Trigger Flags by Age Bucket
-              </h4>
-              <div className="h-56 sm:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={(() => {
-                      const rawClaims = cp1BoxData?.rawClaims || [];
-                      const norm = (s: unknown) => String(s ?? '').trim().toLowerCase();
+                      const pct = ((group.claimCount / (cp1BoxData.rawClaims?.length || 1)) * 100).toFixed(1);
 
-                      const ageOrder = ['365+ Days', '181-365 Days', '61-180 Days', 'Under 60 Days'];
-                      const ageKeys = ageOrder.map((a) => ({ label: a, key: norm(a) }));
-
-                      const fs = cp1BoxData?.fatalitySummary;
-                      const allFlags = [
-                        { key: 'fatality', label: 'Fatality', count: fs?.fatalityCount || 0 },
-                        { key: 'surgery', label: 'Surgery', count: fs?.surgeryCount || 0 },
-                        { key: 'medsVsLimits', label: 'Meds vs Limits', count: fs?.medsVsLimitsCount || 0 },
-                        { key: 'hospitalization', label: 'Hospitalization', count: fs?.hospitalizationCount || 0 },
-                        { key: 'lossOfConsciousness', label: 'Loss of Consciousness', count: fs?.lossOfConsciousnessCount || 0 },
-                        { key: 'aggFactors', label: 'Aggravating Factors', count: fs?.aggFactorsCount || 0 },
-                        { key: 'objectiveInjuries', label: 'Objective Injuries', count: fs?.objectiveInjuriesCount || 0 },
-                        { key: 'pedestrianPregnancy', label: 'Ped/Moto/Bike/Pregnancy', count: fs?.pedestrianPregnancyCount || 0 },
-                        { key: 'lifeCarePlanner', label: 'Life Care Planner', count: fs?.lifeCarePlannerCount || 0 },
-                        { key: 'injections', label: 'Injections', count: fs?.injectionsCount || 0 },
-                        { key: 'emsHeavyImpact', label: 'EMS + Heavy Impact', count: fs?.emsHeavyImpactCount || 0 },
-                      ];
-
-                      const topFlags = allFlags
-                        .filter((f) => f.count > 0)
-                        .sort((a, b) => b.count - a.count)
-                        .slice(0, 5);
-
-                      return ageKeys.map(({ label, key }) => {
-                        const claimsInAge = rawClaims.filter((c) => norm(c.ageBucket) === key);
-
-                        const base: Record<string, string | number> = {
-                          age: label.replace(' Days', ''),
-                          total: claimsInAge.length,
-                        };
-
-                        for (const f of topFlags) {
-                          base[f.key] = claimsInAge.filter((c: any) => Boolean((c as any)[f.key])).length;
-                        }
-
-                        return base;
-                      });
-                    })()}
-                    margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="age" stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '11px',
-                      }}
-                    />
-
-                    {/* Render only the 5 dataKeys we generate (avoid undefined theme tokens) */}
-                    <Bar dataKey="hospitalization" stackId="a" fill="hsl(var(--primary))" name="Hospitalization" />
-                    <Bar dataKey="medsVsLimits" stackId="a" fill="hsl(var(--accent))" name="Meds > Limits" />
-                    <Bar dataKey="pedestrianMotorcyclist" stackId="a" fill="hsl(var(--warning))" name="Ped/Moto/Bicyclist" />
-                    <Bar dataKey="fatality" stackId="a" fill="hsl(var(--destructive))" name="Fatality" />
-                    <Bar dataKey="lossOfConsciousness" stackId="a" fill="hsl(var(--secondary-foreground))" name="Loss of Consciousness" />
-                  </BarChart>
-                </ResponsiveContainer>
+                      return (
+                        <div
+                          key={group.flagCount}
+                          className="group flex items-center justify-between p-4 hover:bg-accent/30 cursor-pointer transition-all"
+                          onClick={() => {
+                            import('xlsx').then((XLSX) => {
+                              const rows = group.claims.map((c) => ({
+                                'Claim #': c.claimNumber, Claimant: c.claimant, Coverage: c.coverage,
+                                'Days Open': c.days, 'Age Bucket': c.ageBucket, 'Type Group': c.typeGroup,
+                                Team: c.teamGroup, 'Open Reserves': c.openReserves, 'Overall CP1': c.overallCP1,
+                                'BI Status': c.biStatus, 'Fatality': c.fatality ? 'Yes' : '',
+                                'Surgery': c.surgery ? 'Yes' : '', 'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
+                                'Hospitalization': c.hospitalization ? 'Yes' : '',
+                                'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
+                                'Aggravating Factors': c.aggFactors ? 'Yes' : '',
+                                'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
+                                'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
+                                'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
+                                'Injections': c.injections ? 'Yes' : '',
+                                'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
+                              }));
+                              const ws = XLSX.utils.json_to_sheet(rows);
+                              const wb = XLSX.utils.book_new();
+                              XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
+                              XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                              toast.success(`Exported ${group.claimCount} claims`);
+                            });
+                          }}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`flex items-center justify-center w-12 h-12 rounded-xl font-bold text-xl ${
+                              group.flagCount >= 4 ? 'bg-destructive text-destructive-foreground' :
+                              group.flagCount === 3 ? 'bg-destructive/80 text-destructive-foreground' :
+                              group.flagCount === 2 ? 'bg-orange-500 text-white' :
+                              'bg-secondary text-secondary-foreground'
+                            }`}>
+                              {group.flagCount}
+                            </div>
+                            <div>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-lg font-bold">{group.claimCount.toLocaleString()}</span>
+                                <span className="text-xs text-muted-foreground">claims</span>
+                                <span className="text-[10px] text-muted-foreground">({pct}%)</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {topFlags.map((f) => (
+                                  <span 
+                                    key={f.label} 
+                                    className="inline-flex items-center gap-1 text-[10px] bg-muted px-2 py-0.5 rounded-full"
+                                  >
+                                    {f.label}
+                                    <span className="text-muted-foreground">({f.count})</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                Chart shows the top 5 trigger flags by total count, broken out by age bucket.
-              </p>
-            </div>
+            )}
 
             {/* (Removed) BI Age Breakdown / Coverage tables / Key Insights per request */}
           </div>
