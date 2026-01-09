@@ -1511,6 +1511,44 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
       XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
 
+      // CP1 Impact Severity Weights (official scoring matrix)
+      const CP1_WEIGHTS = {
+        fatality: 100,
+        surgery: 100,
+        medsVsLimits: 100,
+        lifeCarePlanner: 100,
+        hospitalization: 80,
+        lossOfConsciousness: 80,
+        aggFactors: 70,
+        objectiveInjuries: 70,
+        pedestrianPregnancy: 70,
+        injections: 60,
+        emsHeavyImpact: 50,
+      };
+
+      const calculateImpactScore = (c: typeof cp1BoxData.rawClaims[0]) => {
+        let score = 0;
+        if (c.fatality) score += CP1_WEIGHTS.fatality;
+        if (c.surgery) score += CP1_WEIGHTS.surgery;
+        if (c.medsVsLimits) score += CP1_WEIGHTS.medsVsLimits;
+        if (c.lifeCarePlanner) score += CP1_WEIGHTS.lifeCarePlanner;
+        if (c.hospitalization) score += CP1_WEIGHTS.hospitalization;
+        if (c.lossOfConsciousness) score += CP1_WEIGHTS.lossOfConsciousness;
+        if (c.aggFactors) score += CP1_WEIGHTS.aggFactors;
+        if (c.objectiveInjuries) score += CP1_WEIGHTS.objectiveInjuries;
+        if (c.pedestrianPregnancy) score += CP1_WEIGHTS.pedestrianPregnancy;
+        if (c.injections) score += CP1_WEIGHTS.injections;
+        if (c.emsHeavyImpact) score += CP1_WEIGHTS.emsHeavyImpact;
+        return score;
+      };
+
+      const getSeverityTier = (score: number) => {
+        if (score >= 200) return 'IMMEDIATE SETTLEMENT';
+        if (score >= 100) return 'EARLY AUTHORITY';
+        if (score >= 50) return 'MONITOR CLOSELY';
+        return 'STANDARD';
+      };
+
       // Sheet 2: Multi-Flag Risk Analysis
       const flagLabels: Record<string, string> = {
         fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
@@ -1559,7 +1597,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       multiFlagSheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 50 }];
       XLSX.utils.book_append_sheet(workbook, multiFlagSheet, 'Multi-Flag Analysis');
 
-      // Sheet 3: High-Risk Claims (3+ flags)
+      // Sheet 3: High-Risk Claims (3+ flags) with Impact Severity
       const highRiskClaims = (cp1BoxData?.rawClaims || []).filter(c => {
         let flagCount = 0;
         if (c.fatality) flagCount++;
@@ -1589,9 +1627,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.injections) { flagCount++; flags.push('Injections'); }
         if (c.emsHeavyImpact) { flagCount++; flags.push('EMS/Impact'); }
         
+        const impactScore = calculateImpactScore(c);
+        const severityTier = getSeverityTier(impactScore);
+        
         return {
           'Claim #': c.claimNumber,
           'Claimant': c.claimant,
+          'Impact Score': impactScore,
+          'Severity Tier': severityTier,
           'Flag Count': flagCount,
           'Coverage': c.coverage,
           'BI Phase': c.evaluationPhase || 'N/A',
@@ -1603,18 +1646,18 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Flags Present': flags.join(' | '),
           'BI Status': c.biStatus,
         };
-      }).sort((a, b) => (b['Flag Count'] as number) - (a['Flag Count'] as number));
+      }).sort((a, b) => (b['Impact Score'] as number) - (a['Impact Score'] as number));
 
       if (highRiskClaims.length > 0) {
         const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
         highRiskSheet['!cols'] = [
-          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
           { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
         ];
         XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
       }
 
-      // Sheet 4: All Claims with Flag Details
+      // Sheet 4: All Claims with Flag Details + Impact Severity
       const allClaimsData = (cp1BoxData?.rawClaims || []).map(c => {
         let flagCount = 0;
         if (c.fatality) flagCount++;
@@ -1629,9 +1672,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.injections) flagCount++;
         if (c.emsHeavyImpact) flagCount++;
         
+        const impactScore = calculateImpactScore(c);
+        const severityTier = getSeverityTier(impactScore);
+        
         return {
           'Claim #': c.claimNumber,
           'Claimant': c.claimant,
+          'Impact Score': impactScore,
+          'Severity Tier': severityTier,
           'Flag Count': flagCount,
           'Coverage': c.coverage,
           'BI Phase': c.evaluationPhase || 'N/A',
@@ -1642,19 +1690,19 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
           'BI Status': c.biStatus,
-          'Fatality': c.fatality ? 'YES' : '',
-          'Surgery': c.surgery ? 'YES' : '',
-          'Meds vs Limits': c.medsVsLimits ? 'YES' : '',
-          'Hospitalization': c.hospitalization ? 'YES' : '',
-          'Loss of Consciousness': c.lossOfConsciousness ? 'YES' : '',
-          'Aggravating Factors': c.aggFactors ? 'YES' : '',
-          'Objective Injuries': c.objectiveInjuries ? 'YES' : '',
-          'Ped/Moto/Bike/Preg': c.pedestrianPregnancy ? 'YES' : '',
-          'Life Care Planner': c.lifeCarePlanner ? 'YES' : '',
-          'Injections': c.injections ? 'YES' : '',
-          'EMS + Heavy Impact': c.emsHeavyImpact ? 'YES' : '',
+          'Fatality (100)': c.fatality ? 'YES' : '',
+          'Surgery (100)': c.surgery ? 'YES' : '',
+          'Meds vs Limits (100)': c.medsVsLimits ? 'YES' : '',
+          'Life Care (100)': c.lifeCarePlanner ? 'YES' : '',
+          'Hospital (80)': c.hospitalization ? 'YES' : '',
+          'LOC (80)': c.lossOfConsciousness ? 'YES' : '',
+          'Agg Factors (70)': c.aggFactors ? 'YES' : '',
+          'Obj Injuries (70)': c.objectiveInjuries ? 'YES' : '',
+          'Ped/Preg (70)': c.pedestrianPregnancy ? 'YES' : '',
+          'Injections (60)': c.injections ? 'YES' : '',
+          'EMS/Impact (50)': c.emsHeavyImpact ? 'YES' : '',
         };
-      }).sort((a, b) => (b['Flag Count'] as number) - (a['Flag Count'] as number));
+      }).sort((a, b) => (b['Impact Score'] as number) - (a['Impact Score'] as number));
 
       const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsData);
       XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'All Claims Detail');
