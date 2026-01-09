@@ -133,15 +133,20 @@ const NON_WORKABLE_STATUSES = new Set(
     "past medical release",
     "spd-lit",
     "passed/future medical release",
+    "limits tendered cp1", // Exclude Limits Tendered CP1 from workable claims
   ].map((s) => s.toLowerCase())
 );
 
 function isNonWorkableRow(row: Record<string, string>): boolean {
   const status = normalize(row["Status"]);
   const biStatus = normalize(row["BI Status"]);
+  const evalPhase = normalize(row["Evaluation Phase"]);
 
   // Exact matches (user-provided list)
   if (NON_WORKABLE_STATUSES.has(status) || NON_WORKABLE_STATUSES.has(biStatus)) return true;
+  
+  // Exclude Limits Tendered CP1 claims from evaluation phase as well
+  if (evalPhase.includes("limits tendered cp1")) return true;
 
   // Broad guardrails (covers variants like "Settled" / "Settled - ...")
   if (status.includes("settled") || biStatus.includes("settled")) return true;
