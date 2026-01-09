@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useStateBILimits, calculateOverspendMetrics } from "@/hooks/useStateBILimits";
 import { useOverLimitPaymentsDB } from "@/hooks/useOverLimitPaymentsDB";
 import { useLitigationData } from "@/hooks/useLitigationData";
+import { useAtRiskClaims } from "@/hooks/useAtRiskClaims";
 import { 
   TrendingUp, 
   AlertTriangle, 
@@ -13,7 +14,9 @@ import {
   Calendar,
   Eye,
   Activity,
-  ExternalLink
+  ExternalLink,
+  Target,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +52,7 @@ export function OverspendTracker() {
   const { limits, loading: limitsLoading } = useStateBILimits();
   const { data: litigationData, loading: dataLoading } = useLitigationData();
   const { byState: dbStateMetrics, totals: dbTotals, loading: dbLoading, getClaimsByState, data: dbData } = useOverLimitPaymentsDB();
+  const { atRiskClaims, summary: atRiskSummary, patterns, loading: atRiskLoading } = useAtRiskClaims();
   const [showDetails, setShowDetails] = useState(false);
   const [showClaims, setShowClaims] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ytd");
@@ -127,6 +131,51 @@ export function OverspendTracker() {
         formatCurrencyFull(s.totalOverLimit / s.count),
       ]),
       rawClaimData: [
+        // At-Risk Claims from pattern matching - PRIORITY SHEET
+        {
+          sheetName: 'At-Risk Claims (Pattern Match)',
+          columns: ['Risk Level', 'Score', 'Claim#', 'State', 'Reserves', 'Policy Limit', 'Reserve %', 'Age', 'Type Group', 'In Litigation', 'CP1', 'Pattern Matches', 'Risk Factors'],
+          rows: atRiskClaims.map(c => [
+            c.riskLevel,
+            c.riskScore,
+            c.claimNumber,
+            c.state,
+            formatCurrencyFull(c.reserves),
+            formatCurrencyFull(c.policyLimit),
+            `${(c.reserveToLimitRatio * 100).toFixed(0)}%`,
+            c.age,
+            c.typeGroup,
+            c.inLitigation ? 'Yes' : 'No',
+            c.cp1Flag ? 'Yes' : 'No',
+            c.patternMatches.join(', '),
+            c.triggerFactors.join('; '),
+          ]),
+        },
+        // At-Risk Summary
+        {
+          sheetName: 'At-Risk Summary',
+          columns: ['Metric', 'Value'],
+          rows: [
+            ['Total At-Risk Claims', atRiskSummary.totalAtRisk],
+            ['Critical Risk', atRiskSummary.criticalCount],
+            ['High Risk', atRiskSummary.highCount],
+            ['Moderate Risk', atRiskSummary.moderateCount],
+            ['Total Exposure (Reserves)', formatCurrencyFull(atRiskSummary.totalExposure)],
+            ['Potential Over-Limit', formatCurrencyFull(atRiskSummary.potentialOverLimit)],
+            ['Avg Risk Score', atRiskSummary.avgRiskScore.toFixed(1)],
+          ],
+        },
+        // At-Risk by State
+        {
+          sheetName: 'At-Risk By State',
+          columns: ['State', 'At-Risk Claims', 'Total Reserves', 'Avg Risk Score'],
+          rows: atRiskSummary.byState.map(s => [
+            s.state,
+            s.count,
+            formatCurrencyFull(s.totalReserves),
+            s.avgRiskScore.toFixed(1),
+          ]),
+        },
         // CWP threshold summary by state
         {
           sheetName: 'CWP Threshold By State',
@@ -142,18 +191,6 @@ export function OverspendTracker() {
                 formatCurrencyFull(s.overLimitAmount),
               ])
             : [['No CWP threshold data available', '', '', '', '', '', '']],
-        },
-        // CWP summary totals
-        {
-          sheetName: 'CWP Summary',
-          columns: ['Metric', 'Value'],
-          rows: [
-            ['Total CWP Closures', cwpMetrics?.totalClosures || 0],
-            ['Net Closures (within limits)', cwpMetrics?.netClosures || 0],
-            ['Over Limit Closures', cwpMetrics?.overLimitClosures || 0],
-            ['80% Trigger Alerts', cwpMetrics?.triggerAlerts || 0],
-            ['Total Over Limit Amount', formatCurrencyFull(cwpMetrics?.overLimitAmount || 0)],
-          ],
         },
         // YTD 2025 claims detail from DB
         {
@@ -204,7 +241,7 @@ export function OverspendTracker() {
     }
   };
 
-  if (limitsLoading || dataLoading || dbLoading) {
+  if (limitsLoading || dataLoading || dbLoading || atRiskLoading) {
     return (
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="animate-pulse space-y-4">
@@ -307,14 +344,70 @@ export function OverspendTracker() {
       {/* Detailed Views */}
       {showDetails && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2 mb-3">
+          <TabsList className="grid w-full grid-cols-3 mb-3">
+            <TabsTrigger value="atrisk" className="text-xs">
+              <ShieldAlert className="h-3 w-3 mr-1" />
+              At-Risk ({atRiskSummary.totalAtRisk})
+            </TabsTrigger>
             <TabsTrigger value="ytd" className="text-xs">
-              YTD 2025 Over-Limit ({dbTotals.claimCount})
+              YTD 2025 ({dbTotals.claimCount})
             </TabsTrigger>
             <TabsTrigger value="cwp" className="text-xs">
-              CWP Threshold ({cwpMetrics?.overLimitClosures || 0})
+              CWP ({cwpMetrics?.overLimitClosures || 0})
             </TabsTrigger>
           </TabsList>
+
+          {/* At-Risk Claims Tab */}
+          <TabsContent value="atrisk" className="space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="destructive" className="text-[10px]">{atRiskSummary.criticalCount} Critical</Badge>
+              <Badge variant="secondary" className="text-[10px] bg-amber-500/20 text-amber-600">{atRiskSummary.highCount} High</Badge>
+              <Badge variant="outline" className="text-[10px]">{atRiskSummary.moderateCount} Moderate</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              {atRiskSummary.totalAtRisk} claims flagged based on patterns from 123 historical over-limit payments
+            </p>
+            <div className="border border-border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-muted z-10">
+                  <TableRow>
+                    <TableHead className="text-xs">Risk</TableHead>
+                    <TableHead className="text-xs">Claim#</TableHead>
+                    <TableHead className="text-xs">State</TableHead>
+                    <TableHead className="text-xs text-right">Reserves</TableHead>
+                    <TableHead className="text-xs text-right">Limit</TableHead>
+                    <TableHead className="text-xs">Pattern Matches</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {atRiskClaims.slice(0, 50).map((claim, idx) => (
+                    <TableRow key={`${claim.claimNumber}-${idx}`} className="text-xs">
+                      <TableCell>
+                        <Badge 
+                          variant={claim.riskLevel === 'CRITICAL' ? 'destructive' : 'secondary'}
+                          className={`text-[9px] ${claim.riskLevel === 'HIGH' ? 'bg-amber-500/20 text-amber-600' : ''}`}
+                        >
+                          {claim.riskLevel} ({claim.riskScore})
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono">{claim.claimNumber}</TableCell>
+                      <TableCell>{claim.state}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(claim.reserves)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{formatCurrency(claim.policyLimit)}</TableCell>
+                      <TableCell className="text-muted-foreground text-[10px] max-w-[200px] truncate">
+                        {claim.patternMatches.slice(0, 3).join(', ')}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {atRiskSummary.totalAtRisk > 50 && (
+              <p className="text-xs text-muted-foreground text-center">
+                Showing top 50 of {atRiskSummary.totalAtRisk} at-risk claims. Export to Excel for full list.
+              </p>
+            )}
+          </TabsContent>
 
           {/* YTD 2025 Tab */}
           <TabsContent value="ytd" className="space-y-3">
