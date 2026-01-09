@@ -163,19 +163,25 @@ export interface RawClaimExport {
   matterStatus: string;
   settledDate: string;
   daysSinceSettled: number | null;
-  // CP1 trigger flags
+  // CP1 trigger flags (17 factors)
   fatality: boolean;
   surgery: boolean;
   hospitalization: boolean;
   medsVsLimits: boolean;
   lossOfConsciousness: boolean;
-  aggravatingFactors: boolean;
+  aggFactors: boolean;
   objectiveInjuries: boolean;
-  pedestrianMotorcyclist: boolean;
+  pedestrianPregnancy: boolean;
   pregnancy: boolean;
   lifeCarePlanner: boolean;
   injections: boolean;
   emsHeavyImpact: boolean;
+  // Additional factors
+  confirmedFractures: boolean;
+  lacerations: boolean;
+  priorSurgery: boolean;
+  painLevel5Plus: boolean;
+  eggshell69Plus: boolean;
 }
 
 export interface CP1ByTypeGroup {
@@ -322,9 +328,9 @@ export interface OpenExposureData {
     // Additional CP1 trigger flags
     medsVsLimitsCount: number;
     lossOfConsciousnessCount: number;
-    aggravatingFactorsCount: number;
+    aggFactorsCount: number;
     objectiveInjuriesCount: number;
-    pedestrianMotorcyclistCount: number;
+    pedestrianPregnancyCount: number;
     pregnancyCount: number;
     lifeCarePlannerCount: number;
     injectionsCount: number;
@@ -677,13 +683,18 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       hospitalization: isHospitalization,
       medsVsLimits: isMedsVsLimits,
       lossOfConsciousness: isLossOfConsciousness,
-      aggravatingFactors: isAggravatingFactors,
+      aggFactors: isAggravatingFactors,
       objectiveInjuries: isObjectiveInjuries,
-      pedestrianMotorcyclist: isPedestrianMotorcyclist,
+      pedestrianPregnancy: isPedestrianMotorcyclist,
       pregnancy: isPregnancy,
       lifeCarePlanner: isLifeCarePlanner,
       injections: isInjections,
       emsHeavyImpact: isEmsHeavyImpact,
+      confirmedFractures: false, // Will parse from CSV if available
+      lacerations: false,
+      priorSurgery: false,
+      painLevel5Plus: false,
+      eggshell69Plus: false,
     });
 
     // Track CP1 for ALL coverages (for grand total)
@@ -746,13 +757,18 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       hospitalization: isHospitalization,
       medsVsLimits: isMedsVsLimits,
       lossOfConsciousness: isLossOfConsciousness,
-      aggravatingFactors: isAggravatingFactors,
+      aggFactors: isAggravatingFactors,
       objectiveInjuries: isObjectiveInjuries,
-      pedestrianMotorcyclist: isPedestrianMotorcyclist,
+      pedestrianPregnancy: isPedestrianMotorcyclist,
       pregnancy: isPregnancy,
       lifeCarePlanner: isLifeCarePlanner,
       injections: isInjections,
       emsHeavyImpact: isEmsHeavyImpact,
+      confirmedFractures: false, // Will parse from CSV if available
+      lacerations: false,
+      priorSurgery: false,
+      painLevel5Plus: false,
+      eggshell69Plus: false,
     });
 
     // Update grand totals (claim counts)
@@ -1260,9 +1276,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   // Count CP1 trigger flags from the WORKABLE BI/UM/UI population (rawClaimsExport)
   const medsVsLimitsCount = rawClaimsExport.filter((c) => c.medsVsLimits).length;
   const lossOfConsciousnessCount = rawClaimsExport.filter((c) => c.lossOfConsciousness).length;
-  const aggravatingFactorsCount = rawClaimsExport.filter((c) => c.aggravatingFactors).length;
+  const aggFactorsCount = rawClaimsExport.filter((c) => c.aggFactors).length;
   const objectiveInjuriesCount = rawClaimsExport.filter((c) => c.objectiveInjuries).length;
-  const pedestrianMotorcyclistCount = rawClaimsExport.filter((c) => c.pedestrianMotorcyclist).length;
+  const pedestrianPregnancyCount = rawClaimsExport.filter((c) => c.pedestrianPregnancy).length;
   const pregnancyCount = rawClaimsExport.filter((c) => c.pregnancy).length;
   const lifeCarePlannerCount = rawClaimsExport.filter((c) => c.lifeCarePlanner).length;
   const injectionsCount = rawClaimsExport.filter((c) => c.injections).length;
@@ -1282,9 +1298,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     // Additional CP1 trigger counts
     medsVsLimitsCount,
     lossOfConsciousnessCount,
-    aggravatingFactorsCount,
+    aggFactorsCount,
     objectiveInjuriesCount,
-    pedestrianMotorcyclistCount,
+    pedestrianPregnancyCount,
     pregnancyCount,
     lifeCarePlannerCount,
     injectionsCount,
