@@ -20,7 +20,9 @@ export interface CP1CsvClaim {
   overallCP1: string;
   biStatus: string;
   evaluationPhase: string;
-  // 11 uppercase trigger flags from CSV
+  claimantAge: number;
+  endPainLevel: number | null;
+  // 17 trigger flags from CSV (original 11 + 6 new)
   fatality: boolean;
   surgery: boolean;
   medsVsLimits: boolean;
@@ -32,6 +34,13 @@ export interface CP1CsvClaim {
   lifeCarePlanner: boolean;
   injections: boolean;
   emsHeavyImpact: boolean;
+  // Additional factors from CP1 methodology
+  confirmedFractures: boolean;
+  lacerations: boolean;
+  priorSurgery: boolean; // Surgical Recommendation (not yet completed)
+  pregnancy: boolean;
+  painLevel5Plus: boolean;
+  eggshell69Plus: boolean;
 }
 
 export interface CP1DataShape {
@@ -68,6 +77,13 @@ export interface CP1TriggerSummary {
   lifeCarePlannerCount: number;
   injectionsCount: number;
   emsHeavyImpactCount: number;
+  // Additional factors
+  confirmedFracturesCount: number;
+  lacerationsCount: number;
+  priorSurgeryCount: number;
+  pregnancyCount: number;
+  painLevel5PlusCount: number;
+  eggshell69PlusCount: number;
 }
 
 export interface MultiFlagGroup {
@@ -206,6 +222,21 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const overallCP1 = (r["Overall CP1 Flag"] || "").trim();
       const biStatus = (r["BI Status"] || "").trim();
       const evaluationPhase = (r["Evaluation Phase"] || "").trim();
+      
+      // Parse claimant age and end pain level for derived factors
+      const claimantAge = Number(r["Claimant Age"] || 0) || 0;
+      const endPainLevelRaw = (r["End Pain Level"] || "").trim();
+      const endPainLevel = endPainLevelRaw && !isNaN(Number(endPainLevelRaw)) ? Number(endPainLevelRaw) : null;
+      
+      // Additional factors from Injury Incident columns
+      const confirmedFractures = yesish(r["Injury Incident - Confirmed Fractures"]);
+      const lacerations = yesish(r["Injury Incident - Lacerations"]);
+      const priorSurgery = yesish(r["Injury Incident - Prior Surgery"]);
+      const pregnancy = yesish(r["Injury Incident - Pregnancy"]);
+      
+      // Derived flags
+      const painLevel5Plus = endPainLevel !== null && endPainLevel >= 5;
+      const eggshell69Plus = claimantAge >= 69;
 
       return {
         claimNumber,
@@ -223,6 +254,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         overallCP1,
         biStatus,
         evaluationPhase,
+        claimantAge,
+        endPainLevel,
 
         // 11 UPPERCASE trigger flags from CSV (exact column names)
         fatality: yesish(r["FATALITY"]),
@@ -236,6 +269,14 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         lifeCarePlanner: yesish(r["LIFE CARE PLANNER"]),
         injections: yesish(r["INJECTIONS"]),
         emsHeavyImpact: yesish(r["EMS + HEAVY IMPACT"]),
+        
+        // Additional factors
+        confirmedFractures,
+        lacerations,
+        priorSurgery,
+        pregnancy,
+        painLevel5Plus,
+        eggshell69Plus,
       };
     });
 
@@ -333,9 +374,16 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       lifeCarePlannerCount: claims.filter((c) => c.lifeCarePlanner).length,
       injectionsCount: claims.filter((c) => c.injections).length,
       emsHeavyImpactCount: claims.filter((c) => c.emsHeavyImpact).length,
+      // Additional factors
+      confirmedFracturesCount: claims.filter((c) => c.confirmedFractures).length,
+      lacerationsCount: claims.filter((c) => c.lacerations).length,
+      priorSurgeryCount: claims.filter((c) => c.priorSurgery).length,
+      pregnancyCount: claims.filter((c) => c.pregnancy).length,
+      painLevel5PlusCount: claims.filter((c) => c.painLevel5Plus).length,
+      eggshell69PlusCount: claims.filter((c) => c.eggshell69Plus).length,
     };
 
-    // Count flags per claim for multi-flag grouping
+    // Count flags per claim for multi-flag grouping (all 17 factors)
     const countFlags = (c: CP1CsvClaim): number => {
       let count = 0;
       if (c.fatality) count++;
@@ -349,6 +397,13 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       if (c.lifeCarePlanner) count++;
       if (c.injections) count++;
       if (c.emsHeavyImpact) count++;
+      // Additional factors
+      if (c.confirmedFractures) count++;
+      if (c.lacerations) count++;
+      if (c.priorSurgery) count++;
+      if (c.pregnancy) count++;
+      if (c.painLevel5Plus) count++;
+      if (c.eggshell69Plus) count++;
       return count;
     };
 

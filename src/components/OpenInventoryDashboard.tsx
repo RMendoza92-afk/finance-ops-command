@@ -1511,19 +1511,28 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
       XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
 
-      // CP1 Impact Severity Weights (official scoring matrix)
+      // CP1 Impact Severity Weights (official scoring matrix - 17 factors)
       const CP1_WEIGHTS = {
+        // Tier 1 - Highest severity
         fatality: 100,
         surgery: 100,
         medsVsLimits: 100,
         lifeCarePlanner: 100,
+        // Tier 2 - High severity
+        confirmedFractures: 80,
         hospitalization: 80,
         lossOfConsciousness: 80,
         aggFactors: 70,
         objectiveInjuries: 70,
         pedestrianPregnancy: 70,
+        priorSurgery: 70,
+        // Tier 3 - Moderate severity
         injections: 60,
         emsHeavyImpact: 50,
+        lacerations: 50,
+        painLevel5Plus: 50,
+        pregnancy: 50,
+        eggshell69Plus: 50,
       };
 
       const calculateImpactScore = (c: typeof cp1BoxData.rawClaims[0]) => {
@@ -1532,13 +1541,19 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         if (c.surgery) score += CP1_WEIGHTS.surgery;
         if (c.medsVsLimits) score += CP1_WEIGHTS.medsVsLimits;
         if (c.lifeCarePlanner) score += CP1_WEIGHTS.lifeCarePlanner;
+        if (c.confirmedFractures) score += CP1_WEIGHTS.confirmedFractures;
         if (c.hospitalization) score += CP1_WEIGHTS.hospitalization;
         if (c.lossOfConsciousness) score += CP1_WEIGHTS.lossOfConsciousness;
         if (c.aggFactors) score += CP1_WEIGHTS.aggFactors;
         if (c.objectiveInjuries) score += CP1_WEIGHTS.objectiveInjuries;
         if (c.pedestrianPregnancy) score += CP1_WEIGHTS.pedestrianPregnancy;
+        if (c.priorSurgery) score += CP1_WEIGHTS.priorSurgery;
         if (c.injections) score += CP1_WEIGHTS.injections;
         if (c.emsHeavyImpact) score += CP1_WEIGHTS.emsHeavyImpact;
+        if (c.lacerations) score += CP1_WEIGHTS.lacerations;
+        if (c.painLevel5Plus) score += CP1_WEIGHTS.painLevel5Plus;
+        if (c.pregnancy) score += CP1_WEIGHTS.pregnancy;
+        if (c.eggshell69Plus) score += CP1_WEIGHTS.eggshell69Plus;
         return score;
       };
 
@@ -1552,9 +1567,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       // Sheet 2: Multi-Flag Risk Analysis
       const flagLabels: Record<string, string> = {
         fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
-        hospitalization: 'Hospital', lossOfConsciousness: 'LOC', aggFactors: 'Agg Factors',
-        objectiveInjuries: 'Obj Injuries', pedestrianPregnancy: 'Ped/Preg',
+        hospitalization: 'Hospital', lossOfConsciousness: 'LOC/TBI', aggFactors: 'Re-aggravation',
+        objectiveInjuries: 'MRI/CT Confirmed', pedestrianPregnancy: 'Ped/Moto/Bike',
         lifeCarePlanner: 'Life Care', injections: 'Injections', emsHeavyImpact: 'EMS/Impact',
+        confirmedFractures: 'Fractures', lacerations: 'Lacerations', priorSurgery: 'Surg Rec',
+        pregnancy: 'Pregnancy', painLevel5Plus: 'Pain 5+', eggshell69Plus: 'Eggshell 69+',
       };
       
       const multiFlagData = [
@@ -1583,6 +1600,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
             if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
             if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+            if (c.confirmedFractures) flagCounts['confirmedFractures'] = (flagCounts['confirmedFractures'] || 0) + 1;
+            if (c.lacerations) flagCounts['lacerations'] = (flagCounts['lacerations'] || 0) + 1;
+            if (c.priorSurgery) flagCounts['priorSurgery'] = (flagCounts['priorSurgery'] || 0) + 1;
+            if (c.pregnancy) flagCounts['pregnancy'] = (flagCounts['pregnancy'] || 0) + 1;
+            if (c.painLevel5Plus) flagCounts['painLevel5Plus'] = (flagCounts['painLevel5Plus'] || 0) + 1;
+            if (c.eggshell69Plus) flagCounts['eggshell69Plus'] = (flagCounts['eggshell69Plus'] || 0) + 1;
           });
           const topFlags = Object.entries(flagCounts)
             .sort((a, b) => b[1] - a[1])
@@ -4783,17 +4806,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   const fs = cp1BoxData?.fatalitySummary;
                   const total = cp1BoxData?.rawClaims?.length || 1;
                   const flagsList = [
+                    // Tier 1 - Highest severity
                     { label: 'Fatality', key: 'fatality', count: fs?.fatalityCount || 0, icon: '💀', tier: 1 },
-                    { label: 'Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', tier: 1 },
-                    { label: 'Meds vs Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', tier: 1 },
+                    { label: 'Completed Surgery', key: 'surgery', count: fs?.surgeryCount || 0, icon: '🏥', tier: 1 },
+                    { label: 'Meds Over Policy Limits', key: 'medsVsLimits', count: fs?.medsVsLimitsCount || 0, icon: '💊', tier: 1 },
                     { label: 'Life Care Planner', key: 'lifeCarePlanner', count: fs?.lifeCarePlannerCount || 0, icon: '📋', tier: 1 },
-                    { label: 'Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', tier: 2 },
-                    { label: 'Loss of Consciousness', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', tier: 2 },
-                    { label: 'Aggravating Factors', key: 'aggFactors', count: fs?.aggFactorsCount || 0, icon: '⚠️', tier: 2 },
-                    { label: 'Objective Injuries', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🩹', tier: 2 },
-                    { label: 'Ped/Moto/Bike/Pregnancy', key: 'pedestrianPregnancy', count: fs?.pedestrianPregnancyCount || 0, icon: '🚶', tier: 2 },
-                    { label: 'Injections', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', tier: 3 },
-                    { label: 'EMS + Heavy Impact', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', tier: 3 },
+                    // Tier 2 - High severity
+                    { label: 'Confirmed Fractures', key: 'confirmedFractures', count: fs?.confirmedFracturesCount || 0, icon: '🦴', tier: 2 },
+                    { label: 'Required Hospitalization', key: 'hospitalization', count: fs?.hospitalizationCount || 0, icon: '🛏️', tier: 2 },
+                    { label: 'Head Injury w/ LOC or TBI', key: 'lossOfConsciousness', count: fs?.lossOfConsciousnessCount || 0, icon: '😵', tier: 2 },
+                    { label: 'Pre-existing w/ Re-aggravation', key: 'aggFactors', count: fs?.aggFactorsCount || 0, icon: '⚠️', tier: 2 },
+                    { label: 'Confirmed Objective Injuries (MRI/CT)', key: 'objectiveInjuries', count: fs?.objectiveInjuriesCount || 0, icon: '🩹', tier: 2 },
+                    { label: 'Pedestrian/Bicyclist/Motorcyclist', key: 'pedestrianPregnancy', count: fs?.pedestrianPregnancyCount || 0, icon: '🚶', tier: 2 },
+                    { label: 'Surgical Recommendation (pending)', key: 'priorSurgery', count: fs?.priorSurgeryCount || 0, icon: '📝', tier: 2 },
+                    // Tier 3 - Moderate severity
+                    { label: 'Completed Injections (ESI, Facet)', key: 'injections', count: fs?.injectionsCount || 0, icon: '💉', tier: 3 },
+                    { label: 'Heavy/Moderate Impact w/ EMS', key: 'emsHeavyImpact', count: fs?.emsHeavyImpactCount || 0, icon: '🚑', tier: 3 },
+                    { label: 'Lacerations/Scarring/Disfigurement', key: 'lacerations', count: fs?.lacerationsCount || 0, icon: '🩸', tier: 3 },
+                    { label: 'Ending Pain Level 5+', key: 'painLevel5Plus', count: fs?.painLevel5PlusCount || 0, icon: '😣', tier: 3 },
+                    { label: 'Pregnancy', key: 'pregnancy', count: fs?.pregnancyCount || 0, icon: '🤰', tier: 3 },
+                    { label: 'Eggshell 69+', key: 'eggshell69Plus', count: fs?.eggshell69PlusCount || 0, icon: '👴', tier: 3 },
                   ];
 
                   const nonZeroFlags = flagsList.filter((f) => f.count > 0).sort((a, b) => b.count - a.count);
@@ -4889,9 +4921,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       const flagCounts: Record<string, number> = {};
                       const flagLabels: Record<string, string> = {
                         fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
-                        hospitalization: 'Hospital', lossOfConsciousness: 'LOC', aggFactors: 'Agg Factors',
-                        objectiveInjuries: 'Obj Injuries', pedestrianPregnancy: 'Ped/Preg',
+                        hospitalization: 'Hospital', lossOfConsciousness: 'LOC/TBI', aggFactors: 'Re-aggravation',
+                        objectiveInjuries: 'MRI/CT Confirmed', pedestrianPregnancy: 'Ped/Moto/Bike',
                         lifeCarePlanner: 'Life Care', injections: 'Injections', emsHeavyImpact: 'EMS/Impact',
+                        confirmedFractures: 'Fractures', lacerations: 'Lacerations', priorSurgery: 'Surg Rec',
+                        pregnancy: 'Pregnancy', painLevel5Plus: 'Pain 5+', eggshell69Plus: 'Eggshell 69+',
                       };
                       
                       for (const c of group.claims) {
@@ -4906,6 +4940,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                         if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
                         if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
                         if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
+                        // Additional factors
+                        if (c.confirmedFractures) flagCounts['confirmedFractures'] = (flagCounts['confirmedFractures'] || 0) + 1;
+                        if (c.lacerations) flagCounts['lacerations'] = (flagCounts['lacerations'] || 0) + 1;
+                        if (c.priorSurgery) flagCounts['priorSurgery'] = (flagCounts['priorSurgery'] || 0) + 1;
+                        if (c.pregnancy) flagCounts['pregnancy'] = (flagCounts['pregnancy'] || 0) + 1;
+                        if (c.painLevel5Plus) flagCounts['painLevel5Plus'] = (flagCounts['painLevel5Plus'] || 0) + 1;
+                        if (c.eggshell69Plus) flagCounts['eggshell69Plus'] = (flagCounts['eggshell69Plus'] || 0) + 1;
                       }
                       
                       const topFlags = Object.entries(flagCounts)
@@ -4935,6 +4976,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                                 'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
                                 'Injections': c.injections ? 'Yes' : '',
                                 'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
+                                'Confirmed Fractures': c.confirmedFractures ? 'Yes' : '',
+                                'Lacerations/Scarring': c.lacerations ? 'Yes' : '',
+                                'Surgical Recommendation': c.priorSurgery ? 'Yes' : '',
+                                'Pregnancy': c.pregnancy ? 'Yes' : '',
+                                'End Pain Level 5+': c.painLevel5Plus ? 'Yes' : '',
+                                'Eggshell 69+': c.eggshell69Plus ? 'Yes' : '',
                               }));
                               const ws = XLSX.utils.json_to_sheet(rows);
                               const wb = XLSX.utils.book_new();
