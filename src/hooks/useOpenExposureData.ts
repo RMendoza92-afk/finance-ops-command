@@ -703,7 +703,9 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     
     // FILTER: Only include BI, UM, UI coverages for detailed financial breakdown
     if (!isIncludedCoverage(coverage)) continue;
-    
+
+    // FILTER: BI/UM/UI workable inventory = IN PROGRESS only (excludes any settled/other statuses)
+    if (String(biStatus || '').trim().toLowerCase() !== 'in progress') continue;
     // Add BI/UM/UI claims to rawClaimsExport for financial analysis
     rawClaimsExport.push({
       claimNumber: row['Claim#']?.trim() || '',
@@ -1255,40 +1257,16 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
   
   // ============ FATALITY & SEVERITY SUMMARY ============
-  // Count all CP1 trigger flags directly from raw CSV data
-  let medsVsLimitsCount = 0;
-  let lossOfConsciousnessCount = 0;
-  let aggravatingFactorsCount = 0;
-  let objectiveInjuriesCount = 0;
-  let pedestrianMotorcyclistCount = 0;
-  let pregnancyCount = 0;
-  let lifeCarePlannerCount = 0;
-  let injectionsCount = 0;
-  let emsHeavyImpactCount = 0;
-  
-  // Count from raw data (all rows)
-  rows.forEach((row: RawClaimRow) => {
-    const parseYesNo = (val: string) => {
-      const v = (val || '').toString().toLowerCase().trim();
-      return v === 'yes' || v === 'y' || v === 'true' || v === '1';
-    };
-    if (parseYesNo(row['MEDS VS LIMITS'] as string)) medsVsLimitsCount++;
-    if (parseYesNo(row['LOSS OF CONSCIOUSNESS'] as string)) lossOfConsciousnessCount++;
-    if (parseYesNo(row['AGGRAVATING FACTORS'] as string)) aggravatingFactorsCount++;
-    if (parseYesNo(row['OBJECTIVE INJURIES'] as string)) objectiveInjuriesCount++;
-    const pedMotoPreg = (row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY'] as string || '').toString().toLowerCase().trim();
-    if (pedMotoPreg === 'yes' || pedMotoPreg === 'y' || pedMotoPreg === 'true' || pedMotoPreg === '1') {
-      pedestrianMotorcyclistCount++;
-    }
-
-    const injurySeverity = (row['Injury Severity'] as string || '').toString().toLowerCase();
-    if (injurySeverity.includes('pregnan')) {
-      pregnancyCount++;
-    }
-    if (parseYesNo(row['LIFE CARE PLANNER'] as string)) lifeCarePlannerCount++;
-    if (parseYesNo(row['INJECTIONS'] as string)) injectionsCount++;
-    if (parseYesNo(row['EMS + HEAVY IMPACT'] as string)) emsHeavyImpactCount++;
-  });
+  // Count CP1 trigger flags from the WORKABLE BI/UM/UI population (rawClaimsExport)
+  const medsVsLimitsCount = rawClaimsExport.filter((c) => c.medsVsLimits).length;
+  const lossOfConsciousnessCount = rawClaimsExport.filter((c) => c.lossOfConsciousness).length;
+  const aggravatingFactorsCount = rawClaimsExport.filter((c) => c.aggravatingFactors).length;
+  const objectiveInjuriesCount = rawClaimsExport.filter((c) => c.objectiveInjuries).length;
+  const pedestrianMotorcyclistCount = rawClaimsExport.filter((c) => c.pedestrianMotorcyclist).length;
+  const pregnancyCount = rawClaimsExport.filter((c) => c.pregnancy).length;
+  const lifeCarePlannerCount = rawClaimsExport.filter((c) => c.lifeCarePlanner).length;
+  const injectionsCount = rawClaimsExport.filter((c) => c.injections).length;
+  const emsHeavyImpactCount = rawClaimsExport.filter((c) => c.emsHeavyImpact).length;
   
   const fatalityClaims = rawClaimsExport.filter(c => c.fatality);
   const surgeryClaims = rawClaimsExport.filter(c => c.surgery);
