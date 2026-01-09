@@ -1633,6 +1633,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         return {
           'Claim #': c.claimNumber,
           'Claimant': c.claimant,
+          'Adjuster': c.adjuster || 'N/A',
+          'Impact Severity': c.impactSeverity || 'N/A',
           'Impact Score': impactScore,
           'Severity Tier': severityTier,
           'Flag Count': flagCount,
@@ -1651,7 +1653,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       if (highRiskClaims.length > 0) {
         const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
         highRiskSheet['!cols'] = [
-          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
+          { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
           { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
         ];
         XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
@@ -1678,6 +1680,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         return {
           'Claim #': c.claimNumber,
           'Claimant': c.claimant,
+          'Adjuster': c.adjuster || 'N/A',
+          'Impact Severity': c.impactSeverity || 'N/A',
           'Impact Score': impactScore,
           'Severity Tier': severityTier,
           'Flag Count': flagCount,

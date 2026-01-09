@@ -12,6 +12,8 @@ export interface CP1CsvClaim {
   ageBucket: string;
   typeGroup: string;
   teamGroup: string;
+  adjuster: string;
+  impactSeverity: string;
   openReserves: number;
   totalPaid: number;
   cp1Flag: string;
@@ -194,6 +196,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       const ageBucket = (r["Age"] || "").trim();
       const typeGroup = (r["Type Group"] || "").trim();
       const teamGroup = (r["Team Group"] || "").trim();
+      const adjuster = (r["Adjuster Assigned"] || "").trim();
+      const impactSeverity = (r["Impact Severity"] || "").trim();
       const openReserves = parseCurrency(r["Open Reserves"]);
       const totalPaid = parseCurrency(r["Total Paid"]);
 
@@ -211,6 +215,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
         ageBucket,
         typeGroup,
         teamGroup,
+        adjuster,
+        impactSeverity,
         openReserves,
         totalPaid,
         cp1Flag,
