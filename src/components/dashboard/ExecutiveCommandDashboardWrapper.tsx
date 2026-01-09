@@ -361,6 +361,7 @@ export function ExecutiveCommandDashboardWrapper() {
           delta: undefined,
           typeGroupData: typeGroupData,
           ageBreakdown: data.financials.byAge,
+          rawClaims: data.rawClaims,
         }}
         onOpenChat={() => setShowChat(true)}
         onDrilldown={handleDrilldown}
