@@ -38,7 +38,7 @@ export interface RiskPattern {
 }
 
 // High-risk states based on historical over-limit frequency from 123 claims
-const HIGH_RISK_STATES = ['TEXAS', 'NEVADA', 'CALIFORNIA', 'GEORGIA', 'NEW MEXICO', 'COLORADO', 'ALABAMA'];
+const HIGH_RISK_STATES = ['TEXAS', 'NEVADA', 'CALIFORNIA', 'GEORGIA', 'NEW MEXICO', 'COLORADO', 'ALABAMA', 'OKLAHOMA', 'ARIZONA'];
 const STATE_RISK_WEIGHT: Record<string, number> = {
   'TEXAS': 3,      // 42 claims
   'NEVADA': 3,     // 34 claims
@@ -47,6 +47,8 @@ const STATE_RISK_WEIGHT: Record<string, number> = {
   'NEW MEXICO': 2, // 4 claims
   'COLORADO': 1,   // 2 claims
   'ALABAMA': 1,    // 2 claims
+  'OKLAHOMA': 2,   // Included based on inventory concentration
+  'ARIZONA': 2,    // Included based on inventory concentration
 };
 
 // State BI limits
