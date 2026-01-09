@@ -2,61 +2,117 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3 } from 'lucide-react';
-import { useActuarialData } from '@/hooks/useActuarialData';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface RBCGaugeDashboardProps {
   className?: string;
 }
 
+interface ActuarialMetricsRow {
+  loss_ratio: number | null;
+  lae_ratio: number | null;
+  total_expense_ratio: number | null;
+  development_factor: number | null;
+  trend_factor: number | null;
+  ultimate_loss: number | null;
+  credibility: number | null;
+  selected_change: number | null;
+  target_loss_ratio: number | null;
+}
+
+interface LossDevelopmentRow {
+  ibnr: number | null;
+  incurred_losses: number | null;
+  paid_losses: number | null;
+}
+
+interface InventorySnapshot {
+  total_reserves: number | null;
+  total_high_eval: number | null;
+  total_low_eval: number | null;
+}
+
 const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { data: actuarialData, loading } = useActuarialData(2025);
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<ActuarialMetricsRow | null>(null);
+  const [lossDev, setLossDev] = useState<LossDevelopmentRow | null>(null);
+  const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsRefreshing(true);
+  const fetchData = async () => {
+    setIsRefreshing(true);
+    try {
+      const [metricsRes, lossRes, invRes] = await Promise.all([
+        supabase
+          .from('actuarial_metrics')
+          .select('loss_ratio, lae_ratio, total_expense_ratio, development_factor, trend_factor, ultimate_loss, credibility, selected_change, target_loss_ratio')
+          .order('period_year', { ascending: false })
+          .order('period_quarter', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('loss_development')
+          .select('ibnr, incurred_losses, paid_losses')
+          .order('period_year', { ascending: false })
+          .order('period_quarter', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('inventory_snapshots')
+          .select('total_reserves, total_high_eval, total_low_eval')
+          .order('snapshot_date', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
+
+      if (metricsRes.data) setMetrics(metricsRes.data);
+      if (lossRes.data) setLossDev(lossRes.data);
+      if (invRes.data) setInventory(invRes.data);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
       setLastRefresh(new Date());
-      setTimeout(() => setIsRefreshing(false), 1000);
-    }, 30000);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate RBC Ratio based on actuarial metrics
+  // Calculate RBC metrics from real data
   const rbcMetrics = useMemo(() => {
-    const defaults = {
-      rbcRatio: 285,
-      targetRatio: 300,
-      lossRatio: 62.5,
-      laeRatio: 12.3,
-      combinedRatio: 94.8,
-      developmentFactor: 1.15,
-      trendFactor: 1.03,
-      ibnr: 45000000,
-      ultimateLoss: 125000000,
-      credibility: 0.92
-    };
-
-    if (!actuarialData?.metrics) {
-      return defaults;
-    }
-
-    const metrics = actuarialData.metrics;
+    // Convert decimal ratios to percentages (DB stores as 0.683 = 68.3%)
+    const lossRatio = (metrics?.loss_ratio ?? 0.65) * 100;
+    const laeRatio = (metrics?.lae_ratio ?? 0.15) * 100;
+    const expenseRatio = (metrics?.total_expense_ratio ?? 0.23) * 100;
+    const combinedRatio = lossRatio + laeRatio + expenseRatio;
+    
+    // RBC Ratio calculation: inversely related to combined ratio
+    // Base of 300%, adjusted by how far combined ratio is from 100%
+    const rbcRatio = Math.max(150, Math.min(400, 300 - (combinedRatio - 100) * 3));
+    
     return {
-      rbcRatio: 285 + (metrics.lossRatio ? (65 - metrics.lossRatio) * 2 : 0),
+      rbcRatio,
       targetRatio: 300,
-      lossRatio: metrics.lossRatio || defaults.lossRatio,
-      laeRatio: metrics.laeRatio || defaults.laeRatio,
-      combinedRatio: (metrics.lossRatio || defaults.lossRatio) + (metrics.laeRatio || defaults.laeRatio) + (metrics.totalExpenseRatio || 20),
-      developmentFactor: metrics.developmentFactor || defaults.developmentFactor,
-      trendFactor: metrics.trendFactor || defaults.trendFactor,
-      ibnr: actuarialData.lossDevelopment?.[0]?.ibnr || defaults.ibnr,
-      ultimateLoss: metrics.ultimateLoss || defaults.ultimateLoss,
-      credibility: metrics.credibility || defaults.credibility
+      lossRatio,
+      laeRatio,
+      combinedRatio,
+      developmentFactor: metrics?.development_factor ?? 1.15,
+      trendFactor: metrics?.trend_factor ?? 1.03,
+      ibnr: lossDev?.ibnr ?? 0,
+      ultimateLoss: metrics?.ultimate_loss ?? 0,
+      credibility: metrics?.credibility ?? 0,
+      incurredLosses: lossDev?.incurred_losses ?? 0,
+      paidLosses: lossDev?.paid_losses ?? 0,
+      totalReserves: inventory?.total_reserves ?? 0,
+      selectedChange: (metrics?.selected_change ?? 0) * 100,
+      targetLossRatio: (metrics?.target_loss_ratio ?? 0.65) * 100
     };
-  }, [actuarialData]);
+  }, [metrics, lossDev, inventory]);
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
@@ -75,49 +131,48 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const rbcStatus = getRBCStatus(rbcMetrics.rbcRatio);
 
   // Calculate needle rotation (0-180 degrees, where 0 is left, 180 is right)
-  // Map RBC ratio 100-400 to 0-180 degrees
   const needleRotation = Math.min(Math.max((rbcMetrics.rbcRatio - 100) / 300 * 180, 0), 180);
 
   const kpiCards = [
     {
       title: 'Loss Ratio',
       value: `${rbcMetrics.lossRatio.toFixed(1)}%`,
-      target: '65.0%',
+      target: `${rbcMetrics.targetLossRatio.toFixed(1)}%`,
       icon: Percent,
-      trend: rbcMetrics.lossRatio < 65 ? 'up' : 'down',
-      trendValue: rbcMetrics.lossRatio < 65 ? '+2.5%' : '-1.2%'
+      trend: rbcMetrics.lossRatio <= rbcMetrics.targetLossRatio ? 'up' : 'down',
+      trendValue: rbcMetrics.lossRatio <= rbcMetrics.targetLossRatio ? 'On Target' : 'Above Target'
     },
     {
       title: 'LAE Ratio',
       value: `${rbcMetrics.laeRatio.toFixed(1)}%`,
       target: '15.0%',
       icon: BarChart3,
-      trend: rbcMetrics.laeRatio < 15 ? 'up' : 'down',
-      trendValue: rbcMetrics.laeRatio < 15 ? '+0.8%' : '-0.3%'
+      trend: rbcMetrics.laeRatio <= 15 ? 'up' : 'down',
+      trendValue: rbcMetrics.laeRatio <= 15 ? 'On Target' : 'Above Target'
     },
     {
       title: 'Combined Ratio',
       value: `${rbcMetrics.combinedRatio.toFixed(1)}%`,
       target: '100.0%',
       icon: Target,
-      trend: rbcMetrics.combinedRatio < 100 ? 'up' : 'down',
-      trendValue: rbcMetrics.combinedRatio < 100 ? '+3.2%' : '-1.8%'
+      trend: rbcMetrics.combinedRatio <= 100 ? 'up' : 'down',
+      trendValue: rbcMetrics.combinedRatio <= 100 ? 'Profitable' : 'Underwriting Loss'
     },
     {
       title: 'IBNR Reserve',
       value: formatCurrency(rbcMetrics.ibnr),
-      target: formatCurrency(50000000),
+      target: 'Actuarial Est.',
       icon: DollarSign,
       trend: 'neutral',
-      trendValue: 'Stable'
+      trendValue: 'Q4 2025'
     },
     {
       title: 'Ultimate Loss',
       value: formatCurrency(rbcMetrics.ultimateLoss),
-      target: formatCurrency(130000000),
+      target: 'Projected',
       icon: Activity,
-      trend: rbcMetrics.ultimateLoss < 130000000 ? 'up' : 'down',
-      trendValue: '-$4.2M'
+      trend: 'neutral',
+      trendValue: '2026 Q1'
     },
     {
       title: 'Credibility',
@@ -125,23 +180,23 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       target: '90%',
       icon: CheckCircle,
       trend: rbcMetrics.credibility >= 0.9 ? 'up' : 'down',
-      trendValue: '+2%'
+      trendValue: rbcMetrics.credibility >= 0.9 ? 'High' : 'Moderate'
     },
     {
       title: 'Development Factor',
       value: rbcMetrics.developmentFactor.toFixed(3),
-      target: '1.100',
+      target: 'Selected',
       icon: TrendingUp,
       trend: 'neutral',
-      trendValue: 'Selected'
+      trendValue: 'Applied'
     },
     {
-      title: 'Trend Factor',
-      value: rbcMetrics.trendFactor.toFixed(3),
-      target: '1.050',
+      title: 'Rate Change',
+      value: `${rbcMetrics.selectedChange >= 0 ? '+' : ''}${rbcMetrics.selectedChange.toFixed(1)}%`,
+      target: 'Indicated',
       icon: TrendingUp,
-      trend: 'neutral',
-      trendValue: 'Selected'
+      trend: rbcMetrics.selectedChange > 0 ? 'up' : 'down',
+      trendValue: rbcMetrics.selectedChange > 0 ? 'Increase' : 'Decrease'
     }
   ];
 
@@ -183,9 +238,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           <div className="flex flex-col lg:flex-row items-center gap-8">
             {/* Gauge Visualization */}
             <div className="relative w-80 h-48 flex-shrink-0">
-              {/* Gauge Background Arc */}
               <svg viewBox="0 0 200 120" className="w-full h-full">
-                {/* Background arc segments */}
                 <defs>
                   <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#ef4444" />
@@ -288,17 +341,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="text-sm text-muted-foreground">Target RBC</div>
-                  <div className="text-xl font-semibold">{rbcMetrics.targetRatio}%</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {rbcMetrics.rbcRatio >= rbcMetrics.targetRatio ? (
-                      <span className="text-emerald-500">✓ Above target</span>
-                    ) : (
-                      <span className="text-orange-500">
-                        {(rbcMetrics.targetRatio - rbcMetrics.rbcRatio).toFixed(0)}% below
-                      </span>
-                    )}
-                  </div>
+                  <div className="text-sm text-muted-foreground">Total Reserves</div>
+                  <div className="text-xl font-semibold">{formatCurrency(rbcMetrics.totalReserves)}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Open inventory</div>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="text-sm text-muted-foreground">Regulatory Min</div>
@@ -317,8 +362,9 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                 <p className="text-sm text-muted-foreground">
                   Combined ratio at {rbcMetrics.combinedRatio.toFixed(1)}% indicates 
                   {rbcMetrics.combinedRatio < 100 ? ' profitable underwriting' : ' underwriting pressure'}. 
-                  Loss development trending {rbcMetrics.developmentFactor < 1.2 ? 'favorably' : 'adversely'} 
-                  with {(rbcMetrics.credibility * 100).toFixed(0)}% credibility on selected factors.
+                  Loss development factor of {rbcMetrics.developmentFactor.toFixed(3)} applied 
+                  with {(rbcMetrics.credibility * 100).toFixed(0)}% credibility.
+                  {rbcMetrics.selectedChange > 0 && ` Rate increase of ${rbcMetrics.selectedChange.toFixed(1)}% selected.`}
                 </p>
               </div>
             </div>
