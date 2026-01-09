@@ -60,27 +60,30 @@ export function useLitigationDataDB() {
 
       if (fetchError) throw fetchError;
 
-      const transformedData: LitigationMatter[] = (matters || []).map((m: any) => ({
-        id: m.id,
-        matter_id: m.matter_id,
-        class: m.class || '',
-        claimant: m.claimant || '',
-        indemnities_amount: Number(m.indemnities_amount) || 0,
-        total_amount: Number(m.total_amount) || 0,
-        type: m.type || '',
-        department: m.department || '',
-        team: m.team || '',
-        discipline: m.discipline || '',
-        resolution: m.resolution || '',
-        status: m.status || 'Open',
-        location: m.location || '',
-        matter_lead: m.matter_lead || '',
-        resolution_date: m.resolution_date,
-        filing_date: m.filing_date,
-        days_open: m.days_open || 0,
-        severity: m.severity || '',
-        pain_level: m.pain_levels?.pain_level || undefined,
-      }));
+      const transformedData: LitigationMatter[] = (matters || [])
+        .map((m: any) => ({
+          id: m.id,
+          matter_id: m.matter_id,
+          class: m.class || '',
+          claimant: m.claimant || '',
+          indemnities_amount: Number(m.indemnities_amount) || 0,
+          total_amount: Number(m.total_amount) || 0,
+          type: m.type || '',
+          department: m.department || '',
+          team: m.team || '',
+          discipline: m.discipline || '',
+          resolution: m.resolution || '',
+          status: m.status || 'Open',
+          location: m.location || '',
+          matter_lead: m.matter_lead || '',
+          resolution_date: m.resolution_date,
+          filing_date: m.filing_date,
+          days_open: m.days_open || 0,
+          severity: m.severity || '',
+          pain_level: m.pain_levels?.pain_level || undefined,
+        }))
+        // Filter out SPD (Settled Pending Docs) - these are not workable files
+        .filter(m => m.type !== 'SPD' && m.type !== 'Settled Pending Docs');
 
       setData(transformedData);
 
