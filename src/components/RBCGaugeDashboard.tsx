@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText, Map } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText, Map, Lock, Eye, EyeOff } from 'lucide-react';
 import StatePerformanceMap from './StatePerformanceMap';
 import StateDrilldownModal from './StateDrilldownModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +11,22 @@ import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useExportData } from '@/hooks/useExportData';
 import { format } from 'date-fns';
+
+// Simple hash function for password verification (not cryptographically secure, but sufficient for access gate)
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+};
+
+// Executive access password hash - change the password by updating this hash
+// Current password: "RBC2026" -> hash: "-1n5k8qx"
+const EXEC_ACCESS_HASH = "-1n5k8qx";
+const SESSION_KEY = "rbc_exec_access";
 
 interface RBCGaugeDashboardProps {
   className?: string;
@@ -58,6 +75,27 @@ interface TriangleDataPoint {
 }
 
 const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
+  // Password gate state
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    // Check if already authenticated in this session
+    return sessionStorage.getItem(SESSION_KEY) === "true";
+  });
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (simpleHash(password) === EXEC_ACCESS_HASH) {
+      sessionStorage.setItem(SESSION_KEY, "true");
+      setIsUnlocked(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      setPassword("");
+    }
+  };
+
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -690,6 +728,62 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
       trendValue: rbcMetrics.selectedChange > 0 ? 'Increase' : 'Decrease'
     }
   ];
+
+  // Password gate - show before any dashboard content
+  if (!isUnlocked) {
+    return (
+      <div className={cn("flex items-center justify-center min-h-[600px]", className)}>
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader className="text-center pb-4">
+            <div className="mx-auto p-3 rounded-full bg-primary/10 w-fit mb-4">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Executive Access Required</CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              This RBC dashboard contains confidential actuarial data. Please enter the executive access code to continue.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter access code"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError(false);
+                  }}
+                  className={cn(
+                    "pr-10",
+                    passwordError && "border-destructive focus-visible:ring-destructive"
+                  )}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {passwordError && (
+                <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Invalid access code. Please try again.
+                </p>
+              )}
+              <Button type="submit" className="w-full gap-2">
+                <Lock className="h-4 w-4" />
+                Access Dashboard
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
