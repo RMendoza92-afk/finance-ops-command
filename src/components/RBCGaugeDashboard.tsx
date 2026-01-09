@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Gauge, TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, CheckCircle, Target, DollarSign, Percent, BarChart3, Triangle, Download, FileSpreadsheet, FileText, Map } from 'lucide-react';
 import StatePerformanceMap from './StatePerformanceMap';
+import StateDrilldownModal from './StateDrilldownModal';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -66,6 +67,17 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
   const [accidentYears, setAccidentYears] = useState<AccidentYearSummary[]>([]);
   const [triangleData, setTriangleData] = useState<TriangleDataPoint[]>([]);
   const [gaugeAnimated, setGaugeAnimated] = useState(false);
+  const [selectedState, setSelectedState] = useState<{
+    state: string;
+    stateCode: string;
+    policies: number;
+    policyChange: number;
+    claims: number;
+    frequency: number;
+    overspend: number;
+    action: string;
+  } | null>(null);
+  const [stateDrilldownOpen, setStateDrilldownOpen] = useState(false);
   const { generatePDF, generateExcel } = useExportData();
 
   const fetchData = async () => {
@@ -1174,7 +1186,10 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
               { state: 'Indiana', stateCode: 'IN', policies: 32506, policyChange: 12.7, claims: 649, frequency: 20.0, overspend: 0, action: 'Monitor Growth' },
               { state: 'Ohio', stateCode: 'OH', policies: 13675, policyChange: -8.0, claims: 309, frequency: 22.6, overspend: 0, action: 'Maintain' },
             ]}
-            onStateClick={(state) => console.log('State clicked:', state)}
+            onStateClick={(state) => {
+              setSelectedState(state);
+              setStateDrilldownOpen(true);
+            }}
           />
         </CardContent>
       </Card>
@@ -1704,6 +1719,13 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* State Drilldown Modal */}
+      <StateDrilldownModal
+        open={stateDrilldownOpen}
+        onOpenChange={setStateDrilldownOpen}
+        stateData={selectedState}
+      />
     </div>
   );
 };
