@@ -301,7 +301,7 @@ export interface OpenExposureData {
     }[];
     demandClaims: RawClaimExport[];
   };
-  // Fatality and severity summary
+  // Fatality and severity summary - all CP1 flag types
   fatalitySummary: {
     fatalityCount: number;
     fatalityReserves: number;
@@ -310,6 +310,15 @@ export interface OpenExposureData {
     surgeryCount: number;
     hospitalizationCount: number;
     fatalityClaims: RawClaimExport[];
+    // Additional CP1 trigger flags
+    medsVsLimitsCount: number;
+    lossOfConsciousnessCount: number;
+    aggravatingFactorsCount: number;
+    objectiveInjuriesCount: number;
+    pedestrianMotorcyclistCount: number;
+    lifeCarePlannerCount: number;
+    injectionsCount: number;
+    emsHeavyImpactCount: number;
   };
   delta?: {
     previousTotal: number;
@@ -546,13 +555,22 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const daysSinceSettledStr = row['Days Since Settled?']?.trim() || '';
     const daysSinceSettled = daysSinceSettledStr ? parseInt(daysSinceSettledStr, 10) || null : null;
     
-    // Parse fatality and severity flags
-    const fatalityVal = (row['FATALITY'] || '').toString().toLowerCase().trim();
-    const isFatality = fatalityVal === 'yes' || fatalityVal === 'y' || fatalityVal === 'true' || fatalityVal === '1';
-    const surgeryVal = (row['SURGERY'] || '').toString().toLowerCase().trim();
-    const isSurgery = surgeryVal === 'yes' || surgeryVal === 'y' || surgeryVal === 'true' || surgeryVal === '1';
-    const hospitalizationVal = (row['HOSPITALIZATION'] || '').toString().toLowerCase().trim();
-    const isHospitalization = hospitalizationVal === 'yes' || hospitalizationVal === 'y' || hospitalizationVal === 'true' || hospitalizationVal === '1';
+    // Parse fatality and severity flags (all CP1 trigger types)
+    const parseYesNo = (val: string) => {
+      const v = (val || '').toString().toLowerCase().trim();
+      return v === 'yes' || v === 'y' || v === 'true' || v === '1';
+    };
+    const isFatality = parseYesNo(row['FATALITY']);
+    const isSurgery = parseYesNo(row['SURGERY']);
+    const isHospitalization = parseYesNo(row['HOSPITALIZATION']);
+    const isMedsVsLimits = parseYesNo(row['MEDS VS LIMITS']);
+    const isLossOfConsciousness = parseYesNo(row['LOSS OF CONSCIOUSNESS']);
+    const isAggravatingFactors = parseYesNo(row['AGGRAVATING FACTORS']);
+    const isObjectiveInjuries = parseYesNo(row['OBJECTIVE INJURIES']);
+    const isPedestrianMotorcyclist = parseYesNo(row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY']);
+    const isLifeCarePlanner = parseYesNo(row['LIFE CARE PLANNER']);
+    const isInjections = parseYesNo(row['INJECTIONS']);
+    const isEmsHeavyImpact = parseYesNo(row['EMS + HEAVY IMPACT']);
     
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
@@ -1161,6 +1179,32 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
   };
   
   // ============ FATALITY & SEVERITY SUMMARY ============
+  // Count all CP1 trigger flags directly from raw CSV data
+  let medsVsLimitsCount = 0;
+  let lossOfConsciousnessCount = 0;
+  let aggravatingFactorsCount = 0;
+  let objectiveInjuriesCount = 0;
+  let pedestrianMotorcyclistCount = 0;
+  let lifeCarePlannerCount = 0;
+  let injectionsCount = 0;
+  let emsHeavyImpactCount = 0;
+  
+  // Count from raw data (all rows)
+  rows.forEach((row: RawClaimRow) => {
+    const parseYesNo = (val: string) => {
+      const v = (val || '').toString().toLowerCase().trim();
+      return v === 'yes' || v === 'y' || v === 'true' || v === '1';
+    };
+    if (parseYesNo(row['MEDS VS LIMITS'] as string)) medsVsLimitsCount++;
+    if (parseYesNo(row['LOSS OF CONSCIOUSNESS'] as string)) lossOfConsciousnessCount++;
+    if (parseYesNo(row['AGGRAVATING FACTORS'] as string)) aggravatingFactorsCount++;
+    if (parseYesNo(row['OBJECTIVE INJURIES'] as string)) objectiveInjuriesCount++;
+    if (parseYesNo(row['PEDESTRIAN/MOTORCYCLIST/BICYCLIST/PREGNANCY'] as string)) pedestrianMotorcyclistCount++;
+    if (parseYesNo(row['LIFE CARE PLANNER'] as string)) lifeCarePlannerCount++;
+    if (parseYesNo(row['INJECTIONS'] as string)) injectionsCount++;
+    if (parseYesNo(row['EMS + HEAVY IMPACT'] as string)) emsHeavyImpactCount++;
+  });
+  
   const fatalityClaims = rawClaimsExport.filter(c => c.fatality);
   const surgeryClaims = rawClaimsExport.filter(c => c.surgery);
   const hospitalizationClaims = rawClaimsExport.filter(c => c.hospitalization);
@@ -1171,7 +1215,16 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     fatalityHighEval: fatalityClaims.reduce((sum, c) => sum + c.highEval, 0),
     surgeryCount: surgeryClaims.length,
     hospitalizationCount: hospitalizationClaims.length,
-    fatalityClaims: fatalityClaims, // Include raw claims for export
+    fatalityClaims: fatalityClaims,
+    // Additional CP1 trigger counts
+    medsVsLimitsCount,
+    lossOfConsciousnessCount,
+    aggravatingFactorsCount,
+    objectiveInjuriesCount,
+    pedestrianMotorcyclistCount,
+    lifeCarePlannerCount,
+    injectionsCount,
+    emsHeavyImpactCount,
   };
   
   return {
