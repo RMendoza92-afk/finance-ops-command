@@ -66,11 +66,20 @@ export interface CP1TriggerSummary {
   emsHeavyImpactCount: number;
 }
 
+export interface MultiFlagGroup {
+  flagCount: number;
+  label: string;
+  claimCount: number;
+  claims: CP1CsvClaim[];
+}
+
 export interface CP1CsvAnalysis {
   dataDate: string;
   cp1Data: CP1DataShape;
   rawClaims: CP1CsvClaim[];
   fatalitySummary: CP1TriggerSummary;
+  multiFlagGroups: MultiFlagGroup[];
+  totalFlagInstances: number;
 }
 
 function parseCurrency(val: string): number {
@@ -314,6 +323,42 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       emsHeavyImpactCount: claims.filter((c) => c.emsHeavyImpact).length,
     };
 
+    // Count flags per claim for multi-flag grouping
+    const countFlags = (c: CP1CsvClaim): number => {
+      let count = 0;
+      if (c.fatality) count++;
+      if (c.surgery) count++;
+      if (c.medsVsLimits) count++;
+      if (c.hospitalization) count++;
+      if (c.lossOfConsciousness) count++;
+      if (c.aggFactors) count++;
+      if (c.objectiveInjuries) count++;
+      if (c.pedestrianPregnancy) count++;
+      if (c.lifeCarePlanner) count++;
+      if (c.injections) count++;
+      if (c.emsHeavyImpact) count++;
+      return count;
+    };
+
+    // Group claims by flag count
+    const flagCountMap = new Map<number, CP1CsvClaim[]>();
+    let totalFlagInstances = 0;
+    for (const c of claims) {
+      const fc = countFlags(c);
+      totalFlagInstances += fc;
+      if (!flagCountMap.has(fc)) flagCountMap.set(fc, []);
+      flagCountMap.get(fc)!.push(c);
+    }
+
+    const multiFlagGroups: MultiFlagGroup[] = Array.from(flagCountMap.entries())
+      .sort((a, b) => b[0] - a[0]) // Sort descending by flag count
+      .map(([flagCount, claimsList]) => ({
+        flagCount,
+        label: flagCount === 1 ? "1 Flag" : `${flagCount} Flags`,
+        claimCount: claimsList.length,
+        claims: claimsList,
+      }));
+
     const cp1Data: CP1DataShape = {
       byCoverage,
       biByAge,
@@ -328,6 +373,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
       cp1Data,
       rawClaims: claims,
       fatalitySummary,
+      multiFlagGroups,
+      totalFlagInstances,
     };
   }, [rows]);
 
