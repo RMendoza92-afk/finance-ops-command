@@ -30,6 +30,34 @@ export interface AtRiskClaim {
   biStatus: string;
   accidentDescription: string;
   teamGroup: string;
+  // Impact severity for universal columns
+  impactSeverity: string;
+  impactScore: number;
+  severityTier: string;
+  flagCount: number;
+  biPhase: string;
+  negotiationAmount: number;
+  negotiationDate: string;
+  negotiationType: string;
+  daysSinceNegotiation: number | null;
+  // All 17 risk factors
+  fatality: boolean;
+  surgery: boolean;
+  medsVsLimits: boolean;
+  lifeCarePlanner: boolean;
+  fractures: boolean;
+  hospitalization: boolean;
+  locTBI: boolean;
+  reAggravation: boolean;
+  mriCtConfirmed: boolean;
+  pedMotoBike: boolean;
+  surgeryRec: boolean;
+  injections: boolean;
+  emsImpact: boolean;
+  lacerations: boolean;
+  painLevel5Plus: boolean;
+  pregnancy: boolean;
+  eggshell69Plus: boolean;
 }
 
 export interface RiskPattern {
@@ -162,16 +190,37 @@ export function useAtRiskClaims() {
       const ageBucket = row['Age'] || '';
       const inLitigation = (row['In Litigation Indicator'] || '').toLowerCase().includes('litigation');
       const cp1Flag = (row['Overall CP1 Flag'] || '').toLowerCase() === 'yes';
-      const surgery = (row['SURGERY'] || '').toLowerCase() === 'yes';
-      const fatality = (row['FATALITY'] || '').toLowerCase() === 'yes';
-      const hospitalization = (row['HOSPITALIZATION'] || '').toLowerCase() === 'yes';
       const lowEval = parseCurrency(row['Low'] || '0');
       const highEval = parseCurrency(row['High'] || '0');
       const totalPaid = parseCurrency(row['Total Paid'] || '0');
       const biStatus = row['BI Status'] || '';
+      
+      // Parse all 17 risk factors
+      const fatality = (row['FATALITY'] || '').toLowerCase() === 'yes';
+      const surgery = (row['SURGERY'] || '').toLowerCase() === 'yes';
+      const medsVsLimits = (row['MEDS VS LIMITS'] || '').toLowerCase() === 'yes';
+      const lifeCarePlanner = (row['LIFE CARE PLANNER'] || '').toLowerCase() === 'yes';
+      const fractures = (row['CONFIRMED FRACTURES'] || '').toLowerCase() === 'yes';
+      const hospitalization = (row['HOSPITALIZATION'] || '').toLowerCase() === 'yes';
+      const locTBI = (row['LOSS OF CONSCIOUSNESS'] || '').toLowerCase() === 'yes';
+      const reAggravation = (row['AGGRAVATION FACTORS'] || '').toLowerCase() === 'yes';
+      const mriCtConfirmed = (row['OBJECTIVE INJURY'] || '').toLowerCase() === 'yes';
+      const pedMotoBike = (row['PEDESTRIAN'] || row['PEDESTRIAN/BIKE'] || '').toLowerCase() === 'yes';
+      const surgeryRec = (row['PRIOR SURGERY'] || '').toLowerCase() === 'yes';
+      const injections = (row['INJECTIONS'] || '').toLowerCase() === 'yes';
+      const emsImpact = (row['EMS HEAVY IMPACT'] || '').toLowerCase() === 'yes';
+      const lacerations = (row['LACERATIONS'] || '').toLowerCase() === 'yes';
+      const painLevel5Plus = (row['PAIN LEVEL 5+'] || '').toLowerCase() === 'yes';
+      const pregnancy = (row['PREGNANCY'] || '').toLowerCase() === 'yes';
+      const eggshell69Plus = (row['EGGSHELL 69+'] || '').toLowerCase() === 'yes';
 
       // Count trigger factors
       let triggerTotal = parseInt(row['TRIGGER TOTAL'] || '0') || 0;
+      
+      // Count active flags
+      const flagCount = [fatality, surgery, medsVsLimits, lifeCarePlanner, fractures, hospitalization, 
+        locTBI, reAggravation, mriCtConfirmed, pedMotoBike, surgeryRec, injections, emsImpact, 
+        lacerations, painLevel5Plus, pregnancy, eggshell69Plus].filter(Boolean).length;
 
       // Calculate risk score
       let riskScore = 0;
@@ -260,6 +309,16 @@ export function useAtRiskClaims() {
         let riskLevel: 'CRITICAL' | 'HIGH' | 'MODERATE' = 'MODERATE';
         if (riskScore >= 80) riskLevel = 'CRITICAL';
         else if (riskScore >= 50) riskLevel = 'HIGH';
+        
+        // Determine severity tier label
+        const severityTier = riskLevel === 'CRITICAL' ? 'TIER 1' : riskLevel === 'HIGH' ? 'TIER 2' : 'TIER 3';
+        
+        // Calculate negotiation fields
+        const negotiationAmount = parseCurrency(row['Negotiation Amount'] || row['Demand/Offer Amount'] || '0');
+        const negotiationDate = row['Negotiation Date'] || row['Last Nego Date'] || '';
+        const negotiationType = row['Negotiation Type'] || row['Demand Type'] || '';
+        const daysSinceNegoRaw = row['Days Since Negotiation'] || row['Days Since Nego'] || '';
+        const daysSinceNegotiation = daysSinceNegoRaw ? parseInt(daysSinceNegoRaw) || null : null;
 
         claims.push({
           claimNumber: row['Claim#'] || '',
@@ -290,6 +349,34 @@ export function useAtRiskClaims() {
           biStatus,
           accidentDescription: row['Description of Accident'] || '',
           teamGroup: row['Team Group'] || '',
+          // Universal columns
+          impactSeverity: riskLevel,
+          impactScore: riskScore,
+          severityTier,
+          flagCount,
+          biPhase: row['Evaluation Phase'] || row['BI Phase'] || '',
+          negotiationAmount,
+          negotiationDate,
+          negotiationType,
+          daysSinceNegotiation,
+          // All 17 risk factors
+          fatality,
+          surgery,
+          medsVsLimits,
+          lifeCarePlanner,
+          fractures,
+          hospitalization,
+          locTBI,
+          reAggravation,
+          mriCtConfirmed,
+          pedMotoBike,
+          surgeryRec,
+          injections,
+          emsImpact,
+          lacerations,
+          painLevel5Plus,
+          pregnancy,
+          eggshell69Plus,
         });
       }
     }
@@ -305,6 +392,10 @@ export function useAtRiskClaims() {
     const moderate = atRiskClaims.filter(c => c.riskLevel === 'MODERATE');
 
     const totalExposure = atRiskClaims.reduce((sum, c) => sum + c.reserves, 0);
+    const criticalReserves = critical.reduce((sum, c) => sum + c.reserves, 0);
+    const highReserves = high.reduce((sum, c) => sum + c.reserves, 0);
+    const moderateReserves = moderate.reduce((sum, c) => sum + c.reserves, 0);
+    
     const potentialOverLimit = atRiskClaims
       .filter(c => c.reserves > c.policyLimit)
       .reduce((sum, c) => sum + (c.reserves - c.policyLimit), 0);
@@ -339,8 +430,11 @@ export function useAtRiskClaims() {
     return {
       totalAtRisk: atRiskClaims.length,
       criticalCount: critical.length,
+      criticalReserves,
       highCount: high.length,
+      highReserves,
       moderateCount: moderate.length,
+      moderateReserves,
       totalExposure,
       potentialOverLimit,
       byState: byStateArray,

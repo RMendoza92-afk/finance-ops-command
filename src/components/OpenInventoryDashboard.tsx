@@ -6141,14 +6141,14 @@ TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.to
                       ['AT-RISK CLAIMS ANALYSIS'],
                       [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
                       [],
-                      ['SUMMARY'],
-                      ['Metric', 'Value'],
-                      ['Total At-Risk Claims', atRiskSummary.totalAtRisk],
-                      ['Critical', atRiskSummary.criticalCount],
-                      ['High', atRiskSummary.highCount],
-                      ['Moderate', atRiskSummary.moderateCount],
-                      ['Total Exposure', `$${atRiskSummary.totalExposure.toLocaleString()}`],
-                      ['Potential Over-Limit', `$${atRiskSummary.potentialOverLimit.toLocaleString()}`],
+                      ['SUMMARY BY TIER'],
+                      ['Tier', 'Count', 'Reserves'],
+                      ['Critical (80+ pts)', atRiskSummary.criticalCount, `$${atRiskSummary.criticalReserves.toLocaleString()}`],
+                      ['High (50-79 pts)', atRiskSummary.highCount, `$${atRiskSummary.highReserves.toLocaleString()}`],
+                      ['Moderate (40-49 pts)', atRiskSummary.moderateCount, `$${atRiskSummary.moderateReserves.toLocaleString()}`],
+                      ['TOTAL', atRiskSummary.totalAtRisk, `$${atRiskSummary.totalExposure.toLocaleString()}`],
+                      [],
+                      ['Potential Over-Limit', '', `$${atRiskSummary.potentialOverLimit.toLocaleString()}`],
                       [],
                       ['BY STATE'],
                       ['State', 'Count', 'Reserves', 'Avg Risk Score'],
@@ -6161,23 +6161,46 @@ TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.to
                     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
                     XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
                     
-                    // Sheet 2: All At-Risk Claims
+                    // Sheet 2: All At-Risk Claims with Universal Columns
                     const claimsData = atRiskClaims.map(c => ({
                       'Claim #': c.claimNumber,
                       'Claimant': c.claimant,
-                      'State': c.state,
-                      'Risk Level': c.riskLevel,
-                      'Risk Score': c.riskScore,
-                      'Reserves': c.reserves,
-                      'Policy Limit': c.policyLimit,
-                      'Reserve/Limit %': `${(c.reserveToLimitRatio * 100).toFixed(0)}%`,
-                      'Age': c.age,
-                      'In Litigation': c.inLitigation ? 'Yes' : 'No',
-                      'CP1 Flag': c.cp1Flag ? 'Yes' : 'No',
-                      'Trigger Factors': c.triggerFactors.join('; '),
-                      'Pattern Matches': c.patternMatches.join('; '),
-                      'Team': c.teamGroup,
                       'Adjuster': c.adjuster,
+                      'Impact Severity': c.impactSeverity,
+                      'Impact Score': c.impactScore,
+                      'Severity Tier': c.severityTier,
+                      'Flag Count': c.flagCount,
+                      'Coverage': c.coverage,
+                      'BI Phase': c.biPhase,
+                      'Days Open': c.ageDays,
+                      'Age Bucket': c.age,
+                      'Type Group': c.typeGroup,
+                      'Team': c.teamGroup,
+                      'Total Paid': c.totalPaid,
+                      'Open Reserves': c.reserves,
+                      'BI Status': c.biStatus,
+                      'Negotiation Amount': c.negotiationAmount,
+                      'Negotiation Date': c.negotiationDate,
+                      'Negotiation Type': c.negotiationType,
+                      'Days Since Negotiation': c.daysSinceNegotiation ?? '',
+                      // All 17 risk factors
+                      'Fatality (100)': c.fatality ? 'Yes' : '',
+                      'Surgery (100)': c.surgery ? 'Yes' : '',
+                      'Meds vs Limits (100)': c.medsVsLimits ? 'Yes' : '',
+                      'Life Care (100)': c.lifeCarePlanner ? 'Yes' : '',
+                      'Fractures (80)': c.fractures ? 'Yes' : '',
+                      'Hospital (80)': c.hospitalization ? 'Yes' : '',
+                      'LOC/TBI (80)': c.locTBI ? 'Yes' : '',
+                      'Re-aggravation (70)': c.reAggravation ? 'Yes' : '',
+                      'MRI/CT Confirmed (70)': c.mriCtConfirmed ? 'Yes' : '',
+                      'Ped/Moto/Bike (70)': c.pedMotoBike ? 'Yes' : '',
+                      'Surg Rec (70)': c.surgeryRec ? 'Yes' : '',
+                      'Injections (60)': c.injections ? 'Yes' : '',
+                      'EMS/Impact (50)': c.emsImpact ? 'Yes' : '',
+                      'Lacerations (50)': c.lacerations ? 'Yes' : '',
+                      'Pain 5+ (50)': c.painLevel5Plus ? 'Yes' : '',
+                      'Pregnancy (50)': c.pregnancy ? 'Yes' : '',
+                      'Eggshell 69+ (50)': c.eggshell69Plus ? 'Yes' : '',
                     }));
                     const claimsSheet = XLSX.utils.json_to_sheet(claimsData);
                     XLSX.utils.book_append_sheet(wb, claimsSheet, 'All At-Risk Claims');
@@ -6237,20 +6260,24 @@ TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.to
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/30">
-                    <p className="text-xs text-muted-foreground uppercase">Critical</p>
+                    <p className="text-xs text-muted-foreground uppercase">Critical (80+ pts)</p>
                     <p className="text-2xl font-bold text-destructive">{formatNumber(atRiskSummary.criticalCount)}</p>
+                    <p className="text-xs text-destructive/80">{formatCurrency(atRiskSummary.criticalReserves)}</p>
                   </div>
                   <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/30">
-                    <p className="text-xs text-muted-foreground uppercase">High</p>
+                    <p className="text-xs text-muted-foreground uppercase">High (50-79 pts)</p>
                     <p className="text-2xl font-bold text-orange-500">{formatNumber(atRiskSummary.highCount)}</p>
+                    <p className="text-xs text-orange-500/80">{formatCurrency(atRiskSummary.highReserves)}</p>
                   </div>
                   <div className="bg-warning/10 rounded-lg p-3 border border-warning/30">
-                    <p className="text-xs text-muted-foreground uppercase">Moderate</p>
+                    <p className="text-xs text-muted-foreground uppercase">Moderate (40-49 pts)</p>
                     <p className="text-2xl font-bold text-warning">{formatNumber(atRiskSummary.moderateCount)}</p>
+                    <p className="text-xs text-warning/80">{formatCurrency(atRiskSummary.moderateReserves)}</p>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-3 border border-border">
                     <p className="text-xs text-muted-foreground uppercase">Total Exposure</p>
                     <p className="text-xl font-bold text-foreground">{formatCurrency(atRiskSummary.totalExposure)}</p>
+                    <p className="text-xs text-muted-foreground">{formatNumber(atRiskSummary.totalAtRisk)} claims</p>
                   </div>
                 </div>
 
