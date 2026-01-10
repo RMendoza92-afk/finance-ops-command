@@ -657,6 +657,21 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     const injurySeverity = (row['Injury Severity'] || '').toString().toLowerCase();
     const isPregnancy = injurySeverity.includes('pregnan');
     
+    // Parse Claimant Age for Eggshell 69+ flag
+    const claimantAgeStr = row['Claimant Age']?.toString().trim() || '';
+    const claimantAge = parseInt(claimantAgeStr, 10) || 0;
+    const isEggshell69Plus = claimantAge >= 69;
+    
+    // Parse Pain Level for Pain 5+ flag
+    const endPainLevelStr = row['End Pain Level']?.toString().trim() || '';
+    const endPainLevel = parseInt(endPainLevelStr, 10) || 0;
+    const isPainLevel5Plus = endPainLevel >= 5;
+    
+    // Parse additional flags from CSV columns
+    const isConfirmedFractures = parseYesNo(row['Injury Incident - Confirmed Fractures']) || parseYesNo(row['Demands Adjuster - Confirmed Fractures']);
+    const isLacerations = parseYesNo(row['Injury Incident - Lacerations']);
+    const isPriorSurgery = parseYesNo(row['Injury Incident - Prior Surgery']) || parseYesNo(row['Evaluation - Prior Surgery']) || parseYesNo(row['Demands - Prior Surgery']);
+    
     const teamGroup = row['Team Group']?.trim() || '';
     const adjuster = row['Adjuster Assigned']?.trim() || '';
     const areaNumber = row['Area#']?.trim() || '';
@@ -711,11 +726,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       lifeCarePlanner: isLifeCarePlanner,
       injections: isInjections,
       emsHeavyImpact: isEmsHeavyImpact,
-      confirmedFractures: false, // Will parse from CSV if available
-      lacerations: false,
-      priorSurgery: false,
-      painLevel5Plus: false,
-      eggshell69Plus: false,
+      confirmedFractures: isConfirmedFractures,
+      lacerations: isLacerations,
+      priorSurgery: isPriorSurgery,
+      painLevel5Plus: isPainLevel5Plus,
+      eggshell69Plus: isEggshell69Plus,
     });
 
     // Track CP1 for ALL coverages (for grand total)
@@ -785,11 +800,11 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
       lifeCarePlanner: isLifeCarePlanner,
       injections: isInjections,
       emsHeavyImpact: isEmsHeavyImpact,
-      confirmedFractures: false, // Will parse from CSV if available
-      lacerations: false,
-      priorSurgery: false,
-      painLevel5Plus: false,
-      eggshell69Plus: false,
+      confirmedFractures: isConfirmedFractures,
+      lacerations: isLacerations,
+      priorSurgery: isPriorSurgery,
+      painLevel5Plus: isPainLevel5Plus,
+      eggshell69Plus: isEggshell69Plus,
     });
 
     // Update grand totals (claim counts)
