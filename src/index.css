@@ -3,130 +3,15 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   OBSIDIAN EXECUTIVE - Ultra Premium Dark Interface
-   Refined sophistication with warm champagne accents
+   EXECUTIVE - Bloomberg Terminal Style Interface
+   Professional financial terminal aesthetic with amber accents
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* Default: Obsidian Executive */
+/* Default: Executive (Bloomberg Style) */
 :root {
-  /* Core - Deep obsidian black */
-  --background: 240 10% 4%;
-  --foreground: 40 15% 95%;
-  --card: 240 8% 7%;
-  --card-foreground: 40 15% 95%;
-  --popover: 240 10% 6%;
-  --popover-foreground: 40 15% 95%;
-  
-  /* Primary: Champagne Gold */
-  --primary: 38 65% 55%;
-  --primary-foreground: 240 10% 4%;
-  
-  /* Secondary: Warm Gray */
-  --secondary: 240 5% 14%;
-  --secondary-foreground: 40 10% 85%;
-  
-  /* Muted: Soft charcoal */
-  --muted: 240 6% 11%;
-  --muted-foreground: 40 5% 50%;
-  
-  /* Accent: Rose Gold */
-  --accent: 15 45% 55%;
-  --accent-foreground: 240 10% 4%;
-  
-  /* Status colors - muted elegance */
-  --destructive: 0 55% 50%;
-  --destructive-foreground: 0 0% 100%;
-  --success: 155 45% 42%;
-  --success-foreground: 0 0% 100%;
-  --warning: 38 65% 55%;
-  --warning-foreground: 240 10% 4%;
-  --info: 200 50% 50%;
-  --info-foreground: 0 0% 100%;
-  
-  /* Borders - subtle warmth */
-  --border: 240 5% 16%;
-  --input: 240 8% 10%;
-  --ring: 38 65% 55%;
-  --radius: 0.5rem;
-  
-  /* Sidebar */
-  --sidebar-background: 240 10% 5%;
-  --sidebar-foreground: 40 15% 90%;
-  --sidebar-primary: 38 65% 55%;
-  --sidebar-primary-foreground: 240 10% 4%;
-  --sidebar-accent: 15 45% 55%;
-  --sidebar-accent-foreground: 240 10% 4%;
-  --sidebar-border: 240 5% 14%;
-  --sidebar-ring: 38 65% 55%;
-  
-  /* Table */
-  --table-header: 240 8% 8%;
-  --table-row-hover: 240 6% 10%;
-  
-  /* Executive accents */
-  --exec-gold: 38 65% 55%;
-  --exec-silver: 220 10% 70%;
-  --exec-bronze: 25 50% 45%;
-}
-
-/* AS/400 Green Screen Terminal Mode */
-.dark {
-  --background: 0 0% 0%;
-  --foreground: 120 100% 50%;
-  --card: 0 0% 0%;
-  --card-foreground: 120 100% 50%;
-  --popover: 0 0% 0%;
-  --popover-foreground: 120 100% 50%;
-  --primary: 120 100% 50%;
-  --primary-foreground: 0 0% 0%;
-  --secondary: 120 100% 8%;
-  --secondary-foreground: 120 100% 50%;
-  --muted: 120 100% 5%;
-  --muted-foreground: 120 100% 35%;
-  --accent: 120 100% 50%;
-  --accent-foreground: 0 0% 0%;
-  --destructive: 0 100% 50%;
-  --destructive-foreground: 0 0% 0%;
-  --success: 120 100% 50%;
-  --success-foreground: 0 0% 0%;
-  --warning: 60 100% 50%;
-  --warning-foreground: 0 0% 0%;
-  --info: 120 100% 50%;
-  --info-foreground: 0 0% 0%;
-  --border: 120 100% 25%;
-  --input: 120 100% 8%;
-  --ring: 120 100% 50%;
-  --radius: 0rem;
-  --sidebar-background: 0 0% 0%;
-  --sidebar-foreground: 120 100% 50%;
-  --sidebar-primary: 120 100% 50%;
-  --sidebar-primary-foreground: 0 0% 0%;
-  --sidebar-accent: 120 100% 8%;
-  --sidebar-accent-foreground: 120 100% 50%;
-  --sidebar-border: 120 100% 25%;
-  --sidebar-ring: 120 100% 50%;
-  --table-header: 120 100% 5%;
-  --terminal-mode: 1;
-  cursor: crosshair;
-}
-
-.dark * {
-  cursor: crosshair;
-}
-
-.dark button,
-.dark a,
-.dark [role="button"],
-.dark input,
-.dark select,
-.dark textarea {
-  cursor: crosshair;
-}
-
-/* Bloomberg Terminal Theme */
-.bloomberg {
+  /* Core - Pure black background */
   --background: 0 0% 0%;
   --foreground: 40 10% 90%;
   --card: 0 0% 4%;
@@ -184,20 +69,72 @@
   --exec-gold: 38 100% 50%;
   --exec-silver: 0 0% 70%;
   --exec-bronze: 25 60% 45%;
-}
-
-/* Bloomberg specific font styling */
-.bloomberg body,
-.bloomberg {
+  
+  /* Bloomberg monospace font */
   font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
 }
 
-.bloomberg h1, 
-.bloomberg h2, 
-.bloomberg h3, 
-.bloomberg h4, 
-.bloomberg h5, 
-.bloomberg h6 {
+/* AS/400 Green Screen Terminal Mode */
+.dark {
+  --background: 0 0% 0%;
+  --foreground: 120 100% 50%;
+  --card: 0 0% 0%;
+  --card-foreground: 120 100% 50%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 120 100% 50%;
+  --primary: 120 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 120 100% 8%;
+  --secondary-foreground: 120 100% 50%;
+  --muted: 120 100% 5%;
+  --muted-foreground: 120 100% 35%;
+  --accent: 120 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 0%;
+  --success: 120 100% 50%;
+  --success-foreground: 0 0% 0%;
+  --warning: 60 100% 50%;
+  --warning-foreground: 0 0% 0%;
+  --info: 120 100% 50%;
+  --info-foreground: 0 0% 0%;
+  --border: 120 100% 25%;
+  --input: 120 100% 8%;
+  --ring: 120 100% 50%;
+  --radius: 0rem;
+  --sidebar-background: 0 0% 0%;
+  --sidebar-foreground: 120 100% 50%;
+  --sidebar-primary: 120 100% 50%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 120 100% 8%;
+  --sidebar-accent-foreground: 120 100% 50%;
+  --sidebar-border: 120 100% 25%;
+  --sidebar-ring: 120 100% 50%;
+  --table-header: 120 100% 5%;
+  --terminal-mode: 1;
+  cursor: crosshair;
+}
+
+.dark * {
+  cursor: crosshair;
+}
+
+.dark button,
+.dark a,
+.dark [role="button"],
+.dark input,
+.dark select,
+.dark textarea {
+  cursor: crosshair;
+}
+
+/* Heading styles for executive theme */
+h1, 
+h2, 
+h3, 
+h4, 
+h5, 
+h6 {
   font-family: 'JetBrains Mono', 'Consolas', monospace;
   font-weight: 700;
   letter-spacing: 0;
