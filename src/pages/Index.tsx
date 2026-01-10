@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { SalesTickerBanner } from "@/components/SalesTickerBanner";
 import { ClaimsPaymentTicker } from "@/components/ClaimsPaymentTicker";
+import { OrderBookDrilldown, OrderBookTrigger } from "@/components/OrderBookDrilldown";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 
 const Index = () => {
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [orderBookOpen, setOrderBookOpen] = useState(false);
   const { showTutorial, startTutorial, completeTutorial } = useTutorial();
   const [filters, setFilters] = useState<GlobalFilters>(() => {
     // Load pain level data from localStorage on init
@@ -258,6 +260,21 @@ const Index = () => {
       
       {/* Claims Payment Ticker */}
       <ClaimsPaymentTicker />
+      
+      {/* Order Book Trigger Bar */}
+      <div className="w-full bg-card/50 backdrop-blur-sm border-b border-border px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium">CASH FLOW</span>
+          <span className="text-border">│</span>
+        </div>
+        <OrderBookTrigger onClick={() => setOrderBookOpen(true)} />
+        <div className="text-xs text-muted-foreground">
+          Click to expand order book →
+        </div>
+      </div>
+      
+      {/* Order Book Drilldown */}
+      <OrderBookDrilldown open={orderBookOpen} onOpenChange={setOrderBookOpen} />
       
       <main className="px-3 sm:px-6 py-3 sm:py-6">
         {/* Global Filters - Mobile Collapsible */}
