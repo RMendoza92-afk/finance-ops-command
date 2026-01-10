@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { RBCUnlockDialog } from '@/components/RBCUnlockDialog';
 
 export interface PainLevelRow {
   oldStartPain: string;
@@ -57,11 +60,12 @@ export function GlobalFilterPanel({
   onFilterChange
 }: GlobalFilterPanelProps) {
   const [showRBCButton, setShowRBCButton] = useState(isRBCUnlocked());
+  const [unlockOpen, setUnlockOpen] = useState(false);
 
   // Secret keyboard shortcut: Ctrl+Shift+R to show RBC tab and navigate to it
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
         e.preventDefault();
         setShowRBCButton(true);
         onFilterChange('inventoryStatus', 'rbc');
@@ -80,7 +84,7 @@ export function GlobalFilterPanel({
 
   return (
     <div className="bg-card border border-border rounded-xl p-2 sm:p-4 mb-3 sm:mb-6">
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-2">
         {/* View Toggle - Mobile Responsive */}
         <div className="flex flex-wrap justify-center gap-1 sm:gap-0 sm:rounded-lg sm:overflow-hidden sm:border sm:border-border w-full sm:w-auto">
           <button
@@ -127,6 +131,28 @@ export function GlobalFilterPanel({
             </button>
           )}
         </div>
+
+        {!showRBCButton && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setUnlockOpen(true)}
+            aria-label="Unlock RBC tab"
+          >
+            <Lock className="h-4 w-4" />
+          </Button>
+        )}
+
+        <RBCUnlockDialog
+          open={unlockOpen}
+          onOpenChange={setUnlockOpen}
+          onUnlocked={() => {
+            setShowRBCButton(true);
+            onFilterChange('inventoryStatus', 'rbc');
+          }}
+        />
       </div>
     </div>
   );
