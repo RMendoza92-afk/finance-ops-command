@@ -98,24 +98,24 @@ export function ClaimsPaymentTicker() {
   };
 
   const TickerContent = () => (
-    <div className="flex items-center gap-6 px-4">
+    <div className="flex items-center gap-6 px-4 font-mono">
       {/* Period indicator */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">PERIOD</span>
-        <span className="font-bold text-foreground">{claimsPaymentData.period}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">PERIOD</span>
+        <span className="font-bold text-sm text-white">{claimsPaymentData.period}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Daily amounts with deltas */}
       {tickerItems.map((item, index) => (
         <div key={index} className="flex items-center gap-2 whitespace-nowrap">
-          <span className="text-muted-foreground text-xs font-medium tracking-wider">
+          <span className="text-amber-500/80 text-[10px] font-medium uppercase">
             {item.date}
           </span>
-          <div className={`flex items-center gap-1 font-bold ${getAmountColor(item)}`}>
+          <div className={`flex items-center gap-1 font-bold text-sm ${getAmountColor(item)}`}>
             <span>{formatCurrency(item.amount, true)}</span>
             {item.delta !== null && (
-              <span className={`text-[10px] font-medium ml-0.5 flex items-center ${getDeltaColor(item.delta)}`}>
+              <span className={`text-[10px] font-medium flex items-center ${getDeltaColor(item.delta)}`}>
                 {item.delta > 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : 
                  item.delta < 0 ? <ArrowDownRight className="h-2.5 w-2.5" /> : 
                  <Minus className="h-2.5 w-2.5" />}
@@ -124,20 +124,20 @@ export function ClaimsPaymentTicker() {
             )}
           </div>
           {index < tickerItems.length - 1 && (
-            <span className="text-border ml-4">│</span>
+            <span className="text-amber-500/30 ml-4">│</span>
           )}
         </div>
       ))}
       
       {/* Grand Total with variance */}
-      <span className="text-border">│</span>
+      <span className="text-amber-500/30">│</span>
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-amber-400 text-xs font-bold tracking-wider">TOTAL</span>
-        <div className="flex items-center gap-1 font-bold text-amber-400">
+        <span className="text-amber-400 text-[10px] font-bold uppercase">TOTAL</span>
+        <div className="flex items-center gap-1 font-bold text-sm text-amber-400">
           <span>{formatCurrency(claimsPaymentData.grandTotal, true)}</span>
-          <span className={`text-[10px] font-medium ml-1 flex items-center ${getDeltaColor(totalVariancePct)}`}>
-            {totalVariancePct > 0 ? <TrendingUp className="h-2.5 w-2.5 mr-0.5" /> : 
-             totalVariancePct < 0 ? <TrendingDown className="h-2.5 w-2.5 mr-0.5" /> : null}
+          <span className={`text-[10px] font-medium flex items-center ${getDeltaColor(totalVariancePct)}`}>
+            {totalVariancePct > 0 ? <TrendingUp className="h-2.5 w-2.5" /> : 
+             totalVariancePct < 0 ? <TrendingDown className="h-2.5 w-2.5" /> : null}
             {formatDelta(totalVariancePct)} WoW
           </span>
         </div>
@@ -148,24 +148,21 @@ export function ClaimsPaymentTicker() {
   return (
     <>
       <div 
-        className="w-full bg-card/80 backdrop-blur-sm border-y border-border overflow-hidden relative cursor-pointer group"
+        className="w-full bg-black border-b border-amber-500/20 overflow-hidden relative cursor-pointer group h-8"
         onClick={() => setIsExpanded(true)}
       >
-        {/* Badge - same width as SalesTickerBanner */}
-        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-destructive/90 px-4 py-1">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-red-300 animate-pulse" />
-            <span className="text-xs font-bold text-destructive-foreground tracking-widest">
-              CLAIMS PAY
-            </span>
-          </div>
+        {/* Bloomberg-style badge */}
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-red-600 px-3">
+          <span className="text-[10px] font-bold text-white tracking-wider font-mono">
+            CLAIMS
+          </span>
         </div>
         
-        {/* Gradient fade on left - matches SalesTickerBanner */}
-        <div className="absolute left-24 top-0 bottom-0 w-16 bg-gradient-to-r from-card/80 to-transparent z-[5]" />
+        {/* Gradient fade on left */}
+        <div className="absolute left-14 top-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent z-[5]" />
         
-        {/* Scrolling ticker - same class as SalesTickerBanner */}
-        <div className="py-2 pl-28 ticker-wrapper">
+        {/* Scrolling ticker */}
+        <div className="h-full flex items-center pl-16 ticker-wrapper">
           <div className="ticker-track">
             <TickerContent />
             <TickerContent />
@@ -173,8 +170,8 @@ export function ClaimsPaymentTicker() {
           </div>
         </div>
         
-        {/* Gradient fade on right - matches SalesTickerBanner */}
-        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/80 to-transparent z-[5]" />
+        {/* Gradient fade on right */}
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent z-[5]" />
       </div>
 
       {/* Expanded Detail Sheet */}
