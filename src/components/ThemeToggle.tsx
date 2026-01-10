@@ -1,13 +1,12 @@
-import { Monitor, Terminal, TrendingUp } from "lucide-react";
+import { Monitor, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
-type Theme = 'executive' | 'terminal' | 'bloomberg';
+type Theme = 'executive' | 'terminal';
 
 const themes: { id: Theme; label: string; icon: typeof Monitor }[] = [
   { id: 'executive', label: 'Executive', icon: Monitor },
   { id: 'terminal', label: 'AS/400', icon: Terminal },
-  { id: 'bloomberg', label: 'Bloomberg', icon: TrendingUp },
 ];
 
 export function ThemeToggle() {
@@ -23,16 +22,14 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const root = document.documentElement;
-    // Remove all theme classes
-    root.classList.remove('dark', 'bloomberg');
+    // Remove terminal theme class
+    root.classList.remove('dark');
     
-    // Apply the selected theme class
+    // Apply the terminal theme class if selected
     if (theme === 'terminal') {
       root.classList.add('dark');
-    } else if (theme === 'bloomberg') {
-      root.classList.add('bloomberg');
     }
-    // 'executive' is the default :root styles, no class needed
+    // 'executive' is the default :root styles (Bloomberg), no class needed
     
     localStorage.setItem('theme', theme);
   }, [theme]);
