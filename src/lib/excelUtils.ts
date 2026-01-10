@@ -68,27 +68,35 @@ export function formatNumberDisplay(value: number | string | null | undefined): 
 
 /**
  * Check if a header indicates a currency column
+ * Note: "Total" alone is NOT a currency header - it's used for counts
+ * Currency headers need specific $ indicators like "reserve", "amount", "paid", etc.
  */
 export function isCurrencyHeader(header: string): boolean {
   const h = header.toLowerCase();
-  return (
-    h.includes('reserve') ||
-    h.includes('amount') ||
-    h.includes('paid') ||
-    h.includes('premium') ||
-    h.includes('exposure') ||
-    h.includes('eval') ||
-    h.includes('spend') ||
-    h.includes('budget') ||
-    h.includes('cost') ||
-    h.includes('value') ||
-    h.includes('indemnit') ||
-    h.includes('settlement') ||
-    h.includes('offer') ||
-    h.includes('net ') ||
-    h.includes('gross') ||
-    h.includes('total') && !h.includes('count') && !h.includes('claims')
-  );
+  
+  // Explicit currency indicators
+  const currencyKeywords = [
+    'reserve', 'amount', 'paid', 'premium', 'exposure', 'eval',
+    'spend', 'budget', 'cost', 'indemnit', 'settlement', 'offer',
+    'net exposure', 'gross', 'dollar', 'price', 'fee', 'expense'
+  ];
+  
+  // Check for currency keywords
+  if (currencyKeywords.some(kw => h.includes(kw))) {
+    return true;
+  }
+  
+  // "Total" followed by a currency word is currency, otherwise it's a count
+  if (h.includes('total')) {
+    return currencyKeywords.some(kw => h.includes(kw));
+  }
+  
+  // "Value" is currency unless it's "Value Count" or similar
+  if (h.includes('value') && !h.includes('count')) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
