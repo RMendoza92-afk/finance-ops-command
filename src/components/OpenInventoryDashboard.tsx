@@ -788,22 +788,22 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const claims = decisionsData.claims;
       const byPainLevel = decisionsData.byPainLevel;
       
-      // Summary sheet
+      // Summary sheet - use raw numbers, not formatted strings, so Excel SUM works
       const summaryData = [
         ['Decisions Pending Report'],
         ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
         [''],
         ['Summary'],
         ['Total Claims:', claims.length],
-        ['Total Reserves:', `$${decisionsData.totalReserves.toLocaleString()}`],
+        ['Total Reserves:', decisionsData.totalReserves],
         [''],
         ['By Pain Level Category'],
         ['Category', 'Count', 'Total Reserves', 'Avg Reserve'],
         ...Object.entries(byPainLevel).map(([category, data]) => [
           category,
           data.count,
-          `$${data.reserves.toLocaleString()}`,
-          `$${Math.round(data.reserves / data.count).toLocaleString()}`
+          data.reserves,
+          Math.round(data.reserves / data.count)
         ])
       ];
       
@@ -1505,26 +1505,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         [],
         ['TRIGGER FLAGS BREAKDOWN'],
         ['Flag Type', 'Count', '% of Claims', 'Tier'],
-        // Tier 1 - Critical (100 pts)
-        ['Fatality', fs?.fatalityCount || 0, `${((fs?.fatalityCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
-        ['Surgery', fs?.surgeryCount || 0, `${((fs?.surgeryCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
-        ['Meds vs Limits', fs?.medsVsLimitsCount || 0, `${((fs?.medsVsLimitsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
-        ['Life Care Planner', fs?.lifeCarePlannerCount || 0, `${((fs?.lifeCarePlannerCount || 0) / totalClaims * 100).toFixed(1)}%`, 'CRITICAL'],
+        // Tier 1 - Critical (100 pts) - Use raw numbers for Excel SUM
+        ['Fatality', fs?.fatalityCount || 0, (fs?.fatalityCount || 0) / totalClaims * 100, 'CRITICAL'],
+        ['Surgery', fs?.surgeryCount || 0, (fs?.surgeryCount || 0) / totalClaims * 100, 'CRITICAL'],
+        ['Meds vs Limits', fs?.medsVsLimitsCount || 0, (fs?.medsVsLimitsCount || 0) / totalClaims * 100, 'CRITICAL'],
+        ['Life Care Planner', fs?.lifeCarePlannerCount || 0, (fs?.lifeCarePlannerCount || 0) / totalClaims * 100, 'CRITICAL'],
         // Tier 2 - High (80-70 pts)
-        ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, `${((fs?.confirmedFracturesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Hospitalization', fs?.hospitalizationCount || 0, `${((fs?.hospitalizationCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, `${((fs?.lossOfConsciousnessCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Aggravating Factors', fs?.aggFactorsCount || 0, `${((fs?.aggFactorsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, `${((fs?.objectiveInjuriesCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, `${((fs?.pedestrianPregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
-        ['Surgical Recommendation', fs?.priorSurgeryCount || 0, `${((fs?.priorSurgeryCount || 0) / totalClaims * 100).toFixed(1)}%`, 'HIGH'],
+        ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, (fs?.confirmedFracturesCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Hospitalization', fs?.hospitalizationCount || 0, (fs?.hospitalizationCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, (fs?.lossOfConsciousnessCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Aggravating Factors', fs?.aggFactorsCount || 0, (fs?.aggFactorsCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, (fs?.objectiveInjuriesCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, (fs?.pedestrianPregnancyCount || 0) / totalClaims * 100, 'HIGH'],
+        ['Surgical Recommendation', fs?.priorSurgeryCount || 0, (fs?.priorSurgeryCount || 0) / totalClaims * 100, 'HIGH'],
         // Tier 3 - Moderate (60-50 pts)
-        ['Injections (ESI, Facet)', fs?.injectionsCount || 0, `${((fs?.injectionsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
-        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, `${((fs?.emsHeavyImpactCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
-        ['Lacerations/Scarring', fs?.lacerationsCount || 0, `${((fs?.lacerationsCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
-        ['Pain Level 5+', fs?.painLevel5PlusCount || 0, `${((fs?.painLevel5PlusCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
-        ['Pregnancy', fs?.pregnancyCount || 0, `${((fs?.pregnancyCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
-        ['Eggshell 69+', fs?.eggshell69PlusCount || 0, `${((fs?.eggshell69PlusCount || 0) / totalClaims * 100).toFixed(1)}%`, 'MODERATE'],
+        ['Injections (ESI, Facet)', fs?.injectionsCount || 0, (fs?.injectionsCount || 0) / totalClaims * 100, 'MODERATE'],
+        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, (fs?.emsHeavyImpactCount || 0) / totalClaims * 100, 'MODERATE'],
+        ['Lacerations/Scarring', fs?.lacerationsCount || 0, (fs?.lacerationsCount || 0) / totalClaims * 100, 'MODERATE'],
+        ['Pain Level 5+', fs?.painLevel5PlusCount || 0, (fs?.painLevel5PlusCount || 0) / totalClaims * 100, 'MODERATE'],
+        ['Pregnancy', fs?.pregnancyCount || 0, (fs?.pregnancyCount || 0) / totalClaims * 100, 'MODERATE'],
+        ['Eggshell 69+', fs?.eggshell69PlusCount || 0, (fs?.eggshell69PlusCount || 0) / totalClaims * 100, 'MODERATE'],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(execSummary);
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
@@ -1539,13 +1539,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           [`Prior Snapshot: ${wow.priorSnapshotDate || 'N/A'}`],
           [],
           ['METRIC', 'PRIOR', 'CURRENT', 'DELTA', '% CHANGE', 'TREND'],
-          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, `${wow.totalClaims.pctChange.toFixed(1)}%`, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, `${wow.age365Plus.pctChange.toFixed(1)}%`, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, `${wow.age181To365.pctChange.toFixed(1)}%`, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, `${wow.highRiskClaims.pctChange.toFixed(1)}%`, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, `${wow.totalFlags.pctChange.toFixed(1)}%`, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, `${wow.totalReserves.pctChange.toFixed(1)}%`, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['CP1 Rate (%)', `${wow.cp1Rate.prior.toFixed(1)}%`, `${wow.cp1Rate.current.toFixed(1)}%`, `${wow.cp1Rate.delta.toFixed(1)}%`, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
         ];
         const wowSheet = XLSX.utils.aoa_to_sheet(wowData);
         wowSheet['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
@@ -1563,14 +1563,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           ['Metric', 'Value'],
           ['Claims with Negotiation', nego.totalWithNegotiation],
           ['Claims without Negotiation', nego.totalWithoutNegotiation],
-          ['Total Negotiation Amount', `$${nego.totalNegotiationAmount.toLocaleString()}`],
-          ['Average Negotiation Amount', `$${nego.avgNegotiationAmount.toLocaleString()}`],
+          ['Total Negotiation Amount', nego.totalNegotiationAmount],
+          ['Average Negotiation Amount', nego.avgNegotiationAmount],
           ['Stale Negotiations (60+ Days)', nego.staleNegotiations60Plus],
           ['Stale Negotiations (90+ Days)', nego.staleNegotiations90Plus],
           [],
           ['NEGOTIATION BY TYPE'],
           ['Negotiation Type', 'Count', 'Total Amount'],
-          ...nego.byType.map(t => [t.type, t.count, `$${t.totalAmount.toLocaleString()}`]),
+          ...nego.byType.map(t => [t.type, t.count, t.totalAmount]),
         ];
         const negoSummarySheet = XLSX.utils.aoa_to_sheet(negoSummaryData);
         negoSummarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 18 }];
@@ -1687,7 +1687,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         pregnancy: 'Pregnancy', painLevel5Plus: 'Pain 5+', eggshell69Plus: 'Eggshell 69+',
       };
       
-      const multiFlagData = [
+      const multiFlagData: (string | number)[][] = [
         ['MULTI-FLAG RISK CONCENTRATION'],
         [],
         ['Flag Count', 'Claims', '% of Total', 'Risk Level', 'Top Flags'],
@@ -1697,7 +1697,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         .filter(g => g.flagCount > 0)
         .sort((a, b) => b.flagCount - a.flagCount)
         .forEach(group => {
-          const pct = ((group.claimCount / totalClaims) * 100).toFixed(1);
+          const pct = (group.claimCount / totalClaims) * 100;
           const risk = group.flagCount >= 4 ? 'CRITICAL' : group.flagCount === 3 ? 'HIGH' : group.flagCount === 2 ? 'ELEVATED' : 'STANDARD';
           
           const flagCounts: Record<string, number> = {};
@@ -1726,7 +1726,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             .map(([k]) => flagLabels[k])
             .join(', ');
           
-          multiFlagData.push([`${group.flagCount} Flags`, group.claimCount.toString(), `${pct}%`, risk, topFlags]);
+          // Use raw numbers so Excel SUM works
+          multiFlagData.push([`${group.flagCount} Flags`, group.claimCount, pct, risk, topFlags]);
         });
 
       // Add granular risk factors breakdown to Multi-Flag sheet
@@ -1766,9 +1767,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         
         const allFlags = [...tier1Flags, ...tier2Flags, ...tier3Flags];
         allFlags.forEach(f => {
-          const pct = totalClaims > 0 ? ((f.count / totalClaims) * 100).toFixed(1) : '0.0';
+          const pct = totalClaims > 0 ? (f.count / totalClaims) * 100 : 0;
           const reserves = f.claims.reduce((s, c) => s + c.openReserves, 0);
-          multiFlagData.push([f.tier, f.label, f.count.toString(), `${pct}%`, `$${reserves.toLocaleString()}`]);
+          // Use raw numbers so Excel SUM works - format in Excel if needed
+          multiFlagData.push([f.tier, f.label, f.count, pct, reserves]);
         });
       }
 
@@ -3777,43 +3779,43 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 import('xlsx').then((XLSX) => {
                   const wb = XLSX.utils.book_new();
                   
-                  // Sheet 1: Executive Summary
-                  const summaryRows = [
+                  // Sheet 1: Executive Summary - Use raw numbers for Excel SUM compatibility
+                  const summaryRows: (string | number)[][] = [
                     ['OPEN INVENTORY MASTER REPORT'],
                     [`As of ${data?.dataDate || timestamp}`],
                     [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
                     [],
                     ['EXECUTIVE SUMMARY'],
                     ['Metric', 'Current', 'Prior Week', 'Delta', 'Trend'],
-                    ['Total Open Claims', formatNumber(data?.totals.grandTotal || 0), formatNumber(data?.delta?.previousTotal || 0), data?.delta ? `${data.delta.change >= 0 ? '+' : ''}${formatNumber(data.delta.change)}` : '-', data?.delta?.change && data.delta.change > 0 ? 'UP' : 'DOWN'],
-                    ['Open Reserves', formatCurrencyFullValue(FINANCIAL_DATA.totals.totalOpenReserves), data?.delta ? formatCurrencyFullValue(FINANCIAL_DATA.totals.totalOpenReserves - data.delta.reservesChange) : '-', data?.delta ? `${data.delta.reservesChange >= 0 ? '+' : ''}${formatCurrencyFullValue(data.delta.reservesChange)}` : '-', data?.delta?.reservesChange && data.delta.reservesChange > 0 ? 'UP' : 'DOWN'],
-                    ['Low Evaluation', formatCurrencyFullValue(FINANCIAL_DATA.totals.totalLowEval), '-', '-', '-'],
-                    ['High Evaluation', formatCurrencyFullValue(FINANCIAL_DATA.totals.totalHighEval), '-', '-', '-'],
-                    ['CP1 Rate', `${CP1_RATE_OF_OPEN_INVENTORY}%`, '33.3%', '+0.2%', 'IMPROVING'],
-                    ['At-Risk Claims', formatNumber(atRiskSummary.totalAtRisk), '-', '-', '-'],
-                    ['Multi-Pack Groups', formatNumber(data?.multiPackData?.biMultiPack?.totalGroups || 0), '-', '-', '-'],
+                    ['Total Open Claims', data?.totals.grandTotal || 0, data?.delta?.previousTotal || 0, data?.delta?.change || 0, data?.delta?.change && data.delta.change > 0 ? 'UP' : 'DOWN'],
+                    ['Open Reserves', FINANCIAL_DATA.totals.totalOpenReserves, data?.delta ? FINANCIAL_DATA.totals.totalOpenReserves - data.delta.reservesChange : 0, data?.delta?.reservesChange || 0, data?.delta?.reservesChange && data.delta.reservesChange > 0 ? 'UP' : 'DOWN'],
+                    ['Low Evaluation', FINANCIAL_DATA.totals.totalLowEval, '-', '-', '-'],
+                    ['High Evaluation', FINANCIAL_DATA.totals.totalHighEval, '-', '-', '-'],
+                    ['CP1 Rate (%)', parseFloat(CP1_RATE_OF_OPEN_INVENTORY), 33.3, 0.2, 'IMPROVING'],
+                    ['At-Risk Claims', atRiskSummary.totalAtRisk, '-', '-', '-'],
+                    ['Multi-Pack Groups', data?.multiPackData?.biMultiPack?.totalGroups || 0, '-', '-', '-'],
                     [],
                     ['LITIGATION SPEND (Jan 2026)'],
-                    ['Total Spend', formatCurrencyFullValue(totalLitigationSpendJan2026)],
-                    ['Indemnities', formatCurrencyFullValue(totalIndemnityJan2026)],
-                    ['Expenses', formatCurrencyFullValue(totalExpenseJan2026)],
+                    ['Total Spend', totalLitigationSpendJan2026],
+                    ['Indemnities', totalIndemnityJan2026],
+                    ['Expenses', totalExpenseJan2026],
                     [],
                     ['AT-RISK CLAIMS SUMMARY'],
                     ['Tier', 'Count', 'Reserves'],
-                    ['Critical (80+ pts)', atRiskSummary.criticalCount, formatCurrencyFullValue(atRiskSummary.criticalReserves)],
-                    ['High (50-79 pts)', atRiskSummary.highCount, formatCurrencyFullValue(atRiskSummary.highReserves)],
-                    ['Moderate (40-49 pts)', atRiskSummary.moderateCount, formatCurrencyFullValue(atRiskSummary.moderateReserves)],
-                    ['TOTAL', atRiskSummary.totalAtRisk, formatCurrencyFullValue(atRiskSummary.totalExposure)],
+                    ['Critical (80+ pts)', atRiskSummary.criticalCount, atRiskSummary.criticalReserves],
+                    ['High (50-79 pts)', atRiskSummary.highCount, atRiskSummary.highReserves],
+                    ['Moderate (40-49 pts)', atRiskSummary.moderateCount, atRiskSummary.moderateReserves],
+                    ['TOTAL', atRiskSummary.totalAtRisk, atRiskSummary.totalExposure],
                     [],
                     ['CP1 ANALYSIS'],
-                    ['Total CP1 Claims', formatNumber(CP1_DATA.totals.yes)],
-                    ['CP1 Rate', CP1_DATA.cp1Rate + '%'],
-                    ['In Progress', CP1_DATA.byStatus?.inProgressPct + '%'],
+                    ['Total CP1 Claims', CP1_DATA.totals.yes],
+                    ['CP1 Rate (%)', parseFloat(CP1_DATA.cp1Rate)],
+                    ['In Progress (%)', parseFloat(CP1_DATA.byStatus?.inProgressPct || '0')],
                     [],
                     ['MULTI-PACK BI'],
-                    ['Total Groups', formatNumber(data?.multiPackData?.biMultiPack?.totalGroups || 0)],
-                    ['Total Claims', formatNumber(data?.multiPackData?.biMultiPack?.totalClaims || 0)],
-                    ['Total Reserves', formatCurrencyFullValue(data?.multiPackData?.biMultiPack?.totalReserves || 0)],
+                    ['Total Groups', data?.multiPackData?.biMultiPack?.totalGroups || 0],
+                    ['Total Claims', data?.multiPackData?.biMultiPack?.totalClaims || 0],
+                    ['Total Reserves', data?.multiPackData?.biMultiPack?.totalReserves || 0],
                   ];
                   const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
                   XLSX.utils.book_append_sheet(wb, summarySheet, 'Executive Summary');
