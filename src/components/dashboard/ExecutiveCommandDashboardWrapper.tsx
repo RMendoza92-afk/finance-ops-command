@@ -40,6 +40,7 @@ import {
   exportBudgetDrilldown,
 } from "@/lib/bloombergExport";
 import { generateClaimsInventoryReport } from "@/lib/executiveVisualReport";
+import { generateStyledExcelFromLegacy } from "@/lib/boardroomExcelExport";
 import {
   LineChart, Line, BarChart, Bar, ComposedChart, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -147,10 +148,10 @@ export function ExecutiveCommandDashboardWrapper() {
     }
   };
 
-  const handleOverLimitExportExcel = () => {
+  const handleOverLimitExportExcel = async () => {
     try {
-      generateExcel(overLimitExportData);
-      toast.success('Over-Limit Excel exported');
+      await generateStyledExcelFromLegacy(overLimitExportData);
+      toast.success('Boardroom-styled Over-Limit Excel exported');
     } catch {
       toast.error('Failed to export Over-Limit Excel');
     }

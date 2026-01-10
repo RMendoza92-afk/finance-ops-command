@@ -44,6 +44,17 @@ export interface BoardroomExportData {
   filename?: string;
 }
 
+// Legacy format support for existing useExportData consumers
+export interface LegacyExportData {
+  title: string;
+  subtitle?: string;
+  timestamp?: string;
+  summary?: Record<string, string | number>;
+  columns: string[];
+  rows: (string | number)[][];
+  rawClaimData?: { sheetName?: string; columns: string[]; rows: (string | number)[][] }[];
+}
+
 /**
  * Format a number as currency for Excel display
  */
@@ -412,6 +423,241 @@ export async function generateCP1FlagsExcel(data: {
     asOfDate: format(new Date(), 'MMMM d, yyyy'),
     sections,
     filename: `CP1_Trigger_Flags_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Convert legacy export format to boardroom styled Excel
+ * Drop-in replacement for generateExcel from useExportData
+ */
+export async function generateStyledExcelFromLegacy(data: LegacyExportData): Promise<string> {
+  const sections: BoardroomSection[] = [];
+  
+  // Add summary metrics if present
+  if (data.summary && Object.keys(data.summary).length > 0) {
+    sections.push({
+      title: 'Key Metrics',
+      metrics: Object.entries(data.summary).map(([label, value]) => ({ label, value }))
+    });
+  }
+  
+  // Add main data table
+  if (data.columns.length > 0 && data.rows.length > 0) {
+    sections.push({
+      title: 'Data Summary',
+      table: {
+        headers: data.columns,
+        rows: data.rows,
+        highlightLastRow: false
+      }
+    });
+  }
+  
+  // Add raw claim data sheets as additional sections
+  if (data.rawClaimData && data.rawClaimData.length > 0) {
+    data.rawClaimData.forEach((rawData) => {
+      sections.push({
+        title: rawData.sheetName || 'Claims Detail',
+        table: {
+          headers: rawData.columns,
+          rows: rawData.rows,
+          highlightLastRow: false
+        }
+      });
+    });
+  }
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: data.title,
+    asOfDate: data.timestamp || format(new Date(), 'MMMM d, yyyy'),
+    sections,
+    filename: `${data.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled Excel from simple table data (array of objects)
+ */
+export async function generateStyledTableExcel(
+  title: string,
+  data: Record<string, any>[],
+  options?: {
+    filename?: string;
+    summaryMetrics?: { label: string; value: string | number }[];
+    highlightLastRow?: boolean;
+  }
+): Promise<string> {
+  if (data.length === 0) {
+    throw new Error('No data to export');
+  }
+  
+  const headers = Object.keys(data[0]);
+  const rows = data.map(row => headers.map(h => row[h]));
+  
+  const sections: BoardroomSection[] = [];
+  
+  if (options?.summaryMetrics && options.summaryMetrics.length > 0) {
+    sections.push({
+      title: 'Summary',
+      metrics: options.summaryMetrics
+    });
+  }
+  
+  sections.push({
+    title: '',
+    table: {
+      headers,
+      rows,
+      highlightLastRow: options?.highlightLastRow
+    }
+  });
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: title,
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections,
+    filename: options?.filename || `${title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled Over-Limit Claims export
+ */
+export async function generateOverLimitExcel(
+  state: string,
+  claims: { 
+    claim_number: string; 
+    state: string;
+    payment_date: string;
+    coverage?: string;
+    classification?: string;
+    root_cause?: string;
+    policy_limit?: number;
+    payment_amount: number;
+    over_limit_amount: number;
+  }[],
+  totalOverLimit: number
+): Promise<string> {
+  const anomalyCount = claims.filter(c => c.classification === 'Anomaly').length;
+  const issueCount = claims.filter(c => c.classification === 'Issue').length;
+  const anomalyTotal = claims.filter(c => c.classification === 'Anomaly').reduce((sum, c) => sum + c.over_limit_amount, 0);
+  const issueTotal = claims.filter(c => c.classification === 'Issue').reduce((sum, c) => sum + c.over_limit_amount, 0);
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: `Over-Limit Claims - ${state}`,
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Summary',
+        metrics: [
+          { label: 'State', value: state },
+          { label: 'Total Claims', value: claims.length },
+          { label: 'Total Over-Limit Amount', value: totalOverLimit },
+          { label: 'Anomaly Claims', value: anomalyCount },
+          { label: 'Anomaly Over-Limit', value: anomalyTotal },
+          { label: 'Issue Claims', value: issueCount },
+          { label: 'Issue Over-Limit', value: issueTotal },
+        ]
+      },
+      {
+        title: 'Claims Detail',
+        table: {
+          headers: ['Claim Number', 'State', 'Payment Date', 'Coverage', 'Classification', 'Root Cause', 'Policy Limit', 'Payment Amount', 'Over Limit Amount'],
+          rows: claims.map(c => [
+            c.claim_number,
+            c.state,
+            c.payment_date,
+            c.coverage || 'BI',
+            c.classification || 'Issue',
+            c.root_cause || '',
+            c.policy_limit || 0,
+            c.payment_amount,
+            c.over_limit_amount
+          ]),
+          highlightLastRow: false
+        }
+      }
+    ],
+    filename: `OverLimit_${state.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled RBC/Actuarial export
+ */
+export async function generateRBCExcel(data: {
+  rbcRatio: number;
+  lossRatio: number;
+  laeRatio: number;
+  combinedRatio: number;
+  ibnr: number;
+  ultimateLoss: number;
+  credibility: number;
+  developmentFactor: number;
+  selectedChange: number;
+  triangleData?: { columns: string[]; rows: (string | number)[][] };
+  accidentYears?: { accident_year: number; earned_premium: number; net_paid: number; reserves: number; ibnr: number; incurred: number; loss_ratio: number }[];
+}): Promise<string> {
+  const sections: BoardroomSection[] = [
+    {
+      title: 'Key Metrics',
+      metrics: [
+        { label: 'RBC Ratio', value: `${data.rbcRatio.toFixed(0)}%` },
+        { label: 'Loss Ratio', value: `${data.lossRatio.toFixed(1)}%` },
+        { label: 'LAE Ratio', value: `${data.laeRatio.toFixed(1)}%` },
+        { label: 'Combined Ratio', value: `${data.combinedRatio.toFixed(1)}%` },
+        { label: 'IBNR Reserve', value: data.ibnr },
+        { label: 'Ultimate Loss', value: data.ultimateLoss },
+        { label: 'Credibility', value: `${(data.credibility * 100).toFixed(0)}%` },
+        { label: 'Development Factor', value: data.developmentFactor.toFixed(3) },
+        { label: 'Selected Rate Change', value: `${data.selectedChange >= 0 ? '+' : ''}${data.selectedChange.toFixed(1)}%` },
+      ]
+    }
+  ];
+  
+  if (data.triangleData && data.triangleData.columns.length > 0) {
+    sections.push({
+      title: 'Loss Development Triangle',
+      table: {
+        headers: data.triangleData.columns,
+        rows: data.triangleData.rows,
+        highlightLastRow: false
+      }
+    });
+  }
+  
+  if (data.accidentYears && data.accidentYears.length > 0) {
+    sections.push({
+      title: 'Accident Year Summary',
+      table: {
+        headers: ['Accident Year', 'Earned Premium', 'Net Paid', 'Reserves', 'IBNR', 'Incurred', 'Loss Ratio'],
+        rows: data.accidentYears.map(ay => [
+          ay.accident_year,
+          ay.earned_premium,
+          ay.net_paid,
+          ay.reserves,
+          ay.ibnr,
+          ay.incurred,
+          `${ay.loss_ratio.toFixed(2)}%`
+        ]),
+        highlightLastRow: false
+      }
+    });
+  }
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: 'RBC Performance Monitor',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections,
+    filename: `RBC_Performance_${format(new Date(), 'yyyyMMdd')}.xlsx`
   };
   
   return generateStyledBoardroomExcel(exportData);
