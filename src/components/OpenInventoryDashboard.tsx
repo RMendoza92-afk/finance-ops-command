@@ -312,6 +312,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
   const [showWoWDrilldown, setShowWoWDrilldown] = useState(false);
   const [showNegoDrilldown, setShowNegoDrilldown] = useState(false);
+  const [showRiskFactorsDrilldown, setShowRiskFactorsDrilldown] = useState(false);
   const [generatingBoardPackage, setGeneratingBoardPackage] = useState(false);
   const [cp1DrilldownCoverage, setCp1DrilldownCoverage] = useState<string | null>(null);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
@@ -4411,12 +4412,17 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       {/* CP1 Risk Factors Summary Card - All 17 Factors */}
       {data.fatalitySummary && (data.fatalitySummary.fatalityCount > 0 || data.fatalitySummary.surgeryCount > 0) && (
-        <div className="bg-card border-2 border-destructive/50 rounded-xl p-4 sm:p-5">
+        <div 
+          className="bg-card border-2 border-destructive/50 rounded-xl p-4 sm:p-5 cursor-pointer hover:border-destructive hover:shadow-lg transition-all"
+          onClick={() => setShowRiskFactorsDrilldown(true)}
+          title="Click to view details & export"
+        >
           <div className="flex items-center gap-2 mb-4">
             <span className="inline-flex px-2 py-1 text-xs font-bold uppercase tracking-wide bg-destructive text-destructive-foreground rounded animate-pulse">
               CP1 RISK FACTORS
             </span>
             <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
+            <ExternalLink className="h-3 w-3 text-muted-foreground ml-1" />
           </div>
 
           {/* Tier 1 - Critical (100-80 pts) */}
@@ -5852,6 +5858,248 @@ Avg Negotiation: $${nego.avgNegotiationAmount.toLocaleString()}
 
 Top Types:
 ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.toLocaleString()})`).join('\n')}`}
+                    </pre>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* CP1 Risk Factors Drilldown */}
+      <Sheet open={showRiskFactorsDrilldown} onOpenChange={setShowRiskFactorsDrilldown}>
+        <SheetContent className="w-full sm:w-[750px] sm:max-w-[750px] overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <SheetTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                CP1 Risk Factors (17 Indicators)
+              </SheetTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!data?.fatalitySummary) return;
+                  const fs = data.fatalitySummary;
+                  import('xlsx').then((XLSX) => {
+                    const wb = XLSX.utils.book_new();
+                    
+                    // Summary sheet with all 17 factors
+                    const summaryData = [
+                      ['CP1 RISK FACTORS SUMMARY'],
+                      [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+                      [],
+                      ['TIER 1 - CRITICAL (100-80 pts)'],
+                      ['Factor', 'Count', 'Description'],
+                      ['Fatality', fs.fatalityCount, 'Claims involving death'],
+                      ['Surgery', fs.surgeryCount, 'Claims with surgical procedures'],
+                      ['Meds > Limits', fs.medsVsLimitsCount, 'Medical costs exceeding policy limits'],
+                      ['Life Care Planner', fs.lifeCarePlannerCount, 'Life care plans required'],
+                      [],
+                      ['TIER 2 - HIGH (70-50 pts)'],
+                      ['Factor', 'Count', 'Description'],
+                      ['Confirmed Fractures', fs.confirmedFracturesCount, 'Documented fractures'],
+                      ['Hospitalization', fs.hospitalizationCount, 'Hospital admissions'],
+                      ['Loss of Consciousness/TBI', fs.lossOfConsciousnessCount, 'LOC or traumatic brain injury'],
+                      ['Re-Aggravation', fs.aggFactorsCount, 'Pre-existing condition aggravation'],
+                      ['Objective Injuries (MRI/CT)', fs.objectiveInjuriesCount, 'Injuries confirmed by imaging'],
+                      ['Pedestrian/Bicycle', fs.pedestrianPregnancyCount, 'Pedestrian or bicycle accidents'],
+                      ['Surgery Recommended', fs.priorSurgeryCount, 'Surgery recommendations pending'],
+                      [],
+                      ['TIER 3 - MODERATE (40-30 pts)'],
+                      ['Factor', 'Count', 'Description'],
+                      ['Injections', fs.injectionsCount, 'Injection treatments'],
+                      ['EMS/Heavy Impact', fs.emsHeavyImpactCount, 'Emergency services or heavy impact'],
+                      ['Lacerations', fs.lacerationsCount, 'Laceration injuries'],
+                      ['Pain Level 5+', fs.painLevel5PlusCount, 'Pain severity 5 or higher'],
+                      ['Pregnancy', fs.pregnancyCount, 'Pregnancy-related claims'],
+                      ['Eggshell (69+)', fs.eggshell69PlusCount, 'Claimants 69 years or older'],
+                      [],
+                      ['TOTALS'],
+                      ['Fatality Reserves', `$${fs.fatalityReserves.toLocaleString()}`],
+                    ];
+                    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                    summarySheet['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 40 }];
+                    XLSX.utils.book_append_sheet(wb, summarySheet, 'Risk Factor Summary');
+
+                    // Claims by factor - get raw claims with each factor
+                    const factorClaims: { factor: string; claims: any[] }[] = [
+                      { factor: 'Fatality', claims: data.rawClaims.filter(c => c.fatality) },
+                      { factor: 'Surgery', claims: data.rawClaims.filter(c => c.surgery) },
+                      { factor: 'Meds > Limits', claims: data.rawClaims.filter(c => c.medsVsLimits) },
+                      { factor: 'Life Care Planner', claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
+                      { factor: 'Confirmed Fractures', claims: data.rawClaims.filter(c => c.confirmedFractures) },
+                      { factor: 'Hospitalization', claims: data.rawClaims.filter(c => c.hospitalization) },
+                      { factor: 'Loss of Consciousness', claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
+                      { factor: 'Re-Aggravation', claims: data.rawClaims.filter(c => c.aggFactors) },
+                      { factor: 'Objective Injuries', claims: data.rawClaims.filter(c => c.objectiveInjuries) },
+                    ];
+
+                    // Create a sheet with all high-risk claims
+                    const allHighRiskClaims = data.rawClaims.filter(c => 
+                      c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
+                      c.confirmedFractures || c.hospitalization || c.lossOfConsciousness
+                    ).sort((a, b) => b.openReserves - a.openReserves);
+
+                    if (allHighRiskClaims.length > 0) {
+                      const claimsData = allHighRiskClaims.map(c => ({
+                        'Claim #': c.claimNumber,
+                        'Claimant': c.claimant,
+                        'Coverage': c.coverage,
+                        'Days Open': c.days,
+                        'Open Reserves': c.openReserves,
+                        'Fatality': c.fatality ? 'Yes' : '',
+                        'Surgery': c.surgery ? 'Yes' : '',
+                        'Meds>Limits': c.medsVsLimits ? 'Yes' : '',
+                        'Life Care': c.lifeCarePlanner ? 'Yes' : '',
+                        'Fractures': c.confirmedFractures ? 'Yes' : '',
+                        'Hospital': c.hospitalization ? 'Yes' : '',
+                        'LOC/TBI': c.lossOfConsciousness ? 'Yes' : '',
+                        'Team': c.teamGroup,
+                        'Adjuster': c.adjuster,
+                      }));
+                      const claimsSheet = XLSX.utils.json_to_sheet(claimsData);
+                      claimsSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, 
+                        { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 15 }, { wch: 20 }];
+                      XLSX.utils.book_append_sheet(wb, claimsSheet, 'High-Risk Claims');
+                    }
+
+                    XLSX.writeFile(wb, `CP1_Risk_Factors_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+                    toast.success('Risk factors exported to Excel');
+                  });
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <SheetDescription>
+              All 17 severity indicators with claim-level detail
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 pt-6">
+            {data?.fatalitySummary && (() => {
+              const fs = data.fatalitySummary;
+              const tier1 = [
+                { label: 'Fatality', icon: '💀', count: fs.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
+                { label: 'Surgery', icon: '🏥', count: fs.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
+                { label: 'Meds > Limits', icon: '💊', count: fs.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
+                { label: 'Life Care Planner', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
+              ];
+              const tier2 = [
+                { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount },
+                { label: 'Hospitalization', icon: '🛏️', count: fs.hospitalizationCount },
+                { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount },
+                { label: 'Re-Aggravation', icon: '⚠️', count: fs.aggFactorsCount },
+                { label: 'MRI/CT Injuries', icon: '🩹', count: fs.objectiveInjuriesCount },
+                { label: 'Pedestrian/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount },
+                { label: 'Surgery Rec', icon: '📝', count: fs.priorSurgeryCount },
+              ];
+              const tier3 = [
+                { label: 'Injections', icon: '💉', count: fs.injectionsCount },
+                { label: 'EMS/Heavy Impact', icon: '🚑', count: fs.emsHeavyImpactCount },
+                { label: 'Lacerations', icon: '🩸', count: fs.lacerationsCount },
+                { label: 'Pain Level 5+', icon: '😣', count: fs.painLevel5PlusCount },
+                { label: 'Pregnancy', icon: '🤰', count: fs.pregnancyCount },
+                { label: '69+ Years', icon: '👴', count: fs.eggshell69PlusCount },
+              ];
+
+              return (
+                <>
+                  {/* Tier 1 - Critical */}
+                  <div>
+                    <h4 className="font-bold text-destructive mb-3 flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-destructive text-destructive-foreground text-xs rounded">TIER 1</span>
+                      Critical (100-80 pts)
+                    </h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Factor</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
+                          <TableHead className="text-right">Total Reserves</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tier1.map((f, i) => (
+                          <TableRow key={i} className={f.count > 0 ? 'bg-destructive/5' : ''}>
+                            <TableCell className="font-medium">{f.icon} {f.label}</TableCell>
+                            <TableCell className="text-right font-bold text-destructive">{f.count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              ${f.claims.reduce((sum, c) => sum + c.openReserves, 0).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Tier 2 - High */}
+                  <div>
+                    <h4 className="font-bold text-orange-500 mb-3 flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-orange-500 text-white text-xs rounded">TIER 2</span>
+                      High (70-50 pts)
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {tier2.map((f, i) => (
+                        <div key={i} className={`p-3 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
+                          <p className="text-lg mb-1">{f.icon}</p>
+                          <p className="text-xl font-bold text-orange-500">{f.count.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{f.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tier 3 - Moderate */}
+                  <div>
+                    <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded">TIER 3</span>
+                      Moderate (40-30 pts)
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {tier3.map((f, i) => (
+                        <div key={i} className={`p-2 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
+                          <p className="text-sm mb-1">{f.icon}</p>
+                          <p className="text-lg font-semibold text-primary">{f.count.toLocaleString()}</p>
+                          <p className="text-[9px] text-muted-foreground">{f.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Total Reserves */}
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center justify-between">
+                    <span className="font-semibold">Total Fatality Reserves:</span>
+                    <span className="text-2xl font-bold text-destructive">${fs.fatalityReserves.toLocaleString()}</span>
+                  </div>
+
+                  {/* Copy/Paste Summary */}
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                    <h4 className="font-semibold mb-2">Copy/Paste Summary</h4>
+                    <pre className="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">
+{`CP1 Risk Factors Summary (${format(new Date(), 'MMM d, yyyy')})
+
+TIER 1 - CRITICAL:
+• Fatality: ${fs.fatalityCount}
+• Surgery: ${fs.surgeryCount}
+• Meds > Limits: ${fs.medsVsLimitsCount}
+• Life Care Planner: ${fs.lifeCarePlannerCount}
+
+TIER 2 - HIGH:
+• Fractures: ${fs.confirmedFracturesCount}
+• Hospitalization: ${fs.hospitalizationCount}
+• LOC/TBI: ${fs.lossOfConsciousnessCount}
+• Re-Aggravation: ${fs.aggFactorsCount}
+
+TIER 3 - MODERATE:
+• Injections: ${fs.injectionsCount}
+• EMS/Heavy Impact: ${fs.emsHeavyImpactCount}
+• Pain Level 5+: ${fs.painLevel5PlusCount}
+
+Total Fatality Reserves: $${fs.fatalityReserves.toLocaleString()}`}
                     </pre>
                   </div>
                 </>
