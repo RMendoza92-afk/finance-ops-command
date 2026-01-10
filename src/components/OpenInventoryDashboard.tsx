@@ -4958,6 +4958,50 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   </div>
                 </div>
                 
+                {/* Mini Trend Chart */}
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Weekly Trend</p>
+                  <div className="flex items-end gap-1 h-12">
+                    {/* Prior week bar */}
+                    <div className="flex-1 flex flex-col items-center gap-1">
+                      <div 
+                        className="w-full bg-muted rounded-t" 
+                        style={{ 
+                          height: `${Math.min(100, (cp1BoxData.weekOverWeek.totalClaims.prior / Math.max(cp1BoxData.weekOverWeek.totalClaims.prior, cp1BoxData.weekOverWeek.totalClaims.current)) * 48)}px`,
+                          minHeight: '8px'
+                        }}
+                      />
+                      <span className="text-[9px] text-muted-foreground">{cp1BoxData.weekOverWeek.priorSnapshotDate?.slice(5) || 'Prior'}</span>
+                      <span className="text-xs font-semibold">{cp1BoxData.weekOverWeek.totalClaims.prior.toLocaleString()}</span>
+                    </div>
+                    {/* Arrow indicator */}
+                    <div className="flex items-center justify-center px-2">
+                      {cp1BoxData.weekOverWeek.totalClaims.delta < 0 ? (
+                        <ArrowDownRight className="h-4 w-4 text-green-500" />
+                      ) : cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? (
+                        <ArrowUpRight className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <span className="text-muted-foreground">→</span>
+                      )}
+                    </div>
+                    {/* Current week bar */}
+                    <div className="flex-1 flex flex-col items-center gap-1">
+                      <div 
+                        className={`w-full rounded-t ${
+                          cp1BoxData.weekOverWeek.totalClaims.delta < 0 ? 'bg-green-500' : 
+                          cp1BoxData.weekOverWeek.totalClaims.delta > 0 ? 'bg-destructive' : 'bg-primary'
+                        }`}
+                        style={{ 
+                          height: `${Math.min(100, (cp1BoxData.weekOverWeek.totalClaims.current / Math.max(cp1BoxData.weekOverWeek.totalClaims.prior, cp1BoxData.weekOverWeek.totalClaims.current)) * 48)}px`,
+                          minHeight: '8px'
+                        }}
+                      />
+                      <span className="text-[9px] text-muted-foreground">Current</span>
+                      <span className="text-xs font-semibold">{cp1BoxData.weekOverWeek.totalClaims.current.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Progress Insight */}
                 <div className="mt-3 pt-3 border-t border-border/50">
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
@@ -4981,6 +5025,40 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       </>
                     )}
                   </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Negotiation Activity Summary */}
+            {cp1BoxData?.negotiationSummary && (
+              <div className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/5 via-background to-amber-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-4 w-4 text-orange-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Negotiation Activity</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <p className="text-lg font-bold text-green-500">{cp1BoxData.negotiationSummary.totalWithNegotiation.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">With Negotiation</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <p className="text-lg font-bold text-destructive">{cp1BoxData.negotiationSummary.totalWithoutNegotiation.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">No Negotiation</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
+                    <p className="text-lg font-bold text-orange-500">{cp1BoxData.negotiationSummary.staleNegotiations60Plus.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Stale (60+ Days)</p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <div className="flex flex-wrap gap-2">
+                    {cp1BoxData.negotiationSummary.byType.slice(0, 5).map((t, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted/50 border border-border/50">
+                        <span className="font-medium">{t.type}:</span>
+                        <span className="text-muted-foreground">{t.count}</span>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
