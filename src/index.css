@@ -125,6 +125,85 @@
   cursor: crosshair;
 }
 
+/* Bloomberg Terminal Theme */
+.bloomberg {
+  --background: 0 0% 0%;
+  --foreground: 40 10% 90%;
+  --card: 0 0% 4%;
+  --card-foreground: 40 10% 90%;
+  --popover: 0 0% 3%;
+  --popover-foreground: 40 10% 90%;
+  
+  /* Primary: Bloomberg Orange/Amber */
+  --primary: 38 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  
+  /* Secondary: Dark gray */
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 40 10% 85%;
+  
+  /* Muted: Very dark */
+  --muted: 0 0% 8%;
+  --muted-foreground: 40 5% 55%;
+  
+  /* Accent: Bloomberg amber */
+  --accent: 38 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  
+  /* Status colors - Bloomberg style */
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 120 60% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 100% 50%;
+  --warning-foreground: 0 0% 0%;
+  --info: 200 70% 50%;
+  --info-foreground: 0 0% 100%;
+  
+  /* Borders - subtle amber tint */
+  --border: 38 20% 15%;
+  --input: 0 0% 8%;
+  --ring: 38 100% 50%;
+  --radius: 0.25rem;
+  
+  /* Sidebar */
+  --sidebar-background: 0 0% 2%;
+  --sidebar-foreground: 40 10% 90%;
+  --sidebar-primary: 38 100% 50%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 0 0% 10%;
+  --sidebar-accent-foreground: 40 10% 90%;
+  --sidebar-border: 38 20% 15%;
+  --sidebar-ring: 38 100% 50%;
+  
+  /* Table */
+  --table-header: 0 0% 6%;
+  --table-row-hover: 0 0% 8%;
+  
+  /* Executive accents - Bloomberg palette */
+  --exec-gold: 38 100% 50%;
+  --exec-silver: 0 0% 70%;
+  --exec-bronze: 25 60% 45%;
+}
+
+/* Bloomberg specific font styling */
+.bloomberg body,
+.bloomberg {
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+}
+
+.bloomberg h1, 
+.bloomberg h2, 
+.bloomberg h3, 
+.bloomberg h4, 
+.bloomberg h5, 
+.bloomberg h6 {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 @layer base {
   * {
     @apply border-border;
