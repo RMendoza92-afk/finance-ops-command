@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useSOLBreachAnalysis } from "@/hooks/useSOLBreachAnalysis";
-import { Loader2, AlertTriangle, Gavel, Clock, Download } from "lucide-react";
+import { Loader2, AlertTriangle, Gavel, Clock, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const formatCurrency = (val: number) => 
   new Intl.NumberFormat('en-US', { 
@@ -13,6 +15,7 @@ const formatCurrency = (val: number) =>
 
 export function SOLBreachSummary() {
   const { data, loading, error, exportToExcel } = useSOLBreachAnalysis();
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   if (loading) {
     return (
@@ -41,6 +44,8 @@ export function SOLBreachSummary() {
   const topStates = Object.entries(data.byState)
     .sort((a, b) => b[1].reserves - a[1].reserves)
     .slice(0, 10);
+
+  const hasDetails = data.breachedCount > 0 || data.approachingCount > 0;
 
   return (
     <Card className="border-destructive/50 bg-destructive/5 shadow-lg overflow-hidden">
@@ -121,98 +126,120 @@ export function SOLBreachSummary() {
           </div>
         )}
 
-        {/* Detail Tables - Horizontal scroll on mobile */}
-        {data.breachedCount > 0 && (
-          <div>
-            <h4 className="text-sm font-bold text-destructive mb-2">
-              Breached ({data.breachedCount})
-            </h4>
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-border min-w-[600px] sm:min-w-0 mx-3 sm:mx-0">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary sticky top-0">
-                    <tr>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Claim #</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">State</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Type</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Category</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Status</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">SOL</th>
-                      <th className="text-right p-2 font-semibold whitespace-nowrap">Days</th>
-                      <th className="text-right p-2 font-semibold whitespace-nowrap">Reserves</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.breachedClaims.slice(0, 50).map((claim, i) => (
-                      <tr key={i} className="border-t border-border hover:bg-muted/50">
-                        <td className="p-2 font-mono whitespace-nowrap">{claim.claimNumber}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.state}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.typeGroup}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.exposureCategory}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.biStatus}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.solYears}y</td>
-                        <td className="p-2 text-right text-destructive font-medium whitespace-nowrap">{Math.abs(claim.daysUntilExpiry)}</td>
-                        <td className="p-2 text-right font-medium whitespace-nowrap">{formatCurrency(claim.reserves)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {data.breachedCount > 50 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Showing 50 of {data.breachedCount}
-              </p>
-            )}
-          </div>
+        {/* Collapsible Detail Tables */}
+        {hasDetails && (
+          <Collapsible open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between hover:bg-muted/50 border border-border"
+              >
+                <span className="text-sm font-medium">
+                  {isDetailOpen ? 'Hide' : 'Show'} Claim Details ({data.breachedCount + data.approachingCount} claims)
+                </span>
+                {isDetailOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="space-y-4 mt-4">
+              {data.breachedCount > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold text-destructive mb-2">
+                    Breached ({data.breachedCount})
+                  </h4>
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-border min-w-[600px] sm:min-w-0 mx-3 sm:mx-0">
+                      <table className="w-full text-xs">
+                        <thead className="bg-secondary sticky top-0">
+                          <tr>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Claim #</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">State</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Type</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Category</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Status</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">SOL</th>
+                            <th className="text-right p-2 font-semibold whitespace-nowrap">Days</th>
+                            <th className="text-right p-2 font-semibold whitespace-nowrap">Reserves</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.breachedClaims.slice(0, 50).map((claim, i) => (
+                            <tr key={i} className="border-t border-border hover:bg-muted/50">
+                              <td className="p-2 font-mono whitespace-nowrap">{claim.claimNumber}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.state}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.typeGroup}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.exposureCategory}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.biStatus}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.solYears}y</td>
+                              <td className="p-2 text-right text-destructive font-medium whitespace-nowrap">{Math.abs(claim.daysUntilExpiry)}</td>
+                              <td className="p-2 text-right font-medium whitespace-nowrap">{formatCurrency(claim.reserves)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {data.breachedCount > 50 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Showing 50 of {data.breachedCount}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {data.approachingCount > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold text-warning mb-2">
+                    Approaching ({data.approachingCount})
+                  </h4>
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-border min-w-[600px] sm:min-w-0 mx-3 sm:mx-0">
+                      <table className="w-full text-xs">
+                        <thead className="bg-secondary sticky top-0">
+                          <tr>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Claim #</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">State</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Type</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Category</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">Status</th>
+                            <th className="text-left p-2 font-semibold whitespace-nowrap">SOL</th>
+                            <th className="text-right p-2 font-semibold whitespace-nowrap">Days</th>
+                            <th className="text-right p-2 font-semibold whitespace-nowrap">Reserves</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.approachingClaims.slice(0, 50).map((claim, i) => (
+                            <tr key={i} className="border-t border-border hover:bg-muted/50">
+                              <td className="p-2 font-mono whitespace-nowrap">{claim.claimNumber}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.state}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.typeGroup}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.exposureCategory}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.biStatus}</td>
+                              <td className="p-2 whitespace-nowrap">{claim.solYears}y</td>
+                              <td className="p-2 text-right text-warning font-medium whitespace-nowrap">{claim.daysUntilExpiry}</td>
+                              <td className="p-2 text-right font-medium whitespace-nowrap">{formatCurrency(claim.reserves)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {data.approachingCount > 50 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Showing 50 of {data.approachingCount}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
-        {data.approachingCount > 0 && (
-          <div>
-            <h4 className="text-sm font-bold text-warning mb-2">
-              Approaching ({data.approachingCount})
-            </h4>
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-border min-w-[600px] sm:min-w-0 mx-3 sm:mx-0">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary sticky top-0">
-                    <tr>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Claim #</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">State</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Type</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Category</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">Status</th>
-                      <th className="text-left p-2 font-semibold whitespace-nowrap">SOL</th>
-                      <th className="text-right p-2 font-semibold whitespace-nowrap">Days</th>
-                      <th className="text-right p-2 font-semibold whitespace-nowrap">Reserves</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.approachingClaims.slice(0, 50).map((claim, i) => (
-                      <tr key={i} className="border-t border-border hover:bg-muted/50">
-                        <td className="p-2 font-mono whitespace-nowrap">{claim.claimNumber}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.state}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.typeGroup}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.exposureCategory}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.biStatus}</td>
-                        <td className="p-2 whitespace-nowrap">{claim.solYears}y</td>
-                        <td className="p-2 text-right text-warning font-medium whitespace-nowrap">{claim.daysUntilExpiry}</td>
-                        <td className="p-2 text-right font-medium whitespace-nowrap">{formatCurrency(claim.reserves)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {data.approachingCount > 50 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Showing 50 of {data.approachingCount}
-              </p>
-            )}
-          </div>
-        )}
-
-        {data.breachedCount === 0 && data.approachingCount === 0 && (
+        {!hasDetails && (
           <div className="text-center py-6">
             <p className="text-sm text-muted-foreground">No SOL breaches or approaching deadlines found.</p>
           </div>
