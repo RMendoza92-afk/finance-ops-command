@@ -216,6 +216,11 @@ const renderStyledReportToWorksheet = (
         const isLastRow = rowIdx === rows.length - 1;
         const shouldHighlight = highlightLastRow && isLastRow;
 
+        // Check if this row has a WORSENING trend (critical - needs bold red)
+        const hasWorseningTrend = rowData.some(val => 
+          typeof val === 'string' && val.toUpperCase() === 'WORSENING'
+        );
+
         rowData.forEach((cellValue, colIdx) => {
           const cell = row.getCell(colIdx + 1);
           const header = headers[colIdx] || '';
@@ -245,13 +250,17 @@ const renderStyledReportToWorksheet = (
             vertical: 'middle'
           };
 
+          // WORSENING rows get bold red text for entire row (critical emphasis)
+          if (hasWorseningTrend) {
+            cell.font = { bold: true, color: { argb: COLORS.darkRed } };
+          }
           // Highlighted row (dark red, bold) - like "ACCEPTED SETTLEMENT"
-          if (shouldHighlight) {
+          else if (shouldHighlight) {
             cell.font = { bold: true, color: { argb: COLORS.darkRed } };
           }
 
-          // Alternating row colors (skip if highlighted)
-          if (!shouldHighlight && rowIdx % 2 === 1) {
+          // Alternating row colors (skip if highlighted or worsening)
+          if (!shouldHighlight && !hasWorseningTrend && rowIdx % 2 === 1) {
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',

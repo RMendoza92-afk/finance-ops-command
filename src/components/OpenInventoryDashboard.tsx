@@ -1226,8 +1226,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       // Tab 2: Week-over-Week
       if (wow?.hasValidPrior) {
-        // CP1 Rate: Lower is better, so delta < 0 = IMPROVING
-        const cp1Trend = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
+        // CP1 Rate: Lower is better. If rate >= 90% and delta = 0, it's still CRITICAL (stuck at bad level)
+        const cp1Trend = (d: number, currentVal: number) => {
+          if (d < 0) return 'IMPROVING';
+          if (d > 0) return 'WORSENING';
+          // Delta = 0 but if current rate is high, that's NOT stable - it's stuck at a bad level
+          if (currentVal >= 90) return 'WORSENING';
+          return 'STABLE';
+        };
         // Other metrics: Lower is better (fewer claims, fewer flags, lower reserves, etc.)
         const lowerIsBetter = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
 
@@ -1238,7 +1244,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, lowerIsBetter(wow.highRiskClaims.delta)],
           ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, lowerIsBetter(wow.totalFlags.delta)],
           ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, lowerIsBetter(wow.totalReserves.delta)],
-          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', cp1Trend(wow.cp1Rate.delta)],
+          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', cp1Trend(wow.cp1Rate.delta, wow.cp1Rate.current)],
         ];
 
         sheets.push({
