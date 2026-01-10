@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react"; // Upd
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData, MultiPackSummary, MultiPackGroup } from "@/hooks/useOpenExposureData";
 import { useAtRiskClaims } from "@/hooks/useAtRiskClaims";
 import { useCP1AnalysisCsv } from "@/hooks/useCP1AnalysisCsv";
+import { useCheckHistory } from "@/hooks/useCheckHistory";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
 import { getCurrentMonthlySpend } from "@/data/monthlySpendData";
@@ -118,14 +119,18 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const { data: solData } = useSOLBreachAnalysis();
   const { data: decisionsData } = useDecisionsPending();
   const { offers: lorOffers, stats: lorStats, refetch: refetchLOR } = useLOROffers();
+  const { summary: checkSpendSummary, litigationSpend, biSpend, loading: spendLoading } = useCheckHistory();
   const { exportBoth, generateFullExcel, generateExecutivePDF, generateExecutivePackage } = useExportData();
   const timestamp = format(new Date(), 'MMMM d, yyyy h:mm a');
 
-  // Operations report (01-JAN-2026) spend figures - TOTAL across all coverages
+  // Operations spend figures - NOW using REAL data from check history CSV
+  // Falls back to static monthlySpend data if CSV not loaded
   const monthlySpend = getCurrentMonthlySpend();
-  const totalIndemnityJan2026 = monthlySpend.indemnities.total; // $9,835,934.96
-  const totalExpenseJan2026 = monthlySpend.expenses.total;       // $268,869.38
-  const totalLitigationSpendJan2026 = totalIndemnityJan2026 + totalExpenseJan2026; // $10,104,804.34
+  const totalIndemnityJan2026 = checkSpendSummary?.indemnityTotal || monthlySpend.indemnities.total;
+  const totalExpenseJan2026 = checkSpendSummary?.expenseTotal || monthlySpend.expenses.total;
+  const totalLitigationSpendJan2026 = totalIndemnityJan2026 + totalExpenseJan2026;
+  const spendCheckCount = checkSpendSummary?.checkCount || (monthlySpend.indemnities.totalChecks + monthlySpend.expenses.totalChecks);
+  const isRealSpendData = !spendLoading && (checkSpendSummary?.checkCount || 0) > 0;
   const data = useMemo(() => {
     if (!rawData) return null;
     
