@@ -566,21 +566,10 @@
 .ticker-track {
   display: flex;
   width: fit-content;
-  animation: ticker-scroll 56s linear infinite;
+  animation: ticker-scroll 60s linear infinite;
 }
 
 .ticker-track:hover {
-  animation-play-state: paused;
-}
-
-/* Slower ticker for claims payment - more data points */
-.ticker-track-slow {
-  display: flex;
-  width: fit-content;
-  animation: ticker-scroll 80s linear infinite;
-}
-
-.ticker-track-slow:hover {
   animation-play-state: paused;
 }
 
