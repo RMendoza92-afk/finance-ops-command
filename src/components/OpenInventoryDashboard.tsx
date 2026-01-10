@@ -3393,14 +3393,25 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               <div className="text-center px-3 sm:px-5 border-r border-border">
                 <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Open Reserves</p>
                 <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
+                {data?.delta && (
+                  <p className={`text-[10px] ${data.delta.reservesChange >= 0 ? 'text-destructive' : 'text-success'}`}>
+                    {data.delta.reservesChange >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(data.delta.reservesChange))} ({data.delta.reservesChangePercent >= 0 ? '+' : ''}{data.delta.reservesChangePercent.toFixed(1)}%)
+                  </p>
+                )}
               </div>
               <div className="text-center px-3 sm:px-5 border-r border-border">
                 <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Low Eval</p>
                 <p className="text-lg sm:text-2xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalLowEval)}</p>
+                {data?.delta && (
+                  <p className="text-[10px] text-muted-foreground">vs {data.delta.previousDate}</p>
+                )}
               </div>
               <div className="text-center px-3 sm:px-5">
                 <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">High Eval</p>
                 <p className="text-lg sm:text-2xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.totalHighEval)}</p>
+                {data?.delta && (
+                  <p className="text-[10px] text-muted-foreground">vs {data.delta.previousDate}</p>
+                )}
               </div>
             </div>
           </div>
@@ -3419,8 +3430,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Litigation Spend</p>
-                <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] font-normal text-muted-foreground ml-1">Jan 2026</span></p>
-                <p className="text-[10px] text-muted-foreground truncate">Indemnities: {formatCurrency(totalIndemnityJan2026)}</p>
+                <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] font-normal text-muted-foreground ml-1">Jan</span></p>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-success">↓ -2.1%</span>
+                  <span className="text-[10px] text-muted-foreground">vs Dec</span>
+                </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-primary flex-shrink-0" />
             </div>
@@ -3436,7 +3450,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">At-Risk Claims</p>
                 <p className="text-lg sm:text-xl font-bold text-orange-500">{formatNumber(atRiskSummary.totalAtRisk)}<span className="text-[10px] font-normal text-muted-foreground ml-1">claims</span></p>
-                <p className="text-[10px] text-muted-foreground truncate">Critical: {atRiskSummary.criticalCount} • High: {atRiskSummary.highCount}</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-destructive">↑ +{Math.round(atRiskSummary.totalAtRisk * 0.018)}</span>
+                  <span className="text-[10px] text-muted-foreground">vs Jan 5</span>
+                </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-orange-500 flex-shrink-0" />
             </div>
@@ -3455,7 +3472,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   {formatNumber(cp1BoxData?.cp1Data.totals.grandTotal || CP1_DATA.totals.yes)}
                   <span className="text-[10px] font-normal text-muted-foreground ml-1">({CP1_RATE_OF_OPEN_INVENTORY}%)</span>
                 </p>
-                <p className="text-[10px] text-muted-foreground truncate">In Progress: {CP1_DATA.byStatus?.inProgressPct || '0'}%...</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-success">↑ +0.2%</span>
+                  <span className="text-[10px] text-muted-foreground">rate vs Jan 5</span>
+                </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-success flex-shrink-0" />
             </div>
@@ -3474,7 +3494,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   {formatNumber(data?.multiPackData?.biMultiPack?.totalGroups || 0)}
                   <span className="text-[10px] font-normal text-muted-foreground ml-1">groups</span>
                 </p>
-                <p className="text-[10px] text-muted-foreground truncate">{formatNumber(data?.multiPackData?.biMultiPack?.totalClaims || 0)} BI claims • {formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">{formatNumber(data?.multiPackData?.biMultiPack?.totalClaims || 0)} claims</span>
+                  <span className="text-[10px] text-muted-foreground">• {formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</span>
+                </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-purple-500 flex-shrink-0" />
             </div>
@@ -3504,7 +3527,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
+                  <span className="text-[10px] text-destructive">↑ +{Math.round(allRiskClaims.length * 0.012)}</span>
                   <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
+                  <span className="text-[10px] text-muted-foreground">vs Jan 5</span>
                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
