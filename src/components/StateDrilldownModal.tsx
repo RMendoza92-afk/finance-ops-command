@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, DollarSign, Users, AlertTriangle, FileText, X, Activity, Target, Scale } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import Papa from 'papaparse';
+import { useSharedOpenExposureRows } from '@/contexts/OpenExposureContext';
 
 interface StateData {
   state: string;
@@ -60,21 +60,59 @@ interface StateDrilldownModalProps {
 
 export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDrilldownModalProps) {
   const [overLimitClaims, setOverLimitClaims] = useState<OverLimitClaim[]>([]);
-  const [openExposureClaims, setOpenExposureClaims] = useState<OpenExposureClaim[]>([]);
-  const [litigationClaims, setLitigationClaims] = useState<OpenExposureClaim[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const { rawRows } = useSharedOpenExposureRows();
+
+  // Process claims from shared context instead of fetching
+  const { openExposureClaims, litigationClaims } = useMemo(() => {
+    if (!stateData || !rawRows.length) {
+      return { openExposureClaims: [], litigationClaims: [] };
+    }
+    
+    const stateName = stateData.state.toUpperCase();
+    const stateCode = stateData.stateCode.toUpperCase();
+    
+    const allClaims: OpenExposureClaim[] = rawRows
+      .filter((row: any) => {
+        const claimState = (row['Accident Location State'] || '').toUpperCase();
+        return claimState.includes(stateName) || claimState === stateCode;
+      })
+      .map((row: any) => ({
+        claimNumber: row['Claim#'] || '',
+        claimant: row['Claimant'] || '',
+        status: row['Status'] || '',
+        daysOpen: parseInt(row['Open/Closed Days'] || '0', 10),
+        ageBucket: row['Age'] || '',
+        reserves: parseFloat((row['Open Reserves'] || '0').replace(/,/g, '')) || 0,
+        lowEval: parseFloat((row['Low'] || '0').replace(/,/g, '')) || 0,
+        highEval: parseFloat((row['High'] || '0').replace(/,/g, '')) || 0,
+        inLitigation: (row['In Litigation Indicator'] || '').toLowerCase().includes('litigation'),
+        typeGroup: row['Type Group'] || '',
+        team: row['Team Group'] || '',
+        adjuster: row['Adjuster Assigned'] || '',
+        injurySeverity: row['Injury Severity'] || '',
+        biStatus: row['BI Status'] || '',
+        state: row['Accident Location State'] || '',
+        city: row['Accident Location City'] || '',
+      }));
+
+    const openClaims = allClaims.filter(c => c.status === 'Open');
+    const litClaims = openClaims.filter(c => c.inLitigation);
+    
+    return { openExposureClaims: openClaims, litigationClaims: litClaims };
+  }, [rawRows, stateData]);
 
   useEffect(() => {
     if (open && stateData) {
-      fetchStateData(stateData.state, stateData.stateCode);
+      fetchOverLimitClaims(stateData.state);
     }
   }, [open, stateData]);
 
-  const fetchStateData = async (stateName: string, stateCode: string) => {
+  const fetchOverLimitClaims = async (stateName: string) => {
     setLoading(true);
     try {
-      // Fetch over-limit claims from database
+      // Fetch over-limit claims from database (only DB calls, no CSV fetch)
       const { data: olClaims } = await supabase
         .from('over_limit_payments')
         .select('*')
@@ -83,48 +121,6 @@ export function StateDrilldownModal({ open, onOpenChange, stateData }: StateDril
         .limit(50);
 
       if (olClaims) setOverLimitClaims(olClaims);
-
-      // Fetch open exposure data from CSV (Jan 8, 2026 file)
-      const response = await fetch('/data/open-exposure-raw-jan8.csv');
-      const csvText = await response.text();
-      
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const allClaims: OpenExposureClaim[] = results.data
-            .filter((row: any) => {
-              const claimState = (row['Accident Location State'] || '').toUpperCase();
-              return claimState.includes(stateName.toUpperCase()) || claimState === stateCode.toUpperCase();
-            })
-            .map((row: any) => ({
-              claimNumber: row['Claim#'] || '',
-              claimant: row['Claimant'] || '',
-              status: row['Status'] || '',
-              daysOpen: parseInt(row['Open/Closed Days'] || '0', 10),
-              ageBucket: row['Age'] || '',
-              reserves: parseFloat((row['Open Reserves'] || '0').replace(/,/g, '')) || 0,
-              lowEval: parseFloat((row['Low'] || '0').replace(/,/g, '')) || 0,
-              highEval: parseFloat((row['High'] || '0').replace(/,/g, '')) || 0,
-              inLitigation: (row['In Litigation Indicator'] || '').toLowerCase().includes('litigation'),
-              typeGroup: row['Type Group'] || '',
-              team: row['Team Group'] || '',
-              adjuster: row['Adjuster Assigned'] || '',
-              injurySeverity: row['Injury Severity'] || '',
-              biStatus: row['BI Status'] || '',
-              state: row['Accident Location State'] || '',
-              city: row['Accident Location City'] || '',
-            }));
-
-          // Filter for open claims only
-          const openClaims = allClaims.filter(c => c.status === 'Open');
-          setOpenExposureClaims(openClaims);
-          
-          // Filter for litigation claims
-          const litClaims = openClaims.filter(c => c.inLitigation);
-          setLitigationClaims(litClaims);
-        }
-      });
     } catch (error) {
       console.error('Error fetching state data:', error);
     } finally {
