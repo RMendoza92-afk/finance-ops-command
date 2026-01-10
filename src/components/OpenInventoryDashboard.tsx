@@ -3092,8 +3092,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </div>
         </div>
 
-        {/* CP1 Risk Factors - Click to open full drawer */}
+        {/* CP1 Risk Factors - Inline Expandable Tracker */}
         {data?.fatalitySummary && (() => {
+          const fs = data.fatalitySummary;
+          const wow = cp1BoxData?.weekOverWeek;
+          const rf = wow?.riskFactors;
           const allRiskClaims = data.rawClaims.filter(c => 
             c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
             c.confirmedFractures || c.hospitalization || c.lossOfConsciousness || c.aggFactors ||
@@ -3102,26 +3105,239 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           );
           const totalRiskReserves = allRiskClaims.reduce((sum, c) => sum + c.openReserves, 0);
 
+          // Build trend data for chart
+          const trendData = [
+            { name: 'Fatality', current: fs.fatalityCount, prior: rf?.fatality?.prior || 0, delta: rf?.fatality?.delta || 0 },
+            { name: 'Surgery', current: fs.surgeryCount, prior: rf?.surgery?.prior || 0, delta: rf?.surgery?.delta || 0 },
+            { name: 'Meds>Limits', current: fs.medsVsLimitsCount, prior: rf?.medsVsLimits?.prior || 0, delta: rf?.medsVsLimits?.delta || 0 },
+            { name: 'Hospital', current: fs.hospitalizationCount, prior: rf?.hospitalization?.prior || 0, delta: rf?.hospitalization?.delta || 0 },
+            { name: 'LOC/TBI', current: fs.lossOfConsciousnessCount, prior: rf?.lossOfConsciousness?.prior || 0, delta: rf?.lossOfConsciousness?.delta || 0 },
+            { name: 'Re-Aggravation', current: fs.aggFactorsCount, prior: rf?.aggFactors?.prior || 0, delta: rf?.aggFactors?.delta || 0 },
+            { name: 'Injections', current: fs.injectionsCount, prior: rf?.injections?.prior || 0, delta: rf?.injections?.delta || 0 },
+          ];
+
           return (
-            <div 
-              className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors"
-              onClick={() => setShowRiskFactorsDrilldown(true)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
-                  <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
+            <Collapsible open={showRiskFactorsDrilldown} onOpenChange={setShowRiskFactorsDrilldown}>
+              <CollapsibleTrigger className="w-full">
+                <div className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
+                      <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
+                      {wow?.hasValidPrior && (
+                        <span className={`text-[10px] ${wow.totalClaims.delta > 0 ? 'text-destructive' : 'text-success'}`}>
+                          {wow.totalClaims.delta > 0 ? '↑' : '↓'} {Math.abs(wow.totalClaims.delta)}
+                        </span>
+                      )}
+                      <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
+                      {wow?.priorSnapshotDate && (
+                        <span className="text-[10px] text-muted-foreground">vs {wow.priorSnapshotDate}</span>
+                      )}
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showRiskFactorsDrilldown ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
-                  <span className="text-[10px] text-destructive">↑ +{Math.round(allRiskClaims.length * 0.012)}</span>
-                  <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
-                  <span className="text-[10px] text-muted-foreground">vs Jan 5</span>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent>
+                <div className="bg-destructive/5 border-t border-destructive/10 p-4 sm:p-6 space-y-6 animate-fade-in">
+                  {/* Progress Chart */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Bar Chart */}
+                    <div className="bg-card border rounded-lg p-4">
+                      <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        Risk Factor Trends
+                        {wow?.priorSnapshotDate && (
+                          <span className="text-xs font-normal text-muted-foreground">vs {wow.priorSnapshotDate}</span>
+                        )}
+                      </h4>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={trendData} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis type="number" tick={{ fontSize: 10 }} />
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--card))', 
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px',
+                                fontSize: '12px'
+                              }}
+                              formatter={(value: number, name: string) => [value.toLocaleString(), name === 'current' ? 'Current' : 'Prior']}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Bar dataKey="prior" fill="hsl(var(--muted-foreground))" name="Prior" />
+                            <Bar dataKey="current" fill="hsl(var(--destructive))" name="Current" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Right: Delta Summary Cards */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />
+                        Week-over-Week Changes
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'Total Claims', current: wow?.totalClaims?.current || 0, delta: wow?.totalClaims?.delta || 0 },
+                          { label: 'Total Reserves', current: wow?.totalReserves?.current || 0, delta: wow?.totalReserves?.delta || 0, isCurrency: true },
+                          { label: 'High-Risk (3+)', current: wow?.highRiskClaims?.current || 0, delta: wow?.highRiskClaims?.delta || 0 },
+                          { label: 'Total Flags', current: wow?.totalFlags?.current || 0, delta: wow?.totalFlags?.delta || 0 },
+                        ].map((metric, i) => (
+                          <div key={i} className="bg-card/50 border rounded-lg p-3">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{metric.label}</p>
+                            <p className="text-lg font-bold">
+                              {metric.isCurrency ? formatCurrency(metric.current) : metric.current.toLocaleString()}
+                            </p>
+                            {wow?.hasValidPrior && (
+                              <p className={`text-xs font-medium ${metric.delta > 0 ? 'text-destructive' : metric.delta < 0 ? 'text-success' : 'text-muted-foreground'}`}>
+                                {metric.delta > 0 ? '↑ +' : metric.delta < 0 ? '↓ ' : ''}{Math.abs(metric.delta).toLocaleString()}
+                                <span className="text-muted-foreground font-normal ml-1">
+                                  {metric.delta > 0 ? 'WORSENING' : metric.delta < 0 ? 'IMPROVING' : 'STABLE'}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tier Breakdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Tier 1 - Critical */}
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                      <h5 className="text-xs font-bold text-destructive uppercase tracking-wide mb-2">Tier 1 - Critical</h5>
+                      <div className="space-y-1">
+                        {[
+                          { label: 'Fatality', count: fs.fatalityCount },
+                          { label: 'Surgery', count: fs.surgeryCount },
+                          { label: 'Meds > Limits', count: fs.medsVsLimitsCount },
+                          { label: 'Life Care Planner', count: fs.lifeCarePlannerCount },
+                        ].map((item, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span className="font-medium text-destructive">{item.count.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tier 2 - High */}
+                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+                      <h5 className="text-xs font-bold text-orange-600 uppercase tracking-wide mb-2">Tier 2 - High</h5>
+                      <div className="space-y-1">
+                        {[
+                          { label: 'Hospitalization', count: fs.hospitalizationCount },
+                          { label: 'LOC/TBI', count: fs.lossOfConsciousnessCount },
+                          { label: 'Re-Aggravation', count: fs.aggFactorsCount },
+                          { label: 'MRI/CT Injuries', count: fs.objectiveInjuriesCount },
+                        ].map((item, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span className="font-medium text-orange-600">{item.count.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tier 3 - Moderate */}
+                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                      <h5 className="text-xs font-bold text-warning uppercase tracking-wide mb-2">Tier 3 - Moderate</h5>
+                      <div className="space-y-1">
+                        {[
+                          { label: 'Injections', count: fs.injectionsCount },
+                          { label: 'EMS/Impact', count: fs.emsHeavyImpactCount },
+                          { label: 'Pain Level 5+', count: fs.painLevel5PlusCount },
+                          { label: 'Eggshell 69+', count: fs.eggshell69PlusCount },
+                        ].map((item, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span className="font-medium text-warning">{item.count.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!data?.fatalitySummary) return;
+                        const fs = data.fatalitySummary;
+                        const allHighRiskClaims = data.rawClaims
+                          .filter(c => c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner || c.confirmedFractures || c.hospitalization || c.lossOfConsciousness)
+                          .sort((a, b) => b.openReserves - a.openReserves);
+
+                        await generateStyledBoardroomExcel({
+                          reportTitle: 'CP1 Risk Factors',
+                          asOfDate: format(new Date(), 'MMMM d, yyyy'),
+                          sections: [
+                            {
+                              title: 'Summary',
+                              table: {
+                                headers: ['Tier', 'Factor', 'Count', 'Description'],
+                                rows: [
+                                  ['CRITICAL', 'Fatality', fs.fatalityCount, 'Claims involving death'],
+                                  ['CRITICAL', 'Surgery', fs.surgeryCount, 'Claims with surgical procedures'],
+                                  ['CRITICAL', 'Meds > Limits', fs.medsVsLimitsCount, 'Medical costs exceeding policy limits'],
+                                  ['CRITICAL', 'Life Care Planner', fs.lifeCarePlannerCount, 'Life care plans required'],
+                                  ['HIGH', 'Fractures', fs.confirmedFracturesCount, 'Documented fractures'],
+                                  ['HIGH', 'Hospitalization', fs.hospitalizationCount, 'Hospital admissions'],
+                                  ['HIGH', 'LOC/TBI', fs.lossOfConsciousnessCount, 'Loss of consciousness or TBI'],
+                                  ['HIGH', 'Re-Aggravation', fs.aggFactorsCount, 'Pre-existing condition aggravation'],
+                                  ['MODERATE', 'Injections', fs.injectionsCount, 'Injection treatments'],
+                                  ['MODERATE', 'EMS/Impact', fs.emsHeavyImpactCount, 'EMS or heavy impact'],
+                                  ['MODERATE', 'Pain 5+', fs.painLevel5PlusCount, 'Pain level 5 or higher'],
+                                  ['MODERATE', 'Eggshell 69+', fs.eggshell69PlusCount, 'Claimants aged 69+'],
+                                ],
+                                highlightLastRow: false,
+                              },
+                            },
+                            {
+                              title: 'High-Risk Claims',
+                              table: {
+                                headers: ['Claim #', 'Claimant', 'Coverage', 'Days', 'Reserves', 'Team', 'Adjuster'],
+                                rows: allHighRiskClaims.slice(0, 100).map(c => ([
+                                  c.claimNumber,
+                                  c.claimant,
+                                  c.coverage,
+                                  c.days,
+                                  c.openReserves,
+                                  c.teamGroup,
+                                  c.adjuster,
+                                ])),
+                                highlightLastRow: false,
+                              },
+                            },
+                          ],
+                          filename: `CP1_Risk_Factors_${format(new Date(), 'yyyyMMdd')}.xlsx`,
+                        });
+                        toast.success('Risk factors exported');
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Excel
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {allRiskClaims.length.toLocaleString()} claims with risk indicators
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })()}
 
