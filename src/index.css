@@ -573,6 +573,17 @@
   animation-play-state: paused;
 }
 
+/* Slower ticker for claims payment - more data points */
+.ticker-track-slow {
+  display: flex;
+  width: fit-content;
+  animation: ticker-scroll 80s linear infinite;
+}
+
+.ticker-track-slow:hover {
+  animation-play-state: paused;
+}
+
 @keyframes ticker-scroll {
   0% {
     transform: translateX(0);

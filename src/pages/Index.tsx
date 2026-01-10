@@ -9,6 +9,7 @@ import { LitigationChat } from "@/components/LitigationChat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { SalesTickerBanner } from "@/components/SalesTickerBanner";
+import { ClaimsPaymentTicker } from "@/components/ClaimsPaymentTicker";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
 import { Button } from "@/components/ui/button";
@@ -254,6 +255,9 @@ const Index = () => {
 
       {/* NYSE-Style Sales Ticker Banner */}
       <SalesTickerBanner />
+      
+      {/* Claims Payment Ticker */}
+      <ClaimsPaymentTicker />
       
       <main className="px-3 sm:px-6 py-3 sm:py-6">
         {/* Global Filters - Mobile Collapsible */}
