@@ -4,9 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FileSpreadsheet, FileText, MapPin, Calendar } from "lucide-react";
 import { OverLimitPaymentDB } from "@/hooks/useOverLimitPaymentsDB";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
+import { generateOverLimitExcel } from "@/lib/boardroomExcelExport";
 
 interface OverLimitDrilldownModalProps {
   open: boolean;
@@ -45,64 +45,22 @@ export function OverLimitDrilldownModal({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const handleExportExcel = () => {
+  // BOARDROOM STYLED EXCEL EXPORT
+  const handleExportExcel = async () => {
     try {
-      const exportData = claims.map(c => ({
-        'Claim Number': c.claim_number,
-        'State': c.state,
-        'Payment Date': c.payment_date,
-        'Coverage': c.coverage || 'BI',
-        'Classification': c.classification || 'Issue',
-        'Root Cause': c.root_cause || '',
-        'Policy Limit': c.policy_limit || 0,
-        'Payment Amount': c.payment_amount,
-        'Over Limit Amount': c.over_limit_amount,
-      }));
+      await generateOverLimitExcel(state, claims.map(c => ({
+        claim_number: c.claim_number,
+        state: c.state,
+        payment_date: c.payment_date,
+        coverage: c.coverage || undefined,
+        classification: c.classification || undefined,
+        root_cause: c.root_cause || undefined,
+        policy_limit: c.policy_limit || undefined,
+        payment_amount: c.payment_amount,
+        over_limit_amount: c.over_limit_amount,
+      })), totalOverLimit);
 
-      const ws = XLSX.utils.json_to_sheet(exportData);
-
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 18 }, // Claim Number
-        { wch: 14 }, // State
-        { wch: 12 }, // Payment Date
-        { wch: 10 }, // Coverage
-        { wch: 12 }, // Classification
-        { wch: 35 }, // Root Cause
-        { wch: 14 }, // Policy Limit
-        { wch: 16 }, // Payment Amount
-        { wch: 18 }, // Over Limit Amount
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `${state} Over-Limit Claims`);
-
-      // Add summary sheet
-      const summaryData = [
-        { Metric: 'State', Value: state },
-        { Metric: 'Total Claims', Value: claims.length },
-        { Metric: 'Total Over-Limit', Value: totalOverLimit },
-        { Metric: '', Value: '' },
-        { Metric: 'CLASSIFICATION BREAKDOWN', Value: '' },
-        { Metric: 'Anomaly Claims', Value: anomalyCount },
-        { Metric: 'Anomaly Over-Limit', Value: anomalyTotal },
-        { Metric: 'Issue Claims', Value: issueCount },
-        { Metric: 'Issue Over-Limit', Value: issueTotal },
-        { Metric: '', Value: '' },
-        { Metric: 'Export Date', Value: format(new Date(), 'yyyy-MM-dd HH:mm') },
-      ];
-      const summaryWs = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-
-      const filename = `OverLimit_${state.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.xlsx`;
-
-      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([out], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      downloadBlob(blob, filename);
-
-      toast.success(`Exported ${claims.length} claims to ${filename}`);
+      toast.success(`Exported ${claims.length} claims with boardroom styling`);
     } catch (err) {
       console.error('Export failed:', err);
       toast.error('Failed to export Excel file');

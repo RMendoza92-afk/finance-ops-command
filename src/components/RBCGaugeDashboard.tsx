@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useExportData } from '@/hooks/useExportData';
 import { format } from 'date-fns';
+import { generateRBCExcel, generateStyledExcelFromLegacy } from '@/lib/boardroomExcelExport';
 
 // Executive access gate (lightweight, not for strong security)
 const EXEC_ACCESS_PASSWORD = "rbc2026"; // case-insensitive
@@ -589,46 +590,35 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
     await generatePDF(exportData);
   };
 
-  const handleExportExcel = () => {
-    const exportData = {
-      title: 'RBC Performance Monitor',
-      subtitle: 'Risk-Based Capital & Actuarial KPIs',
-      timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
-      summary: {
-        'RBC Ratio': `${rbcMetrics.rbcRatio.toFixed(0)}%`,
-        'Loss Ratio': `${rbcMetrics.lossRatio.toFixed(1)}%`,
-        'LAE Ratio': `${rbcMetrics.laeRatio.toFixed(1)}%`,
-        'Combined Ratio': `${rbcMetrics.combinedRatio.toFixed(1)}%`,
-        'IBNR Reserve': formatCurrency(rbcMetrics.ibnr),
-        'Ultimate Loss': formatCurrency(rbcMetrics.ultimateLoss),
-        'Credibility': `${(rbcMetrics.credibility * 100).toFixed(0)}%`,
-        'Development Factor': rbcMetrics.developmentFactor.toFixed(3),
-        'Selected Rate Change': `${rbcMetrics.selectedChange >= 0 ? '+' : ''}${rbcMetrics.selectedChange.toFixed(1)}%`,
-      },
-      bulletInsights: [
-        `Capital position rated as "${rbcStatus.status}" with ${rbcMetrics.rbcRatio.toFixed(0)}% RBC ratio`,
-        `Combined ratio at ${rbcMetrics.combinedRatio.toFixed(1)}% indicates ${rbcMetrics.combinedRatio < 100 ? 'profitable underwriting' : 'underwriting pressure'}`,
-        `Loss development factor of ${rbcMetrics.developmentFactor.toFixed(3)} applied with ${(rbcMetrics.credibility * 100).toFixed(0)}% credibility`,
-      ],
-      columns: triangleTableData.columns,
-      rows: triangleTableData.rows,
-      rawClaimData: [
-        {
-          sheetName: 'Accident Year Summary',
-          columns: ['Accident Year', 'Earned Premium', 'Net Paid', 'Reserves', 'IBNR', 'Incurred', 'Loss Ratio'],
-          rows: accidentYears.map(ay => [
-            ay.accident_year,
-            ay.earned_premium,
-            ay.net_paid,
-            ay.reserves,
-            ay.ibnr,
-            ay.incurred,
-            `${ay.loss_ratio.toFixed(2)}%`
-          ])
-        }
-      ]
-    };
-    generateExcel(exportData);
+  const handleExportExcel = async () => {
+    try {
+      await generateRBCExcel({
+        rbcRatio: rbcMetrics.rbcRatio,
+        lossRatio: rbcMetrics.lossRatio,
+        laeRatio: rbcMetrics.laeRatio,
+        combinedRatio: rbcMetrics.combinedRatio,
+        ibnr: rbcMetrics.ibnr,
+        ultimateLoss: rbcMetrics.ultimateLoss,
+        credibility: rbcMetrics.credibility,
+        developmentFactor: rbcMetrics.developmentFactor,
+        selectedChange: rbcMetrics.selectedChange,
+        triangleData: {
+          columns: triangleTableData.columns,
+          rows: triangleTableData.rows
+        },
+        accidentYears: accidentYears.map(ay => ({
+          accident_year: ay.accident_year,
+          earned_premium: ay.earned_premium,
+          net_paid: ay.net_paid,
+          reserves: ay.reserves,
+          ibnr: ay.ibnr,
+          incurred: ay.incurred,
+          loss_ratio: ay.loss_ratio
+        }))
+      });
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
   };
 
   const formatCurrency = (value: number) => {

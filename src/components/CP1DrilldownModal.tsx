@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Clock, Flame, Download, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import * as XLSX from "xlsx";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   calculateExecutiveReview, 
@@ -15,6 +14,7 @@ import {
   ExecutiveReviewResult 
 } from "@/lib/executiveReview";
 import { AlertSendDialog } from "./AlertSendDialog";
+import { generateStyledTableExcel } from "@/lib/boardroomExcelExport";
 
 interface CP1Claim {
   matter_id: string;
@@ -170,7 +170,7 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
+                onClick={async () => {
                   const extractTeamNumber = (team: string | null): string => {
                     const m = String(team || '').match(/\b(\d{1,3})\b/);
                     return m?.[1] || '';
@@ -191,15 +191,23 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
                     'Filing Date': c.filing_date || '',
                     'Reasons': c.executiveReview.reasons.join(' | '),
                   }));
-                  const ws = XLSX.utils.json_to_sheet(exportData);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
-                  ws['!cols'] = [
-                    { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 25 }, 
-                    { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 },
-                    { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 50 }
-                  ];
-                  XLSX.writeFile(wb, `CP1_${coverage}_Executive_Review_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                  
+                  try {
+                    await generateStyledTableExcel(
+                      `CP1 ${coverage} Executive Review`,
+                      exportData,
+                      {
+                        filename: `CP1_${coverage}_Executive_Review_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+                        summaryMetrics: [
+                          { label: 'Coverage', value: coverage },
+                          { label: 'Total Claims', value: claimsWithReview.length },
+                          { label: 'Critical Count', value: claimsWithReview.filter(c => c.executiveReview.level === 'CRITICAL').length },
+                        ]
+                      }
+                    );
+                  } catch (err) {
+                    console.error('Export failed:', err);
+                  }
                 }}
                 className="gap-1.5"
               >
