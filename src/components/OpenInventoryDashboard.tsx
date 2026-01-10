@@ -10,6 +10,7 @@ import { SimpleDashboardV2 } from "@/components/dashboard/SimpleDashboardV2";
 import { ExecutiveCommandDashboard } from "@/components/dashboard/ExecutiveCommandDashboard";
 import { DashboardLayoutToggle, DashboardVersion } from "@/components/dashboard/DashboardLayoutToggle";
 import { Loader2, FileStack, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, Wallet, Car, MapPin, MessageSquare, Send, CheckCircle2, Target, Users, Flag, Eye, RefreshCw, Calendar, Sparkles, TestTube, Download, FileSpreadsheet, XCircle, CircleDot, ArrowUpRight, ArrowDownRight, Activity, ChevronDown, ChevronUp, Gavel, User, ExternalLink, Filter, Layers } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -3324,7 +3325,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                   Open Inventory: {formatNumber(metrics?.totalOpenClaims || 0)} Claims
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  As of {data?.dataDate || timestamp} • {formatNumber(metrics?.totalOpenExposures || 0)} open exposures
+                  As of {data?.dataDate || timestamp} • {formatNumber(data?.knownTotals?.totalOpenExposures || data?.totals.grandTotal || 0)} open exposures
                 </p>
                 {data?.delta && (
                   <div className={`flex items-center gap-2 mt-2 text-xs ${data.delta.change >= 0 ? 'text-destructive' : 'text-success'}`}>
@@ -3431,42 +3432,110 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </div>
         </div>
 
-        {/* Hot Topics Row - Risk Indicators */}
-        <div className="p-4 sm:p-6 bg-muted/20">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">Risk Indicators</span>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            {/* High Risk (3+ flags) */}
-            <div className="bg-card rounded-lg p-2.5 border border-orange-500/40">
-              <span className="text-[10px] font-bold text-orange-500 uppercase">High Risk (3+ flags)</span>
-              <p className="text-lg font-bold text-orange-500">{formatNumber(cp1BoxData?.multiFlagGroups?.find(g => g.flagCount >= 3)?.claimCount || 0)}</p>
-            </div>
+        {/* CP1 Risk Factors - Collapsible */}
+        {data?.fatalitySummary && (() => {
+          const fs = data.fatalitySummary;
+          const tier1 = [
+            { label: 'Fatality', icon: '💀', count: fs.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
+            { label: 'Surgery', icon: '🏥', count: fs.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
+            { label: 'Meds > Limits', icon: '💊', count: fs.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
+            { label: 'Life Care', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
+          ];
+          const tier2 = [
+            { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount, claims: data.rawClaims.filter(c => c.confirmedFractures) },
+            { label: 'Hospital', icon: '🛏️', count: fs.hospitalizationCount, claims: data.rawClaims.filter(c => c.hospitalization) },
+            { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount, claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
+            { label: 'Re-Agg', icon: '⚠️', count: fs.aggFactorsCount, claims: data.rawClaims.filter(c => c.aggFactors) },
+            { label: 'MRI/CT', icon: '🩹', count: fs.objectiveInjuriesCount, claims: data.rawClaims.filter(c => c.objectiveInjuries) },
+            { label: 'Ped/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount, claims: data.rawClaims.filter(c => c.pedestrianPregnancy) },
+            { label: 'Surg Rec', icon: '📝', count: fs.priorSurgeryCount, claims: data.rawClaims.filter(c => c.priorSurgery) },
+          ];
+          const tier3 = [
+            { label: 'Inject', icon: '💉', count: fs.injectionsCount, claims: data.rawClaims.filter(c => c.injections) },
+            { label: 'EMS', icon: '🚑', count: fs.emsHeavyImpactCount, claims: data.rawClaims.filter(c => c.emsHeavyImpact) },
+            { label: 'Lacer', icon: '🩸', count: fs.lacerationsCount, claims: data.rawClaims.filter(c => c.lacerations) },
+            { label: 'Pain 5+', icon: '😣', count: fs.painLevel5PlusCount, claims: data.rawClaims.filter(c => c.painLevel5Plus) },
+            { label: 'Preg', icon: '🤰', count: fs.pregnancyCount, claims: data.rawClaims.filter(c => c.pregnancy) },
+            { label: '69+', icon: '👴', count: fs.eggshell69PlusCount, claims: data.rawClaims.filter(c => c.eggshell69Plus) },
+          ];
+          const allRiskClaims = data.rawClaims.filter(c => 
+            c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
+            c.confirmedFractures || c.hospitalization || c.lossOfConsciousness || c.aggFactors ||
+            c.objectiveInjuries || c.pedestrianPregnancy || c.priorSurgery ||
+            c.injections || c.emsHeavyImpact || c.lacerations || c.painLevel5Plus || c.pregnancy || c.eggshell69Plus
+          );
+          const totalRiskReserves = allRiskClaims.reduce((sum, c) => sum + c.openReserves, 0);
 
-            {/* 365+ Days */}
-            <div className="bg-card rounded-lg p-2.5 border border-amber-500/40">
-              <span className="text-[10px] font-bold text-amber-600 uppercase">Aged 365+</span>
-              <p className="text-lg font-bold text-amber-600">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
-            </div>
+          return (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <div className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
+                      <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
+                      <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="p-4 sm:p-6 bg-muted/20 space-y-4">
+                  {/* Tier 1 - Critical */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-destructive uppercase tracking-wide mb-2">Tier 1 — Critical</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {tier1.map((f, i) => (
+                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/30 border-border'}`}>
+                          <p className="text-xs mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
+                          <p className="text-xl font-bold text-destructive">{formatNumber(f.count)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-            {/* No Evaluation */}
-            <div className="bg-card rounded-lg p-2.5 border border-warning/40">
-              <span className="text-[10px] font-bold text-warning uppercase">No Eval</span>
-              <p className="text-lg font-bold text-warning">{formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(FINANCIAL_DATA.totals.noEvalReserves || 0)}</p>
-            </div>
+                  {/* Tier 2 - High */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-orange-500 uppercase tracking-wide mb-2">Tier 2 — High</h4>
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {tier2.map((f, i) => (
+                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
+                          <p className="text-[9px] mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
+                          <p className="text-lg font-bold text-orange-500">{formatNumber(f.count)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-            {/* 181-365 Days */}
-            <div className="bg-card rounded-lg p-2.5 border border-amber-400/40">
-              <span className="text-[10px] font-bold text-amber-500 uppercase">Aged 181-365</span>
-              <p className="text-lg font-bold text-amber-500">{formatNumber(data?.totals.age181To365 || 0)}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(data?.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0)}</p>
-            </div>
-          </div>
-        </div>
+                  {/* Tier 3 - Moderate */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-primary uppercase tracking-wide mb-2">Tier 3 — Moderate</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {tier3.map((f, i) => (
+                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
+                          <p className="text-[9px] mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
+                          <p className="text-lg font-bold text-primary">{formatNumber(f.count)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Total Fatality Reserves */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-sm text-muted-foreground">Total Fatality Reserves:</span>
+                    <span className="text-xl font-bold text-destructive">{formatCurrency(tier1[0].claims.reduce((s, c) => s + c.openReserves, 0))}</span>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })()}
 
         {/* Actions Row */}
         <div className="p-4 sm:p-6 bg-card/50 border-t border-border flex flex-col sm:flex-row sm:items-center gap-3">
