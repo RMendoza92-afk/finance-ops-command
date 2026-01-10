@@ -113,6 +113,17 @@ export interface CP1WeekOverWeekDelta {
   hasValidPrior: boolean;
 }
 
+// Negotiation activity summary
+export interface CP1NegotiationSummary {
+  totalWithNegotiation: number;
+  totalWithoutNegotiation: number;
+  totalNegotiationAmount: number;
+  avgNegotiationAmount: number;
+  staleNegotiations60Plus: number;
+  staleNegotiations90Plus: number;
+  byType: { type: string; count: number; totalAmount: number }[];
+}
+
 export interface CP1CsvAnalysis {
   dataDate: string;
   cp1Data: CP1DataShape;
@@ -121,6 +132,7 @@ export interface CP1CsvAnalysis {
   multiFlagGroups: MultiFlagGroup[];
   totalFlagInstances: number;
   weekOverWeek: CP1WeekOverWeekDelta | null;
+  negotiationSummary: CP1NegotiationSummary;
 }
 
 function parseCurrency(val: string): number {
@@ -495,6 +507,37 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
     // Total reserves
     const totalReserves = claims.reduce((sum, c) => sum + c.openReserves, 0);
 
+    // Calculate negotiation summary
+    const claimsWithNego = claims.filter(c => c.negotiationAmount > 0 || c.negotiationDate);
+    const claimsWithoutNego = claims.filter(c => !c.negotiationAmount && !c.negotiationDate);
+    const stale60Plus = claims.filter(c => c.daysSinceNegotiationDate !== null && c.daysSinceNegotiationDate >= 60);
+    const stale90Plus = claims.filter(c => c.daysSinceNegotiationDate !== null && c.daysSinceNegotiationDate >= 90);
+    
+    // Group by negotiation type
+    const negoTypeMap = new Map<string, { count: number; totalAmount: number }>();
+    for (const c of claims) {
+      const type = c.negotiationType || '(No Negotiation)';
+      if (!negoTypeMap.has(type)) negoTypeMap.set(type, { count: 0, totalAmount: 0 });
+      const acc = negoTypeMap.get(type)!;
+      acc.count++;
+      acc.totalAmount += c.negotiationAmount;
+    }
+    
+    const totalNegoAmount = claims.reduce((sum, c) => sum + c.negotiationAmount, 0);
+    const avgNegoAmount = claimsWithNego.length > 0 ? totalNegoAmount / claimsWithNego.length : 0;
+    
+    const negotiationSummary: CP1NegotiationSummary = {
+      totalWithNegotiation: claimsWithNego.length,
+      totalWithoutNegotiation: claimsWithoutNego.length,
+      totalNegotiationAmount: totalNegoAmount,
+      avgNegotiationAmount: avgNegoAmount,
+      staleNegotiations60Plus: stale60Plus.length,
+      staleNegotiations90Plus: stale90Plus.length,
+      byType: Array.from(negoTypeMap.entries())
+        .map(([type, data]) => ({ type, count: data.count, totalAmount: data.totalAmount }))
+        .sort((a, b) => b.count - a.count),
+    };
+
     const cp1Data: CP1DataShape = {
       byCoverage,
       biByAge,
@@ -511,6 +554,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
       fatalitySummary,
       multiFlagGroups,
       totalFlagInstances,
+      negotiationSummary,
       // For snapshot
       snapshotMetrics: {
         totalClaims: total,
@@ -672,6 +716,7 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
       fatalitySummary: processedData.fatalitySummary,
       multiFlagGroups: processedData.multiFlagGroups,
       totalFlagInstances: processedData.totalFlagInstances,
+      negotiationSummary: processedData.negotiationSummary,
       weekOverWeek,
     };
   }, [processedData, weekOverWeek]);
