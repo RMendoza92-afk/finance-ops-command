@@ -5982,32 +5982,42 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
           <div className="space-y-6 pt-6">
             {data?.fatalitySummary && (() => {
               const fs = data.fatalitySummary;
+              const rf = cp1BoxData?.weekOverWeek?.riskFactors;
+              const priorDate = cp1BoxData?.weekOverWeek?.priorSnapshotDate;
+              
               const tier1 = [
-                { label: 'Fatality', icon: '💀', count: fs.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
-                { label: 'Surgery', icon: '🏥', count: fs.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
-                { label: 'Meds > Limits', icon: '💊', count: fs.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
-                { label: 'Life Care Planner', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
+                { label: 'Fatality', icon: '💀', count: fs.fatalityCount, claims: data.rawClaims.filter(c => c.fatality), key: 'fatality' as const },
+                { label: 'Surgery', icon: '🏥', count: fs.surgeryCount, claims: data.rawClaims.filter(c => c.surgery), key: 'surgery' as const },
+                { label: 'Meds > Limits', icon: '💊', count: fs.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits), key: 'medsVsLimits' as const },
+                { label: 'Life Care Planner', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner), key: 'lifeCarePlanner' as const },
               ];
               const tier2 = [
-                { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount },
-                { label: 'Hospitalization', icon: '🛏️', count: fs.hospitalizationCount },
-                { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount },
-                { label: 'Re-Aggravation', icon: '⚠️', count: fs.aggFactorsCount },
-                { label: 'MRI/CT Injuries', icon: '🩹', count: fs.objectiveInjuriesCount },
-                { label: 'Pedestrian/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount },
-                { label: 'Surgery Rec', icon: '📝', count: fs.priorSurgeryCount },
+                { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount, key: null },
+                { label: 'Hospitalization', icon: '🛏️', count: fs.hospitalizationCount, key: 'hospitalization' as const },
+                { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount, key: 'lossOfConsciousness' as const },
+                { label: 'Re-Aggravation', icon: '⚠️', count: fs.aggFactorsCount, key: 'aggFactors' as const },
+                { label: 'MRI/CT Injuries', icon: '🩹', count: fs.objectiveInjuriesCount, key: 'objectiveInjuries' as const },
+                { label: 'Pedestrian/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount, key: 'pedestrianPregnancy' as const },
+                { label: 'Surgery Rec', icon: '📝', count: fs.priorSurgeryCount, key: null },
               ];
               const tier3 = [
-                { label: 'Injections', icon: '💉', count: fs.injectionsCount },
-                { label: 'EMS/Heavy Impact', icon: '🚑', count: fs.emsHeavyImpactCount },
-                { label: 'Lacerations', icon: '🩸', count: fs.lacerationsCount },
-                { label: 'Pain Level 5+', icon: '😣', count: fs.painLevel5PlusCount },
-                { label: 'Pregnancy', icon: '🤰', count: fs.pregnancyCount },
-                { label: '69+ Years', icon: '👴', count: fs.eggshell69PlusCount },
+                { label: 'Injections', icon: '💉', count: fs.injectionsCount, key: 'injections' as const },
+                { label: 'EMS/Heavy Impact', icon: '🚑', count: fs.emsHeavyImpactCount, key: 'emsHeavyImpact' as const },
+                { label: 'Lacerations', icon: '🩸', count: fs.lacerationsCount, key: null },
+                { label: 'Pain Level 5+', icon: '😣', count: fs.painLevel5PlusCount, key: null },
+                { label: 'Pregnancy', icon: '🤰', count: fs.pregnancyCount, key: null },
+                { label: '69+ Years', icon: '👴', count: fs.eggshell69PlusCount, key: null },
               ];
 
               return (
                 <>
+                  {/* Comparison Header */}
+                  {rf && priorDate && (
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <p className="text-xs text-muted-foreground">Comparing to <span className="font-semibold text-foreground">{priorDate}</span></p>
+                    </div>
+                  )}
+
                   {/* Tier 1 - Critical */}
                   <div>
                     <h4 className="font-bold text-destructive mb-3 flex items-center gap-2">
@@ -6018,20 +6028,31 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                       <TableHeader>
                         <TableRow>
                           <TableHead>Factor</TableHead>
-                          <TableHead className="text-right">Count</TableHead>
-                          <TableHead className="text-right">Total Reserves</TableHead>
+                          {rf && <TableHead className="text-right">Prior</TableHead>}
+                          <TableHead className="text-right">Current</TableHead>
+                          {rf && <TableHead className="text-right">Δ</TableHead>}
+                          <TableHead className="text-right">Reserves</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {tier1.map((f, i) => (
-                          <TableRow key={i} className={f.count > 0 ? 'bg-destructive/5' : ''}>
-                            <TableCell className="font-medium">{f.icon} {f.label}</TableCell>
-                            <TableCell className="text-right font-bold text-destructive">{f.count.toLocaleString()}</TableCell>
-                            <TableCell className="text-right">
-                              ${f.claims.reduce((sum, c) => sum + c.openReserves, 0).toLocaleString()}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {tier1.map((f, i) => {
+                          const comp = f.key && rf ? rf[f.key] : null;
+                          return (
+                            <TableRow key={i} className={f.count > 0 ? 'bg-destructive/5' : ''}>
+                              <TableCell className="font-medium">{f.icon} {f.label}</TableCell>
+                              {rf && <TableCell className="text-right text-muted-foreground">{comp?.prior ?? '-'}</TableCell>}
+                              <TableCell className="text-right font-bold text-destructive">{f.count.toLocaleString()}</TableCell>
+                              {rf && (
+                                <TableCell className={`text-right font-bold ${(comp?.delta ?? 0) > 0 ? 'text-destructive' : (comp?.delta ?? 0) < 0 ? 'text-green-500' : ''}`}>
+                                  {comp?.delta !== undefined ? (comp.delta > 0 ? '+' : '') + comp.delta : '-'}
+                                </TableCell>
+                              )}
+                              <TableCell className="text-right">
+                                ${f.claims.reduce((sum, c) => sum + c.openReserves, 0).toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -6042,14 +6063,22 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                       <span className="px-2 py-0.5 bg-orange-500 text-white text-xs rounded">TIER 2</span>
                       High (70-50 pts)
                     </h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                      {tier2.map((f, i) => (
-                        <div key={i} className={`p-3 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
-                          <p className="text-lg mb-1">{f.icon}</p>
-                          <p className="text-xl font-bold text-orange-500">{f.count.toLocaleString()}</p>
-                          <p className="text-[10px] text-muted-foreground">{f.label}</p>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {tier2.map((f, i) => {
+                        const comp = f.key && rf ? rf[f.key] : null;
+                        return (
+                          <div key={i} className={`p-3 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
+                            <p className="text-lg mb-1">{f.icon}</p>
+                            <p className="text-xl font-bold text-orange-500">{f.count.toLocaleString()}</p>
+                            {comp && (
+                              <p className={`text-xs font-semibold ${comp.delta > 0 ? 'text-destructive' : comp.delta < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                                {comp.delta > 0 ? '↑' : comp.delta < 0 ? '↓' : '→'} {comp.delta > 0 ? '+' : ''}{comp.delta} vs prior
+                              </p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">{f.label}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -6060,13 +6089,21 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                       Moderate (40-30 pts)
                     </h4>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {tier3.map((f, i) => (
-                        <div key={i} className={`p-2 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
-                          <p className="text-sm mb-1">{f.icon}</p>
-                          <p className="text-lg font-semibold text-primary">{f.count.toLocaleString()}</p>
-                          <p className="text-[9px] text-muted-foreground">{f.label}</p>
-                        </div>
-                      ))}
+                      {tier3.map((f, i) => {
+                        const comp = f.key && rf ? rf[f.key] : null;
+                        return (
+                          <div key={i} className={`p-2 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
+                            <p className="text-sm mb-1">{f.icon}</p>
+                            <p className="text-lg font-semibold text-primary">{f.count.toLocaleString()}</p>
+                            {comp && (
+                              <p className={`text-[9px] font-semibold ${comp.delta > 0 ? 'text-destructive' : comp.delta < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                                {comp.delta !== 0 ? (comp.delta > 0 ? '+' : '') + comp.delta : '—'}
+                              </p>
+                            )}
+                            <p className="text-[9px] text-muted-foreground">{f.label}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

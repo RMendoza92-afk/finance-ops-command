@@ -100,6 +100,13 @@ export interface MultiFlagGroup {
   claims: CP1CsvClaim[];
 }
 
+// Risk factor comparison item
+export interface RiskFactorComparison {
+  current: number;
+  prior: number;
+  delta: number;
+}
+
 // Week-over-week delta tracking
 export interface CP1WeekOverWeekDelta {
   totalClaims: { current: number; prior: number; delta: number; pctChange: number };
@@ -111,6 +118,20 @@ export interface CP1WeekOverWeekDelta {
   age181To365: { current: number; prior: number; delta: number; pctChange: number };
   priorSnapshotDate: string | null;
   hasValidPrior: boolean;
+  // Risk factor comparisons
+  riskFactors?: {
+    fatality: RiskFactorComparison;
+    surgery: RiskFactorComparison;
+    medsVsLimits: RiskFactorComparison;
+    hospitalization: RiskFactorComparison;
+    lossOfConsciousness: RiskFactorComparison;
+    aggFactors: RiskFactorComparison;
+    objectiveInjuries: RiskFactorComparison;
+    pedestrianPregnancy: RiskFactorComparison;
+    lifeCarePlanner: RiskFactorComparison;
+    injections: RiskFactorComparison;
+    emsHeavyImpact: RiskFactorComparison;
+  };
 }
 
 // Negotiation activity summary
@@ -637,6 +658,16 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
         const prior = priorSnapshots?.[0];
         
         if (prior) {
+          // Parse prior flag breakdown
+          const priorFlags = (prior.flag_breakdown as Record<string, number>) || {};
+          const currentFlags = metrics.flagBreakdown;
+          
+          const makeRiskComparison = (key: string): RiskFactorComparison => ({
+            current: currentFlags[key] || 0,
+            prior: priorFlags[key] || 0,
+            delta: (currentFlags[key] || 0) - (priorFlags[key] || 0),
+          });
+
           const delta: CP1WeekOverWeekDelta = {
             totalClaims: {
               current: metrics.totalClaims,
@@ -681,6 +712,19 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
             },
             priorSnapshotDate: prior.snapshot_date,
             hasValidPrior: true,
+            riskFactors: {
+              fatality: makeRiskComparison('fatality'),
+              surgery: makeRiskComparison('surgery'),
+              medsVsLimits: makeRiskComparison('medsVsLimits'),
+              hospitalization: makeRiskComparison('hospitalization'),
+              lossOfConsciousness: makeRiskComparison('lossOfConsciousness'),
+              aggFactors: makeRiskComparison('aggFactors'),
+              objectiveInjuries: makeRiskComparison('objectiveInjuries'),
+              pedestrianPregnancy: makeRiskComparison('pedestrianPregnancy'),
+              lifeCarePlanner: makeRiskComparison('lifeCarePlanner'),
+              injections: makeRiskComparison('injections'),
+              emsHeavyImpact: makeRiskComparison('emsHeavyImpact'),
+            },
           };
           setWeekOverWeek(delta);
         } else {
