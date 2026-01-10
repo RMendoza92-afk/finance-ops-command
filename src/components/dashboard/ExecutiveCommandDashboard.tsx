@@ -27,7 +27,6 @@ import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { useExportData } from "@/hooks/useExportData";
 import { toast } from "sonner";
-import { generateClaimsInventoryReport, generateCostCurveReport } from "@/lib/executiveVisualReport";
 import { generatePremiumBoardBriefing } from "@/lib/premiumBoardBriefing";
 
 interface CP1CoverageRow {
