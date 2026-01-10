@@ -28,7 +28,7 @@ const COLORS = {
 export interface BoardroomSection {
   title: string;
   subtitle?: string;
-  metrics?: { label: string; value: string | number }[];
+  metrics?: { label: string; value: string | number; notes?: string }[];
   table?: {
     headers: string[];
     rows: (string | number | null | undefined)[][];
@@ -111,12 +111,16 @@ const renderStyledReportToWorksheet = (
 
     // Key-Value Metrics Table
     if (section.metrics && section.metrics.length > 0) {
+      const hasNotes = section.metrics.some((m) => Boolean(m.notes));
+      const metricCols = hasNotes ? [1, 2, 3] : [1, 2];
+
       // Metric header row
       const metricHeaderRow = worksheet.getRow(currentRow);
       metricHeaderRow.getCell(1).value = 'Metric';
       metricHeaderRow.getCell(2).value = 'Value';
+      if (hasNotes) metricHeaderRow.getCell(3).value = 'Notes';
 
-      [1, 2].forEach(col => {
+      metricCols.forEach((col) => {
         const cell = metricHeaderRow.getCell(col);
         cell.font = { bold: true, color: { argb: COLORS.white } };
         cell.fill = {
@@ -157,9 +161,15 @@ const renderStyledReportToWorksheet = (
           valueCell.alignment = { horizontal: 'right' };
         }
 
+        if (hasNotes) {
+          const notesCell = row.getCell(3);
+          notesCell.value = metric.notes ?? '';
+          notesCell.alignment = { horizontal: 'left' };
+        }
+
         // Alternating row color
         if (idx % 2 === 1) {
-          [1, 2].forEach(col => {
+          metricCols.forEach((col) => {
             row.getCell(col).fill = {
               type: 'pattern',
               pattern: 'solid',
@@ -169,7 +179,7 @@ const renderStyledReportToWorksheet = (
         }
 
         // Light border
-        [1, 2].forEach(col => {
+        metricCols.forEach((col) => {
           row.getCell(col).border = {
             bottom: { style: 'hair', color: { argb: COLORS.borderGray } }
           };
