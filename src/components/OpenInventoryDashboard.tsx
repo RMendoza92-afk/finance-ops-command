@@ -3538,23 +3538,25 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
           </div>
 
-          {/* Multi-Pack Claims */}
+          {/* Multi-Pack BI Claims - Enhanced */}
           <div 
-            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-purple-500/50 transition-all hover:shadow-lg"
+            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-purple-500/5 rounded-xl border border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-all hover:shadow-lg col-span-2 sm:col-span-1"
             onClick={() => setShowMultiPackDrawer(true)}
           >
             <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
               <Layers className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Multi-Pack Claims</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Multi-Pack BI</p>
               <p className="text-lg sm:text-2xl font-bold text-purple-500 mt-0.5 sm:mt-1">
-                {data?.multiPackData?.totalMultiPackGroups || 0}
+                {data?.multiPackData?.biMultiPack?.totalGroups || 0}
                 <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">groups</span>
               </p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                {data?.multiPackData?.totalClaimsInPacks || 0} claims • Same incident
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+                <span className="font-medium text-purple-400">{data?.multiPackData?.biMultiPack?.totalClaims || 0} BI claims</span>
+                <span>•</span>
+                <span className="font-semibold text-foreground">{formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</span>
+              </div>
             </div>
             <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 flex-shrink-0" />
           </div>
@@ -5416,18 +5418,44 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </SheetHeader>
 
           <div className="space-y-6">
-            {/* Summary Stats */}
+            {/* BI Multi-Pack Summary - Primary Focus */}
+            <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/30">
+              <h4 className="text-sm font-semibold text-purple-500 mb-3 flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                BI Multi-Pack Summary
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">BI Groups</p>
+                  <p className="text-xl font-bold text-purple-500 mt-1">{data?.multiPackData?.biMultiPack?.totalGroups || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">BI Claims</p>
+                  <p className="text-xl font-bold text-foreground mt-1">{data?.multiPackData?.biMultiPack?.totalClaims || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">BI Reserves</p>
+                  <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">BI High Eval</p>
+                  <p className="text-xl font-bold text-warning mt-1">{formatCurrency(data?.multiPackData?.biMultiPack?.totalHighEval || 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* All Multi-Pack Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="bg-purple-500/10 rounded-lg p-3 sm:p-4 border border-purple-500/30">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Groups</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-500 mt-1">{data?.multiPackData?.totalMultiPackGroups || 0}</p>
+              <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">All Groups</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{data?.multiPackData?.totalMultiPackGroups || 0}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Claims in Packs</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">All Claims in Packs</p>
                 <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{data?.multiPackData?.totalClaimsInPacks || 0}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Reserves</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">All Reserves</p>
                 <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">
                   {formatCurrency(data?.multiPackData?.groups.reduce((sum, g) => sum + g.totalReserves, 0) || 0)}
                 </p>

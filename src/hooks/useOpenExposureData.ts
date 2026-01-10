@@ -226,6 +226,20 @@ export interface MultiPackSummary {
     reserves: number;
   }[];
   groups: MultiPackGroup[];
+  // BI-specific multi-pack data
+  biMultiPack: {
+    totalGroups: number;
+    totalClaims: number;
+    totalReserves: number;
+    totalLowEval: number;
+    totalHighEval: number;
+    byPackSize: {
+      packSize: number;
+      groupCount: number;
+      claimCount: number;
+      reserves: number;
+    }[];
+  };
 }
 
 // Phase breakdown for population analysis
@@ -1171,11 +1185,56 @@ function processRawClaims(rows: RawClaimRow[]): Omit<OpenExposureData, 'delta' |
     .map(([packSize, data]) => ({ packSize, ...data }))
     .sort((a, b) => b.packSize - a.packSize);
   
+  // Calculate BI-specific multi-pack data (filter groups that have at least one BI claim)
+  const biCoverages = ['BI', 'UM', 'UIM', 'UI'];
+  const biMultiPackGroups = multiPackGroups.filter(g => 
+    g.claims.some(c => biCoverages.some(bc => c.coverage?.toUpperCase().includes(bc)))
+  );
+  
+  let biTotalReserves = 0;
+  let biTotalLowEval = 0;
+  let biTotalHighEval = 0;
+  let biTotalClaims = 0;
+  
+  const biPackSizeMap = new Map<number, { groupCount: number; claimCount: number; reserves: number }>();
+  for (const group of biMultiPackGroups) {
+    // Count only BI claims within each group
+    const biClaims = group.claims.filter(c => biCoverages.some(bc => c.coverage?.toUpperCase().includes(bc)));
+    const biReserves = biClaims.reduce((sum, c) => sum + c.reserves, 0);
+    const biLow = biClaims.reduce((sum, c) => sum + c.lowEval, 0);
+    const biHigh = biClaims.reduce((sum, c) => sum + c.highEval, 0);
+    
+    biTotalReserves += biReserves;
+    biTotalLowEval += biLow;
+    biTotalHighEval += biHigh;
+    biTotalClaims += biClaims.length;
+    
+    if (!biPackSizeMap.has(group.packSize)) {
+      biPackSizeMap.set(group.packSize, { groupCount: 0, claimCount: 0, reserves: 0 });
+    }
+    const ps = biPackSizeMap.get(group.packSize)!;
+    ps.groupCount++;
+    ps.claimCount += biClaims.length;
+    ps.reserves += biReserves;
+  }
+  
+  const biByPackSize = Array.from(biPackSizeMap.entries())
+    .map(([packSize, data]) => ({ packSize, ...data }))
+    .sort((a, b) => b.packSize - a.packSize);
+
   const multiPackData: MultiPackSummary = {
     totalMultiPackGroups: multiPackGroups.length,
     totalClaimsInPacks: multiPackGroups.reduce((sum, g) => sum + g.claims.length, 0),
     byPackSize,
     groups: multiPackGroups,
+    biMultiPack: {
+      totalGroups: biMultiPackGroups.length,
+      totalClaims: biTotalClaims,
+      totalReserves: biTotalReserves,
+      totalLowEval: biTotalLowEval,
+      totalHighEval: biTotalHighEval,
+      byPackSize: biByPackSize,
+    },
   };
   
   // ============ PHASE BREAKDOWN ============
