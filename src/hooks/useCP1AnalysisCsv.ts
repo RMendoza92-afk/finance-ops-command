@@ -153,12 +153,12 @@ const NON_WORKABLE_STATUSES = new Set(
   ].map((s) => s.toLowerCase())
 );
 
-// Coverages to EXCLUDE from CP1 analysis - only want BI, UI, UM
-const EXCLUDED_COVERAGES = new Set(["pd", "oc", "cl", "up"]);
+// Coverages to INCLUDE in CP1 analysis - only want BI, UI, UM, UIM
+const INCLUDED_COVERAGES = new Set(["bi", "ui", "um", "uim"]);
 
-function isExcludedCoverage(coverage: string): boolean {
+function isIncludedCoverage(coverage: string): boolean {
   const norm = normalize(coverage);
-  return EXCLUDED_COVERAGES.has(norm);
+  return INCLUDED_COVERAGES.has(norm);
 }
 
 function isNonWorkableRow(row: Record<string, string>): boolean {
@@ -167,8 +167,8 @@ function isNonWorkableRow(row: Record<string, string>): boolean {
   const evalPhase = normalize(row["Evaluation Phase"]);
   const coverage = normalize(row["Coverage"]);
 
-  // Exclude non-BI coverages (PD, OC, CL, UP) from CP1 analysis
-  if (isExcludedCoverage(coverage)) return true;
+  // Only include BI, UI, UM, UIM coverages in CP1 analysis
+  if (!isIncludedCoverage(coverage)) return true;
 
   // Exact matches (user-provided list)
   if (NON_WORKABLE_STATUSES.has(status) || NON_WORKABLE_STATUSES.has(biStatus)) return true;
