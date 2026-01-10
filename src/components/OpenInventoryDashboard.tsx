@@ -310,6 +310,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const [showCP1Drawer, setShowCP1Drawer] = useState(false);
   const [generatingCP1PDF, setGeneratingCP1PDF] = useState(false);
   const [generatingCP1Excel, setGeneratingCP1Excel] = useState(false);
+  const [showWoWDrilldown, setShowWoWDrilldown] = useState(false);
+  const [showNegoDrilldown, setShowNegoDrilldown] = useState(false);
   const [generatingBoardPackage, setGeneratingBoardPackage] = useState(false);
   const [cp1DrilldownCoverage, setCp1DrilldownCoverage] = useState<string | null>(null);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
@@ -1519,6 +1521,100 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const summarySheet = XLSX.utils.aoa_to_sheet(execSummary);
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
       XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+      // Sheet: Week-over-Week Progress Tracker
+      const wow = cp1BoxData?.weekOverWeek;
+      if (wow?.hasValidPrior) {
+        const wowData = [
+          ['WEEK-OVER-WEEK PROGRESS TRACKER'],
+          [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
+          [`Prior Snapshot: ${wow.priorSnapshotDate || 'N/A'}`],
+          [],
+          ['METRIC', 'PRIOR', 'CURRENT', 'DELTA', '% CHANGE', 'TREND'],
+          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, `${wow.totalClaims.pctChange.toFixed(1)}%`, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, `${wow.age365Plus.pctChange.toFixed(1)}%`, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, `${wow.age181To365.pctChange.toFixed(1)}%`, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, `${wow.highRiskClaims.pctChange.toFixed(1)}%`, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, `${wow.totalFlags.pctChange.toFixed(1)}%`, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, `${wow.totalReserves.pctChange.toFixed(1)}%`, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['CP1 Rate (%)', `${wow.cp1Rate.prior.toFixed(1)}%`, `${wow.cp1Rate.current.toFixed(1)}%`, `${wow.cp1Rate.delta.toFixed(1)}%`, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
+        ];
+        const wowSheet = XLSX.utils.aoa_to_sheet(wowData);
+        wowSheet['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(workbook, wowSheet, 'Week-over-Week');
+      }
+
+      // Sheet: Negotiation Activity Summary
+      const nego = cp1BoxData?.negotiationSummary;
+      if (nego) {
+        const negoSummaryData = [
+          ['NEGOTIATION ACTIVITY SUMMARY'],
+          [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
+          [],
+          ['KEY METRICS'],
+          ['Metric', 'Value'],
+          ['Claims with Negotiation', nego.totalWithNegotiation],
+          ['Claims without Negotiation', nego.totalWithoutNegotiation],
+          ['Total Negotiation Amount', `$${nego.totalNegotiationAmount.toLocaleString()}`],
+          ['Average Negotiation Amount', `$${nego.avgNegotiationAmount.toLocaleString()}`],
+          ['Stale Negotiations (60+ Days)', nego.staleNegotiations60Plus],
+          ['Stale Negotiations (90+ Days)', nego.staleNegotiations90Plus],
+          [],
+          ['NEGOTIATION BY TYPE'],
+          ['Negotiation Type', 'Count', 'Total Amount'],
+          ...nego.byType.map(t => [t.type, t.count, `$${t.totalAmount.toLocaleString()}`]),
+        ];
+        const negoSummarySheet = XLSX.utils.aoa_to_sheet(negoSummaryData);
+        negoSummarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 18 }];
+        XLSX.utils.book_append_sheet(workbook, negoSummarySheet, 'Negotiation Summary');
+
+        // Sheet: Stale Negotiations (60+ days)
+        const staleClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+          c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60
+        ).sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
+
+        if (staleClaims.length > 0) {
+          const staleData = staleClaims.map(c => ({
+            'Claim #': c.claimNumber,
+            'Claimant': c.claimant,
+            'Coverage': c.coverage,
+            'Days Open': c.days,
+            'Negotiation Type': c.negotiationType,
+            'Negotiation Amount': c.negotiationAmount,
+            'Negotiation Date': c.negotiationDate,
+            'Days Since Negotiation': c.daysSinceNegotiationDate,
+            'Open Reserves': c.openReserves,
+            'Team': c.teamGroup,
+            'BI Status': c.biStatus,
+          }));
+          const staleSheet = XLSX.utils.json_to_sheet(staleData);
+          staleSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+          XLSX.utils.book_append_sheet(workbook, staleSheet, 'Stale Negotiations');
+        }
+
+        // Sheet: No Negotiation
+        const noNegoClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+          !c.negotiationDate && !c.negotiationType
+        ).sort((a, b) => b.openReserves - a.openReserves);
+
+        if (noNegoClaims.length > 0) {
+          const noNegoData = noNegoClaims.map(c => ({
+            'Claim #': c.claimNumber,
+            'Claimant': c.claimant,
+            'Coverage': c.coverage,
+            'Days Open': c.days,
+            'Age Bucket': c.ageBucket,
+            'Open Reserves': c.openReserves,
+            'Team': c.teamGroup,
+            'Adjuster': c.adjuster,
+            'BI Status': c.biStatus,
+            'BI Phase': c.evaluationPhase,
+          }));
+          const noNegoSheet = XLSX.utils.json_to_sheet(noNegoData);
+          noNegoSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+          XLSX.utils.book_append_sheet(workbook, noNegoSheet, 'No Negotiation');
+        }
+      }
 
       // CP1 Impact Severity Weights (official scoring matrix - 17 factors)
       const CP1_WEIGHTS = {
@@ -4876,10 +4972,15 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           <div className="space-y-6 pt-6">
             {/* Week-over-Week Progress Tracker */}
             {cp1BoxData?.weekOverWeek?.hasValidPrior && (
-              <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-green-500/5 p-4">
+              <div 
+                className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-green-500/5 p-4 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
+                onClick={() => setShowWoWDrilldown(true)}
+                title="Click to view details & export"
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span className="text-xs font-bold uppercase tracking-wider">Week-over-Week Progress</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground ml-1" />
                   <span className="text-[10px] text-muted-foreground ml-auto">
                     vs {cp1BoxData.weekOverWeek.priorSnapshotDate}
                   </span>
@@ -5031,10 +5132,15 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             
             {/* Negotiation Activity Summary */}
             {cp1BoxData?.negotiationSummary && (
-              <div className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/5 via-background to-amber-500/5 p-4">
+              <div 
+                className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/5 via-background to-amber-500/5 p-4 cursor-pointer hover:border-orange-500/50 hover:shadow-lg transition-all"
+                onClick={() => setShowNegoDrilldown(true)}
+                title="Click to view details & export"
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquare className="h-4 w-4 text-orange-500" />
                   <span className="text-xs font-bold uppercase tracking-wider">Negotiation Activity</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground ml-1" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="text-center p-2 rounded-lg bg-background/50 border border-border/50">
@@ -5439,6 +5545,321 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           coverageData={CP1_DATA.byCoverage.find(c => c.coverage === cp1DrilldownCoverage) || { noCP: 0, yes: 0, total: 0, cp1Rate: 0 }}
         />
       )}
+
+      {/* Week-over-Week Progress Drilldown */}
+      <Sheet open={showWoWDrilldown} onOpenChange={setShowWoWDrilldown}>
+        <SheetContent className="w-full sm:w-[600px] sm:max-w-[600px] overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <SheetTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Week-over-Week Progress
+              </SheetTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!cp1BoxData?.weekOverWeek?.hasValidPrior) return;
+                  const wow = cp1BoxData.weekOverWeek;
+                  import('xlsx').then((XLSX) => {
+                    const data = [
+                      ['WEEK-OVER-WEEK PROGRESS TRACKER'],
+                      [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
+                      [`Prior Snapshot: ${wow.priorSnapshotDate || 'N/A'}`],
+                      [],
+                      ['METRIC', 'PRIOR', 'CURRENT', 'DELTA', '% CHANGE', 'TREND'],
+                      ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, `${wow.totalClaims.pctChange.toFixed(1)}%`, wow.totalClaims.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                      ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, `${wow.age365Plus.pctChange.toFixed(1)}%`, wow.age365Plus.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                      ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, `${wow.age181To365.pctChange.toFixed(1)}%`, wow.age181To365.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                      ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, `${wow.highRiskClaims.pctChange.toFixed(1)}%`, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                      ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, `${wow.totalFlags.pctChange.toFixed(1)}%`, wow.totalFlags.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                      ['Total Reserves', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, `${wow.totalReserves.pctChange.toFixed(1)}%`, wow.totalReserves.delta < 0 ? 'IMPROVING' : 'WORSENING'],
+                    ];
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Week-over-Week');
+                    XLSX.writeFile(wb, `WoW_Progress_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+                    toast.success('Week-over-Week data exported');
+                  });
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <SheetDescription>
+              CP1 claims comparison vs prior snapshot
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 pt-6">
+            {cp1BoxData?.weekOverWeek?.hasValidPrior && (() => {
+              const wow = cp1BoxData.weekOverWeek;
+              const metrics = [
+                { label: 'Total Claims', ...wow.totalClaims },
+                { label: '365+ Days Aged', ...wow.age365Plus },
+                { label: '181-365 Days', ...wow.age181To365 },
+                { label: 'High-Risk (3+ Flags)', ...wow.highRiskClaims },
+                { label: 'Total Flags', ...wow.totalFlags },
+                { label: 'Total Reserves', ...wow.totalReserves, isCurrency: true },
+              ];
+
+              return (
+                <>
+                  <div className="rounded-lg border border-border bg-muted/30 p-4">
+                    <p className="text-sm text-muted-foreground mb-1">Comparing to</p>
+                    <p className="text-lg font-bold">{wow.priorSnapshotDate}</p>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Metric</TableHead>
+                        <TableHead className="text-right">Prior</TableHead>
+                        <TableHead className="text-right">Current</TableHead>
+                        <TableHead className="text-right">Delta</TableHead>
+                        <TableHead className="text-right">Trend</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {metrics.map((m, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium">{m.label}</TableCell>
+                          <TableCell className="text-right">{(m as any).isCurrency ? `$${m.prior.toLocaleString()}` : m.prior.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{(m as any).isCurrency ? `$${m.current.toLocaleString()}` : m.current.toLocaleString()}</TableCell>
+                          <TableCell className={`text-right font-bold ${m.delta < 0 ? 'text-green-500' : m.delta > 0 ? 'text-destructive' : ''}`}>
+                            {m.delta > 0 ? '+' : ''}{(m as any).isCurrency ? `$${m.delta.toLocaleString()}` : m.delta.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {m.delta < 0 ? (
+                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">↓ Improving</Badge>
+                            ) : m.delta > 0 ? (
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">↑ Worsening</Badge>
+                            ) : (
+                              <Badge variant="outline">Stable</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <h4 className="font-semibold mb-2">Copy/Paste Summary</h4>
+                    <pre className="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">
+{`Week-over-Week CP1 Progress (vs ${wow.priorSnapshotDate})
+Total Claims: ${wow.totalClaims.prior.toLocaleString()} → ${wow.totalClaims.current.toLocaleString()} (${wow.totalClaims.delta > 0 ? '+' : ''}${wow.totalClaims.delta})
+365+ Days: ${wow.age365Plus.prior.toLocaleString()} → ${wow.age365Plus.current.toLocaleString()} (${wow.age365Plus.delta > 0 ? '+' : ''}${wow.age365Plus.delta})
+High-Risk (3+): ${wow.highRiskClaims.prior.toLocaleString()} → ${wow.highRiskClaims.current.toLocaleString()} (${wow.highRiskClaims.delta > 0 ? '+' : ''}${wow.highRiskClaims.delta})
+Total Flags: ${wow.totalFlags.prior.toLocaleString()} → ${wow.totalFlags.current.toLocaleString()} (${wow.totalFlags.delta > 0 ? '+' : ''}${wow.totalFlags.delta})`}
+                    </pre>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Negotiation Activity Drilldown */}
+      <Sheet open={showNegoDrilldown} onOpenChange={setShowNegoDrilldown}>
+        <SheetContent className="w-full sm:w-[700px] sm:max-w-[700px] overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <SheetTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-orange-500" />
+                Negotiation Activity
+              </SheetTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!cp1BoxData?.negotiationSummary) return;
+                    const nego = cp1BoxData.negotiationSummary;
+                    import('xlsx').then((XLSX) => {
+                      const wb = XLSX.utils.book_new();
+                      
+                      // Summary sheet
+                      const summaryData = [
+                        ['NEGOTIATION ACTIVITY SUMMARY'],
+                        [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
+                        [],
+                        ['KEY METRICS'],
+                        ['Metric', 'Value'],
+                        ['Claims with Negotiation', nego.totalWithNegotiation],
+                        ['Claims without Negotiation', nego.totalWithoutNegotiation],
+                        ['Total Negotiation Amount', `$${nego.totalNegotiationAmount.toLocaleString()}`],
+                        ['Average Negotiation Amount', `$${nego.avgNegotiationAmount.toLocaleString()}`],
+                        ['Stale Negotiations (60+ Days)', nego.staleNegotiations60Plus],
+                        ['Stale Negotiations (90+ Days)', nego.staleNegotiations90Plus],
+                        [],
+                        ['NEGOTIATION BY TYPE'],
+                        ['Type', 'Count', 'Total Amount'],
+                        ...nego.byType.map(t => [t.type, t.count, `$${t.totalAmount.toLocaleString()}`]),
+                      ];
+                      const ws = XLSX.utils.aoa_to_sheet(summaryData);
+                      XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+
+                      // Stale negotiations sheet
+                      const staleClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+                        c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60
+                      ).sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
+                      
+                      if (staleClaims.length > 0) {
+                        const staleData = staleClaims.map(c => ({
+                          'Claim #': c.claimNumber,
+                          'Claimant': c.claimant,
+                          'Coverage': c.coverage,
+                          'Days Open': c.days,
+                          'Negotiation Type': c.negotiationType,
+                          'Negotiation Amount': c.negotiationAmount,
+                          'Negotiation Date': c.negotiationDate,
+                          'Days Since': c.daysSinceNegotiationDate,
+                          'Open Reserves': c.openReserves,
+                          'Team': c.teamGroup,
+                        }));
+                        const staleSheet = XLSX.utils.json_to_sheet(staleData);
+                        XLSX.utils.book_append_sheet(wb, staleSheet, 'Stale Negotiations');
+                      }
+
+                      // No negotiation sheet
+                      const noNegoClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+                        !c.negotiationDate && !c.negotiationType
+                      ).sort((a, b) => b.openReserves - a.openReserves);
+                      
+                      if (noNegoClaims.length > 0) {
+                        const noNegoData = noNegoClaims.map(c => ({
+                          'Claim #': c.claimNumber,
+                          'Claimant': c.claimant,
+                          'Coverage': c.coverage,
+                          'Days Open': c.days,
+                          'Age Bucket': c.ageBucket,
+                          'Open Reserves': c.openReserves,
+                          'Team': c.teamGroup,
+                          'Adjuster': c.adjuster,
+                        }));
+                        const noNegoSheet = XLSX.utils.json_to_sheet(noNegoData);
+                        XLSX.utils.book_append_sheet(wb, noNegoSheet, 'No Negotiation');
+                      }
+
+                      XLSX.writeFile(wb, `Negotiation_Activity_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+                      toast.success('Negotiation data exported');
+                    });
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All
+                </Button>
+              </div>
+            </div>
+            <SheetDescription>
+              Negotiation activity breakdown and stale negotiations
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 pt-6">
+            {cp1BoxData?.negotiationSummary && (() => {
+              const nego = cp1BoxData.negotiationSummary;
+              const staleClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+                c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60
+              ).sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
+              const noNegoClaims = (cp1BoxData?.rawClaims || []).filter(c => 
+                !c.negotiationDate && !c.negotiationType
+              ).sort((a, b) => b.openReserves - a.openReserves);
+
+              return (
+                <>
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4 text-center">
+                      <p className="text-2xl font-bold text-green-500">{nego.totalWithNegotiation.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">With Negotiation</p>
+                    </div>
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center">
+                      <p className="text-2xl font-bold text-destructive">{nego.totalWithoutNegotiation.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">No Negotiation</p>
+                    </div>
+                    <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 text-center">
+                      <p className="text-2xl font-bold text-orange-500">{nego.staleNegotiations60Plus.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Stale (60+ Days)</p>
+                    </div>
+                  </div>
+
+                  {/* By Type */}
+                  <div>
+                    <h4 className="font-semibold mb-3">Negotiation by Type</h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
+                          <TableHead className="text-right">Total Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {nego.byType.slice(0, 10).map((t, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{t.type}</TableCell>
+                            <TableCell className="text-right">{t.count.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">${t.totalAmount.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Stale Negotiations Preview */}
+                  {staleClaims.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 text-orange-500">Stale Negotiations ({staleClaims.length})</h4>
+                      <div className="border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="text-xs">Claim #</TableHead>
+                              <TableHead className="text-xs">Days Since</TableHead>
+                              <TableHead className="text-xs">Type</TableHead>
+                              <TableHead className="text-xs text-right">Reserves</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {staleClaims.slice(0, 15).map((c, i) => (
+                              <TableRow key={i}>
+                                <TableCell className="text-xs font-medium">{c.claimNumber}</TableCell>
+                                <TableCell className="text-xs">{c.daysSinceNegotiationDate} days</TableCell>
+                                <TableCell className="text-xs">{c.negotiationType}</TableCell>
+                                <TableCell className="text-xs text-right">${c.openReserves.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Copy/Paste Summary */}
+                  <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
+                    <h4 className="font-semibold mb-2">Copy/Paste Summary</h4>
+                    <pre className="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">
+{`Negotiation Activity Summary (${format(new Date(), 'MMM d, yyyy')})
+With Negotiation: ${nego.totalWithNegotiation.toLocaleString()}
+Without Negotiation: ${nego.totalWithoutNegotiation.toLocaleString()}
+Stale (60+ Days): ${nego.staleNegotiations60Plus.toLocaleString()}
+Total Negotiation Amount: $${nego.totalNegotiationAmount.toLocaleString()}
+Avg Negotiation: $${nego.avgNegotiationAmount.toLocaleString()}
+
+Top Types:
+${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.toLocaleString()})`).join('\n')}`}
+                    </pre>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Multi-Pack Claims Drawer */}
       <Sheet open={showMultiPackDrawer} onOpenChange={setShowMultiPackDrawer}>
