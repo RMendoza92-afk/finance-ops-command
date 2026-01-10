@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AlertSendDialog } from "@/components/AlertSendDialog";
 import { SalesTickerBanner } from "@/components/SalesTickerBanner";
 import { ClaimsPaymentTicker } from "@/components/ClaimsPaymentTicker";
-import { OrderBookDrilldown, OrderBookTrigger } from "@/components/OrderBookDrilldown";
+import { OrderBookDrilldown, CashFlowTicker } from "@/components/OrderBookDrilldown";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
 import { Button } from "@/components/ui/button";
@@ -261,17 +261,8 @@ const Index = () => {
       {/* Claims Payment Ticker */}
       <ClaimsPaymentTicker />
       
-      {/* Order Book Trigger Bar */}
-      <div className="w-full bg-card/50 backdrop-blur-sm border-b border-border px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">CASH FLOW</span>
-          <span className="text-border">│</span>
-        </div>
-        <OrderBookTrigger onClick={() => setOrderBookOpen(true)} />
-        <div className="text-xs text-muted-foreground">
-          Click to expand order book →
-        </div>
-      </div>
+      {/* Cash Flow Ticker */}
+      <CashFlowTicker onClick={() => setOrderBookOpen(true)} />
       
       {/* Order Book Drilldown */}
       <OrderBookDrilldown open={orderBookOpen} onOpenChange={setOrderBookOpen} />
