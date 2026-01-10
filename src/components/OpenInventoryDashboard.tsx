@@ -3356,66 +3356,115 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </div>
         </div>
 
-        {/* Hot Topics Row - CP1, High Risk, Aging, No Eval */}
-        <div className="p-4 sm:p-6 bg-muted/30">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <span className="text-xs font-bold uppercase tracking-wider text-destructive">Hot Topics & Risk Indicators</span>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            {/* CP1 Summary */}
+        {/* Key Metrics Row - Litigation Spend, Decisions, CP1, Multi-Pack */}
+        <div className="p-4 sm:p-6 bg-muted/30 border-b border-border">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Litigation Spend */}
             <div 
-              className="bg-card rounded-lg p-3 border-2 border-destructive/40 cursor-pointer hover:border-destructive transition-colors"
-              onClick={() => setShowCP1Drawer(true)}
+              className="flex items-center gap-3 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg"
+              onClick={() => setShowBudgetDrawer(true)}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-destructive uppercase">CP1</span>
-                <span className="text-[10px] text-muted-foreground">({cp1BoxData?.cp1Data.cp1Rate || CP1_DATA.cp1Rate})</span>
+              <div className="p-2 bg-primary/20 rounded-lg border border-primary/30">
+                <Wallet className="h-5 w-5 text-primary" />
               </div>
-              <p className="text-xl font-bold text-destructive">{formatNumber(cp1BoxData?.cp1Data.totals.grandTotal || CP1_DATA.totals.yes)}</p>
-              <p className="text-[10px] text-muted-foreground">claims flagged</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Litigation Spend</p>
+                <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] font-normal text-muted-foreground ml-1">Jan 2026</span></p>
+                <p className="text-[10px] text-muted-foreground truncate">Indemnities: {formatCurrency(totalIndemnityJan2026)}</p>
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-primary flex-shrink-0" />
             </div>
 
-            {/* High Risk (3+ flags) */}
-            <div className="bg-card rounded-lg p-3 border-2 border-orange-500/40">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-orange-500 uppercase">High Risk</span>
+            {/* Decisions Pending */}
+            <div 
+              className="flex items-center gap-3 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-warning/50 transition-all hover:shadow-lg"
+              onClick={() => setShowDecisionsDrawer(true)}
+            >
+              <div className="p-2 bg-warning/20 rounded-lg border border-warning/30">
+                <Flag className="h-5 w-5 text-warning" />
               </div>
-              <p className="text-xl font-bold text-orange-500">{formatNumber(cp1BoxData?.multiFlagGroups?.find(g => g.flagCount >= 3)?.claimCount || 0)}</p>
-              <p className="text-[10px] text-muted-foreground">3+ flags</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Decisions Pending</p>
+                <p className="text-lg sm:text-xl font-bold text-warning">{formatNumber(decisionsData?.totalCount || 0)}<span className="text-[10px] font-normal text-muted-foreground ml-1">claims</span></p>
+                <p className="text-[10px] text-muted-foreground truncate">Pain 6+ • No eval...</p>
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-warning flex-shrink-0" />
+            </div>
+            
+            {/* CP1 */}
+            <div 
+              className="flex items-center gap-3 p-3 sm:p-4 bg-success/5 rounded-xl border border-success/30 cursor-pointer hover:border-success/50 transition-all hover:shadow-lg"
+              onClick={() => setShowCP1Drawer(true)}
+            >
+              <div className="p-2 bg-success/20 rounded-lg border border-success/30">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">CP1</p>
+                <p className="text-lg sm:text-xl font-bold text-success">
+                  {formatNumber(cp1BoxData?.cp1Data.totals.grandTotal || CP1_DATA.totals.yes)}
+                  <span className="text-[10px] font-normal text-muted-foreground ml-1">({CP1_RATE_OF_OPEN_INVENTORY}%)</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">In Progress: {CP1_DATA.byStatus?.inProgressPct || '0'}%...</p>
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-success flex-shrink-0" />
+            </div>
+
+            {/* Multi-Pack BI */}
+            <div 
+              className="flex items-center gap-3 p-3 sm:p-4 bg-purple-500/5 rounded-xl border border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-all hover:shadow-lg"
+              onClick={() => setShowMultiPackDrawer(true)}
+            >
+              <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                <Layers className="h-5 w-5 text-purple-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Multi-Pack BI</p>
+                <p className="text-lg sm:text-xl font-bold text-purple-500">
+                  {formatNumber(data?.multiPackData?.biMultiPack?.totalGroups || 0)}
+                  <span className="text-[10px] font-normal text-muted-foreground ml-1">groups</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">{formatNumber(data?.multiPackData?.biMultiPack?.totalClaims || 0)} BI claims • {formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</p>
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-purple-500 flex-shrink-0" />
+            </div>
+          </div>
+        </div>
+
+        {/* Hot Topics Row - Risk Indicators */}
+        <div className="p-4 sm:p-6 bg-muted/20">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">Risk Indicators</span>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            {/* High Risk (3+ flags) */}
+            <div className="bg-card rounded-lg p-2.5 border border-orange-500/40">
+              <span className="text-[10px] font-bold text-orange-500 uppercase">High Risk (3+ flags)</span>
+              <p className="text-lg font-bold text-orange-500">{formatNumber(cp1BoxData?.multiFlagGroups?.find(g => g.flagCount >= 3)?.claimCount || 0)}</p>
             </div>
 
             {/* 365+ Days */}
-            <div className="bg-card rounded-lg p-3 border border-amber-500/40">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-amber-600 uppercase">Aged 365+</span>
-              </div>
-              <p className="text-xl font-bold text-amber-600">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
+            <div className="bg-card rounded-lg p-2.5 border border-amber-500/40">
+              <span className="text-[10px] font-bold text-amber-600 uppercase">Aged 365+</span>
+              <p className="text-lg font-bold text-amber-600">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
               <p className="text-[10px] text-muted-foreground">{formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
             </div>
 
             {/* No Evaluation */}
-            <div className="bg-card rounded-lg p-3 border border-warning/40">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-warning uppercase">No Eval</span>
-              </div>
-              <p className="text-xl font-bold text-warning">{formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)}</p>
+            <div className="bg-card rounded-lg p-2.5 border border-warning/40">
+              <span className="text-[10px] font-bold text-warning uppercase">No Eval</span>
+              <p className="text-lg font-bold text-warning">{formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)}</p>
               <p className="text-[10px] text-muted-foreground">{formatCurrency(FINANCIAL_DATA.totals.noEvalReserves || 0)}</p>
             </div>
 
-            {/* Pending Decisions */}
-            <div 
-              className="bg-card rounded-lg p-3 border border-primary/40 cursor-pointer hover:border-primary transition-colors"
-              onClick={() => setShowDecisionsDrawer(true)}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-primary uppercase">Decisions</span>
-              </div>
-              <p className="text-xl font-bold text-primary">{formatNumber(decisionsData?.totalCount || 0)}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(decisionsData?.totalReserves || 0)}</p>
+            {/* 181-365 Days */}
+            <div className="bg-card rounded-lg p-2.5 border border-amber-400/40">
+              <span className="text-[10px] font-bold text-amber-500 uppercase">Aged 181-365</span>
+              <p className="text-lg font-bold text-amber-500">{formatNumber(data?.totals.age181To365 || 0)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(data?.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0)}</p>
             </div>
-
           </div>
         </div>
 
@@ -3526,180 +3575,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       {dashboardVersion === 'v1' && (
       <>
-      <div id="executive-command-center" className="print-section bg-card rounded-xl border border-border shadow-xl print:bg-white print:border-2 print:border-gray-800 print:shadow-none">
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-5 border-b border-border gap-3">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-2.5 bg-warning/20 rounded-lg border border-warning/30">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-            </div>
-            <div>
-              <h3 className="text-sm sm:text-lg font-bold text-foreground tracking-wide">EXECUTIVE COMMAND CENTER</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Real-time portfolio health dashboard</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-success/10 border border-success/30 rounded-lg">
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-success rounded-full animate-pulse"></div>
-              <span className="text-xs sm:text-sm font-semibold text-success">LIVE</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-3 sm:p-5 space-y-4 sm:space-y-6">
-
-        {/* Primary KPI Row - 2x2 on mobile, 4 on desktop */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-          {/* Total Open Reserves with Trend */}
-          <div className="bg-secondary/50 rounded-xl p-3 sm:p-5 border border-border hover:border-primary/30 transition-colors">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wide">Open Reserves</span>
-              <div className={`hidden sm:flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${EXECUTIVE_METRICS.trends.reservesMoM > 0 ? 'text-destructive bg-destructive/10' : 'text-success bg-success/10'}`}>
-                {EXECUTIVE_METRICS.trends.reservesMoM > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                {Math.abs(EXECUTIVE_METRICS.trends.reservesMoM)}% MoM
-              </div>
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
-            <div className="flex items-center gap-3 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/50">
-              <span className={`text-xs sm:text-sm font-medium ${EXECUTIVE_METRICS.trends.reservesYoY < 0 ? 'text-success' : 'text-destructive'}`}>
-                {EXECUTIVE_METRICS.trends.reservesYoY > 0 ? '+' : ''}{EXECUTIVE_METRICS.trends.reservesYoY}% YoY
-              </span>
-            </div>
-          </div>
-
-          {/* Pending Evaluation ALERT - Dynamic from CSV */}
-          <div className="bg-warning/5 rounded-xl p-3 sm:p-5 border-2 border-warning/40 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-16 sm:w-24 h-16 sm:h-24 bg-warning/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-bold text-warning uppercase tracking-wide">⚠️ NO EVAL</span>
-              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning animate-pulse" />
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.noEvalReserves || 0)}</p>
-            <p className="text-xs sm:text-sm text-warning/80 mt-1 sm:mt-2">
-              {metrics?.totalOpenClaims && FINANCIAL_DATA.totals.noEvalCount 
-                ? Math.round((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100) 
-                : 0}% without evaluation ({formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)} claims)
-            </p>
-            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-warning/20">
-              <span className="text-[10px] sm:text-xs text-warning font-bold uppercase">Action Required</span>
-            </div>
-          </div>
-
-          {/* 181-365 Days Aging (replacing closures - not applicable for open inventory) */}
-          <div className="bg-amber-500/5 rounded-xl p-3 sm:p-5 border-2 border-amber-500/40">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-bold text-amber-600 uppercase tracking-wide">⏳ AGED 181-365</span>
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-amber-600">{formatNumber(data?.totals.age181To365 || 0)}</p>
-            <p className="text-xs sm:text-sm text-amber-600/80 mt-1 sm:mt-2">
-              {data?.totals.grandTotal ? ((data.totals.age181To365 / data.totals.grandTotal) * 100).toFixed(1) : 0}% • {formatCurrency(data?.financials.byAge.find(a => a.age === '181-365 Days')?.openReserves || 0)}
-            </p>
-            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-amber-500/20">
-              <span className="text-[10px] sm:text-xs text-amber-600 font-bold uppercase">Monitor Closely</span>
-            </div>
-          </div>
-
-          {/* Aging Alert */}
-          <div className="bg-destructive/5 rounded-xl p-3 sm:p-5 border-2 border-destructive/40">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <span className="text-[10px] sm:text-xs font-bold text-destructive uppercase tracking-wide">🚨 AGED 365+</span>
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-destructive">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
-            <p className="text-xs sm:text-sm text-destructive/80 mt-1 sm:mt-2">{EXECUTIVE_METRICS.aging.over365Pct}% • {formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
-            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-destructive/20">
-              <div className="h-1.5 sm:h-2 bg-destructive/20 rounded-full overflow-hidden">
-                <div className="h-full bg-destructive rounded-full transition-all" style={{ width: `${EXECUTIVE_METRICS.aging.over365Pct}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* CEO Metrics Row - Stack on mobile, 4 cols on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 p-3 sm:p-5 bg-muted/20 rounded-xl border border-border/50">
-          {/* Budget Burn Rate */}
-          <div 
-            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg"
-            onClick={() => setShowBudgetDrawer(true)}
-          >
-            <div className="p-2 sm:p-3 bg-primary/20 rounded-lg border border-primary/30">
-              <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Litigation Spend</p>
-              <div className="flex items-baseline gap-2 sm:gap-3 mt-0.5 sm:mt-1">
-                <p className="text-lg sm:text-2xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-1">Jan 2026</span></p>
-              </div>
-              <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 font-medium truncate text-muted-foreground">
-                Indemnities: {formatCurrency(totalIndemnityJan2026)} • Expenses: {formatCurrencyK(totalExpenseJan2026)}
-              </p>
-            </div>
-            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-          </div>
-
-          {/* Pending Decisions - Pain Level > 5, No Eval */}
-          <div 
-            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-warning/50 transition-all hover:shadow-lg"
-            onClick={() => setShowDecisionsDrawer(true)}
-          >
-            <div className="p-2 sm:p-3 bg-warning/20 rounded-lg border border-warning/30">
-              <Flag className="h-5 w-5 sm:h-6 sm:w-6 text-warning" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Decisions Pending</p>
-              <p className="text-lg sm:text-2xl font-bold text-warning mt-0.5 sm:mt-1">{decisionsData?.totalCount || 0}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">claims</span></p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">Pain 6+ • No eval set</p>
-            </div>
-            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-warning flex-shrink-0" />
-          </div>
-          
-          {/* CP1 Claims */}
-          <div 
-            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-success/5 rounded-xl border border-success/30 cursor-pointer hover:border-success/50 transition-all hover:shadow-lg"
-            onClick={() => setShowCP1Drawer(true)}
-          >
-            <div className="p-2 sm:p-3 bg-success/20 rounded-lg border border-success/30">
-              <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">CP1</p>
-              <p className="text-lg sm:text-2xl font-bold text-success mt-0.5 sm:mt-1">
-                {CP1_DATA.totals.yes.toLocaleString()}
-                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">({CP1_RATE_OF_OPEN_INVENTORY}%)</span>
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                In Progress: <span className="text-success font-semibold">{CP1_DATA.byStatus?.inProgressPct || '0'}%</span> • Settled: <span className="font-medium">{CP1_DATA.byStatus?.settledPct || '0'}%</span>
-              </p>
-            </div>
-            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-success flex-shrink-0" />
-          </div>
-
-          {/* Multi-Pack BI Claims - Enhanced */}
-          <div 
-            className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-purple-500/5 rounded-xl border border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-all hover:shadow-lg col-span-2 sm:col-span-1"
-            onClick={() => setShowMultiPackDrawer(true)}
-          >
-            <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
-              <Layers className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-wide">Multi-Pack BI</p>
-              <p className="text-lg sm:text-2xl font-bold text-purple-500 mt-0.5 sm:mt-1">
-                {data?.multiPackData?.biMultiPack?.totalGroups || 0}
-                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">groups</span>
-              </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-                <span className="font-medium text-purple-400">{data?.multiPackData?.biMultiPack?.totalClaims || 0} BI claims</span>
-                <span>•</span>
-                <span className="font-semibold text-foreground">{formatCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0)}</span>
-              </div>
-            </div>
-            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 flex-shrink-0" />
-          </div>
-        </div>
-        </div>
-      </div>
 
       {/* SOL Breach Analysis */}
       <SOLBreachSummary />
