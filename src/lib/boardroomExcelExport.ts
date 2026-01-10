@@ -315,3 +315,104 @@ export async function generateQuickBoardroomReport(
     filename: options?.filename
   });
 }
+
+/**
+ * Generate a styled Negotiation Activity Summary report
+ * Matches the boardroom aesthetic with blue headers and proper formatting
+ */
+export async function generateNegotiationSummaryExcel(data: {
+  totalWithNegotiation: number;
+  totalWithoutNegotiation: number;
+  totalNegotiationAmount: number;
+  avgNegotiationAmount: number;
+  staleNegotiations60Plus: number;
+  staleNegotiations90Plus: number;
+  byType: { type: string; count: number; totalAmount: number }[];
+}): Promise<string> {
+  const exportData: BoardroomExportData = {
+    reportTitle: 'Negotiation Activity Summary',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Key Metrics',
+        metrics: [
+          { label: 'Claims with Negotiation', value: data.totalWithNegotiation },
+          { label: 'Claims without Negotiation', value: data.totalWithoutNegotiation },
+          { label: 'Total Negotiation Amount', value: data.totalNegotiationAmount },
+          { label: 'Average Negotiation Amount', value: data.avgNegotiationAmount },
+          { label: 'Stale Negotiations (60+ Days)', value: data.staleNegotiations60Plus },
+          { label: 'Stale Negotiations (90+ Days)', value: data.staleNegotiations90Plus },
+        ]
+      },
+      {
+        title: 'Negotiation by Type',
+        table: {
+          headers: ['Negotiation Type', 'Count', 'Total Amount'],
+          rows: data.byType.map(t => [t.type, t.count, t.totalAmount]),
+          highlightLastRow: true
+        }
+      }
+    ],
+    filename: `Negotiation_Activity_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate a styled CP1 Trigger Flags report
+ */
+export async function generateCP1FlagsExcel(data: {
+  totalClaims: number;
+  totalFlags: number;
+  multiFlag2Plus: number;
+  multiFlag3Plus: number;
+  flagBreakdown: { flagType: string; count: number; tier: string }[];
+  weekOverWeek?: {
+    metric: string;
+    prior: number | string;
+    current: number | string;
+    delta: number | string;
+    trend: string;
+  }[];
+}): Promise<string> {
+  const sections: BoardroomSection[] = [
+    {
+      title: 'Key Metrics',
+      metrics: [
+        { label: 'Total CP1 Claims', value: data.totalClaims },
+        { label: 'Active Trigger Flags', value: data.totalFlags },
+        { label: 'Multi-Flag Claims (2+)', value: data.multiFlag2Plus },
+        { label: 'High-Risk Claims (3+ Flags)', value: data.multiFlag3Plus },
+      ]
+    },
+    {
+      title: 'Trigger Flags Breakdown',
+      table: {
+        headers: ['Flag Type', 'Count', 'Tier'],
+        rows: data.flagBreakdown.map(f => [f.flagType, f.count, f.tier]),
+        highlightLastRow: false
+      }
+    }
+  ];
+  
+  if (data.weekOverWeek && data.weekOverWeek.length > 0) {
+    sections.push({
+      title: 'Week-over-Week Progress',
+      table: {
+        headers: ['Metric', 'Prior', 'Current', 'Delta', 'Trend'],
+        rows: data.weekOverWeek.map(w => [w.metric, w.prior, w.current, w.delta, w.trend]),
+        highlightLastRow: false
+      }
+    });
+  }
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: 'CP1 Trigger Flags - Executive Summary',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections,
+    filename: `CP1_Trigger_Flags_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
