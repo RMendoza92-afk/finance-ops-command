@@ -153,10 +153,22 @@ const NON_WORKABLE_STATUSES = new Set(
   ].map((s) => s.toLowerCase())
 );
 
+// Coverages to EXCLUDE from CP1 analysis - only want BI, UI, UM
+const EXCLUDED_COVERAGES = new Set(["pd", "oc", "cl", "up"]);
+
+function isExcludedCoverage(coverage: string): boolean {
+  const norm = normalize(coverage);
+  return EXCLUDED_COVERAGES.has(norm);
+}
+
 function isNonWorkableRow(row: Record<string, string>): boolean {
   const status = normalize(row["Status"]);
   const biStatus = normalize(row["BI Status"]);
   const evalPhase = normalize(row["Evaluation Phase"]);
+  const coverage = normalize(row["Coverage"]);
+
+  // Exclude non-BI coverages (PD, OC, CL, UP) from CP1 analysis
+  if (isExcludedCoverage(coverage)) return true;
 
   // Exact matches (user-provided list)
   if (NON_WORKABLE_STATUSES.has(status) || NON_WORKABLE_STATUSES.has(biStatus)) return true;
@@ -177,7 +189,7 @@ function pctChange(current: number, prior: number): number {
   return ((current - prior) / prior) * 100;
 }
 
-export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv") {
+export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-jan10.csv") {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -510,7 +522,8 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
     if (!processedData) return;
 
     const today = format(new Date(), "yyyy-MM-dd");
-    const priorWeekDate = format(subDays(new Date(), 7), "yyyy-MM-dd");
+    // For day-over-day delta, look for yesterday's snapshot
+    const yesterdayDate = format(subDays(new Date(), 1), "yyyy-MM-dd");
     const metrics = processedData.snapshotMetrics;
 
     async function saveAndCompare() {
@@ -539,11 +552,11 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/cp1-analysis.csv")
           console.error("Error saving CP1 snapshot:", upsertError);
         }
 
-        // Fetch prior week's snapshot (closest to 7 days ago)
+        // Fetch yesterday's snapshot for day-over-day comparison
         const { data: priorSnapshots, error: fetchError } = await supabase
           .from("cp1_snapshots")
           .select("*")
-          .lte("snapshot_date", priorWeekDate)
+          .lt("snapshot_date", today)
           .order("snapshot_date", { ascending: false })
           .limit(1);
 

@@ -49,7 +49,7 @@ async function loadCsvData(): Promise<RawClaimRow[]> {
   }
   
   loadingPromise = (async () => {
-    const response = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
+    const response = await fetch('/data/open-exposure-raw-jan10.csv?d=2026-01-10');
     const csvText = await response.text();
     
     const parsed = Papa.parse<RawClaimRow>(csvText, {
