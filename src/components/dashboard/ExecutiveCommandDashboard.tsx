@@ -30,6 +30,39 @@ import { toast } from "sonner";
 import { generateClaimsInventoryReport, generateCostCurveReport } from "@/lib/executiveVisualReport";
 import { generatePremiumBoardBriefing } from "@/lib/premiumBoardBriefing";
 
+interface CP1CoverageRow {
+  coverage: string;
+  total: number;
+  yes: number;
+  noCP: number;
+  cp1Rate: number;
+}
+
+interface CP1AgeRow {
+  age: string;
+  total: number;
+  yes: number;
+  noCP: number;
+}
+
+interface CP1AnalysisData {
+  totalClaims: number;
+  cp1Count: number;
+  cp1Rate: string;
+  biCP1Rate: string;
+  byCoverage: CP1CoverageRow[];
+  biByAge: CP1AgeRow[];
+  biTotal: { total: number; yes: number; noCP: number };
+  totals: { grandTotal: number; yes: number; noCP: number };
+  weekOverWeek?: {
+    totalClaimsDelta: number;
+    cp1RateDelta: number;
+    highRiskDelta: number;
+    aged365Delta: number;
+    previousDate: string;
+  };
+}
+
 interface ExecutiveCommandDashboardProps {
   data: {
     totalClaims: number;
@@ -83,6 +116,8 @@ interface ExecutiveCommandDashboardProps {
       surgery?: boolean;
       hospitalization?: boolean;
     }>;
+    // Enhanced CP1 Analysis
+    cp1Analysis?: CP1AnalysisData;
   };
   onOpenChat: () => void;
   onDrilldown: (section: string) => void;
@@ -147,8 +182,10 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
         fatalityReserves: data.fatalityReserves,
         surgeryCount: data.surgeryCount,
         hospitalizationCount: data.hospitalizationCount,
+        // Include full CP1 analysis if available
+        cp1Analysis: data.cp1Analysis,
       });
-      toast.success('Board Briefing PDF generated');
+      toast.success('Board Briefing PDF generated with CP1 analysis');
     } catch (err) {
       console.error('PDF generation error:', err);
       toast.error('Failed to generate PDF');

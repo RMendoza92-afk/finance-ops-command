@@ -1872,7 +1872,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           totalClaims: CP1_DATA.totals.grandTotal,
           cp1Count: CP1_DATA.totals.yes,
           cp1Rate: `${CP1_DATA.cp1Rate}%`,
-          biCP1Rate: '34.2%',
+          biCP1Rate: CP1_DATA.biTotal && CP1_DATA.biTotal.total > 0 
+            ? `${((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)}%`
+            : '0.0%',
           byCoverage: CP1_DATA.byCoverage,
           biByAge: CP1_DATA.biByAge,
           biTotal: CP1_DATA.biTotal,
@@ -1884,7 +1886,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const result = await generateBoardReadyPackage(packageConfig);
       
       if (result.success) {
-        toast.success(`Board Package generated: ${result.pageCount} pages`);
+        toast.success(`Board Package generated with CP1 analysis: ${result.pageCount} pages`);
       } else {
         throw new Error('Package generation failed');
       }
@@ -1894,7 +1896,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     } finally {
       setGeneratingBoardPackage(false);
     }
-  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data, decisionsData]);
+  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data, decisionsData, cp1BoxData]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
