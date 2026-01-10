@@ -106,6 +106,13 @@ import {
   isCurrencyHeader,
   isPercentHeader
 } from "@/lib/excelUtils";
+import { 
+  generateStyledBoardroomExcel, 
+  generateNegotiationSummaryExcel,
+  generateCP1FlagsExcel,
+  BoardroomSection,
+  BoardroomExportData 
+} from "@/lib/boardroomExcelExport";
 
 interface OpenInventoryDashboardProps {
   filters: GlobalFilters;
@@ -788,7 +795,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [decisionsData]);
 
-  // Generate Excel for Decisions Pending (CSV-based data)
+  // Generate Excel for Decisions Pending (CSV-based data) - BOARDROOM STYLED
   const generateDecisionsPendingExcel = useCallback(async () => {
     if (!decisionsData || decisionsData.claims.length === 0) {
       toast.error('No decisions pending data to export');
@@ -796,53 +803,57 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
     
     try {
-      const XLSX = await import('xlsx');
       const claims = decisionsData.claims;
       const byPainLevel = decisionsData.byPainLevel;
       
-      // Summary sheet - use raw numbers, not formatted strings, so Excel SUM works
-      const summaryData = [
-        ['Decisions Pending Report'],
-        ['Generated:', format(new Date(), 'MMMM d, yyyy h:mm a')],
-        [''],
-        ['Summary'],
-        ['Total Claims:', claims.length],
-        ['Total Reserves:', decisionsData.totalReserves],
-        [''],
-        ['By Pain Level Category'],
-        ['Category', 'Count', 'Total Reserves', 'Avg Reserve'],
-        ...Object.entries(byPainLevel).map(([category, data]) => [
-          category,
-          data.count,
-          data.reserves,
-          Math.round(data.reserves / data.count)
-        ])
-      ];
+      // Build boardroom-styled export
+      const exportData: BoardroomExportData = {
+        reportTitle: 'Decisions Pending Report',
+        asOfDate: format(new Date(), 'MMMM d, yyyy'),
+        sections: [
+          {
+            title: 'Key Metrics',
+            metrics: [
+              { label: 'Total Claims Requiring Decision', value: claims.length },
+              { label: 'Total Reserves at Risk', value: decisionsData.totalReserves },
+              { label: 'High Pain Level (5+)', value: claims.filter(c => c.painLevel.includes('5+') || c.painLevel === 'Limits').length },
+              { label: 'Critical (≥$100K Reserves)', value: claims.filter(c => c.reserves >= 100000).length },
+            ]
+          },
+          {
+            title: 'By Pain Level Category',
+            table: {
+              headers: ['Pain Category', 'Count', 'Total Reserves', 'Avg Reserve'],
+              rows: Object.entries(byPainLevel).map(([category, data]) => [
+                category,
+                data.count,
+                data.reserves,
+                Math.round(data.reserves / data.count)
+              ]),
+              highlightLastRow: false
+            }
+          },
+          {
+            title: 'Claims Detail',
+            table: {
+              headers: ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team', 'Reason'],
+              rows: claims.map(c => [
+                c.claimNumber,
+                c.state,
+                c.painLevel,
+                c.reserves,
+                c.biStatus,
+                c.team,
+                c.reason
+              ]),
+              highlightLastRow: false
+            }
+          }
+        ],
+        filename: `Decisions_Pending_${format(new Date(), 'yyyyMMdd')}.xlsx`
+      };
       
-      // Claims detail sheet
-      const claimsData = [
-        ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team', 'Reason'],
-        ...claims.map(c => [
-          c.claimNumber,
-          c.state,
-          c.painLevel,
-          c.reserves,
-          c.biStatus,
-          c.team,
-          c.reason
-        ])
-      ];
-      
-      const wb = XLSX.utils.book_new();
-      
-      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-      
-      const claimsWs = XLSX.utils.aoa_to_sheet(claimsData);
-      XLSX.utils.book_append_sheet(wb, claimsWs, 'Claims Detail');
-      
-      XLSX.writeFile(wb, `Decisions_Pending_${format(new Date(), 'yyyyMMdd')}.xlsx`);
-      
+      await generateStyledBoardroomExcel(exportData);
       toast.success(`Decisions Pending Excel exported (${claims.length} claims)`);
     } catch (err) {
       console.error('Error generating Decisions Pending Excel:', err);
@@ -5784,82 +5795,29 @@ Total Flags: ${wow.totalFlags.prior.toLocaleString()} → ${wow.totalFlags.curre
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!cp1BoxData?.negotiationSummary) return;
                     const nego = cp1BoxData.negotiationSummary;
-                    import('xlsx').then((XLSX) => {
-                      const wb = XLSX.utils.book_new();
-                      
-                      // Summary sheet
-                      const summaryData = [
-                        ['NEGOTIATION ACTIVITY SUMMARY'],
-                        [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
-                        [],
-                        ['KEY METRICS'],
-                        ['Metric', 'Value'],
-                        ['Claims with Negotiation', nego.totalWithNegotiation],
-                        ['Claims without Negotiation', nego.totalWithoutNegotiation],
-                        ['Total Negotiation Amount', `$${nego.totalNegotiationAmount.toLocaleString()}`],
-                        ['Average Negotiation Amount', `$${nego.avgNegotiationAmount.toLocaleString()}`],
-                        ['Stale Negotiations (60+ Days)', nego.staleNegotiations60Plus],
-                        ['Stale Negotiations (90+ Days)', nego.staleNegotiations90Plus],
-                        [],
-                        ['NEGOTIATION BY TYPE'],
-                        ['Type', 'Count', 'Total Amount'],
-                        ...nego.byType.map(t => [t.type, t.count, `$${t.totalAmount.toLocaleString()}`]),
-                      ];
-                      const ws = XLSX.utils.aoa_to_sheet(summaryData);
-                      XLSX.utils.book_append_sheet(wb, ws, 'Summary');
-
-                      // Stale negotiations sheet
-                      const staleClaims = (cp1BoxData?.rawClaims || []).filter(c => 
-                        c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60
-                      ).sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
-                      
-                      if (staleClaims.length > 0) {
-                        const staleData = staleClaims.map(c => ({
-                          'Claim #': c.claimNumber,
-                          'Claimant': c.claimant,
-                          'Coverage': c.coverage,
-                          'Days Open': c.days,
-                          'Negotiation Type': c.negotiationType,
-                          'Negotiation Amount': c.negotiationAmount,
-                          'Negotiation Date': c.negotiationDate,
-                          'Days Since': c.daysSinceNegotiationDate,
-                          'Open Reserves': c.openReserves,
-                          'Team': c.teamGroup,
-                        }));
-                        const staleSheet = XLSX.utils.json_to_sheet(staleData);
-                        XLSX.utils.book_append_sheet(wb, staleSheet, 'Stale Negotiations');
-                      }
-
-                      // No negotiation sheet
-                      const noNegoClaims = (cp1BoxData?.rawClaims || []).filter(c => 
-                        !c.negotiationDate && !c.negotiationType
-                      ).sort((a, b) => b.openReserves - a.openReserves);
-                      
-                      if (noNegoClaims.length > 0) {
-                        const noNegoData = noNegoClaims.map(c => ({
-                          'Claim #': c.claimNumber,
-                          'Claimant': c.claimant,
-                          'Coverage': c.coverage,
-                          'Days Open': c.days,
-                          'Age Bucket': c.ageBucket,
-                          'Open Reserves': c.openReserves,
-                          'Team': c.teamGroup,
-                          'Adjuster': c.adjuster,
-                        }));
-                        const noNegoSheet = XLSX.utils.json_to_sheet(noNegoData);
-                        XLSX.utils.book_append_sheet(wb, noNegoSheet, 'No Negotiation');
-                      }
-
-                      XLSX.writeFile(wb, `Negotiation_Activity_${format(new Date(), 'yyyyMMdd')}.xlsx`);
-                      toast.success('Negotiation data exported');
-                    });
+                    
+                    try {
+                      await generateNegotiationSummaryExcel({
+                        totalWithNegotiation: nego.totalWithNegotiation,
+                        totalWithoutNegotiation: nego.totalWithoutNegotiation,
+                        totalNegotiationAmount: nego.totalNegotiationAmount,
+                        avgNegotiationAmount: nego.avgNegotiationAmount,
+                        staleNegotiations60Plus: nego.staleNegotiations60Plus,
+                        staleNegotiations90Plus: nego.staleNegotiations90Plus,
+                        byType: nego.byType
+                      });
+                      toast.success('Boardroom-styled Negotiation report exported');
+                    } catch (err) {
+                      console.error('Error generating styled export:', err);
+                      toast.error('Failed to generate export');
+                    }
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export All
+                  Export Styled
                 </Button>
               </div>
             </div>
