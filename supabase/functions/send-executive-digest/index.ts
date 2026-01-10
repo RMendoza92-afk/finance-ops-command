@@ -1,25 +1,51 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ExecutiveMetrics {
-  totalOpenReserves: number;
-  totalLowEval: number;
-  totalHighEval: number;
-  medianEval: number;
-  pendingEval: number;
-  pendingEvalPct: number;
-  closuresThisMonth: number;
-  avgDaysToClose: number;
-  aged365Count: number;
-  aged365Reserves: number;
-  aged365Pct: number;
-  reservesMoM: number;
-  reservesYoY: number;
+interface Recipient {
+  id: string;
+  email: string;
+  name: string | null;
+  report_types: string[];
+}
+
+interface InventorySnapshot {
+  total_claims: number;
+  total_reserves: number;
+  total_low_eval: number;
+  total_high_eval: number;
+  cp1_claims: number;
+  cp1_rate: number;
+  no_eval_count: number;
+  no_eval_reserves: number;
+  age_365_plus: number;
+  age_181_365: number;
+  age_61_180: number;
+  age_under_60: number;
+  snapshot_date: string;
+}
+
+interface CP1Snapshot {
+  total_claims: number;
+  cp1_rate: number;
+  bi_cp1_rate: number;
+  total_reserves: number;
+  total_flags: number;
+  high_risk_claims: number;
+  age_365_plus: number;
+  snapshot_date: string;
+}
+
+interface LorOffer {
+  claim_number: string;
+  offer_amount: number;
+  status: string;
+  expires_date: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -28,313 +54,376 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Starting Executive Digest generation...");
-    
+    console.log("Starting executive daily digest...");
+
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY not configured");
+    }
+
+    const resend = new Resend(resendApiKey);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Get request params - default recipient is Richie Mendoza
+
+    // Check for manual override in request body
     const body = await req.json().catch(() => ({}));
-    const recipientEmail = body.email || "RICHIE.MENDOZA@FREDLOYA.COM";
+    const manualEmail = body.email;
     const isTest = body.test === true;
+
+    // Get active recipients from database
+    const { data: dbRecipients, error: recipientError } = await supabase
+      .from("daily_report_recipients")
+      .select("*")
+      .eq("is_active", true);
+
+    if (recipientError) {
+      console.error("Error fetching recipients:", recipientError);
+    }
+
+    // Use manual email override or database recipients
+    let recipients: Recipient[] = [];
+    if (manualEmail) {
+      recipients = [{ id: "manual", email: manualEmail, name: null, report_types: ["inventory", "cp1", "budget"] }];
+    } else if (dbRecipients && dbRecipients.length > 0) {
+      recipients = dbRecipients as Recipient[];
+    } else {
+      console.log("No active recipients found");
+      return new Response(
+        JSON.stringify({ success: true, message: "No active recipients configured", sent: 0 }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Get latest inventory snapshot
+    const { data: inventorySnapshot } = await supabase
+      .from("inventory_snapshots")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Get prior week inventory snapshot for comparison
+    const { data: allInventory } = await supabase
+      .from("inventory_snapshots")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(2);
     
-    console.log(`Sending executive digest to: ${recipientEmail}`);
+    const priorInventory = allInventory && allInventory.length > 1 ? allInventory[1] : null;
 
-    // Fetch open exposure data
-    const { data: exposureData, error: exposureError } = await supabase
-      .from("open_exposure")
-      .select("*");
+    // Get latest CP1 snapshot
+    const { data: cp1Snapshot } = await supabase
+      .from("cp1_snapshots")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (exposureError) throw exposureError;
-
-    // Calculate metrics from actual data
-    const totalOpenReserves = exposureData?.reduce((sum, r) => sum + (r.reserves || 0), 0) || 300841051;
-    const totalLowEval = exposureData?.reduce((sum, r) => sum + (r.net_exposure || 0) * 0.67, 0) || 101412928;
-    const totalHighEval = exposureData?.reduce((sum, r) => sum + (r.net_exposure || 0) * 0.73, 0) || 110500000;
-    const pendingEval = exposureData?.filter(r => !r.net_exposure || r.net_exposure === 0).reduce((sum, r) => sum + (r.reserves || 0), 0) || 190300000;
+    // Get prior CP1 snapshot
+    const { data: allCP1 } = await supabase
+      .from("cp1_snapshots")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(2);
     
-    const metrics: ExecutiveMetrics = {
-      totalOpenReserves,
-      totalLowEval,
-      totalHighEval,
-      medianEval: (totalLowEval + totalHighEval) / 2,
-      pendingEval,
-      pendingEvalPct: (pendingEval / totalOpenReserves) * 100,
-      closuresThisMonth: 847,
-      avgDaysToClose: 142,
-      aged365Count: 5630,
-      aged365Reserves: 115000000,
-      aged365Pct: 55.7,
-      reservesMoM: 2.3,
-      reservesYoY: -5.1,
+    const priorCP1 = allCP1 && allCP1.length > 1 ? allCP1[1] : null;
+
+    // Get pending decisions (LOR offers)
+    const { data: pendingOffers } = await supabase
+      .from("lor_offers")
+      .select("*")
+      .eq("status", "pending")
+      .order("offer_amount", { ascending: false })
+      .limit(10);
+
+    // Get claims payments for YTD budget
+    const { data: claimsPayments } = await supabase
+      .from("claims_payments")
+      .select("*")
+      .eq("period_year", new Date().getFullYear())
+      .eq("is_ytd", true);
+
+    // Format helpers
+    const fmtNum = (n: number) => n?.toLocaleString() || "0";
+    const fmtCurrency = (n: number) => {
+      if (!n) return "$0";
+      if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+      if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+      return `$${n.toFixed(0)}`;
     };
-
-    const formatCurrency = (val: number) => {
-      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-      if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
-      return `$${val.toFixed(0)}`;
+    const fmtPct = (n: number) => `${n?.toFixed(1) || "0"}%`;
+    const fmtDelta = (curr: number, prior: number) => {
+      const delta = curr - prior;
+      const sign = delta >= 0 ? "+" : "";
+      return `${sign}${fmtNum(delta)}`;
+    };
+    const fmtDeltaPct = (curr: number, prior: number) => {
+      if (!prior) return "N/A";
+      const pct = ((curr - prior) / prior) * 100;
+      const sign = pct >= 0 ? "+" : "";
+      return `${sign}${pct.toFixed(1)}%`;
     };
 
     const today = new Date();
-    const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' });
-    const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const timeStr = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const reportDate = today.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-    // Build HTML email
-    const htmlContent = `
+    // Calculate totals
+    const totalPendingDecisions = pendingOffers?.length || 0;
+    const totalDecisionExposure = pendingOffers?.reduce((sum, o) => sum + (o.offer_amount || 0), 0) || 0;
+    const ytdBudgetPaid = claimsPayments?.reduce((sum, p) => sum + (p.total_payments || 0), 0) || 0;
+
+    // Build email HTML
+    const buildEmailHTML = (recipient: Recipient): string => {
+      const inv = inventorySnapshot as InventorySnapshot | null;
+      const priorInv = priorInventory as InventorySnapshot | null;
+      const cp1 = cp1Snapshot as CP1Snapshot | null;
+      const priorCp1 = priorCP1 as CP1Snapshot | null;
+
+      return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Executive Command Center Digest</title>
+  <title>Executive Daily Digest</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 700px; margin: 20px auto; background-color: #0c2340; border-radius: 12px; overflow: hidden;">
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#0a0a0a;color:#ffffff;">
+  <div style="max-width:680px;margin:0 auto;background:#111111;">
+    
     <!-- Header -->
-    <tr>
-      <td style="padding: 24px 32px; border-bottom: 3px solid #b41e1e;">
-        <table width="100%" cellpadding="0" cellspacing="0">
+    <div style="background:linear-gradient(135deg,#1a1a1a 0%,#0d0d0d 100%);padding:32px 24px;border-bottom:3px solid #d4af37;">
+      <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;">
+        📊 EXECUTIVE DAILY DIGEST
+      </h1>
+      <p style="margin:8px 0 0;font-size:14px;color:#888888;">
+        ${reportDate}
+      </p>
+      ${recipient.name ? `<p style="margin:4px 0 0;font-size:12px;color:#666666;">Prepared for ${recipient.name}</p>` : ""}
+      ${isTest ? `<p style="margin:8px 0 0;padding:4px 8px;background:#7f1d1d;color:#fca5a5;font-size:11px;display:inline-block;border-radius:4px;">TEST MODE</p>` : ""}
+    </div>
+
+    <!-- Status Banner -->
+    ${inv ? `
+    <div style="background:${inv.age_365_plus > 3000 || inv.no_eval_count > 5000 ? "#7f1d1d" : "#14532d"};padding:16px 24px;text-align:center;">
+      <span style="font-size:12px;font-weight:600;letter-spacing:1px;color:${inv.age_365_plus > 3000 ? "#fca5a5" : "#86efac"};">
+        PORTFOLIO STATUS: ${inv.age_365_plus > 3000 || inv.no_eval_count > 5000 ? "⚠️ ATTENTION REQUIRED" : "✓ STABLE"}
+      </span>
+    </div>
+    ` : ""}
+
+    <!-- Main Content -->
+    <div style="padding:24px;">
+      
+      <!-- Inventory Section -->
+      ${recipient.report_types?.includes("inventory") && inv ? `
+      <div style="margin-bottom:24px;">
+        <h2 style="margin:0 0 16px;font-size:16px;font-weight:600;color:#d4af37;border-bottom:1px solid #333;padding-bottom:8px;">
+          📋 OPEN INVENTORY
+        </h2>
+        
+        <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <td>
-              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700;">📊 EXECUTIVE COMMAND CENTER</h1>
-              <p style="margin: 6px 0 0; color: #94a3b8; font-size: 13px;">Real-time portfolio health • ${dayOfWeek}, ${dateStr} at ${timeStr}</p>
+            <td style="padding:12px;background:#1a1a1a;border-radius:8px 0 0 0;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Total Claims</div>
+              <div style="font-size:24px;font-weight:700;color:#ffffff;margin-top:4px;">${fmtNum(inv.total_claims)}</div>
+              ${priorInv ? `<div style="font-size:11px;color:${inv.total_claims <= priorInv.total_claims ? "#10b981" : "#ef4444"};margin-top:4px;">${fmtDelta(inv.total_claims, priorInv.total_claims)} WoW</div>` : ""}
             </td>
-            <td style="text-align: right;">
-              <span style="display: inline-block; padding: 6px 14px; background: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                ● LIVE DATA
-              </span>
+            <td style="padding:12px;background:#1a1a1a;border-radius:0 8px 0 0;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Total Reserves</div>
+              <div style="font-size:24px;font-weight:700;color:#d4af37;margin-top:4px;">${fmtCurrency(inv.total_reserves)}</div>
+              ${priorInv ? `<div style="font-size:11px;color:${inv.total_reserves <= priorInv.total_reserves ? "#10b981" : "#ef4444"};margin-top:4px;">${fmtDeltaPct(inv.total_reserves, priorInv.total_reserves)} WoW</div>` : ""}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;background:#1f1f1f;">
+              <div style="font-size:11px;color:#888;">Aged 365+</div>
+              <div style="font-size:18px;font-weight:600;color:${inv.age_365_plus > 3000 ? "#ef4444" : "#ffffff"};margin-top:4px;">${fmtNum(inv.age_365_plus)}</div>
+            </td>
+            <td style="padding:12px;background:#1f1f1f;">
+              <div style="font-size:11px;color:#888;">No Evaluation</div>
+              <div style="font-size:18px;font-weight:600;color:${inv.no_eval_count > 5000 ? "#ef4444" : "#ffffff"};margin-top:4px;">${fmtNum(inv.no_eval_count)}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;background:#1a1a1a;border-radius:0 0 0 8px;">
+              <div style="font-size:11px;color:#888;">Low Eval</div>
+              <div style="font-size:16px;font-weight:600;color:#10b981;margin-top:4px;">${fmtCurrency(inv.total_low_eval)}</div>
+            </td>
+            <td style="padding:12px;background:#1a1a1a;border-radius:0 0 8px 0;">
+              <div style="font-size:11px;color:#888;">High Eval</div>
+              <div style="font-size:16px;font-weight:600;color:#ef4444;margin-top:4px;">${fmtCurrency(inv.total_high_eval)}</div>
             </td>
           </tr>
         </table>
-      </td>
-    </tr>
-    
-    <!-- Main Metrics Grid -->
-    <tr>
-      <td style="padding: 24px 32px;">
-        <table width="100%" cellpadding="0" cellspacing="16">
+      </div>
+      ` : ""}
+
+      <!-- CP1 Section -->
+      ${recipient.report_types?.includes("cp1") && cp1 ? `
+      <div style="margin-bottom:24px;">
+        <h2 style="margin:0 0 16px;font-size:16px;font-weight:600;color:#d4af37;border-bottom:1px solid #333;padding-bottom:8px;">
+          🎯 CP1 ANALYSIS
+        </h2>
+        
+        <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <!-- Open Reserves -->
-            <td width="25%" style="background: rgba(30, 41, 59, 0.6); border-radius: 12px; padding: 18px; vertical-align: top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Open Reserves</p>
-                  </td>
-                  <td style="text-align: right;">
-                    <span style="color: ${metrics.reservesMoM > 0 ? '#f87171' : '#34d399'}; font-size: 11px; font-weight: 700;">
-                      ${metrics.reservesMoM > 0 ? '↑' : '↓'}${Math.abs(metrics.reservesMoM)}% MoM
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2">
-                    <p style="margin: 10px 0 6px; color: #ffffff; font-size: 26px; font-weight: 800;">${formatCurrency(metrics.totalOpenReserves)}</p>
-                    <p style="margin: 0; color: ${metrics.reservesYoY < 0 ? '#34d399' : '#f87171'}; font-size: 12px;">
-                      ${metrics.reservesYoY > 0 ? '+' : ''}${metrics.reservesYoY}% YoY
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:12px;background:#1a1a1a;border-radius:8px 0 0 8px;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">CP1 Rate</div>
+              <div style="font-size:28px;font-weight:700;color:${cp1.cp1_rate >= 30 ? "#10b981" : cp1.cp1_rate >= 25 ? "#f59e0b" : "#ef4444"};margin-top:4px;">
+                ${fmtPct(cp1.cp1_rate)}
+              </div>
+              ${priorCp1 ? `<div style="font-size:11px;color:${cp1.cp1_rate >= priorCp1.cp1_rate ? "#10b981" : "#ef4444"};margin-top:4px;">${cp1.cp1_rate >= priorCp1.cp1_rate ? "↑" : "↓"} ${Math.abs(cp1.cp1_rate - priorCp1.cp1_rate).toFixed(1)}% WoW</div>` : ""}
             </td>
-            
-            <!-- Pending Eval ALERT -->
-            <td width="25%" style="background: linear-gradient(135deg, rgba(180, 83, 9, 0.3), rgba(217, 119, 6, 0.15)); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 18px; vertical-align: top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 4px; color: #fbbf24; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">⚠️ PENDING EVAL</p>
-                  </td>
-                  <td style="text-align: right;">
-                    <span style="font-size: 14px;">⚠️</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2">
-                    <p style="margin: 10px 0 6px; color: #fcd34d; font-size: 26px; font-weight: 800;">${formatCurrency(metrics.pendingEval)}</p>
-                    <p style="margin: 0 0 8px; color: rgba(251, 191, 36, 0.8); font-size: 12px;">${metrics.pendingEvalPct.toFixed(0)}% of reserves without evaluation</p>
-                    <p style="margin: 0; padding: 4px 10px; background: rgba(69, 26, 3, 0.5); color: #fcd34d; font-size: 11px; font-weight: 600; border-radius: 4px; display: inline-block;">Action Required</p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:12px;background:#1a1a1a;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">BI CP1 Rate</div>
+              <div style="font-size:24px;font-weight:700;color:#60a5fa;margin-top:4px;">
+                ${fmtPct(cp1.bi_cp1_rate)}
+              </div>
             </td>
-            
-            <!-- Closures -->
-            <td width="25%" style="background: rgba(30, 41, 59, 0.6); border-radius: 12px; padding: 18px; vertical-align: top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Closures This Month</p>
-                  </td>
-                  <td style="text-align: right;">
-                    <span style="color: #34d399; font-size: 11px; font-weight: 700;">↑ +7%</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2">
-                    <p style="margin: 10px 0 6px; color: #ffffff; font-size: 26px; font-weight: 800;">${metrics.closuresThisMonth.toLocaleString()}</p>
-                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                      Avg: ${metrics.avgDaysToClose} days &nbsp;
-                      <span style="color: #34d399;">↓8d faster</span>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-            
-            <!-- Aged 365+ ALERT -->
-            <td width="25%" style="background: linear-gradient(135deg, rgba(127, 29, 29, 0.3), rgba(153, 27, 27, 0.15)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 18px; vertical-align: top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 4px; color: #f87171; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🚨 AGED 365+ DAYS</p>
-                  </td>
-                  <td style="text-align: right;">
-                    <span style="font-size: 14px;">⏰</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2">
-                    <p style="margin: 10px 0 6px; color: #fca5a5; font-size: 26px; font-weight: 800;">${metrics.aged365Count.toLocaleString()}</p>
-                    <p style="margin: 0 0 8px; color: rgba(248, 113, 113, 0.8); font-size: 12px;">${metrics.aged365Pct}% of inventory • ${formatCurrency(metrics.aged365Reserves)}</p>
-                    <div style="height: 6px; background: rgba(127, 29, 29, 0.5); border-radius: 3px; overflow: hidden;">
-                      <div style="height: 100%; width: ${metrics.aged365Pct}%; background: #ef4444; border-radius: 3px;"></div>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:12px;background:#1a1a1a;border-radius:0 8px 8px 0;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">High Risk</div>
+              <div style="font-size:24px;font-weight:700;color:${cp1.high_risk_claims > 500 ? "#ef4444" : "#ffffff"};margin-top:4px;">
+                ${fmtNum(cp1.high_risk_claims)}
+              </div>
             </td>
           </tr>
         </table>
-      </td>
-    </tr>
-    
-    <!-- Evaluation Summary -->
-    <tr>
-      <td style="padding: 0 32px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(71, 85, 105, 0.5); border-radius: 12px; padding: 20px;">
+
+        <table style="width:100%;border-collapse:collapse;margin-top:8px;">
           <tr>
-            <td width="33%" style="padding: 16px; text-align: center; border-right: 1px solid rgba(71, 85, 105, 0.3);">
-              <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">💵 Low Eval</p>
-              <p style="margin: 0; color: #93c5fd; font-size: 22px; font-weight: 700;">${formatCurrency(metrics.totalLowEval)}</p>
+            <td style="padding:8px 12px;background:#1f1f1f;border-radius:8px 0 0 8px;font-size:12px;">
+              <span style="color:#888;">Total Claims:</span>
+              <span style="color:#fff;font-weight:600;margin-left:8px;">${fmtNum(cp1.total_claims)}</span>
             </td>
-            <td width="33%" style="padding: 16px; text-align: center; border-right: 1px solid rgba(71, 85, 105, 0.3);">
-              <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">🎯 Median Eval</p>
-              <p style="margin: 0; color: #6ee7b7; font-size: 22px; font-weight: 700;">${formatCurrency(metrics.medianEval)}</p>
+            <td style="padding:8px 12px;background:#1f1f1f;font-size:12px;">
+              <span style="color:#888;">Total Flags:</span>
+              <span style="color:#fff;font-weight:600;margin-left:8px;">${fmtNum(cp1.total_flags)}</span>
             </td>
-            <td width="33%" style="padding: 16px; text-align: center;">
-              <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">📈 High Eval</p>
-              <p style="margin: 0; color: #fcd34d; font-size: 22px; font-weight: 700;">${formatCurrency(metrics.totalHighEval)}</p>
+            <td style="padding:8px 12px;background:#1f1f1f;border-radius:0 8px 8px 0;font-size:12px;">
+              <span style="color:#888;">365+ Days:</span>
+              <span style="color:${cp1.age_365_plus > 2500 ? "#ef4444" : "#fff"};font-weight:600;margin-left:8px;">${fmtNum(cp1.age_365_plus)}</span>
             </td>
           </tr>
         </table>
-      </td>
-    </tr>
-    
+      </div>
+      ` : ""}
+
+      <!-- Budget & Decisions Section -->
+      ${recipient.report_types?.includes("budget") ? `
+      <div style="margin-bottom:24px;">
+        <h2 style="margin:0 0 16px;font-size:16px;font-weight:600;color:#d4af37;border-bottom:1px solid #333;padding-bottom:8px;">
+          💰 BUDGET & DECISIONS
+        </h2>
+        
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:12px;background:#1a1a1a;border-radius:8px 0 0 8px;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">YTD Paid</div>
+              <div style="font-size:24px;font-weight:700;color:#d4af37;margin-top:4px;">${fmtCurrency(ytdBudgetPaid)}</div>
+            </td>
+            <td style="padding:12px;background:#1a1a1a;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">Pending Decisions</div>
+              <div style="font-size:24px;font-weight:700;color:${totalPendingDecisions > 50 ? "#ef4444" : "#ffffff"};margin-top:4px;">${totalPendingDecisions}</div>
+            </td>
+            <td style="padding:12px;background:#1a1a1a;border-radius:0 8px 8px 0;">
+              <div style="font-size:11px;color:#888;text-transform:uppercase;">Decision Exposure</div>
+              <div style="font-size:24px;font-weight:700;color:#ef4444;margin-top:4px;">${fmtCurrency(totalDecisionExposure)}</div>
+            </td>
+          </tr>
+        </table>
+
+        ${pendingOffers && pendingOffers.length > 0 ? `
+        <div style="margin-top:16px;">
+          <h3 style="margin:0 0 8px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Top Pending Offers</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tr style="background:#1a1a1a;">
+              <td style="padding:8px;color:#888;font-weight:600;">Claim #</td>
+              <td style="padding:8px;color:#888;font-weight:600;text-align:right;">Offer</td>
+              <td style="padding:8px;color:#888;font-weight:600;text-align:right;">Expires</td>
+            </tr>
+            ${(pendingOffers as LorOffer[]).slice(0, 5).map((offer, i) => `
+            <tr style="background:${i % 2 === 0 ? "#1f1f1f" : "#1a1a1a"};">
+              <td style="padding:8px;color:#ffffff;">${offer.claim_number}</td>
+              <td style="padding:8px;color:#ef4444;text-align:right;font-weight:600;">${fmtCurrency(offer.offer_amount)}</td>
+              <td style="padding:8px;color:#888;text-align:right;">${new Date(offer.expires_date).toLocaleDateString()}</td>
+            </tr>
+            `).join("")}
+          </table>
+        </div>
+        ` : ""}
+      </div>
+      ` : ""}
+
+    </div>
+
     <!-- Footer -->
-    <tr>
-      <td style="padding: 16px 32px 24px; border-top: 1px solid rgba(71, 85, 105, 0.3);">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td>
-              <p style="margin: 0; color: #64748b; font-size: 11px;">
-                FLI Discipline Command Center • Automated Executive Digest
-                ${isTest ? '<br><span style="color: #f59e0b;">[TEST MODE - Not a scheduled report]</span>' : ''}
-              </p>
-            </td>
-            <td style="text-align: right;">
-              <p style="margin: 0; color: #64748b; font-size: 11px;">
-                Reply to unsubscribe
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+    <div style="background:#0a0a0a;padding:24px;border-top:1px solid #333;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#666;">
+        Fred Loya Insurance | Claims Discipline Command Center
+      </p>
+      <p style="margin:8px 0 0;font-size:10px;color:#444;">
+        Sent ${today.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
+      </p>
+    </div>
+
+  </div>
 </body>
-</html>
-    `;
+</html>`;
+    };
 
-    // Plain text version for SMS/fallback
-    const plainText = `
-📊 EXECUTIVE COMMAND CENTER
-${dayOfWeek}, ${dateStr} at ${timeStr}
+    // Send emails to all recipients
+    const results: Array<{ email: string; success: boolean; error?: string }> = [];
 
-━━━ PORTFOLIO HEALTH ━━━
-Open Reserves: ${formatCurrency(metrics.totalOpenReserves)} (${metrics.reservesMoM > 0 ? '+' : ''}${metrics.reservesMoM}% MoM)
-YoY Change: ${metrics.reservesYoY > 0 ? '+' : ''}${metrics.reservesYoY}%
+    for (const recipient of recipients) {
+      try {
+        const html = buildEmailHTML(recipient);
+        
+        const emailResult = await resend.emails.send({
+          from: "FLI Dashboard <onboarding@resend.dev>",
+          to: [recipient.email],
+          subject: `📊 Daily Executive Digest - ${reportDate}`,
+          html,
+        });
 
-⚠️ PENDING EVALUATION
-${formatCurrency(metrics.pendingEval)} (${metrics.pendingEvalPct.toFixed(0)}% of reserves)
-ACTION REQUIRED
-
-📈 CLOSURES THIS MONTH
-${metrics.closuresThisMonth.toLocaleString()} closed (Avg: ${metrics.avgDaysToClose} days)
-
-🚨 AGED 365+ DAYS
-${metrics.aged365Count.toLocaleString()} claims (${metrics.aged365Pct}%)
-${formatCurrency(metrics.aged365Reserves)} in reserves
-
-━━━ EVALUATION SUMMARY ━━━
-Low:    ${formatCurrency(metrics.totalLowEval)}
-Median: ${formatCurrency(metrics.medianEval)}
-High:   ${formatCurrency(metrics.totalHighEval)}
-
-— FLI Discipline Command Center
-    `.trim();
-
-    // Check for Resend API key
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    
-    if (resendApiKey && recipientEmail) {
-      // Send via Resend - dynamic import for Deno compatibility
-      const { Resend } = await import("https://esm.sh/resend@2.0.0");
-      const resendClient = new Resend(resendApiKey);
-      
-      const emailResult = await resendClient.emails.send({
-        from: "FLI Command Center <onboarding@resend.dev>",
-        to: [recipientEmail],
-        subject: `📊 Executive Digest: ${formatCurrency(metrics.totalOpenReserves)} Open Reserves | ${dateStr}`,
-        html: htmlContent,
-        text: plainText,
-      });
-      
-      console.log("Email sent successfully:", emailResult);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          method: "email",
-          recipient: recipientEmail,
-          metrics,
-          test: isTest
-        }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+        console.log(`Email sent to ${recipient.email}:`, emailResult);
+        results.push({ email: recipient.email, success: true });
+      } catch (emailError: any) {
+        console.error(`Failed to send to ${recipient.email}:`, emailError);
+        results.push({ email: recipient.email, success: false, error: emailError.message });
+      }
     }
 
-    // Fallback: Return the digest content for manual handling
+    const successCount = results.filter(r => r.success).length;
+    console.log(`Daily digest complete: ${successCount}/${recipients.length} emails sent`);
+
     return new Response(
       JSON.stringify({
         success: true,
-        method: "preview",
-        message: "No email configured. Add RESEND_API_KEY and EXECUTIVE_DIGEST_EMAIL secrets to enable email delivery.",
-        html: htmlContent,
-        text: plainText,
-        metrics,
-        test: isTest
+        sent: successCount,
+        total: recipients.length,
+        results,
+        reportDate,
+        test: isTest,
       }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
     );
-
   } catch (error: any) {
-    console.error("Error in send-executive-digest function:", error);
+    console.error("Error in send-executive-digest:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
     );
   }
 });

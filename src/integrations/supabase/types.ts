@@ -389,6 +389,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_report_recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string | null
+          report_types: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          report_types?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          report_types?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_snapshots: {
         Row: {
           age_181_365: number
