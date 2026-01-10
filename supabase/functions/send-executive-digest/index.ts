@@ -38,7 +38,12 @@ interface CP1Snapshot {
   total_flags: number;
   high_risk_claims: number;
   age_365_plus: number;
+  age_181_365: number;
+  age_61_180: number;
+  age_under_60: number;
   snapshot_date: string;
+  coverage_breakdown?: Record<string, { total: number; yes: number; rate: number }>;
+  flag_breakdown?: Record<string, number>;
 }
 
 interface LorOffer {
@@ -295,6 +300,7 @@ serve(async (req: Request): Promise<Response> => {
           </tr>
         </table>
 
+        <!-- CP1 Age Distribution -->
         <table style="width:100%;border-collapse:collapse;margin-top:8px;">
           <tr>
             <td style="padding:8px 12px;background:#1f1f1f;border-radius:8px 0 0 8px;font-size:12px;">
@@ -306,11 +312,50 @@ serve(async (req: Request): Promise<Response> => {
               <span style="color:#fff;font-weight:600;margin-left:8px;">${fmtNum(cp1.total_flags)}</span>
             </td>
             <td style="padding:8px 12px;background:#1f1f1f;border-radius:0 8px 8px 0;font-size:12px;">
-              <span style="color:#888;">365+ Days:</span>
-              <span style="color:${cp1.age_365_plus > 2500 ? "#ef4444" : "#fff"};font-weight:600;margin-left:8px;">${fmtNum(cp1.age_365_plus)}</span>
+              <span style="color:#888;">Reserves:</span>
+              <span style="color:#d4af37;font-weight:600;margin-left:8px;">${fmtCurrency(cp1.total_reserves)}</span>
             </td>
           </tr>
         </table>
+
+        <!-- CP1 Age Breakdown -->
+        <div style="margin-top:12px;">
+          <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:8px;letter-spacing:0.5px;">Age Distribution</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tr style="background:#1a1a1a;">
+              <td style="padding:8px;color:#10b981;font-weight:600;">
+                &lt;60 days: <span style="color:#fff;">${fmtNum(cp1.age_under_60 || 0)}</span>
+              </td>
+              <td style="padding:8px;color:#60a5fa;font-weight:600;">
+                61-180: <span style="color:#fff;">${fmtNum(cp1.age_61_180 || 0)}</span>
+              </td>
+              <td style="padding:8px;color:#f59e0b;font-weight:600;">
+                181-365: <span style="color:#fff;">${fmtNum(cp1.age_181_365 || 0)}</span>
+              </td>
+              <td style="padding:8px;color:#ef4444;font-weight:600;">
+                365+: <span style="color:#fff;">${fmtNum(cp1.age_365_plus)}</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Top Flags (if available) -->
+        ${cp1.flag_breakdown ? `
+        <div style="margin-top:12px;">
+          <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:8px;letter-spacing:0.5px;">Top Risk Flags</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            ${Object.entries(cp1.flag_breakdown as Record<string, number>)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 4)
+              .map(([flag, count], i) => `
+              <tr style="background:${i % 2 === 0 ? "#1a1a1a" : "#1f1f1f"};">
+                <td style="padding:6px 8px;color:#888;">${flag}</td>
+                <td style="padding:6px 8px;color:#ef4444;font-weight:600;text-align:right;">${fmtNum(count)}</td>
+              </tr>
+            `).join("")}
+          </table>
+        </div>
+        ` : ""}
       </div>
       ` : ""}
 
