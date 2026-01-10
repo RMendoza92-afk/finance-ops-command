@@ -82,10 +82,14 @@ serve(async (req: Request): Promise<Response> => {
           });
 
         if (!uploadError) {
-          const { data: urlData } = supabase.storage
+          // Use signed URL instead of public URL (expires in 7 days)
+          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
             .from('review-exports')
-            .getPublicUrl(filename);
-          downloadUrl = urlData.publicUrl;
+            .createSignedUrl(filename, 60 * 60 * 24 * 7); // 7 days
+          
+          if (signedUrlData && !signedUrlError) {
+            downloadUrl = signedUrlData.signedUrl;
+          }
         }
       } catch (err) {
         console.error('Error uploading Excel:', err);
