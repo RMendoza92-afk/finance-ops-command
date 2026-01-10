@@ -6,6 +6,7 @@ import { useExportData, type ExportableData } from "@/hooks/useExportData";
 import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
 import { useCP1AnalysisCsv } from "@/hooks/useCP1AnalysisCsv";
+import { useCheckHistory } from "@/hooks/useCheckHistory";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
 import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, FileSpreadsheet, Wallet, Users, Target, Activity, ExternalLink, Download, BarChart3, PieChart, AlertCircle } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
@@ -56,6 +57,7 @@ export function ExecutiveCommandDashboardWrapper() {
   const { data, loading, error } = useOpenExposureData();
   const { data: decisionsData } = useDecisionsPending();
   const { data: cp1CsvData } = useCP1AnalysisCsv();
+  const { summary: spendSummary, litigationSpend, biSpend, loading: spendLoading } = useCheckHistory();
   const { generateCSuiteBriefing, generateCSuiteExcel, generatePDF, generateExcel } = useExportData();
   const { data: actuarialData } = useActuarialData(2026);
   const triangleData = useLossTriangleData();
@@ -217,27 +219,52 @@ export function ExecutiveCommandDashboardWrapper() {
   const typeGroupData = data.typeGroupSummaries || [];
   const litCount = typeGroupData.find(t => t.typeGroup === 'LIT')?.grandTotal || 0;
 
-  // Budget metrics calculation - 2026 YTD BI/UM/UI Payments (1/1/26 - 1/7/26)
-  // Source: GWCHKHIS03_1.8.26.xlsx
-  // 2025 Actuals: YTD December 31, 2025
-  const budgetMetrics = {
-    coverageBreakdown: {
-      bi: {
-        ytd2026: 5847291.33,  // BI Paid YTD (335 payments)
-        ytd2025: 344631765,   // BI 2025 Full Year: $344,631,765 (37,700 claims)
+  // Budget metrics - now using REAL data from check history CSV
+  // Falls back to static data if CSV not loaded
+  const budgetMetrics = useMemo(() => {
+    // Get BI spend from check history (real data)
+    const biYtd2026 = biSpend?.totalNet || 5847291.33;
+    const biCheckCount = biSpend?.checkCount || 335;
+    
+    // Get UM/UI from coverage breakdown if available
+    const umSpend = spendSummary?.byCoverage.get('UM')?.net || 101896.68;
+    const uiSpend = spendSummary?.byCoverage.get('UI')?.net || 90000.00;
+    
+    // Calculate total YTD from real data
+    const totalYtd = spendSummary?.totalNet || 6039188.01;
+    
+    return {
+      coverageBreakdown: {
+        bi: {
+          ytd2026: biYtd2026,
+          checkCount: biCheckCount,
+          ytd2025: 344631765,   // BI 2025 Full Year: $344,631,765 (37,700 claims)
+        },
+        um: {
+          ytd2026: umSpend,
+          ytd2025: 83565242,    // UM 2025 Full Year: $83,565,242 (10,998 claims)
+        },
+        ui: {
+          ytd2026: uiSpend,
+          ytd2025: 23226040,    // UI 2025 Full Year: $23,226,040 (3,109 claims)
+        }
       },
-      um: {
-        ytd2026: 101896.68,   // UM Paid YTD (7 payments)
-        ytd2025: 83565242,    // UM 2025 Full Year: $83,565,242 (10,998 claims)
+      totalYtd2026: totalYtd,
+      total2025: 451423047,  // Total 2025: $451,423,047 (51,807 total claims)
+      // Litigation-specific spend from real data
+      litigationSpend: {
+        total: litigationSpend?.totalNet || 0,
+        indemnity: litigationSpend?.indemnityTotal || 0,
+        expense: litigationSpend?.expenseTotal || 0,
+        checkCount: litigationSpend?.checkCount || 0,
       },
-      ui: {
-        ytd2026: 90000.00,    // UI Paid YTD (3 payments)
-        ytd2025: 23226040,    // UI 2025 Full Year: $23,226,040 (3,109 claims)
-      }
-    },
-    totalYtd2026: 6039188.01,
-    total2025: 451423047,  // Total 2025: $451,423,047 (51,807 total claims)
-  };
+      // Overall spend breakdown
+      totalIndemnity: spendSummary?.indemnityTotal || 0,
+      totalExpense: spendSummary?.expenseTotal || 0,
+      totalChecks: spendSummary?.checkCount || 0,
+      isRealData: !spendLoading && (spendSummary?.checkCount || 0) > 0,
+    };
+  }, [biSpend, spendSummary, litigationSpend, spendLoading]);
 
   // Drilldown handler
   const handleDrilldown = (section: string) => {

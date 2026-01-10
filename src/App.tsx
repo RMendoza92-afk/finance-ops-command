@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OpenExposureProvider } from "@/contexts/OpenExposureContext";
+import { OperationsDataProvider } from "@/contexts/OperationsDataContext";
 import Index from "./pages/Index";
 import AdminDownloads from "./pages/AdminDownloads";
 import NotFound from "./pages/NotFound";
@@ -26,13 +27,15 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <OpenExposureProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
+      <OperationsDataProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </OperationsDataProvider>
     </OpenExposureProvider>
   </QueryClientProvider>
 );
