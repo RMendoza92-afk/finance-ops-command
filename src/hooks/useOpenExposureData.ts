@@ -1515,8 +1515,8 @@ export function useOpenExposureData() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load current raw data (Jan 8)
-        const currentRes = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
+        // Load current raw data (Jan 10)
+        const currentRes = await fetch('/data/open-exposure-raw-jan10.csv?d=2026-01-10');
         const currentCsv = await currentRes.text();
         
         // Parse current raw data
@@ -1555,7 +1555,7 @@ export function useOpenExposureData() {
         });
         
         // Current snapshot date (from filename or hardcoded for now)
-        const currentSnapshotDate = '2026-01-08';
+        const currentSnapshotDate = '2026-01-10';
         
         // Save current data as snapshot
         await saveSnapshot(currentData, currentSnapshotDate);
@@ -1594,7 +1594,7 @@ export function useOpenExposureData() {
             reservesChange: 0,
             reservesChangePercent: 0,
             previousDate: FALLBACK_BASELINE.date,
-            currentDate: format(parseISO(currentSnapshotDate), 'MMM d, yyyy')
+            currentDate: format(parseISO('2026-01-10'), 'MMM d, yyyy')
           };
         }
         
