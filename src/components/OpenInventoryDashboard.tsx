@@ -3310,114 +3310,164 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         </div>
       )}
 
-      {/* Executive Header Banner - Board-Ready Design */}
-      <div className="bg-gradient-to-r from-secondary via-secondary/80 to-muted rounded-xl p-4 sm:p-6 border border-border shadow-lg">
-        <div className="flex flex-col gap-4">
-          {/* Header Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5">
-            <div className="flex items-center gap-3 sm:gap-5">
-              <div className="p-2 sm:p-3 bg-primary/20 rounded-xl border border-primary/30 w-fit">
-                <FileStack className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
+      {/* Executive Header Banner - Master Report Summary */}
+      <div className="bg-gradient-to-br from-secondary via-card to-muted rounded-xl border-2 border-primary/30 shadow-xl overflow-hidden">
+        {/* Top Row - Title + Date + Key Metrics */}
+        <div className="p-4 sm:p-6 border-b border-border">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-xl border border-primary/30">
+                <FileStack className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               </div>
-              <div className="border-l-2 border-primary pl-3 sm:pl-5">
-                <h2 className="text-base sm:text-xl font-bold text-foreground tracking-wide">OPEN INVENTORY COMMAND</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Claims & Financial Overview • {timestamp}</p>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                  Open Inventory: {formatNumber(metrics?.totalOpenClaims || 0)} Claims
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  As of {data?.dataDate || timestamp} • {formatNumber(metrics?.totalOpenExposures || 0)} open exposures
+                </p>
+                {data?.delta && (
+                  <div className={`flex items-center gap-2 mt-2 text-xs ${data.delta.change >= 0 ? 'text-destructive' : 'text-success'}`}>
+                    {data.delta.change >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                    <span className="font-semibold">
+                      {data.delta.change >= 0 ? '+' : ''}{formatNumber(data.delta.change)} claims ({data.delta.changePercent >= 0 ? '+' : ''}{data.delta.changePercent.toFixed(1)}%)
+                    </span>
+                    <span className="text-muted-foreground">vs {data.delta.previousDate}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Primary Financials */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-6">
+              <div className="text-center px-3 sm:px-5 border-r border-border">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Open Reserves</p>
+                <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(FINANCIAL_DATA.totals.totalOpenReserves)}</p>
+              </div>
+              <div className="text-center px-3 sm:px-5 border-r border-border">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Low Eval</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{formatCurrency(FINANCIAL_DATA.totals.totalLowEval)}</p>
+              </div>
+              <div className="text-center px-3 sm:px-5">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">High Eval</p>
+                <p className="text-lg sm:text-2xl font-bold text-warning">{formatCurrency(FINANCIAL_DATA.totals.totalHighEval)}</p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Hot Topics Row - CP1, High Risk, Aging, No Eval */}
+        <div className="p-4 sm:p-6 bg-muted/30">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <span className="text-xs font-bold uppercase tracking-wider text-destructive">Hot Topics & Risk Indicators</span>
+          </div>
           
-          {/* Actions Row - Stacked on mobile */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            {/* COMBINED BOARD PACKAGE - Primary CTA */}
-            <Button
-              onClick={generateCombinedBoardPackage}
-              disabled={generatingBoardPackage}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 sm:px-6 py-2 sm:py-2.5 shadow-lg text-sm w-full sm:w-auto"
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {/* CP1 Summary */}
+            <div 
+              className="bg-card rounded-lg p-3 border-2 border-destructive/40 cursor-pointer hover:border-destructive transition-colors"
+              onClick={() => setShowCP1Drawer(true)}
             >
-              {generatingBoardPackage ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <FileStack className="h-4 w-4 mr-2" />
-              )}
-              {generatingBoardPackage ? 'Generating...' : 'Board Package (Combined)'}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-destructive uppercase">CP1</span>
+                <span className="text-[10px] text-muted-foreground">({cp1BoxData?.cp1Data.cp1Rate || CP1_DATA.cp1Rate})</span>
+              </div>
+              <p className="text-xl font-bold text-destructive">{formatNumber(cp1BoxData?.cp1Data.totals.grandTotal || CP1_DATA.totals.yes)}</p>
+              <p className="text-[10px] text-muted-foreground">claims flagged</p>
+            </div>
+
+            {/* High Risk (3+ flags) */}
+            <div className="bg-card rounded-lg p-3 border-2 border-orange-500/40">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-orange-500 uppercase">High Risk</span>
+              </div>
+              <p className="text-xl font-bold text-orange-500">{formatNumber(cp1BoxData?.multiFlagGroups?.find(g => g.flagCount >= 3)?.claimCount || 0)}</p>
+              <p className="text-[10px] text-muted-foreground">3+ flags</p>
+            </div>
+
+            {/* 365+ Days */}
+            <div className="bg-card rounded-lg p-3 border border-amber-500/40">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-amber-600 uppercase">Aged 365+</span>
+              </div>
+              <p className="text-xl font-bold text-amber-600">{formatNumber(EXECUTIVE_METRICS.aging.over365Days)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(EXECUTIVE_METRICS.aging.over365Reserves)}</p>
+            </div>
+
+            {/* No Evaluation */}
+            <div className="bg-card rounded-lg p-3 border border-warning/40">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-warning uppercase">No Eval</span>
+              </div>
+              <p className="text-xl font-bold text-warning">{formatNumber(FINANCIAL_DATA.totals.noEvalCount || 0)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(FINANCIAL_DATA.totals.noEvalReserves || 0)}</p>
+            </div>
+
+            {/* Pending Decisions */}
+            <div 
+              className="bg-card rounded-lg p-3 border border-primary/40 cursor-pointer hover:border-primary transition-colors"
+              onClick={() => setShowDecisionsDrawer(true)}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-primary uppercase">Decisions</span>
+              </div>
+              <p className="text-xl font-bold text-primary">{formatNumber(decisionsData?.totalCount || 0)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(decisionsData?.totalReserves || 0)}</p>
+            </div>
+
+            {/* Reserve Adequacy */}
+            {(() => {
+              const medianEval = (FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2;
+              const variance = FINANCIAL_DATA.totals.totalOpenReserves - medianEval;
+              const variancePct = ((variance / medianEval) * 100).toFixed(1);
+              const isOverReserved = variance > 0;
+              return (
+                <div className={`rounded-lg p-3 border-2 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-bold uppercase ${isOverReserved ? 'text-success' : 'text-destructive'}`}>Adequacy</span>
+                  </div>
+                  <p className={`text-xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>{isOverReserved ? '+' : ''}{variancePct}%</p>
+                  <p className="text-[10px] text-muted-foreground">{isOverReserved ? 'Over' : 'Under'}-reserved</p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Actions Row */}
+        <div className="p-4 sm:p-6 bg-card/50 border-t border-border flex flex-col sm:flex-row sm:items-center gap-3">
+          <Button
+            onClick={generateCombinedBoardPackage}
+            disabled={generatingBoardPackage}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 shadow-lg"
+          >
+            {generatingBoardPackage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileStack className="h-4 w-4 mr-2" />}
+            {generatingBoardPackage ? 'Generating...' : 'Board Package'}
+          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={generateBudgetPDF} disabled={generatingBudgetPDF} className="h-9 text-xs">
+              {generatingBudgetPDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Budget'}
             </Button>
-            
-            {/* Individual Reports - Hidden on mobile, shown as dropdown alternative */}
-            <div className="hidden lg:flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg border border-border">
-              <span className="text-xs font-medium text-muted-foreground">Individual:</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateBudgetPDF}
-                disabled={generatingBudgetPDF}
-                className="h-7 px-2 text-xs hover:bg-primary/10"
-              >
-                {generatingBudgetPDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Budget'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowDecisionsDrawer(true);
-                }}
-                className="h-7 px-2 text-xs hover:bg-primary/10"
-              >
-                Decisions
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateCP1PDF}
-                disabled={generatingCP1PDF}
-                className="h-7 px-2 text-xs hover:bg-primary/10"
-              >
-                {generatingCP1PDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'CP1'}
-              </Button>
-            </div>
-            
-            {/* Mobile-friendly individual reports */}
-            <div className="flex lg:hidden gap-2 w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={generateBudgetPDF}
-                disabled={generatingBudgetPDF}
-                className="flex-1 h-9 text-xs"
-              >
-                {generatingBudgetPDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Budget'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDecisionsDrawer(true)}
-                className="flex-1 h-9 text-xs"
-              >
-                Decisions
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={generateCP1PDF}
-                disabled={generatingCP1PDF}
-                className="flex-1 h-9 text-xs"
-              >
-                {generatingCP1PDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'CP1'}
-              </Button>
-            </div>
-            
-            {/* Inventory Export */}
+            <Button variant="outline" size="sm" onClick={() => setShowDecisionsDrawer(true)} className="h-9 text-xs">
+              Decisions
+            </Button>
+            <Button variant="outline" size="sm" onClick={generateCP1PDF} disabled={generatingCP1PDF} className="h-9 text-xs">
+              {generatingCP1PDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'CP1'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={async () => {
-              await generateExecutivePackage(
+                await generateExecutivePackage(
                   {
                     totalOpenReserves: FINANCIAL_DATA.totals.totalOpenReserves,
                     pendingEval: FINANCIAL_DATA.totals.noEvalReserves || 0,
                     pendingEvalPct: FINANCIAL_DATA.totals.noEvalCount > 0 && metrics?.totalOpenClaims 
                       ? Math.round((FINANCIAL_DATA.totals.noEvalCount / metrics.totalOpenClaims) * 100) : 0,
-                    closuresThisMonth: 0, // N/A for open inventory
-                    avgDaysToClose: 0, // N/A for open inventory
+                    closuresThisMonth: 0,
+                    avgDaysToClose: 0,
                     closureTrend: 0,
                     aged365Count: EXECUTIVE_METRICS.aging.over365Days,
                     aged365Reserves: EXECUTIVE_METRICS.aging.over365Reserves,
@@ -3432,16 +3482,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     byAge: FINANCIAL_DATA.byAge,
                     byQueue: FINANCIAL_DATA.byQueue,
                     byTypeGroup: FINANCIAL_DATA.byTypeGroup,
-                    highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ 
-                      name: a.name, 
-                      value: String(a.value),
-                    })),
+                    highEvalAdjusters: ALL_HIGH_EVAL_ADJUSTERS.map(a => ({ name: a.name, value: String(a.value) })),
                     quarterlyData: EXPERT_QUARTERLY_DATA,
                   }
                 );
                 toast.success('Inventory Package downloaded!');
               }}
-              className="h-9 text-xs w-full sm:w-auto"
+              className="h-9 text-xs"
             >
               <FileSpreadsheet className="h-3 w-3 mr-1" />
               Inventory
@@ -3673,109 +3720,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       {/* SOL Breach Analysis */}
       <SOLBreachSummary />
 
-      {/* Summary Banner with Financials - Cleaner Layout */}
-      <div 
-        className="bg-card border border-border rounded-xl p-4 sm:p-6 cursor-pointer hover:border-primary/50 transition-colors"
-        onDoubleClick={handleExportSummary}
-        title="Double-click to export"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg sm:text-2xl font-bold text-foreground">Open Inventory: {formatNumber(metrics.totalOpenClaims)} Claims</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-              As of {data?.dataDate || 'Loading...'} • <span className="font-semibold text-foreground">{formatNumber(metrics.totalOpenExposures)}</span> open exposures
-            </p>
-            {/* Delta from previous period */}
-            {data?.delta && (
-              <div className={`flex items-center gap-2 mt-2 text-xs ${data.delta.change >= 0 ? 'text-destructive' : 'text-success'}`}>
-                {data.delta.change >= 0 ? (
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                ) : (
-                  <ArrowDownRight className="h-3.5 w-3.5" />
-                )}
-                <span className="font-semibold">
-                  {data.delta.change >= 0 ? '+' : ''}{formatNumber(data.delta.change)} claims ({data.delta.changePercent >= 0 ? '+' : ''}{data.delta.changePercent.toFixed(1)}%)
-                </span>
-                <span className="text-muted-foreground">
-                  vs {data.delta.previousDate} ({formatNumber(data.delta.previousTotal)})
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-6 items-center">
-            <div className="text-center sm:px-5 sm:border-r border-border">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1 sm:mb-2">Open Reserves</p>
-              <p className="text-base sm:text-2xl font-bold text-primary">{formatCurrency(metrics.financials.totals.totalOpenReserves)}</p>
-            </div>
-            <div className="text-center sm:px-5 sm:border-r border-border">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1 sm:mb-2">Low Eval</p>
-              <p className="text-base sm:text-2xl font-bold text-foreground">{formatCurrency(metrics.financials.totals.totalLowEval)}</p>
-            </div>
-            <div className="text-center sm:px-5">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1 sm:mb-2">High Eval</p>
-              <p className="text-base sm:text-2xl font-bold text-warning">{formatCurrency(metrics.financials.totals.totalHighEval)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Financial KPI Cards with Reserve Adequacy - Improved Layout */}
-      {(() => {
-        const medianEval = (metrics.financials.totals.totalLowEval + metrics.financials.totals.totalHighEval) / 2;
-        const reserves = metrics.financials.totals.totalOpenReserves;
-        const variance = reserves - medianEval;
-        const variancePct = ((variance / medianEval) * 100).toFixed(1);
-        const isOverReserved = variance > 0;
-        
-        return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
-            <KPICard
-              title="Total Open Reserves"
-              value={formatCurrency(reserves)}
-              subtitle="Outstanding liability"
-              icon={Wallet}
-              variant="default"
-            />
-            <KPICard
-              title="Low Evaluation"
-              value={formatCurrency(metrics.financials.totals.totalLowEval)}
-              subtitle="Minimum exposure"
-              icon={DollarSign}
-              variant="default"
-            />
-            <KPICard
-              title="Median Evaluation"
-              value={formatCurrency(medianEval)}
-              subtitle="(Low + High) / 2"
-              icon={Target}
-              variant="default"
-            />
-            <KPICard
-              title="High Evaluation"
-              value={formatCurrency(metrics.financials.totals.totalHighEval)}
-              subtitle="Maximum exposure"
-              icon={DollarSign}
-              variant="warning"
-            />
-            <div className={`rounded-xl p-3 sm:p-5 border-2 col-span-2 sm:col-span-1 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
-              <div className="flex items-center gap-2 mb-1 sm:mb-2">
-                {isOverReserved ? (
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
-                )}
-                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reserve Adequacy</span>
-              </div>
-              <p className={`text-xl sm:text-3xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>
-                {isOverReserved ? '+' : ''}{variancePct}%
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-                {isOverReserved ? 'Over-reserved' : 'Under-reserved'} by {formatCurrency(Math.abs(variance))}
-              </p>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Charts Row - Financials by Age */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
