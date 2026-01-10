@@ -465,7 +465,8 @@ export function useExportData() {
       summaryRows.push(['KEY METRICS']);
       summaryRows.push(['Metric', 'Value']);
       Object.entries(data.summary).forEach(([k, v]) => {
-        summaryRows.push([k, String(v)]);
+        // Keep numbers as numbers for Excel SUM compatibility
+        summaryRows.push([k, typeof v === 'number' ? v : v]);
       });
       summaryRows.push([]);
     }
@@ -505,7 +506,12 @@ export function useExportData() {
           ['Rank', 'Adjuster Name', 'High Eval Amount'],
         ];
         highEval.forEach((adj, idx) => {
-          adjRows.push([idx + 1, adj.name, String(adj.value)]);
+          // Keep value as number if it's numeric for Excel SUM
+          const numValue = typeof adj.value === 'number' ? adj.value : 
+            (typeof adj.value === 'string' && !isNaN(parseFloat(adj.value.replace(/[$,]/g, ''))) 
+              ? parseFloat(adj.value.replace(/[$,]/g, '')) 
+              : adj.value);
+          adjRows.push([idx + 1, adj.name, numValue]);
         });
 
         if (noEval.length > 0) {
@@ -513,7 +519,12 @@ export function useExportData() {
           adjRows.push(['NO EVALUATION ASSIGNED']);
           adjRows.push(['Assigned To', 'Claims Count']);
           noEval.forEach(item => {
-            adjRows.push([item.name, String(item.value)]);
+            // Keep value as number if it's numeric for Excel SUM
+            const numValue = typeof item.value === 'number' ? item.value : 
+              (typeof item.value === 'string' && !isNaN(parseFloat(item.value.replace(/[$,]/g, ''))) 
+                ? parseFloat(item.value.replace(/[$,]/g, '')) 
+                : item.value);
+            adjRows.push([item.name, numValue]);
           });
         }
 
