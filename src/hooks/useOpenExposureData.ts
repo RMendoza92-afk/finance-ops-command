@@ -423,7 +423,7 @@ function getAgeBucketLabel(bucket: string): string {
 }
 
 // Only include these coverage types for BI measurement
-const INCLUDED_COVERAGES = ['BI', 'UM', 'UI'];
+const INCLUDED_COVERAGES = ['BI', 'UM', 'UI', 'UIM'];
 
 function isIncludedCoverage(coverage: string): boolean {
   const trimmed = coverage?.trim().toUpperCase() || '';
