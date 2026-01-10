@@ -342,58 +342,58 @@ export function OrderBookDrilldown({ open, onOpenChange }: OrderBookDrilldownPro
   );
 }
 
-// Cash Flow Ticker - matching format of Sales and Claims tickers
+// Cash Flow Ticker - Bloomberg terminal style
 export function CashFlowTicker({ onClick }: { onClick: () => void }) {
   const TickerContent = () => (
-    <div className="flex items-center gap-6 px-4">
+    <div className="flex items-center gap-6 px-4 font-mono">
       {/* Period */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">PERIOD</span>
-        <span className="font-bold text-foreground">{incomingData.period}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">PERIOD</span>
+        <span className="font-bold text-sm text-white">{incomingData.period}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Total Incoming */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">INCOMING</span>
-        <span className="font-bold text-emerald-400">{formatCurrency(incomingData.total, true)}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">INCOMING</span>
+        <span className="font-bold text-sm text-emerald-400">{formatCurrency(incomingData.total, true)}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Total Outgoing */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">OUTGOING</span>
-        <span className="font-bold text-red-400">{formatCurrency(outgoingData.total, true)}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">OUTGOING</span>
+        <span className="font-bold text-sm text-red-400">{formatCurrency(outgoingData.total, true)}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Avg Daily Sales */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">AVG DAILY SALES</span>
-        <span className="font-bold text-emerald-400">{formatCurrency(avgDailyIncoming, true)}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">AVG/DAY IN</span>
+        <span className="font-bold text-sm text-emerald-400">{formatCurrency(avgDailyIncoming, true)}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Avg Daily Paid */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">AVG DAILY PAID</span>
-        <span className="font-bold text-red-400">{formatCurrency(avgDailyOutgoing, true)}</span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">AVG/DAY OUT</span>
+        <span className="font-bold text-sm text-red-400">{formatCurrency(avgDailyOutgoing, true)}</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Net Position */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-amber-400 text-xs font-bold tracking-wider">NET POSITION</span>
-        <span className={`font-bold ${netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        <span className="text-amber-400 text-[10px] font-bold uppercase">NET</span>
+        <span className={`font-bold text-sm ${netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
           {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow, true)}
         </span>
-        <span className="text-border ml-4">│</span>
+        <span className="text-amber-500/30 ml-4">│</span>
       </div>
       
       {/* Coverage Ratio */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider">RATIO</span>
-        <span className={`font-bold ${parseFloat(cashFlowRatio) >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+        <span className="text-amber-500/80 text-[10px] font-medium uppercase">RATIO</span>
+        <span className={`font-bold text-sm ${parseFloat(cashFlowRatio) >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
           {cashFlowRatio}%
         </span>
       </div>
@@ -402,24 +402,21 @@ export function CashFlowTicker({ onClick }: { onClick: () => void }) {
 
   return (
     <div 
-      className="w-full bg-card/80 backdrop-blur-sm border-y border-border overflow-hidden relative cursor-pointer group"
+      className="w-full bg-black border-b border-amber-500/20 overflow-hidden relative cursor-pointer group h-8"
       onClick={onClick}
     >
-      {/* Badge - same size as other tickers */}
-      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-blue-600/90 px-4 py-1">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-blue-300 animate-pulse" />
-          <span className="text-xs font-bold text-white tracking-widest">
-            CASH FLOW
-          </span>
-        </div>
+      {/* Bloomberg-style badge */}
+      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-blue-600 px-3">
+        <span className="text-[10px] font-bold text-white tracking-wider font-mono">
+          FLOW
+        </span>
       </div>
       
-      {/* Gradient fade on left - matches other tickers */}
-      <div className="absolute left-24 top-0 bottom-0 w-16 bg-gradient-to-r from-card/80 to-transparent z-[5]" />
+      {/* Gradient fade on left */}
+      <div className="absolute left-14 top-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent z-[5]" />
       
-      {/* Scrolling ticker - same class as other tickers */}
-      <div className="py-2 pl-28 ticker-wrapper">
+      {/* Scrolling ticker */}
+      <div className="h-full flex items-center pl-16 ticker-wrapper">
         <div className="ticker-track">
           <TickerContent />
           <TickerContent />
@@ -428,12 +425,7 @@ export function CashFlowTicker({ onClick }: { onClick: () => void }) {
       </div>
       
       {/* Gradient fade on right */}
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/80 to-transparent z-[5]" />
-      
-      {/* Click indicator */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-      </div>
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent z-[5]" />
     </div>
   );
 }

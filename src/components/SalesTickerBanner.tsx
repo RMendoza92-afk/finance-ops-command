@@ -120,24 +120,24 @@ export function SalesTickerBanner() {
   };
 
   const TickerContent = () => (
-    <div className="flex items-center gap-8 px-4">
+    <div className="flex items-center gap-6 px-4 font-mono">
       {tickerItems.map((item, index) => (
         <div key={index} className="flex items-center gap-2 whitespace-nowrap">
-          <span className="text-muted-foreground text-xs font-medium tracking-wider">
+          <span className="text-amber-500/80 text-[10px] font-medium uppercase">
             {item.label}
           </span>
-          <div className={`flex items-center gap-1 font-bold ${getTypeStyles(item.type)}`}>
-            {item.icon && <item.icon className="h-3.5 w-3.5" />}
+          <div className={`flex items-center gap-1 font-bold text-sm ${getTypeStyles(item.type)}`}>
+            {item.icon && <item.icon className="h-3 w-3" />}
             <span>{item.value}</span>
             {item.delta !== null && item.delta !== undefined && (
-              <span className={`text-[10px] font-medium ml-1 ${getDeltaColor(item.delta, item.invertDelta)}`}>
-                {item.delta > 0 ? <TrendingUp className="h-2.5 w-2.5 inline mr-0.5" /> : item.delta < 0 ? <TrendingDown className="h-2.5 w-2.5 inline mr-0.5" /> : null}
+              <span className={`text-[10px] font-medium ${getDeltaColor(item.delta, item.invertDelta)}`}>
+                {item.delta > 0 ? <TrendingUp className="h-2.5 w-2.5 inline" /> : item.delta < 0 ? <TrendingDown className="h-2.5 w-2.5 inline" /> : null}
                 {formatDelta(item.delta, item.isPercentPoint)}
               </span>
             )}
           </div>
           {index < tickerItems.length - 1 && (
-            <span className="text-border ml-6">│</span>
+            <span className="text-amber-500/30 ml-4">│</span>
           )}
         </div>
       ))}
@@ -179,24 +179,21 @@ export function SalesTickerBanner() {
   return (
     <>
       <div 
-        className="w-full bg-card/80 backdrop-blur-sm border-y border-border overflow-hidden relative cursor-pointer group"
+        className="w-full bg-black border-b border-amber-500/20 overflow-hidden relative cursor-pointer group h-8"
         onClick={() => setIsExpanded(true)}
       >
-        {/* NYSE-style header badge */}
-        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-primary px-4 py-1">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-bold text-primary-foreground tracking-widest">
-              FLI SALES
-            </span>
-          </div>
+        {/* Bloomberg-style badge */}
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-amber-500 px-3">
+          <span className="text-[10px] font-bold text-black tracking-wider font-mono">
+            SALES
+          </span>
         </div>
         
         {/* Gradient fade on left */}
-        <div className="absolute left-24 top-0 bottom-0 w-16 bg-gradient-to-r from-card/80 to-transparent z-[5]" />
+        <div className="absolute left-14 top-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent z-[5]" />
         
-        {/* Scrolling ticker - continuous right to left */}
-        <div className="py-2 pl-28 ticker-wrapper">
+        {/* Scrolling ticker */}
+        <div className="h-full flex items-center pl-16 ticker-wrapper">
           <div className="ticker-track">
             <TickerContent />
             <TickerContent />
@@ -205,12 +202,7 @@ export function SalesTickerBanner() {
         </div>
         
         {/* Gradient fade on right */}
-        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/80 to-transparent z-[5]" />
-        
-        {/* Click indicator */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent z-[5]" />
       </div>
 
       {/* Expanded Detail Sheet */}
