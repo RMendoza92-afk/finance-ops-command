@@ -3105,7 +3105,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           );
           const totalRiskReserves = allRiskClaims.reduce((sum, c) => sum + c.openReserves, 0);
 
-          // Build trend data for chart
+          // Build trend data for chart (including Eggshell 69+)
           const trendData = [
             { name: 'Fatality', current: fs.fatalityCount, prior: rf?.fatality?.prior || 0, delta: rf?.fatality?.delta || 0 },
             { name: 'Surgery', current: fs.surgeryCount, prior: rf?.surgery?.prior || 0, delta: rf?.surgery?.delta || 0 },
@@ -3114,6 +3114,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             { name: 'LOC/TBI', current: fs.lossOfConsciousnessCount, prior: rf?.lossOfConsciousness?.prior || 0, delta: rf?.lossOfConsciousness?.delta || 0 },
             { name: 'Re-Aggravation', current: fs.aggFactorsCount, prior: rf?.aggFactors?.prior || 0, delta: rf?.aggFactors?.delta || 0 },
             { name: 'Injections', current: fs.injectionsCount, prior: rf?.injections?.prior || 0, delta: rf?.injections?.delta || 0 },
+            { name: 'Eggshell 69+', current: fs.eggshell69PlusCount, prior: 0, delta: 0 },
           ];
 
           return (
@@ -3154,12 +3155,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                           <span className="text-xs font-normal text-muted-foreground">vs {wow.priorSnapshotDate}</span>
                         )}
                       </h4>
-                      <div className="h-64">
+                      <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={trendData} layout="vertical">
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                             <XAxis type="number" tick={{ fontSize: 10 }} />
-                            <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={90} />
                             <Tooltip 
                               contentStyle={{ 
                                 backgroundColor: 'hsl(var(--card))', 
@@ -3167,10 +3168,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                                 borderRadius: '8px',
                                 fontSize: '12px'
                               }}
-                              formatter={(value: number, name: string) => [value.toLocaleString(), name === 'current' ? 'Current' : 'Prior']}
+                              formatter={(value: number, name: string) => [value.toLocaleString(), name]}
                             />
                             <Legend wrapperStyle={{ fontSize: '10px' }} />
-                            <Bar dataKey="prior" fill="hsl(var(--muted-foreground))" name="Prior" />
+                            <Bar dataKey="prior" fill="hsl(var(--muted-foreground))" name="Prior Week" />
                             <Bar dataKey="current" fill="hsl(var(--destructive))" name="Current" />
                           </BarChart>
                         </ResponsiveContainer>
