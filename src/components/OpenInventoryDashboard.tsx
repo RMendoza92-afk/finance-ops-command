@@ -5992,22 +5992,34 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                 { label: 'Life Care Planner', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner), key: 'lifeCarePlanner' as const },
               ];
               const tier2 = [
-                { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount, key: null },
-                { label: 'Hospitalization', icon: '🛏️', count: fs.hospitalizationCount, key: 'hospitalization' as const },
-                { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount, key: 'lossOfConsciousness' as const },
-                { label: 'Re-Aggravation', icon: '⚠️', count: fs.aggFactorsCount, key: 'aggFactors' as const },
-                { label: 'MRI/CT Injuries', icon: '🩹', count: fs.objectiveInjuriesCount, key: 'objectiveInjuries' as const },
-                { label: 'Pedestrian/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount, key: 'pedestrianPregnancy' as const },
-                { label: 'Surgery Rec', icon: '📝', count: fs.priorSurgeryCount, key: null },
+                { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount, claims: data.rawClaims.filter(c => c.confirmedFractures), key: null },
+                { label: 'Hospitalization', icon: '🛏️', count: fs.hospitalizationCount, claims: data.rawClaims.filter(c => c.hospitalization), key: 'hospitalization' as const },
+                { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount, claims: data.rawClaims.filter(c => c.lossOfConsciousness), key: 'lossOfConsciousness' as const },
+                { label: 'Re-Aggravation', icon: '⚠️', count: fs.aggFactorsCount, claims: data.rawClaims.filter(c => c.aggFactors), key: 'aggFactors' as const },
+                { label: 'MRI/CT Injuries', icon: '🩹', count: fs.objectiveInjuriesCount, claims: data.rawClaims.filter(c => c.objectiveInjuries), key: 'objectiveInjuries' as const },
+                { label: 'Pedestrian/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount, claims: data.rawClaims.filter(c => c.pedestrianPregnancy), key: 'pedestrianPregnancy' as const },
+                { label: 'Surgery Rec', icon: '📝', count: fs.priorSurgeryCount, claims: data.rawClaims.filter(c => c.priorSurgery), key: null },
               ];
               const tier3 = [
-                { label: 'Injections', icon: '💉', count: fs.injectionsCount, key: 'injections' as const },
-                { label: 'EMS/Heavy Impact', icon: '🚑', count: fs.emsHeavyImpactCount, key: 'emsHeavyImpact' as const },
-                { label: 'Lacerations', icon: '🩸', count: fs.lacerationsCount, key: null },
-                { label: 'Pain Level 5+', icon: '😣', count: fs.painLevel5PlusCount, key: null },
-                { label: 'Pregnancy', icon: '🤰', count: fs.pregnancyCount, key: null },
-                { label: '69+ Years', icon: '👴', count: fs.eggshell69PlusCount, key: null },
+                { label: 'Injections', icon: '💉', count: fs.injectionsCount, claims: data.rawClaims.filter(c => c.injections), key: 'injections' as const },
+                { label: 'EMS/Heavy Impact', icon: '🚑', count: fs.emsHeavyImpactCount, claims: data.rawClaims.filter(c => c.emsHeavyImpact), key: 'emsHeavyImpact' as const },
+                { label: 'Lacerations', icon: '🩸', count: fs.lacerationsCount, claims: data.rawClaims.filter(c => c.lacerations), key: null },
+                { label: 'Pain Level 5+', icon: '😣', count: fs.painLevel5PlusCount, claims: data.rawClaims.filter(c => c.painLevel5Plus), key: null },
+                { label: 'Pregnancy', icon: '🤰', count: fs.pregnancyCount, claims: data.rawClaims.filter(c => c.pregnancy), key: null },
+                { label: '69+ Years', icon: '👴', count: fs.eggshell69PlusCount, claims: data.rawClaims.filter(c => c.eggshell69Plus), key: null },
               ];
+
+              // Calculate total reserves across all risk factors (unique claims)
+              const allRiskClaims = data.rawClaims.filter(c => 
+                c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
+                c.confirmedFractures || c.hospitalization || c.lossOfConsciousness || c.aggFactors ||
+                c.objectiveInjuries || c.pedestrianPregnancy || c.priorSurgery ||
+                c.injections || c.emsHeavyImpact || c.lacerations || c.painLevel5Plus || c.pregnancy || c.eggshell69Plus
+              );
+              const totalRiskReserves = allRiskClaims.reduce((sum, c) => sum + c.openReserves, 0);
+              const tier1Reserves = tier1.reduce((sum, f) => sum + f.claims.reduce((s, c) => s + c.openReserves, 0), 0);
+              const tier2Reserves = tier2.reduce((sum, f) => sum + f.claims.reduce((s, c) => s + c.openReserves, 0), 0);
+              const tier3Reserves = tier3.reduce((sum, f) => sum + f.claims.reduce((s, c) => s + c.openReserves, 0), 0);
 
               return (
                 <>
@@ -6062,17 +6074,20 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                     <h4 className="font-bold text-orange-500 mb-3 flex items-center gap-2">
                       <span className="px-2 py-0.5 bg-orange-500 text-white text-xs rounded">TIER 2</span>
                       High (70-50 pts)
+                      <span className="text-xs font-normal text-muted-foreground ml-auto">${tier2Reserves.toLocaleString()}</span>
                     </h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {tier2.map((f, i) => {
                         const comp = f.key && rf ? rf[f.key] : null;
+                        const reserves = f.claims.reduce((s, c) => s + c.openReserves, 0);
                         return (
                           <div key={i} className={`p-3 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
                             <p className="text-lg mb-1">{f.icon}</p>
                             <p className="text-xl font-bold text-orange-500">{f.count.toLocaleString()}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium">${reserves.toLocaleString()}</p>
                             {comp && (
                               <p className={`text-xs font-semibold ${comp.delta > 0 ? 'text-destructive' : comp.delta < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
-                                {comp.delta > 0 ? '↑' : comp.delta < 0 ? '↓' : '→'} {comp.delta > 0 ? '+' : ''}{comp.delta} vs prior
+                                {comp.delta > 0 ? '↑' : comp.delta < 0 ? '↓' : '→'} {comp.delta > 0 ? '+' : ''}{comp.delta}
                               </p>
                             )}
                             <p className="text-[10px] text-muted-foreground">{f.label}</p>
@@ -6087,14 +6102,17 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                     <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
                       <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded">TIER 3</span>
                       Moderate (40-30 pts)
+                      <span className="text-xs font-normal text-muted-foreground ml-auto">${tier3Reserves.toLocaleString()}</span>
                     </h4>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {tier3.map((f, i) => {
                         const comp = f.key && rf ? rf[f.key] : null;
+                        const reserves = f.claims.reduce((s, c) => s + c.openReserves, 0);
                         return (
                           <div key={i} className={`p-2 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
                             <p className="text-sm mb-1">{f.icon}</p>
                             <p className="text-lg font-semibold text-primary">{f.count.toLocaleString()}</p>
+                            <p className="text-[9px] text-muted-foreground">${reserves.toLocaleString()}</p>
                             {comp && (
                               <p className={`text-[9px] font-semibold ${comp.delta > 0 ? 'text-destructive' : comp.delta < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
                                 {comp.delta !== 0 ? (comp.delta > 0 ? '+' : '') + comp.delta : '—'}
@@ -6107,10 +6125,27 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                     </div>
                   </div>
 
-                  {/* Total Reserves */}
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center justify-between">
-                    <span className="font-semibold">Total Fatality Reserves:</span>
-                    <span className="text-2xl font-bold text-destructive">${fs.fatalityReserves.toLocaleString()}</span>
+                  {/* Total Reserves by Tier */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-center">
+                        <p className="text-xs text-destructive font-semibold uppercase">Tier 1</p>
+                        <p className="text-lg font-bold text-destructive">${tier1Reserves.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-center">
+                        <p className="text-xs text-orange-500 font-semibold uppercase">Tier 2</p>
+                        <p className="text-lg font-bold text-orange-500">${tier2Reserves.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-center">
+                        <p className="text-xs text-primary font-semibold uppercase">Tier 3</p>
+                        <p className="text-lg font-bold text-primary">${tier3Reserves.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border-2 border-destructive/50 bg-destructive/10 p-4 flex items-center justify-between">
+                      <span className="font-semibold">Total Risk Factor Reserves (Unique Claims):</span>
+                      <span className="text-2xl font-bold text-destructive">${totalRiskReserves.toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">{allRiskClaims.length.toLocaleString()} unique claims with at least one risk factor</p>
                   </div>
 
                   {/* Copy/Paste Summary */}
@@ -6119,24 +6154,16 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
                     <pre className="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">
 {`CP1 Risk Factors Summary (${format(new Date(), 'MMM d, yyyy')})
 
-TIER 1 - CRITICAL:
-• Fatality: ${fs.fatalityCount}
-• Surgery: ${fs.surgeryCount}
-• Meds > Limits: ${fs.medsVsLimitsCount}
-• Life Care Planner: ${fs.lifeCarePlannerCount}
+TIER 1 - CRITICAL ($${tier1Reserves.toLocaleString()}):
+${tier1.map(f => `• ${f.label}: ${f.count} ($${f.claims.reduce((s, c) => s + c.openReserves, 0).toLocaleString()})`).join('\n')}
 
-TIER 2 - HIGH:
-• Fractures: ${fs.confirmedFracturesCount}
-• Hospitalization: ${fs.hospitalizationCount}
-• LOC/TBI: ${fs.lossOfConsciousnessCount}
-• Re-Aggravation: ${fs.aggFactorsCount}
+TIER 2 - HIGH ($${tier2Reserves.toLocaleString()}):
+${tier2.map(f => `• ${f.label}: ${f.count} ($${f.claims.reduce((s, c) => s + c.openReserves, 0).toLocaleString()})`).join('\n')}
 
-TIER 3 - MODERATE:
-• Injections: ${fs.injectionsCount}
-• EMS/Heavy Impact: ${fs.emsHeavyImpactCount}
-• Pain Level 5+: ${fs.painLevel5PlusCount}
+TIER 3 - MODERATE ($${tier3Reserves.toLocaleString()}):
+${tier3.map(f => `• ${f.label}: ${f.count} ($${f.claims.reduce((s, c) => s + c.openReserves, 0).toLocaleString()})`).join('\n')}
 
-Total Fatality Reserves: $${fs.fatalityReserves.toLocaleString()}`}
+TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.toLocaleString()}`}
                     </pre>
                   </div>
                 </>
