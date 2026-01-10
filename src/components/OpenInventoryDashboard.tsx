@@ -3092,7 +3092,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </div>
         </div>
 
-        {/* CP1 Risk Factors - Inline Expandable Tracker */}
+        {/* CP1 Risk Factors - Always Visible Tracker (like SOL) */}
         {data?.fatalitySummary && (() => {
           const fs = data.fatalitySummary;
           const wow = cp1BoxData?.weekOverWeek;
@@ -3117,34 +3117,32 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           ];
 
           return (
-            <Collapsible open={showRiskFactorsDrilldown} onOpenChange={setShowRiskFactorsDrilldown}>
-              <CollapsibleTrigger className="w-full">
-                <div className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
-                      <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
-                      {wow?.hasValidPrior && (
-                        <span className={`text-[10px] ${wow.totalClaims.delta > 0 ? 'text-destructive' : 'text-success'}`}>
-                          {wow.totalClaims.delta > 0 ? '↑' : '↓'} {Math.abs(wow.totalClaims.delta)}
-                        </span>
-                      )}
-                      <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
-                      {wow?.priorSnapshotDate && (
-                        <span className="text-[10px] text-muted-foreground">vs {wow.priorSnapshotDate}</span>
-                      )}
-                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showRiskFactorsDrilldown ? 'rotate-180' : ''}`} />
-                    </div>
+            <div className="border-t border-destructive/20">
+              {/* Header */}
+              <div className="p-3 sm:p-4 bg-destructive/5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
+                    <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
+                    {wow?.hasValidPrior && (
+                      <span className={`text-[10px] ${wow.totalClaims.delta > 0 ? 'text-destructive' : 'text-success'}`}>
+                        {wow.totalClaims.delta > 0 ? '↑' : '↓'} {Math.abs(wow.totalClaims.delta)}
+                      </span>
+                    )}
+                    <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
+                    {wow?.priorSnapshotDate && (
+                      <span className="text-[10px] text-muted-foreground">vs {wow.priorSnapshotDate}</span>
+                    )}
                   </div>
                 </div>
-              </CollapsibleTrigger>
+              </div>
               
-              <CollapsibleContent>
-                <div className="bg-destructive/5 border-t border-destructive/10 p-4 sm:p-6 space-y-6 animate-fade-in">
+              {/* Always visible content (like SOL) */}
+              <div className="bg-destructive/5 border-t border-destructive/10 p-4 sm:p-6 space-y-6">
                   {/* Progress Chart */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Left: Bar Chart */}
@@ -3336,8 +3334,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     </span>
                   </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+            </div>
           );
         })()}
 
