@@ -5,6 +5,7 @@ import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 import { useExportData, type ExportableData } from "@/hooks/useExportData";
 import { useActuarialData } from "@/hooks/useActuarialData";
 import { useLossTriangleData } from "@/hooks/useLossTriangleData";
+import { useCP1AnalysisCsv } from "@/hooks/useCP1AnalysisCsv";
 import { ExecutiveCommandDashboard } from "./ExecutiveCommandDashboard";
 import { Loader2, DollarSign, Clock, AlertTriangle, Shield, Flag, TrendingUp, TrendingDown, FileText, FileSpreadsheet, Wallet, Users, Target, Activity, ExternalLink, Download, BarChart3, PieChart, AlertCircle } from "lucide-react";
 import { LitigationChat } from "@/components/LitigationChat";
@@ -54,6 +55,7 @@ const formatCurrency = (value: number) => {
 export function ExecutiveCommandDashboardWrapper() {
   const { data, loading, error } = useOpenExposureData();
   const { data: decisionsData } = useDecisionsPending();
+  const { data: cp1CsvData } = useCP1AnalysisCsv();
   const { generateCSuiteBriefing, generateCSuiteExcel, generatePDF, generateExcel } = useExportData();
   const { data: actuarialData } = useActuarialData(2026);
   const triangleData = useLossTriangleData();
@@ -335,6 +337,15 @@ export function ExecutiveCommandDashboardWrapper() {
   const biCP1Rate = data.cp1Data.biTotal && data.cp1Data.biTotal.total > 0
     ? ((data.cp1Data.biTotal.yes / data.cp1Data.biTotal.total) * 100).toFixed(1) + '%'
     : cp1Rate;
+
+  // Extract week-over-week data from CP1 CSV hook if available
+  const cp1WeekOverWeek = cp1CsvData?.weekOverWeek?.hasValidPrior ? {
+    totalClaimsDelta: cp1CsvData.weekOverWeek.totalClaims.delta,
+    cp1RateDelta: cp1CsvData.weekOverWeek.cp1Rate.delta,
+    highRiskDelta: cp1CsvData.weekOverWeek.highRiskClaims.delta,
+    aged365Delta: cp1CsvData.weekOverWeek.age365Plus.delta,
+    previousDate: cp1CsvData.weekOverWeek.priorSnapshotDate || '',
+  } : undefined;
     
   const cp1Analysis = {
     totalClaims: data.cp1Data.totals.grandTotal,
@@ -345,7 +356,7 @@ export function ExecutiveCommandDashboardWrapper() {
     biByAge: data.cp1Data.biByAge || [],
     biTotal: data.cp1Data.biTotal || { total: 0, yes: 0, noCP: 0 },
     totals: data.cp1Data.totals,
-    weekOverWeek: undefined, // Will be populated if historical data is available
+    weekOverWeek: cp1WeekOverWeek,
   };
 
   return (

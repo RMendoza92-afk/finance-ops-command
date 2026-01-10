@@ -378,6 +378,54 @@ export async function generateBoardReadyPackage(config: ExecutivePackageConfig):
     y += metricRowH;
   });
 
+  // ============ CP1 BREAKDOWN SECTION (compact) ============
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...C.gold);
+  doc.text('CP1 ANALYSIS', m.l, y + 3);
+  y += 7;
+
+  const cp1ColW = [35, 30, 30, 30, cw - 125];
+  
+  // Header
+  doc.setFillColor(...C.headerBg);
+  doc.rect(m.l, y, cw, metricRowH, 'F');
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.muted);
+  doc.text('COVERAGE', m.l + 3, y + 7);
+  doc.text('TOTAL', m.l + cp1ColW[0] + 3, y + 7);
+  doc.text('IN CP1', m.l + cp1ColW[0] + cp1ColW[1] + 3, y + 7);
+  doc.text('NOT CP', m.l + cp1ColW[0] + cp1ColW[1] + cp1ColW[2] + 3, y + 7);
+  doc.text('RATE', m.l + cp1ColW[0] + cp1ColW[1] + cp1ColW[2] + cp1ColW[3] + 3, y + 7);
+  y += metricRowH;
+
+  // CP1 by coverage rows (top 3)
+  const topCoverages = config.cp1Data.byCoverage.slice(0, 3);
+  doc.setFontSize(7);
+  topCoverages.forEach((cov, i) => {
+    doc.setFillColor(...(i % 2 === 0 ? C.rowDark : C.rowLight));
+    doc.rect(m.l, y, cw, metricRowH, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...C.offWhite);
+    doc.text(cov.coverage.substring(0, 10), m.l + 3, y + 7);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(cov.total.toLocaleString(), m.l + cp1ColW[0] + 3, y + 7);
+    doc.text(cov.yes.toLocaleString(), m.l + cp1ColW[0] + cp1ColW[1] + 3, y + 7);
+    doc.text(cov.noCP.toLocaleString(), m.l + cp1ColW[0] + cp1ColW[1] + cp1ColW[2] + 3, y + 7);
+    
+    const rate = cov.cp1Rate;
+    const rateColor = rate >= 35 ? C.green : rate >= 28 ? C.amber : C.red;
+    doc.setTextColor(...rateColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(rate.toFixed(1) + '%', m.l + cp1ColW[0] + cp1ColW[1] + cp1ColW[2] + cp1ColW[3] + 3, y + 7);
+    
+    y += metricRowH;
+  });
+
   // ============ FOOTER ============
   doc.setFillColor(...C.headerBg);
   doc.rect(0, ph - 10, pw, 10, 'F');
