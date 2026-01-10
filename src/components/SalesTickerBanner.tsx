@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TrendingUp, TrendingDown, DollarSign, FileText, Users, Percent, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+// Current period data
 const salesData = {
   period: "1/1/26 - 1/10/26",
   capArea: "CAP AREA",
@@ -20,6 +21,45 @@ const salesData = {
   renewalPercentMonthly: 82.49,
 };
 
+// Prior period data for WoW comparison
+const priorPeriodData = {
+  period: "12/25/25 - 1/1/26",
+  quotesGiven: 13855,
+  policiesSold: 5171,
+  otherSold: 0,
+  closingPercent: 37.32,
+  numberOfZeros: 2738,
+  netWrittenPremium: 12637232,
+  grossWrittenPremium: 13812032,
+  cancellationPremium: -1174800,
+  cancellationPercent: -7.97,
+  renewalPercent6Mo: 90.03,
+  policiesRenewedMonthly: 34785,
+  policiesExpiredMonthly: 7840,
+  renewalPercentMonthly: 81.61,
+};
+
+// Calculate WoW deltas
+const calculateDelta = (current: number, prior: number) => {
+  if (prior === 0) return 0;
+  return ((current - prior) / Math.abs(prior)) * 100;
+};
+
+const deltas = {
+  quotesGiven: calculateDelta(salesData.quotesGiven, priorPeriodData.quotesGiven),
+  policiesSold: calculateDelta(salesData.policiesSold, priorPeriodData.policiesSold),
+  closingPercent: salesData.closingPercent - priorPeriodData.closingPercent,
+  numberOfZeros: calculateDelta(salesData.numberOfZeros, priorPeriodData.numberOfZeros),
+  netWrittenPremium: calculateDelta(salesData.netWrittenPremium, priorPeriodData.netWrittenPremium),
+  grossWrittenPremium: calculateDelta(salesData.grossWrittenPremium, priorPeriodData.grossWrittenPremium),
+  cancellationPremium: calculateDelta(salesData.cancellationPremium, priorPeriodData.cancellationPremium),
+  cancellationPercent: salesData.cancellationPercent - priorPeriodData.cancellationPercent,
+  renewalPercent6Mo: salesData.renewalPercent6Mo - priorPeriodData.renewalPercent6Mo,
+  policiesRenewedMonthly: calculateDelta(salesData.policiesRenewedMonthly, priorPeriodData.policiesRenewedMonthly),
+  policiesExpiredMonthly: calculateDelta(salesData.policiesExpiredMonthly, priorPeriodData.policiesExpiredMonthly),
+  renewalPercentMonthly: salesData.renewalPercentMonthly - priorPeriodData.renewalPercentMonthly,
+};
+
 const formatCurrency = (value: number) => {
   if (value < 0) {
     return `-$${Math.abs(value).toLocaleString()}`;
@@ -32,23 +72,38 @@ const formatPercent = (value: number) => {
   return `${sign}${value.toFixed(2)}%`;
 };
 
+const formatDelta = (value: number, isPercentPoint = false) => {
+  const sign = value > 0 ? "+" : "";
+  if (isPercentPoint) {
+    return `${sign}${value.toFixed(2)}pp`;
+  }
+  return `${sign}${value.toFixed(1)}%`;
+};
+
+// Determine if delta is favorable (green) or unfavorable (red)
+const getDeltaColor = (delta: number, invertLogic = false) => {
+  if (delta === 0) return "text-muted-foreground";
+  const isPositive = invertLogic ? delta < 0 : delta > 0;
+  return isPositive ? "text-emerald-400" : "text-red-400";
+};
+
 export function SalesTickerBanner() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const tickerItems = [
-    { label: "PERIOD", value: salesData.period, icon: null, type: "text" },
-    { label: "QUOTES", value: salesData.quotesGiven.toLocaleString(), icon: FileText, type: "neutral" },
-    { label: "POLICIES SOLD", value: salesData.policiesSold.toLocaleString(), icon: Users, type: "positive" },
-    { label: "CLOSING %", value: `${salesData.closingPercent}%`, icon: null, type: "positive" },
-    { label: "# ZEROS", value: salesData.numberOfZeros.toLocaleString(), icon: null, type: "warning" },
-    { label: "NET WP", value: formatCurrency(salesData.netWrittenPremium), icon: null, type: "positive" },
-    { label: "GROSS WP", value: formatCurrency(salesData.grossWrittenPremium), icon: null, type: "positive" },
-    { label: "CANCEL PREM", value: formatCurrency(salesData.cancellationPremium), icon: null, type: "negative" },
-    { label: "CANCEL %", value: formatPercent(salesData.cancellationPercent), icon: null, type: "negative" },
-    { label: "RENEWAL % (6MO)", value: `${salesData.renewalPercent6Mo}%`, icon: null, type: "positive" },
-    { label: "RENEWED (MO)", value: salesData.policiesRenewedMonthly.toLocaleString(), icon: null, type: "positive" },
-    { label: "EXPIRED (MO)", value: salesData.policiesExpiredMonthly.toLocaleString(), icon: null, type: "warning" },
-    { label: "RENEWAL % (MO)", value: `${salesData.renewalPercentMonthly}%`, icon: null, type: "positive" },
+    { label: "PERIOD", value: salesData.period, icon: null, type: "text", delta: null },
+    { label: "QUOTES", value: salesData.quotesGiven.toLocaleString(), icon: FileText, type: "neutral", delta: deltas.quotesGiven, invertDelta: false },
+    { label: "POLICIES SOLD", value: salesData.policiesSold.toLocaleString(), icon: Users, type: "positive", delta: deltas.policiesSold, invertDelta: false },
+    { label: "CLOSING %", value: `${salesData.closingPercent}%`, icon: null, type: "positive", delta: deltas.closingPercent, isPercentPoint: true, invertDelta: false },
+    { label: "# ZEROS", value: salesData.numberOfZeros.toLocaleString(), icon: null, type: "warning", delta: deltas.numberOfZeros, invertDelta: true },
+    { label: "NET WP", value: formatCurrency(salesData.netWrittenPremium), icon: null, type: "positive", delta: deltas.netWrittenPremium, invertDelta: false },
+    { label: "GROSS WP", value: formatCurrency(salesData.grossWrittenPremium), icon: null, type: "positive", delta: deltas.grossWrittenPremium, invertDelta: false },
+    { label: "CANCEL PREM", value: formatCurrency(salesData.cancellationPremium), icon: null, type: "negative", delta: deltas.cancellationPremium, invertDelta: true },
+    { label: "CANCEL %", value: formatPercent(salesData.cancellationPercent), icon: null, type: "negative", delta: deltas.cancellationPercent, isPercentPoint: true, invertDelta: true },
+    { label: "RENEWAL % (6MO)", value: `${salesData.renewalPercent6Mo}%`, icon: null, type: "positive", delta: deltas.renewalPercent6Mo, isPercentPoint: true, invertDelta: false },
+    { label: "RENEWED (MO)", value: salesData.policiesRenewedMonthly.toLocaleString(), icon: null, type: "positive", delta: deltas.policiesRenewedMonthly, invertDelta: false },
+    { label: "EXPIRED (MO)", value: salesData.policiesExpiredMonthly.toLocaleString(), icon: null, type: "warning", delta: deltas.policiesExpiredMonthly, invertDelta: true },
+    { label: "RENEWAL % (MO)", value: `${salesData.renewalPercentMonthly}%`, icon: null, type: "positive", delta: deltas.renewalPercentMonthly, isPercentPoint: true, invertDelta: false },
   ];
 
   const getTypeStyles = (type: string) => {
@@ -74,6 +129,12 @@ export function SalesTickerBanner() {
           <div className={`flex items-center gap-1 font-bold ${getTypeStyles(item.type)}`}>
             {item.icon && <item.icon className="h-3.5 w-3.5" />}
             <span>{item.value}</span>
+            {item.delta !== null && item.delta !== undefined && (
+              <span className={`text-[10px] font-medium ml-1 ${getDeltaColor(item.delta, item.invertDelta)}`}>
+                {item.delta > 0 ? <TrendingUp className="h-2.5 w-2.5 inline mr-0.5" /> : item.delta < 0 ? <TrendingDown className="h-2.5 w-2.5 inline mr-0.5" /> : null}
+                {formatDelta(item.delta, item.isPercentPoint)}
+              </span>
+            )}
           </div>
           {index < tickerItems.length - 1 && (
             <span className="text-border ml-6">│</span>
