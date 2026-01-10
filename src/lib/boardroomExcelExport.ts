@@ -662,3 +662,398 @@ export async function generateRBCExcel(data: {
   
   return generateStyledBoardroomExcel(exportData);
 }
+
+/**
+ * Generate styled At-Risk Claims export
+ */
+export async function generateAtRiskExcel(data: {
+  summary: {
+    totalAtRisk: number;
+    criticalCount: number;
+    criticalReserves: number;
+    highCount: number;
+    highReserves: number;
+    moderateCount: number;
+    moderateReserves: number;
+    totalExposure: number;
+    potentialOverLimit: number;
+  };
+  claims: {
+    claimNumber: string;
+    claimant: string;
+    adjuster: string;
+    severityTier: string;
+    impactScore: number;
+    flagCount: number;
+    coverage: string;
+    ageDays: number;
+    reserves: number;
+    biStatus?: string;
+    teamGroup?: string;
+  }[];
+}): Promise<string> {
+  const exportData: BoardroomExportData = {
+    reportTitle: 'At-Risk Claims Report',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Summary by Tier',
+        metrics: [
+          { label: 'Total At-Risk Claims', value: data.summary.totalAtRisk },
+          { label: 'Critical (80+ pts)', value: data.summary.criticalCount },
+          { label: 'Critical Reserves', value: data.summary.criticalReserves },
+          { label: 'High (50-79 pts)', value: data.summary.highCount },
+          { label: 'High Reserves', value: data.summary.highReserves },
+          { label: 'Moderate (40-49 pts)', value: data.summary.moderateCount },
+          { label: 'Moderate Reserves', value: data.summary.moderateReserves },
+          { label: 'Total Exposure', value: data.summary.totalExposure },
+          { label: 'Potential Over-Limit', value: data.summary.potentialOverLimit },
+        ]
+      },
+      {
+        title: 'Claims Detail',
+        table: {
+          headers: ['Claim #', 'Claimant', 'Adjuster', 'Severity Tier', 'Impact Score', 'Flag Count', 'Coverage', 'Days Open', 'Reserves', 'BI Status', 'Team'],
+          rows: data.claims.map(c => [
+            c.claimNumber,
+            c.claimant,
+            c.adjuster,
+            c.severityTier,
+            c.impactScore,
+            c.flagCount,
+            c.coverage,
+            c.ageDays,
+            c.reserves,
+            c.biStatus || '',
+            c.teamGroup || ''
+          ]),
+          highlightLastRow: false
+        }
+      }
+    ],
+    filename: `At_Risk_Claims_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled CP1 Analysis export
+ */
+export async function generateCP1AnalysisExcel(data: {
+  cp1Rate: string;
+  totalClaims: number;
+  cp1Count: number;
+  noCPCount: number;
+  byCoverage: { coverage: string; total: number; yes: number; noCP: number; cp1Rate: number }[];
+  biByAge: { age: string; total: number; yes: number; noCP: number }[];
+  claims?: {
+    claimNumber: string;
+    claimant: string;
+    coverage: string;
+    days: number;
+    ageBucket: string;
+    openReserves: number;
+    lowEval: number;
+    highEval: number;
+    biStatus?: string;
+    teamGroup?: string;
+  }[];
+}): Promise<string> {
+  const sections: BoardroomSection[] = [
+    {
+      title: 'Key Metrics',
+      metrics: [
+        { label: 'CP1 Rate', value: `${data.cp1Rate}%` },
+        { label: 'Total Claims', value: data.totalClaims },
+        { label: 'In CP1', value: data.cp1Count },
+        { label: 'Not in CP1', value: data.noCPCount },
+      ]
+    },
+    {
+      title: 'By Coverage',
+      table: {
+        headers: ['Coverage', 'Total', 'In CP1', 'Not CP', 'CP1 Rate'],
+        rows: data.byCoverage.map(c => [
+          c.coverage,
+          c.total,
+          c.yes,
+          c.noCP,
+          `${c.cp1Rate.toFixed(1)}%`
+        ]),
+        highlightLastRow: false
+      }
+    },
+    {
+      title: 'BI By Age',
+      table: {
+        headers: ['Age Bucket', 'Total', 'In CP1', 'Not CP'],
+        rows: data.biByAge.map(a => [a.age, a.total, a.yes, a.noCP]),
+        highlightLastRow: false
+      }
+    }
+  ];
+  
+  if (data.claims && data.claims.length > 0) {
+    sections.push({
+      title: 'CP1 Claims Detail',
+      table: {
+        headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Reserves', 'Low Eval', 'High Eval', 'BI Status', 'Team'],
+        rows: data.claims.map(c => [
+          c.claimNumber,
+          c.claimant,
+          c.coverage,
+          c.days,
+          c.ageBucket,
+          c.openReserves,
+          c.lowEval,
+          c.highEval,
+          c.biStatus || '',
+          c.teamGroup || ''
+        ]),
+        highlightLastRow: false
+      }
+    });
+  }
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: 'CP1 Analysis Report',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections,
+    filename: `CP1_Analysis_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled Budget/Spend export
+ */
+export async function generateBudgetSpendExcel(data: {
+  totalSpend: number;
+  indemnities: number;
+  expenses: number;
+  coverageBreakdown: { name: string; indemnity: number; expense: number; total: number; claimCount: number }[];
+}): Promise<string> {
+  const exportData: BoardroomExportData = {
+    reportTitle: 'Litigation Spend Report',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Summary',
+        metrics: [
+          { label: 'Total Spend', value: data.totalSpend },
+          { label: 'Indemnities', value: data.indemnities },
+          { label: 'Expenses', value: data.expenses },
+        ]
+      },
+      {
+        title: 'Coverage Breakdown',
+        table: {
+          headers: ['Coverage', 'Indemnity', 'Expense', 'Total', 'Claims'],
+          rows: data.coverageBreakdown.map(c => [
+            c.name,
+            c.indemnity,
+            c.expense,
+            c.total,
+            c.claimCount
+          ]),
+          highlightLastRow: false
+        }
+      }
+    ],
+    filename: `Budget_Spend_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled Multi-Pack export
+ */
+export async function generateMultiPackExcel(data: {
+  totalGroups: number;
+  totalClaims: number;
+  totalReserves: number;
+  groups: { baseClaimNumber: string; packSize: number; totalReserves: number; totalLowEval: number; totalHighEval: number; claims: { claimNumber: string }[] }[];
+}): Promise<string> {
+  const exportData: BoardroomExportData = {
+    reportTitle: 'Multi-Pack BI Report',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Summary',
+        metrics: [
+          { label: 'Total Groups', value: data.totalGroups },
+          { label: 'Total Claims', value: data.totalClaims },
+          { label: 'Total Reserves', value: data.totalReserves },
+          { label: 'Average Claims/Group', value: (data.totalClaims / Math.max(data.totalGroups, 1)).toFixed(1) },
+        ]
+      },
+      {
+        title: 'Groups Detail',
+        table: {
+          headers: ['Base Claim', 'Pack Size', 'Total Reserves', 'Low Eval', 'High Eval', 'Claims'],
+          rows: data.groups.slice(0, 500).map(g => [
+            g.baseClaimNumber,
+            g.packSize,
+            g.totalReserves,
+            g.totalLowEval,
+            g.totalHighEval,
+            g.claims.map(c => c.claimNumber).join(', ')
+          ]),
+          highlightLastRow: false
+        }
+      }
+    ],
+    filename: `Multi_Pack_BI_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled Inventory Master Report export
+ */
+export async function generateInventoryMasterExcel(data: {
+  summary: {
+    totalClaims: number;
+    openReserves: number;
+    lowEval: number;
+    highEval: number;
+    cp1Rate: string;
+    atRiskCount: number;
+    multiPackGroups: number;
+    delta?: { change: number; reservesChange: number; previousDate: string };
+  };
+  atRiskSummary: {
+    criticalCount: number;
+    criticalReserves: number;
+    highCount: number;
+    highReserves: number;
+    moderateCount: number;
+    moderateReserves: number;
+    totalAtRisk: number;
+    totalExposure: number;
+  };
+  litigationSpend: { total: number; indemnities: number; expenses: number };
+  cp1Data: { cp1Count: number; cp1Rate: string };
+  multiPack: { totalGroups: number; totalClaims: number; totalReserves: number };
+}): Promise<string> {
+  const exportData: BoardroomExportData = {
+    reportTitle: 'Open Inventory Master Report',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Executive Summary',
+        metrics: [
+          { label: 'Total Open Claims', value: data.summary.totalClaims },
+          { label: 'Open Reserves', value: data.summary.openReserves },
+          { label: 'Low Evaluation', value: data.summary.lowEval },
+          { label: 'High Evaluation', value: data.summary.highEval },
+          { label: 'CP1 Rate (%)', value: data.summary.cp1Rate },
+          { label: 'At-Risk Claims', value: data.summary.atRiskCount },
+          { label: 'Multi-Pack Groups', value: data.summary.multiPackGroups },
+        ]
+      },
+      {
+        title: 'Litigation Spend (Jan 2026)',
+        metrics: [
+          { label: 'Total Spend', value: data.litigationSpend.total },
+          { label: 'Indemnities', value: data.litigationSpend.indemnities },
+          { label: 'Expenses', value: data.litigationSpend.expenses },
+        ]
+      },
+      {
+        title: 'At-Risk Claims Summary',
+        table: {
+          headers: ['Tier', 'Count', 'Reserves'],
+          rows: [
+            ['Critical (80+ pts)', data.atRiskSummary.criticalCount, data.atRiskSummary.criticalReserves],
+            ['High (50-79 pts)', data.atRiskSummary.highCount, data.atRiskSummary.highReserves],
+            ['Moderate (40-49 pts)', data.atRiskSummary.moderateCount, data.atRiskSummary.moderateReserves],
+            ['TOTAL', data.atRiskSummary.totalAtRisk, data.atRiskSummary.totalExposure],
+          ],
+          highlightLastRow: true
+        }
+      },
+      {
+        title: 'CP1 Analysis',
+        metrics: [
+          { label: 'Total CP1 Claims', value: data.cp1Data.cp1Count },
+          { label: 'CP1 Rate (%)', value: data.cp1Data.cp1Rate },
+        ]
+      },
+      {
+        title: 'Multi-Pack BI',
+        metrics: [
+          { label: 'Total Groups', value: data.multiPack.totalGroups },
+          { label: 'Total Claims', value: data.multiPack.totalClaims },
+          { label: 'Total Reserves', value: data.multiPack.totalReserves },
+        ]
+      }
+    ],
+    filename: `Inventory_Master_Report_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
+
+/**
+ * Generate styled State Profitability export
+ */
+export async function generateStateProfitabilityExcel(data: {
+  states: {
+    state: string;
+    policies2025: number;
+    policies2024: number;
+    claims2025: number;
+    claims2024: number;
+    frequency: number;
+    overspend: number;
+    action: string;
+    priority: string;
+  }[];
+}): Promise<string> {
+  const totalPolicies = data.states.reduce((sum, s) => sum + s.policies2025, 0);
+  const totalOverspend = data.states.reduce((sum, s) => sum + s.overspend, 0);
+  
+  const exportData: BoardroomExportData = {
+    reportTitle: 'State Profitability & Rate Recommendations',
+    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+    sections: [
+      {
+        title: 'Summary',
+        metrics: [
+          { label: 'Report Type', value: 'CFO/CEO Territory Briefing' },
+          { label: 'Period', value: '2024 vs 2025 YTD' },
+          { label: 'Total States Analyzed', value: data.states.length },
+          { label: 'Total Policies', value: totalPolicies },
+          { label: 'Total Overspend', value: totalOverspend },
+        ]
+      },
+      {
+        title: 'State Performance',
+        table: {
+          headers: ['State', 'Policies 2025', 'Policies 2024', 'YoY Change %', 'Claims 2025', 'Claims 2024', 'Frequency /1K', 'YTD Overspend', 'Recommended Action', 'Priority'],
+          rows: data.states.map(s => [
+            s.state,
+            s.policies2025,
+            s.policies2024,
+            ((s.policies2025 - s.policies2024) / s.policies2024 * 100).toFixed(1) + '%',
+            s.claims2025,
+            s.claims2024,
+            s.frequency.toFixed(1),
+            s.overspend,
+            s.action,
+            s.priority
+          ]),
+          highlightLastRow: false
+        }
+      }
+    ],
+    filename: `State_Profitability_${format(new Date(), 'yyyyMMdd')}.xlsx`
+  };
+  
+  return generateStyledBoardroomExcel(exportData);
+}
