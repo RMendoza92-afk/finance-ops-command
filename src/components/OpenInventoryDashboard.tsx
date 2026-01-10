@@ -103,6 +103,7 @@ import {
 } from "@/lib/excelUtils";
 import { 
   generateStyledBoardroomExcel, 
+  generateStyledBoardroomWorkbookExcel,
   generateNegotiationSummaryExcel,
   generateCP1FlagsExcel,
   generateAtRiskExcel,
@@ -1130,7 +1131,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [cp1BoxData]);
 
-  // Generate Excel for CP1 Trigger Flags - Executive Ready (Styled)
+  // Generate Excel for CP1 Trigger Flags - Executive Ready (Styled, multi-tab)
   const generateCP1Excel = useCallback(async () => {
     setGeneratingCP1Excel(true);
     try {
@@ -1141,9 +1142,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       };
 
       const fs = cp1BoxData?.fatalitySummary;
+      const wow = cp1BoxData?.weekOverWeek;
+      const nego = cp1BoxData?.negotiationSummary;
+      const allClaims = cp1BoxData?.rawClaims || [];
       const multiFlagGroups = cp1BoxData?.multiFlagGroups || [];
+
       const totalFlags = cp1BoxData?.totalFlagInstances || 0;
-      const totalClaims = CP1_DATA.totals.grandTotal || (cp1BoxData?.rawClaims?.length || 0);
+      const totalClaims = CP1_DATA.totals.grandTotal || allClaims.length || 0;
 
       const multiFlag2Plus = multiFlagGroups
         .filter(g => g.flagCount >= 2)
@@ -1154,48 +1159,239 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       const safePct = (num: number, denom: number) => (denom > 0 ? (num / denom) * 100 : 0);
 
-      await generateStyledBoardroomExcel({
-        reportTitle: 'CP1 Trigger Flags - Executive Summary',
-        asOfDate: format(new Date(), 'MMMM d, yyyy'),
-        sections: [
-          {
-            title: 'Key Metrics',
-            metrics: [
-              { label: 'Total CP1 Claims', value: totalClaims },
-              { label: 'Active Trigger Flags', value: totalFlags },
-              { label: 'Multi-Flag Claims (2+)', value: multiFlag2Plus },
-              { label: 'High-Risk Claims (3+)', value: multiFlag3Plus },
-            ],
-          },
-          {
-            title: 'Trigger Flags Breakdown',
-            table: {
-              headers: ['Flag Type', 'Count', '% of Claims', 'Tier'],
-              rows: [
-                ['Fatality', fs?.fatalityCount || 0, safePct(fs?.fatalityCount || 0, totalClaims), 'CRITICAL'],
-                ['Surgery', fs?.surgeryCount || 0, safePct(fs?.surgeryCount || 0, totalClaims), 'CRITICAL'],
-                ['Meds vs Limits', fs?.medsVsLimitsCount || 0, safePct(fs?.medsVsLimitsCount || 0, totalClaims), 'CRITICAL'],
-                ['Life Care Planner', fs?.lifeCarePlannerCount || 0, safePct(fs?.lifeCarePlannerCount || 0, totalClaims), 'CRITICAL'],
-                ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, safePct(fs?.confirmedFracturesCount || 0, totalClaims), 'HIGH'],
-                ['Hospitalization', fs?.hospitalizationCount || 0, safePct(fs?.hospitalizationCount || 0, totalClaims), 'HIGH'],
-                ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, safePct(fs?.lossOfConsciousnessCount || 0, totalClaims), 'HIGH'],
-                ['Aggravating Factors', fs?.aggFactorsCount || 0, safePct(fs?.aggFactorsCount || 0, totalClaims), 'HIGH'],
-                ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, safePct(fs?.objectiveInjuriesCount || 0, totalClaims), 'HIGH'],
-                ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, safePct(fs?.pedestrianPregnancyCount || 0, totalClaims), 'HIGH'],
-                ['Surgical Recommendation', fs?.priorSurgeryCount || 0, safePct(fs?.priorSurgeryCount || 0, totalClaims), 'HIGH'],
-                ['Injections (ESI, Facet)', fs?.injectionsCount || 0, safePct(fs?.injectionsCount || 0, totalClaims), 'MODERATE'],
-                ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, safePct(fs?.emsHeavyImpactCount || 0, totalClaims), 'MODERATE'],
-                ['Lacerations/Scarring', fs?.lacerationsCount || 0, safePct(fs?.lacerationsCount || 0, totalClaims), 'MODERATE'],
-                ['Pain Level 5+', fs?.painLevel5PlusCount || 0, safePct(fs?.painLevel5PlusCount || 0, totalClaims), 'MODERATE'],
-                ['Pregnancy', fs?.pregnancyCount || 0, safePct(fs?.pregnancyCount || 0, totalClaims), 'MODERATE'],
-                ['Eggshell 69+', fs?.eggshell69PlusCount || 0, safePct(fs?.eggshell69PlusCount || 0, totalClaims), 'MODERATE'],
+      const sheets: { name: string; data: BoardroomExportData }[] = [];
+
+      // Tab 1: Executive Summary
+      sheets.push({
+        name: 'Executive Summary',
+        data: {
+          reportTitle: 'CP1 Trigger Flags - Executive Summary',
+          asOfDate: format(new Date(), 'MMMM d, yyyy'),
+          sections: [
+            {
+              title: 'Key Metrics',
+              metrics: [
+                { label: 'Total CP1 Claims', value: totalClaims },
+                { label: 'Active Trigger Flags', value: totalFlags },
+                { label: 'Multi-Flag Claims (2+)', value: multiFlag2Plus },
+                { label: 'High-Risk Claims (3+)', value: multiFlag3Plus },
               ],
-              highlightLastRow: false,
             },
-          },
-        ],
-        filename: `CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+            {
+              title: 'Trigger Flags Breakdown',
+              table: {
+                headers: ['Flag Type', 'Count', '% of Claims', 'Tier'],
+                rows: [
+                  ['Fatality', fs?.fatalityCount || 0, safePct(fs?.fatalityCount || 0, totalClaims), 'CRITICAL'],
+                  ['Surgery', fs?.surgeryCount || 0, safePct(fs?.surgeryCount || 0, totalClaims), 'CRITICAL'],
+                  ['Meds vs Limits', fs?.medsVsLimitsCount || 0, safePct(fs?.medsVsLimitsCount || 0, totalClaims), 'CRITICAL'],
+                  ['Life Care Planner', fs?.lifeCarePlannerCount || 0, safePct(fs?.lifeCarePlannerCount || 0, totalClaims), 'CRITICAL'],
+                  ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, safePct(fs?.confirmedFracturesCount || 0, totalClaims), 'HIGH'],
+                  ['Hospitalization', fs?.hospitalizationCount || 0, safePct(fs?.hospitalizationCount || 0, totalClaims), 'HIGH'],
+                  ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, safePct(fs?.lossOfConsciousnessCount || 0, totalClaims), 'HIGH'],
+                  ['Aggravating Factors', fs?.aggFactorsCount || 0, safePct(fs?.aggFactorsCount || 0, totalClaims), 'HIGH'],
+                  ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, safePct(fs?.objectiveInjuriesCount || 0, totalClaims), 'HIGH'],
+                  ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, safePct(fs?.pedestrianPregnancyCount || 0, totalClaims), 'HIGH'],
+                  ['Surgical Recommendation', fs?.priorSurgeryCount || 0, safePct(fs?.priorSurgeryCount || 0, totalClaims), 'HIGH'],
+                  ['Injections (ESI, Facet)', fs?.injectionsCount || 0, safePct(fs?.injectionsCount || 0, totalClaims), 'MODERATE'],
+                  ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, safePct(fs?.emsHeavyImpactCount || 0, totalClaims), 'MODERATE'],
+                  ['Lacerations/Scarring', fs?.lacerationsCount || 0, safePct(fs?.lacerationsCount || 0, totalClaims), 'MODERATE'],
+                  ['Pain Level 5+', fs?.painLevel5PlusCount || 0, safePct(fs?.painLevel5PlusCount || 0, totalClaims), 'MODERATE'],
+                  ['Pregnancy', fs?.pregnancyCount || 0, safePct(fs?.pregnancyCount || 0, totalClaims), 'MODERATE'],
+                  ['Eggshell 69+', fs?.eggshell69PlusCount || 0, safePct(fs?.eggshell69PlusCount || 0, totalClaims), 'MODERATE'],
+                ],
+                highlightLastRow: false,
+              },
+            },
+          ],
+        }
       });
+
+      // Tab 2: Week-over-Week
+      if (wow?.hasValidPrior) {
+        const rows: (string | number | null)[][] = [
+          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
+        ];
+
+        sheets.push({
+          name: 'Week-over-Week',
+          data: {
+            reportTitle: 'Week-over-Week Progress Tracker',
+            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+            sections: [
+              {
+                title: 'Snapshots',
+                metrics: [
+                  { label: 'Prior Snapshot', value: wow.priorSnapshotDate || 'N/A' },
+                ],
+              },
+              {
+                title: 'Progress',
+                table: {
+                  headers: ['Metric', 'Prior', 'Current', 'Delta', '% Change', 'Trend'],
+                  rows,
+                  highlightLastRow: false,
+                },
+              },
+            ],
+          }
+        });
+      }
+
+      // Tab 3: Negotiation Summary
+      if (nego) {
+        sheets.push({
+          name: 'Negotiation Summary',
+          data: {
+            reportTitle: 'Negotiation Activity Summary',
+            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+            sections: [
+              {
+                title: 'Key Metrics',
+                metrics: [
+                  { label: 'Claims with Negotiation', value: nego.totalWithNegotiation },
+                  { label: 'Claims without Negotiation', value: nego.totalWithoutNegotiation },
+                  { label: 'Total Negotiation Amount', value: nego.totalNegotiationAmount },
+                  { label: 'Average Negotiation Amount', value: nego.avgNegotiationAmount },
+                  { label: 'Stale Negotiations (60+ Days)', value: nego.staleNegotiations60Plus },
+                  { label: 'Stale Negotiations (90+ Days)', value: nego.staleNegotiations90Plus },
+                ],
+              },
+              {
+                title: 'Negotiation by Type',
+                table: {
+                  headers: ['Negotiation Type', 'Count', 'Total Amount'],
+                  rows: nego.byType.map(t => [t.type, t.count, t.totalAmount]),
+                  highlightLastRow: false,
+                },
+              },
+            ],
+          }
+        });
+
+        // Tab 4: Stale Negotiations
+        const staleClaims = allClaims
+          .filter(c => c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60)
+          .sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
+
+        if (staleClaims.length > 0) {
+          sheets.push({
+            name: 'Stale Negotiations',
+            data: {
+              reportTitle: 'Stale Negotiations (60+ Days)',
+              asOfDate: format(new Date(), 'MMMM d, yyyy'),
+              sections: [
+                {
+                  title: 'Claims',
+                  table: {
+                    headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Negotiation Type', 'Negotiation Amount', 'Negotiation Date', 'Days Since Negotiation', 'Open Reserves', 'Team', 'BI Status'],
+                    rows: staleClaims.map(c => ([
+                      c.claimNumber,
+                      c.claimant,
+                      c.coverage,
+                      c.days,
+                      c.negotiationType,
+                      c.negotiationAmount,
+                      c.negotiationDate,
+                      c.daysSinceNegotiationDate,
+                      c.openReserves,
+                      c.teamGroup,
+                      c.biStatus,
+                    ])),
+                    highlightLastRow: false,
+                  },
+                },
+              ],
+            }
+          });
+        }
+
+        // Tab 5: No Negotiation
+        const noNegoClaims = allClaims
+          .filter(c => !c.negotiationDate && !c.negotiationType)
+          .sort((a, b) => (b.openReserves || 0) - (a.openReserves || 0));
+
+        if (noNegoClaims.length > 0) {
+          sheets.push({
+            name: 'No Negotiation',
+            data: {
+              reportTitle: 'No Negotiation Claims',
+              asOfDate: format(new Date(), 'MMMM d, yyyy'),
+              sections: [
+                {
+                  title: 'Claims',
+                  table: {
+                    headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Open Reserves', 'Team', 'Adjuster', 'BI Status', 'BI Phase'],
+                    rows: noNegoClaims.map(c => ([
+                      c.claimNumber,
+                      c.claimant,
+                      c.coverage,
+                      c.days,
+                      c.ageBucket,
+                      c.openReserves,
+                      c.teamGroup,
+                      (c as any).adjuster || '',
+                      c.biStatus,
+                      (c as any).evaluationPhase || '',
+                    ])),
+                    highlightLastRow: false,
+                  },
+                },
+              ],
+            }
+          });
+        }
+      }
+
+      // Tab 6: All Claims Detail (kept, but limited for file size)
+      if (allClaims.length > 0) {
+        const limited = allClaims.slice(0, 5000);
+        sheets.push({
+          name: 'All Claims Detail',
+          data: {
+            reportTitle: 'All Claims Detail',
+            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+            sections: [
+              {
+                title: 'Claims',
+                table: {
+                  headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Team', 'Total Paid', 'Open Reserves', 'Low Eval', 'High Eval', 'Overall CP1', 'BI Status', 'BI Phase', 'Negotiation Amount', 'Negotiation Date', 'Negotiation Type', 'Days Since Negotiation'],
+                  rows: limited.map(c => ([
+                    c.claimNumber,
+                    c.claimant,
+                    c.coverage,
+                    c.days,
+                    c.ageBucket,
+                    c.typeGroup,
+                    c.teamGroup,
+                    c.totalPaid,
+                    c.openReserves,
+                    (c as any).lowEval ?? null,
+                    (c as any).highEval ?? null,
+                    c.overallCP1,
+                    c.biStatus,
+                    (c as any).evaluationPhase || '',
+                    (c as any).negotiationAmount ?? null,
+                    (c as any).negotiationDate || '',
+                    (c as any).negotiationType || '',
+                    (c as any).daysSinceNegotiationDate ?? null,
+                  ])),
+                  highlightLastRow: false,
+                },
+              },
+            ],
+          }
+        });
+      }
+
+      const filename = `CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+      await generateStyledBoardroomWorkbookExcel({ filename, sheets });
 
       toast.success('Executive Excel report generated');
     } catch (err) {
