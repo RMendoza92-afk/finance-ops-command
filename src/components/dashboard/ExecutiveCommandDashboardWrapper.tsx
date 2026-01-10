@@ -330,6 +330,24 @@ export function ExecutiveCommandDashboardWrapper() {
     });
   };
 
+  // Build CP1 analysis data for exports
+  // Calculate BI CP1 rate from biTotal
+  const biCP1Rate = data.cp1Data.biTotal && data.cp1Data.biTotal.total > 0
+    ? ((data.cp1Data.biTotal.yes / data.cp1Data.biTotal.total) * 100).toFixed(1) + '%'
+    : cp1Rate;
+    
+  const cp1Analysis = {
+    totalClaims: data.cp1Data.totals.grandTotal,
+    cp1Count: cp1Count,
+    cp1Rate: cp1Rate,
+    biCP1Rate: biCP1Rate,
+    byCoverage: data.cp1Data.byCoverage || [],
+    biByAge: data.cp1Data.biByAge || [],
+    biTotal: data.cp1Data.biTotal || { total: 0, yes: 0, noCP: 0 },
+    totals: data.cp1Data.totals,
+    weekOverWeek: undefined, // Will be populated if historical data is available
+  };
+
   return (
     <>
       <ExecutiveCommandDashboard
@@ -362,6 +380,8 @@ export function ExecutiveCommandDashboardWrapper() {
           typeGroupData: typeGroupData,
           ageBreakdown: data.financials.byAge,
           rawClaims: data.rawClaims,
+          // Include full CP1 analysis for board reports
+          cp1Analysis,
         }}
         onOpenChat={() => setShowChat(true)}
         onDrilldown={handleDrilldown}

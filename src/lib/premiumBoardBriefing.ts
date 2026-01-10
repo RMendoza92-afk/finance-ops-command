@@ -129,6 +129,39 @@ const drawGradient = (
 // MAIN GENERATOR
 // ════════════════════════════════════════════════════════════════════════════
 
+export interface CP1CoverageRow {
+  coverage: string;
+  total: number;
+  yes: number;
+  noCP: number;
+  cp1Rate: number;
+}
+
+export interface CP1AgeRow {
+  age: string;
+  total: number;
+  yes: number;
+  noCP: number;
+}
+
+export interface CP1AnalysisData {
+  totalClaims: number;
+  cp1Count: number;
+  cp1Rate: string;
+  biCP1Rate: string;
+  byCoverage: CP1CoverageRow[];
+  biByAge: CP1AgeRow[];
+  biTotal: { total: number; yes: number; noCP: number };
+  totals: { grandTotal: number; yes: number; noCP: number };
+  weekOverWeek?: {
+    totalClaimsDelta: number;
+    cp1RateDelta: number;
+    highRiskDelta: number;
+    aged365Delta: number;
+    previousDate: string;
+  };
+}
+
 export interface BoardBriefingData {
   totalClaims: number;
   totalReserves: number;
@@ -157,6 +190,8 @@ export interface BoardBriefingData {
   fatalityReserves?: number;
   surgeryCount?: number;
   hospitalizationCount?: number;
+  // Enhanced CP1 Analysis
+  cp1Analysis?: CP1AnalysisData;
 }
 
 export async function generatePremiumBoardBriefing(data: BoardBriefingData): Promise<string> {
@@ -593,7 +628,7 @@ export async function generatePremiumBoardBriefing(data: BoardBriefingData): Pro
   });
 
   // ════════════════════════════════════════════════════════════════════════
-  // FOOTER
+  // FOOTER - PAGE 2
   // ════════════════════════════════════════════════════════════════════════
   
   doc.setFillColor(...COLORS.surface);
@@ -606,7 +641,271 @@ export async function generatePremiumBoardBriefing(data: BoardBriefingData): Pro
   doc.setTextColor(...COLORS.subtle);
   doc.text('CONFIDENTIAL - BOARD DISTRIBUTION ONLY', m.l, ph - 6);
   doc.text('Fred Loya Insurance | Claims Discipline Command', pw / 2, ph - 6, { align: 'center' });
-  doc.text('Page 2 of 2', pw - m.r, ph - 6, { align: 'right' });
+  doc.text('Page 2 of ' + (data.cp1Analysis ? '3' : '2'), pw - m.r, ph - 6, { align: 'right' });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PAGE 3: CP1 ANALYSIS (if data available)
+  // ══════════════════════════════════════════════════════════════════════════
+  
+  if (data.cp1Analysis) {
+    doc.addPage();
+    
+    // Background
+    doc.setFillColor(...COLORS.bg);
+    doc.rect(0, 0, pw, ph, 'F');
+
+    // Header bar
+    doc.setFillColor(...COLORS.surface);
+    doc.rect(0, 0, pw, 22, 'F');
+    doc.setFillColor(...COLORS.gold);
+    doc.rect(0, 22, pw, 1, 'F');
+
+    // Logo in header
+    try {
+      const logoBase64 = await loadImageAsBase64(loyaLogo);
+      doc.addImage(logoBase64, 'JPEG', m.l, 4, 40, 13);
+    } catch {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.white);
+      doc.text('FRED LOYA INSURANCE', m.l, 13);
+    }
+
+    // Header title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.title);
+    doc.setTextColor(...COLORS.white);
+    doc.text('CP1 ANALYSIS DEEP DIVE', pw / 2, 13, { align: 'center' });
+
+    // Date
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(TYPE.caption);
+    doc.setTextColor(...COLORS.muted);
+    doc.text(format(new Date(), 'MMM d, yyyy'), pw - m.r, 13, { align: 'right' });
+
+    let cp1Y = 30;
+    const cp1 = data.cp1Analysis;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CP1 SUMMARY BANNER
+    // ════════════════════════════════════════════════════════════════════════
+    
+    const cp1RateNum = parseFloat(cp1.cp1Rate);
+    const cp1Status = cp1RateNum >= 35 ? 'EXCELLENT' : cp1RateNum >= 28 ? 'ACCEPTABLE' : 'NEEDS ATTENTION';
+    const cp1StatusColor = cp1RateNum >= 35 ? COLORS.emerald : cp1RateNum >= 28 ? COLORS.amber : COLORS.ruby;
+
+    doc.setFillColor(...COLORS.surface);
+    doc.roundedRect(m.l, cp1Y, cw, 24, 2, 2, 'F');
+    
+    // Status indicator
+    doc.setFillColor(...cp1StatusColor);
+    doc.circle(m.l + 12, cp1Y + 12, 4, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.title);
+    doc.setTextColor(...cp1StatusColor);
+    doc.text('CP1 RATE: ' + cp1.cp1Rate + '%', m.l + 24, cp1Y + 10);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(TYPE.caption);
+    doc.setTextColor(...COLORS.muted);
+    doc.text(cp1Status + ' | ' + fmtNum(cp1.cp1Count || 0) + ' of ' + fmtNum(cp1.totalClaims) + ' claims in CP1', m.l + 24, cp1Y + 18);
+    
+    // Week over week delta
+    if (cp1.weekOverWeek) {
+      const wow = cp1.weekOverWeek;
+      const sign = wow.cp1RateDelta >= 0 ? '+' : '';
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(TYPE.body);
+      doc.setTextColor(...(wow.cp1RateDelta >= 0 ? COLORS.emerald : COLORS.ruby));
+      doc.text(sign + wow.cp1RateDelta.toFixed(1) + '% WoW', pw - m.r - 10, cp1Y + 14, { align: 'right' });
+    }
+
+    cp1Y += 32;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CP1 BY COVERAGE TABLE
+    // ════════════════════════════════════════════════════════════════════════
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.body);
+    doc.setTextColor(...COLORS.gold);
+    doc.text('CP1 BY COVERAGE', m.l, cp1Y);
+    cp1Y += SPACE.md;
+
+    const covColW = [45, 35, 35, 35, 40];
+    const covRowH = 12;
+
+    // Header row
+    doc.setFillColor(...COLORS.surfaceAlt);
+    doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.micro);
+    doc.setTextColor(...COLORS.muted);
+    doc.text('COVERAGE', m.l + 4, cp1Y + 8);
+    doc.text('TOTAL', m.l + covColW[0], cp1Y + 8);
+    doc.text('IN CP1', m.l + covColW[0] + covColW[1], cp1Y + 8);
+    doc.text('NOT IN CP', m.l + covColW[0] + covColW[1] + covColW[2], cp1Y + 8);
+    doc.text('CP1 RATE', m.l + covColW[0] + covColW[1] + covColW[2] + covColW[3], cp1Y + 8);
+    cp1Y += covRowH;
+
+    // Data rows
+    cp1.byCoverage.forEach((row, idx) => {
+      doc.setFillColor(...(idx % 2 === 0 ? COLORS.surface : COLORS.surfaceAlt));
+      doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(TYPE.caption);
+      doc.setTextColor(...COLORS.offWhite);
+      doc.text(sanitize(row.coverage), m.l + 4, cp1Y + 8);
+      doc.text(fmtNum(row.total), m.l + covColW[0], cp1Y + 8);
+      doc.text(fmtNum(row.yes), m.l + covColW[0] + covColW[1], cp1Y + 8);
+      doc.text(fmtNum(row.noCP), m.l + covColW[0] + covColW[1] + covColW[2], cp1Y + 8);
+      
+      // CP1 Rate with color coding
+      const rate = row.cp1Rate;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(rate >= 35 ? COLORS.emerald : rate >= 28 ? COLORS.amber : COLORS.ruby));
+      doc.text(rate.toFixed(1) + '%', m.l + covColW[0] + covColW[1] + covColW[2] + covColW[3], cp1Y + 8);
+      
+      cp1Y += covRowH;
+    });
+
+    // Totals row - use slightly lighter gold to indicate total
+    doc.setFillColor(40, 35, 20);
+    doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.caption);
+    doc.setTextColor(...COLORS.gold);
+    doc.text('TOTAL', m.l + 4, cp1Y + 8);
+    doc.text(fmtNum(cp1.totals.grandTotal), m.l + covColW[0], cp1Y + 8);
+    doc.text(fmtNum(cp1.totals.yes), m.l + covColW[0] + covColW[1], cp1Y + 8);
+    doc.text(fmtNum(cp1.totals.noCP), m.l + covColW[0] + covColW[1] + covColW[2], cp1Y + 8);
+    doc.text(cp1.cp1Rate + '%', m.l + covColW[0] + covColW[1] + covColW[2] + covColW[3], cp1Y + 8);
+    cp1Y += covRowH + SPACE.lg;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // BI BY AGE TABLE
+    // ════════════════════════════════════════════════════════════════════════
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.body);
+    doc.setTextColor(...COLORS.gold);
+    doc.text('BI CLAIMS BY AGE', m.l, cp1Y);
+    cp1Y += SPACE.md;
+
+    const ageColW = [60, 40, 40, 50];
+
+    // Header row
+    doc.setFillColor(...COLORS.surfaceAlt);
+    doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.micro);
+    doc.setTextColor(...COLORS.muted);
+    doc.text('AGE BUCKET', m.l + 4, cp1Y + 8);
+    doc.text('TOTAL', m.l + ageColW[0], cp1Y + 8);
+    doc.text('IN CP1', m.l + ageColW[0] + ageColW[1], cp1Y + 8);
+    doc.text('NOT IN CP', m.l + ageColW[0] + ageColW[1] + ageColW[2], cp1Y + 8);
+    cp1Y += covRowH;
+
+    // Data rows
+    cp1.biByAge.forEach((row, idx) => {
+      doc.setFillColor(...(idx % 2 === 0 ? COLORS.surface : COLORS.surfaceAlt));
+      doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+      
+      const isAged = row.age.includes('365') || row.age.includes('181');
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(TYPE.caption);
+      doc.setTextColor(...(isAged ? COLORS.amber : COLORS.offWhite));
+      doc.text(sanitize(row.age), m.l + 4, cp1Y + 8);
+      doc.text(fmtNum(row.total), m.l + ageColW[0], cp1Y + 8);
+      doc.text(fmtNum(row.yes), m.l + ageColW[0] + ageColW[1], cp1Y + 8);
+      doc.text(fmtNum(row.noCP), m.l + ageColW[0] + ageColW[1] + ageColW[2], cp1Y + 8);
+      
+      cp1Y += covRowH;
+    });
+
+    // BI Totals row - use slightly lighter gold background to indicate total
+    doc.setFillColor(40, 35, 20);
+    doc.rect(m.l, cp1Y, cw, covRowH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(TYPE.caption);
+    doc.setTextColor(...COLORS.gold);
+    doc.text('BI TOTAL', m.l + 4, cp1Y + 8);
+    doc.text(fmtNum(cp1.biTotal.total), m.l + ageColW[0], cp1Y + 8);
+    doc.text(fmtNum(cp1.biTotal.yes), m.l + ageColW[0] + ageColW[1], cp1Y + 8);
+    doc.text(fmtNum(cp1.biTotal.noCP), m.l + ageColW[0] + ageColW[1] + ageColW[2], cp1Y + 8);
+    
+    // BI CP1 Rate
+    doc.setTextColor(...COLORS.sapphire);
+    doc.text('BI CP1: ' + cp1.biCP1Rate, m.l + ageColW[0] + ageColW[1] + ageColW[2] + 20, cp1Y + 8);
+    cp1Y += covRowH + SPACE.lg;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // WEEK OVER WEEK PROGRESS
+    // ════════════════════════════════════════════════════════════════════════
+    
+    if (cp1.weekOverWeek) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(TYPE.body);
+      doc.setTextColor(...COLORS.gold);
+      doc.text('WEEK OVER WEEK PROGRESS', m.l, cp1Y);
+      cp1Y += SPACE.md;
+
+      const wow = cp1.weekOverWeek;
+      const wowMetrics = [
+        { label: 'Total Claims Change', value: (wow.totalClaimsDelta >= 0 ? '+' : '') + fmtNum(wow.totalClaimsDelta), good: wow.totalClaimsDelta <= 0 },
+        { label: 'CP1 Rate Change', value: (wow.cp1RateDelta >= 0 ? '+' : '') + wow.cp1RateDelta.toFixed(1) + '%', good: wow.cp1RateDelta >= 0 },
+        { label: 'High Risk Claims Change', value: (wow.highRiskDelta >= 0 ? '+' : '') + fmtNum(wow.highRiskDelta), good: wow.highRiskDelta <= 0 },
+        { label: '365+ Age Change', value: (wow.aged365Delta >= 0 ? '+' : '') + fmtNum(wow.aged365Delta), good: wow.aged365Delta <= 0 },
+      ];
+
+      const wowColW = (cw - SPACE.md * 3) / 4;
+
+      wowMetrics.forEach((metric, idx) => {
+        const x = m.l + idx * (wowColW + SPACE.md);
+        
+        doc.setFillColor(...COLORS.surface);
+        doc.roundedRect(x, cp1Y, wowColW, 28, 2, 2, 'F');
+        
+        // Status indicator
+        doc.setFillColor(...(metric.good ? COLORS.emerald : COLORS.ruby));
+        doc.rect(x, cp1Y + 4, 2, 20, 'F');
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(TYPE.micro);
+        doc.setTextColor(...COLORS.muted);
+        doc.text(metric.label, x + 8, cp1Y + 10);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(TYPE.title);
+        doc.setTextColor(...(metric.good ? COLORS.emerald : COLORS.ruby));
+        doc.text(metric.value, x + 8, cp1Y + 22);
+      });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(TYPE.micro);
+      doc.setTextColor(...COLORS.subtle);
+      doc.text('Compared to: ' + sanitize(wow.previousDate), m.l, cp1Y + 36);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // FOOTER - PAGE 3
+    // ════════════════════════════════════════════════════════════════════════
+    
+    doc.setFillColor(...COLORS.surface);
+    doc.rect(0, ph - 14, pw, 14, 'F');
+    doc.setFillColor(...COLORS.goldMuted);
+    doc.rect(0, ph - 14, pw, 0.5, 'F');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(TYPE.micro);
+    doc.setTextColor(...COLORS.subtle);
+    doc.text('CONFIDENTIAL - BOARD DISTRIBUTION ONLY', m.l, ph - 6);
+    doc.text('Fred Loya Insurance | Claims Discipline Command', pw / 2, ph - 6, { align: 'center' });
+    doc.text('Page 3 of 3', pw - m.r, ph - 6, { align: 'right' });
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // SAVE
