@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useExportData } from '@/hooks/useExportData';
 import { format } from 'date-fns';
-import { generateRBCExcel, generateStyledExcelFromLegacy } from '@/lib/boardroomExcelExport';
+import { generateRBCExcel, generateStyledExcelFromLegacy, generateStateProfitabilityExcel } from '@/lib/boardroomExcelExport';
 
 // Executive access gate (lightweight, not for strong security)
 const EXEC_ACCESS_PASSWORD = "rbc2026"; // case-insensitive
@@ -1364,7 +1364,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                 variant="outline"
                 size="sm"
                 className="h-7 text-xs gap-1"
-                onClick={() => {
+                onClick={async () => {
                   const stateData = [
                     { state: 'Texas', policies2025: 2312106, policies2024: 2402479, claims2025: 35353, claims2024: 39061, frequency: 15.3, overspend: 4478135, action: 'Rate +5-7%', priority: 'High' },
                     { state: 'California', policies2025: 1465299, policies2024: 1635935, claims2025: 24828, claims2024: 30111, frequency: 16.9, overspend: 5015063, action: 'Rate +6-8%', priority: 'Critical' },
@@ -1380,37 +1380,7 @@ const RBCGaugeDashboard = ({ className }: RBCGaugeDashboardProps) => {
                     { state: 'Ohio', policies2025: 13675, policies2024: 14872, claims2025: 309, claims2024: 345, frequency: 22.6, overspend: 0, action: 'Maintain', priority: 'Low' },
                   ];
                   
-                  generateExcel({
-                    title: 'State Profitability & Rate Recommendations',
-                    subtitle: 'Executive Territory Performance Analysis',
-                    timestamp: format(new Date(), 'MMMM d, yyyy h:mm a'),
-                    summary: {
-                      'Report Type': 'CFO/CEO Territory Briefing',
-                      'Period': '2024 vs 2025 YTD',
-                      'Total States Analyzed': stateData.length.toString(),
-                      'Total Policies': stateData.reduce((sum, s) => sum + s.policies2025, 0).toLocaleString(),
-                      'Total Overspend': '$' + (stateData.reduce((sum, s) => sum + s.overspend, 0) / 1000000).toFixed(1) + 'M',
-                    },
-                    bulletInsights: [
-                      'Critical: Nevada ($5.6M overspend) and California ($5.0M) require immediate rate action',
-                      'High Priority: Texas, New Mexico, Georgia need rate increases or UW changes',
-                      'Growth Watch: Colorado (+8.5%), Oklahoma (+5.1%), Indiana (+12.7%) growing profitably',
-                      'Frequency Alert: Georgia (28.5/1K) significantly above portfolio average',
-                    ],
-                    columns: ['State', 'Policies 2025', 'Policies 2024', 'YoY Change %', 'Claims 2025', 'Claims 2024', 'Frequency /1K', 'YTD Overspend', 'Recommended Action', 'Priority'],
-                    rows: stateData.map(s => [
-                      s.state,
-                      s.policies2025,
-                      s.policies2024,
-                      Number(((s.policies2025 - s.policies2024) / s.policies2024 * 100).toFixed(1)),
-                      s.claims2025,
-                      s.claims2024,
-                      s.frequency,
-                      s.overspend,
-                      s.action,
-                      s.priority,
-                    ]),
-                  });
+                  await generateStateProfitabilityExcel({ states: stateData });
                 }}
               >
                 <FileSpreadsheet className="h-3 w-3" />
