@@ -3593,7 +3593,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 shadow-lg"
           >
             {generatingBoardPackage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileStack className="h-4 w-4 mr-2" />}
-            {generatingBoardPackage ? 'Generating...' : 'Board Package'}
+            {generatingBoardPackage ? 'Generating...' : 'Executive Brief'}
           </Button>
           
           <div className="flex items-center gap-2 flex-wrap">
