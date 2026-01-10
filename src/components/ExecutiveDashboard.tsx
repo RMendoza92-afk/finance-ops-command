@@ -26,7 +26,7 @@ import {
   ExecutiveReviewLevel,
   ExecutiveReviewResult 
 } from "@/lib/executiveReview";
-import { SMSDialog } from "./SMSDialog";
+import { AlertSendDialog } from "./AlertSendDialog";
 interface PainLevelRow {
   oldStartPain: string;
   oldEndPain: string;
@@ -1207,7 +1207,7 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
       
       {/* SMS Dialog */}
       {selectedCaseForSMS && (
-        <SMSDialog
+        <AlertSendDialog
           open={smsDialogOpen}
           onClose={() => {
             setSmsDialogOpen(false);
@@ -1217,7 +1217,6 @@ export function ExecutiveDashboard({ data, onDrilldown }: ExecutiveDashboardProp
             matterId: selectedCaseForSMS.matterId,
             exposure: selectedCaseForSMS.exposure,
             phase: selectedCaseForSMS.stage,
-            actionRequired: `${selectedCaseForSMS.level} review - ${selectedCaseForSMS.adjuster}`
           }}
         />
       )}

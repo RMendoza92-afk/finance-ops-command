@@ -263,8 +263,7 @@ export function DrilldownModal({ matter, onClose }: DrilldownModalProps) {
           matterId: matter.uniqueRecord,
           claimant: matter.claimant,
           exposure: matter.totalPaid,
-          phase: matter.litigationStage,
-          actionRequired: `${matter.riskFlag} risk - Review required`
+          phase: matter.litigationStage
         }}
       />
     </Dialog>
