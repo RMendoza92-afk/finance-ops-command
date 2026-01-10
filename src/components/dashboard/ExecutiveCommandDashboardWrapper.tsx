@@ -39,7 +39,7 @@ import {
   exportCP1Drilldown,
   exportBudgetDrilldown,
 } from "@/lib/bloombergExport";
-import { generateClaimsInventoryReport } from "@/lib/executiveVisualReport";
+// Visual reports removed - using styled Excel exports
 import { generateStyledExcelFromLegacy } from "@/lib/boardroomExcelExport";
 import {
   LineChart, Line, BarChart, Bar, ComposedChart, 
@@ -347,16 +347,9 @@ export function ExecutiveCommandDashboardWrapper() {
     }
   };
 
-  // Double-click to generate visual PDF report
+  // Double-click to show toast about styled Excel exports
   const handleDoubleClickReport = (section: string) => {
-    toast.success('Generating executive visual report...');
-    
-    generateClaimsInventoryReport({
-      totalClaims: totalOpenClaims,
-      totalReserves,
-      typeGroups: typeGroupData.map(tg => ({ name: tg.typeGroup, claims: tg.grandTotal, reserves: tg.reserves })),
-      ageBreakdown: data.financials.byAge.map(a => ({ bucket: a.age, claims: a.claims, reserves: a.openReserves })),
-    });
+    toast.info('Use Export buttons for styled Excel reports');
   };
 
   // Build CP1 analysis data for exports

@@ -16,7 +16,7 @@ import { TrendComparisonCard, parseTrendData } from "@/components/TrendCompariso
 import { DrilldownModal } from "@/components/DrilldownModal";
 import loyaLogo from "@/assets/fli_logo.jpg";
 import { registerIBMPlexSans, setIBMPlexSans } from "@/lib/pdfFonts";
-import { EXECUTIVE_COLORS, getReportContext } from "@/lib/executivePDFFramework";
+import { EXECUTIVE_COLORS, getReportContext } from "@/lib/executiveColors";
 
 interface Message {
   role: "user" | "assistant";

@@ -55,22 +55,17 @@ import {
   AreaChart,
 } from "recharts";
 import { format, addDays } from "date-fns";
-import { 
-  generateExecutiveReport, 
-  auditReportQuality, 
-  getReportContext,
-  ExecutiveReportConfig,
-  ExecutiveMetric,
-  ExecutiveInsight,
-  ExecutiveTable,
-  EXECUTIVE_COLORS,
-  formatCurrency as formatExecCurrency,
-  formatPercent,
-  getDeltaDirection,
-  QuarterlyData,
-  AppendixSection
-} from "@/lib/executivePDFFramework";
-import { generateBoardReadyPackage, ExecutivePackageConfig } from "@/lib/boardReadyPDFGenerator";
+import { getReportContext } from "@/lib/executiveColors";
+
+// QuarterlyData type for expert spend data
+interface QuarterlyData {
+  quarter: string;
+  paid: number;
+  paidMonthly: number;
+  approved: number;
+  approvedMonthly: number;
+  variance: number;
+}
 
 // 6 Quarters of Expert Spend Data (Q2 2024 - Q4 2025)
 const EXPERT_QUARTERLY_DATA: QuarterlyData[] = [
@@ -487,10 +482,13 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [showDecisionsDrawer, fetchPendingDecisions]);
 
-  // Generate Board-Ready Executive PDF for Pending Decisions
+  // Generate Styled Excel for Pending Decisions (replaced PDF with Excel)
   const generateDecisionsPDF = useCallback(async () => {
     setGeneratingDecisionsPDF(true);
     try {
+      const { generateStyledBoardroomExcel } = await import('@/lib/boardroomExcelExport');
+      const { formatCurrency } = await import('@/lib/executiveColors');
+      
       const stats = {
         total: pendingDecisions.length,
         critical: pendingDecisions.filter(d => d.severity === 'critical').length,
@@ -503,298 +501,85 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         totalExposure: pendingDecisions.reduce((sum, d) => sum + d.amount, 0)
       };
       
-      const ctx = getReportContext();
-      
-      // Build executive report configuration with quality gates
-      const reportConfig: ExecutiveReportConfig = {
-        title: 'Pending Executive Decisions',
-        subtitle: `${stats.critical} Critical Items Require Immediate Action`,
-        reportType: 'DECISION',
-        classification: 'RESTRICTED',
-        
-        executiveSummary: {
-          keyTakeaway: `${stats.total} matters require executive decision totaling ${formatExecCurrency(stats.totalExposure, true)} exposure. ${stats.critical} are CRITICAL priority. ${stats.thisWeek} due within 7 days. ${stats.statuteDeadlines} approaching statute deadlines (350+ days open).`,
-          
-          metrics: [
-            {
-              label: 'Total Decisions Required',
-              value: stats.total,
-              context: 'Pending Executive Action'
-            },
-            {
-              label: 'Critical Priority',
-              value: stats.critical,
-              context: stats.critical > 0 ? 'IMMEDIATE ACTION' : 'None pending',
-              deltaDirection: stats.critical > 0 ? 'negative' : 'neutral'
-            },
-            {
-              label: 'Due This Week',
-              value: stats.thisWeek,
-              context: 'Next 7 days',
-              deltaDirection: stats.thisWeek > 3 ? 'negative' : 'neutral'
-            },
-            {
-              label: 'Total Exposure',
-              value: formatExecCurrency(stats.totalExposure, true),
-              context: 'Combined reserves at risk'
-            }
-          ],
-          
-          insights: pendingDecisions.slice(0, 4).map(d => ({
-            priority: d.severity === 'critical' ? 'critical' as const : 
-                     d.severity === 'high' ? 'high' as const : 'medium' as const,
-            headline: `${d.matterId}: ${d.claimant} - ${formatExecCurrency(d.amount, true)}`,
-            action: d.recommendedAction
-          })),
-          
-          bottomLine: stats.critical > 0 
-            ? `${stats.critical} critical decisions require immediate C-suite attention. Combined exposure of ${formatExecCurrency(stats.totalExposure, true)} at risk. ${stats.statuteDeadlines} matters approaching statute limits require priority resolution.`
-            : `All ${stats.total} pending decisions are within normal priority range. Total exposure: ${formatExecCurrency(stats.totalExposure, true)}. No immediate escalation required.`
-        },
-        
-        tables: [
+      await generateStyledBoardroomExcel({
+        reportTitle: 'Pending Executive Decisions',
+        asOfDate: format(new Date(), 'MMMM d, yyyy'),
+        sections: [
           {
-            title: 'Pending Decision Queue by Priority',
-            headers: ['Matter ID', 'Claimant', 'Lead', 'Days Open', 'Exposure', 'Priority'],
-            rows: pendingDecisions.slice(0, 20).map(d => ({
-              cells: [
+            title: 'Summary',
+            metrics: [
+              { label: 'Total Decisions Required', value: stats.total },
+              { label: 'Critical Priority', value: stats.critical },
+              { label: 'Due This Week', value: stats.thisWeek },
+              { label: 'Statute Deadlines (350+ days)', value: stats.statuteDeadlines },
+              { label: 'Total Exposure', value: stats.totalExposure },
+            ]
+          },
+          {
+            title: 'Decision Queue',
+            table: {
+              headers: ['Matter ID', 'Claimant', 'Lead', 'Days Open', 'Exposure', 'Priority'],
+              rows: pendingDecisions.map(d => [
                 d.matterId,
-                d.claimant.substring(0, 25) + (d.claimant.length > 25 ? '...' : ''),
+                d.claimant,
                 d.lead,
                 d.daysOpen,
-                formatExecCurrency(d.amount, true),
+                d.amount,
                 d.severity.toUpperCase()
-              ],
-              highlight: d.severity === 'critical' ? 'risk' as const : 
-                        d.severity === 'high' ? 'warning' as const : undefined
-            })),
-            footnote: pendingDecisions.length > 20 ? `Showing 20 of ${pendingDecisions.length} pending decisions` : undefined
-          }
-        ],
-        
-        // Appendix with detailed breakdowns
-        appendix: [
-          {
-            title: 'Decisions by Department',
-            content: `Pending decisions span ${new Set(pendingDecisions.map(d => d.department)).size} departments. The largest concentration is in litigation matters with ${pendingDecisions.filter(d => d.type === 'Litigation').length} pending items.`,
-            table: {
-              title: 'Department Distribution',
-              headers: ['Department', 'Count', 'Total Exposure', 'Avg Exposure'],
-              rows: (() => {
-                const deptMap = new Map<string, { count: number; exposure: number }>();
-                pendingDecisions.forEach(d => {
-                  const dept = d.department || 'Unassigned';
-                  const existing = deptMap.get(dept) || { count: 0, exposure: 0 };
-                  deptMap.set(dept, { count: existing.count + 1, exposure: existing.exposure + d.amount });
-                });
-                return Array.from(deptMap.entries())
-                  .sort((a, b) => b[1].exposure - a[1].exposure)
-                  .slice(0, 8)
-                  .map(([dept, data]) => ({
-                    cells: [dept, data.count, formatExecCurrency(data.exposure, true), formatExecCurrency(data.exposure / data.count, true)],
-                    highlight: data.exposure > 5000000 ? 'warning' as const : undefined
-                  }));
-              })()
-            }
-          },
-          {
-            title: 'Aging Analysis',
-            content: `${pendingDecisions.filter(d => d.daysOpen > 365).length} matters exceed 1 year open. ${pendingDecisions.filter(d => d.daysOpen > 540).length} matters exceed 18 months, representing highest statute risk.`,
-            chart: {
-              type: 'horizontalBar' as const,
-              title: 'Decisions by Age Bucket (Count)',
-              data: [
-                { label: '500+ Days', value: pendingDecisions.filter(d => d.daysOpen > 500).length },
-                { label: '365-500 Days', value: pendingDecisions.filter(d => d.daysOpen > 365 && d.daysOpen <= 500).length },
-                { label: '180-365 Days', value: pendingDecisions.filter(d => d.daysOpen > 180 && d.daysOpen <= 365).length },
-                { label: 'Under 180 Days', value: pendingDecisions.filter(d => d.daysOpen <= 180).length },
-              ]
-            }
-          },
-          {
-            title: 'Full Decision Queue',
-            table: {
-              title: 'All Pending Decisions (Complete List)',
-              headers: ['Matter ID', 'Claimant', 'Lead', 'Days', 'Exposure', 'Type', 'Priority'],
-              rows: pendingDecisions.map(d => ({
-                cells: [
-                  d.matterId,
-                  d.claimant.substring(0, 20) + (d.claimant.length > 20 ? '...' : ''),
-                  d.lead.substring(0, 15) + (d.lead.length > 15 ? '...' : ''),
-                  d.daysOpen,
-                  formatExecCurrency(d.amount, true),
-                  d.type.substring(0, 10),
-                  d.severity.toUpperCase()
-                ],
-                highlight: d.severity === 'critical' ? 'risk' as const : 
-                          d.severity === 'high' ? 'warning' as const : undefined
-              }))
+              ]),
+              highlightLastRow: false
             }
           }
         ],
-        
-        includeAllContent: true
-      };
+        filename: `Pending_Decisions_${format(new Date(), 'yyyyMMdd')}.xlsx`
+      });
       
-      // === QUALITY GATE CHECK ===
-      const qualityScore = auditReportQuality(reportConfig);
-      
-      if (!qualityScore.passed) {
-        console.warn('Quality Gate Warning:', qualityScore.issues);
-      }
-      
-      // Generate the report
-      const result = await generateExecutiveReport(reportConfig);
-      
-      if (result.success) {
-        toast.success(`Board-ready Decisions report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
-      } else {
-        throw new Error('Report generation failed');
-      }
+      toast.success('Decisions report generated successfully');
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      toast.error('Failed to generate PDF');
+      console.error('Error generating Excel:', err);
+      toast.error('Failed to generate report');
     } finally {
       setGeneratingDecisionsPDF(false);
     }
   }, [pendingDecisions]);
 
-  // Generate PDF for Decisions Pending (CSV-based data from useDecisionsPending)
+  // Generate Excel for Decisions Pending - redirects to Excel export
   const generateDecisionsPendingPDF = useCallback(async () => {
     if (!decisionsData || decisionsData.claims.length === 0) {
       toast.error('No decisions pending data to export');
       return;
     }
-    
     setGeneratingDecisionsPDF(true);
     try {
-      const ctx = getReportContext();
       const claims = decisionsData.claims;
       const byPainLevel = decisionsData.byPainLevel;
       
-      // Build summary stats
-      const highPainCount = claims.filter(c => c.painLevel.includes('5+') || c.painLevel === 'Limits').length;
-      const pendingPainCount = claims.filter(c => c.painLevel === 'Pending' || c.painLevel === 'Blank').length;
-      const criticalCount = claims.filter(c => c.reserves >= 100000).length;
-      
-      const reportConfig: ExecutiveReportConfig = {
-        title: 'Decisions Pending Report',
-        subtitle: `${claims.length} Claims Requiring Evaluation Decisions`,
-        reportType: 'DECISION',
-        classification: 'CONFIDENTIAL',
-        
-        executiveSummary: {
-          keyTakeaway: `${claims.length} claims with high reserves (≥$15K) have no evaluation set, totaling ${formatExecCurrency(decisionsData.totalReserves, true)} in open reserves. ${highPainCount} have high pain levels (5+), ${pendingPainCount} have pending pain assessments. Immediate evaluation decisions required.`,
-          
-          metrics: [
-            {
-              label: 'Total Claims',
-              value: claims.length,
-              context: 'Requiring Decisions'
-            },
-            {
-              label: 'Total Reserves',
-              value: formatExecCurrency(decisionsData.totalReserves, true),
-              context: 'At risk without evaluation'
-            },
-            {
-              label: 'High Pain (5+)',
-              value: highPainCount,
-              context: 'Elevated injury severity',
-              deltaDirection: highPainCount > 10 ? 'negative' : 'neutral'
-            },
-            {
-              label: 'Critical (≥$100K)',
-              value: criticalCount,
-              context: 'Highest priority',
-              deltaDirection: criticalCount > 5 ? 'negative' : 'neutral'
-            }
-          ],
-          
-          insights: claims.slice(0, 4).map(c => ({
-            priority: c.reserves >= 100000 ? 'critical' as const : 
-                     c.painLevel.includes('5+') ? 'high' as const : 'medium' as const,
-            headline: `${c.claimNumber}: ${c.state} - ${formatExecCurrency(c.reserves, true)}`,
-            action: `Set evaluation for ${c.painLevel} pain level claim`
-          })),
-          
-          bottomLine: criticalCount > 0 
-            ? `${criticalCount} claims with reserves ≥$100K require immediate evaluation decisions. Combined exposure of ${formatExecCurrency(decisionsData.totalReserves, true)} at risk. Focus on ${highPainCount} high pain level claims first.`
-            : `All ${claims.length} pending decisions are routine priority. Total exposure: ${formatExecCurrency(decisionsData.totalReserves, true)}. Recommend batch evaluation review.`
-        },
-        
-        tables: [
+      await generateStyledBoardroomExcel({
+        reportTitle: 'Decisions Pending Report',
+        asOfDate: format(new Date(), 'MMMM d, yyyy'),
+        sections: [
           {
-            title: 'Decisions Pending - Claims Without Evaluation',
-            headers: ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team', 'Reason'],
-            rows: claims.slice(0, 30).map(c => ({
-              cells: [
-                c.claimNumber,
-                c.state,
-                c.painLevel,
-                formatExecCurrency(c.reserves, true),
-                c.biStatus,
-                c.team,
-                c.reason.substring(0, 25)
-              ],
-              highlight: c.reserves >= 100000 ? 'risk' as const : 
-                        c.painLevel.includes('5+') ? 'warning' as const : undefined
-            })),
-            footnote: claims.length > 30 ? `Showing 30 of ${claims.length} claims` : undefined
-          }
-        ],
-        
-        appendix: [
-          {
-            title: 'By Pain Level Category',
-            content: `Claims grouped by pain severity level.`,
-            table: {
-              title: 'Pain Level Distribution',
-              headers: ['Pain Category', 'Count', 'Total Reserves', 'Avg Reserve'],
-              rows: Object.entries(byPainLevel).map(([category, data]) => ({
-                cells: [
-                  category,
-                  data.count,
-                  formatExecCurrency(data.reserves, true),
-                  formatExecCurrency(data.reserves / data.count, true)
-                ],
-                highlight: category.includes('High') || category === 'Limits' ? 'warning' as const : undefined
-              }))
-            }
+            title: 'Summary',
+            metrics: [
+              { label: 'Total Claims', value: claims.length },
+              { label: 'Total Reserves', value: decisionsData.totalReserves },
+            ]
           },
           {
-            title: 'Full Claims List',
+            title: 'Claims Detail',
             table: {
-              title: 'All Pending Decisions',
               headers: ['Claim #', 'State', 'Pain Level', 'Reserves', 'BI Status', 'Team'],
-              rows: claims.map(c => ({
-                cells: [
-                  c.claimNumber,
-                  c.state,
-                  c.painLevel,
-                  formatExecCurrency(c.reserves, true),
-                  c.biStatus,
-                  c.team
-                ],
-                highlight: c.reserves >= 100000 ? 'risk' as const : undefined
-              }))
+              rows: claims.map(c => [c.claimNumber, c.state, c.painLevel, c.reserves, c.biStatus, c.team]),
+              highlightLastRow: false
             }
           }
         ],
-        
-        includeAllContent: true
-      };
-      
-      const result = await generateExecutiveReport(reportConfig);
-      
-      if (result.success) {
-        toast.success(`Decisions Pending PDF generated (${claims.length} claims)`);
-      } else {
-        throw new Error('Report generation failed');
-      }
+        filename: `Decisions_Pending_${format(new Date(), 'yyyyMMdd')}.xlsx`
+      });
+      toast.success(`Decisions report generated (${claims.length} claims)`);
     } catch (err) {
-      console.error('Error generating Decisions Pending PDF:', err);
-      toast.error('Failed to generate PDF');
+      console.error('Error:', err);
+      toast.error('Failed to generate report');
     } finally {
       setGeneratingDecisionsPDF(false);
     }
@@ -1019,181 +804,26 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   }, [monthlySpend]);
 
 
-  // Generate Board-Ready Executive PDF for Budget Burn Rate
+  // Generate Styled Excel for Budget (replaced PDF)
   const generateBudgetPDF = useCallback(async () => {
     setGeneratingBudgetPDF(true);
     try {
-      const ctx = getReportContext();
-      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2025;
-      const yoyChangePercent = (yoyChange / budgetMetrics.total2025) * 100;
-      
-      // Build executive report configuration with quality gates
-      const reportConfig: ExecutiveReportConfig = {
-        title: 'Budget Burn Rate Analysis',
-        subtitle: `FY${ctx.fiscalYear} Claims Payment Tracking`,
-        reportType: 'FORECAST',
-        classification: 'CONFIDENTIAL',
-        
-        executiveSummary: {
-          keyTakeaway: `YTD claims spend of ${formatExecCurrency(budgetMetrics.ytdPaid, true)} represents ${budgetMetrics.burnRate}% of annual budget. ${budgetMetrics.onTrack ? 'ON TRACK' : 'OVER BUDGET'} with ${formatExecCurrency(budgetMetrics.remaining, true)} remaining. BI exposure up ${formatExecCurrency(budgetMetrics.coverageBreakdown.bi.change, true)} YoY driving majority of variance.`,
-          
-          metrics: [
-            {
-              label: 'Annual Budget',
-              value: formatExecCurrency(budgetMetrics.annualBudget, true),
-              context: `FY${ctx.fiscalYear} Approved`
-            },
-            {
-              label: 'YTD Payments',
-              value: formatExecCurrency(budgetMetrics.ytdPaid, true),
-              delta: yoyChangePercent,
-              deltaLabel: 'YoY',
-              deltaDirection: yoyChangePercent > 5 ? 'negative' : yoyChangePercent < -5 ? 'positive' : 'neutral'
-            },
-            {
-              label: 'Burn Rate',
-              value: `${budgetMetrics.burnRate}%`,
-              context: `${budgetMetrics.monthsRemaining} months remaining`,
-              deltaDirection: budgetMetrics.burnRate > 91 ? 'negative' : 'neutral'
-            },
-            {
-              label: 'Budget Status',
-              value: budgetMetrics.onTrack ? 'ON TRACK' : 'OVER',
-              context: formatExecCurrency(budgetMetrics.remaining, true) + ' remaining',
-              deltaDirection: budgetMetrics.onTrack ? 'positive' : 'negative'
-            }
-          ],
-          
-          insights: [
-            {
-              priority: budgetMetrics.coverageBreakdown.bi.change > 30000000 ? 'critical' : 'high',
-              headline: `BI claims ${budgetMetrics.coverageBreakdown.bi.change >= 0 ? 'up' : 'down'} ${formatExecCurrency(Math.abs(budgetMetrics.coverageBreakdown.bi.change), true)} YoY`,
-              action: 'Review BI severity trends and litigation exposure'
-            },
-            {
-              priority: 'medium',
-              headline: `Collision claims down ${formatExecCurrency(Math.abs(budgetMetrics.coverageBreakdown.cl.change), true)} YoY`,
-              action: 'Maintain current claims handling efficiency'
-            },
-            {
-              priority: 'info',
-              headline: `Projected year-end: ${formatExecCurrency(budgetMetrics.projectedBurn, true)}`,
-              action: budgetMetrics.projectedVariance >= 0 
-                ? `${formatExecCurrency(budgetMetrics.projectedVariance, true)} under budget expected`
-                : `${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} over budget - escalate`
-            },
-            {
-              priority: 'info',
-              headline: `Average cost per claim: $${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}`,
-              action: 'Monitor severity trends for leading indicators'
-            }
-          ],
-          
-          bottomLine: budgetMetrics.onTrack 
-            ? `Claims payments are tracking well within budget parameters. YTD 2026 spend of ${formatExecCurrency(budgetMetrics.ytdPaid, true)} represents minimal budget utilization with ${formatExecCurrency(budgetMetrics.remaining, true)} remaining.`
-            : `ALERT: Claims payments exceeding budget trajectory. Projected overage of ${formatExecCurrency(Math.abs(budgetMetrics.projectedVariance), true)} requires immediate CFO review.`
-        },
-        
-        tables: [
-          {
-            title: 'Coverage Breakdown - YoY Comparison',
-            headers: ['Coverage', '2025 Full Year', '2026 YTD', 'Change', 'Claims', 'Avg/Claim'],
-            rows: [
-              ...Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
-                cells: [
-                  cov.name,
-                  formatExecCurrency(cov.ytd2025, true),
-                  formatExecCurrency(cov.ytd2026, true),
-                  `${cov.change >= 0 ? '+' : ''}${formatExecCurrency(cov.change, true)}`,
-                  cov.claimCount2026.toLocaleString(),
-                  `$${cov.avgPerClaim2026.toLocaleString()}`
-                ],
-                highlight: cov.change > 20000000 ? 'risk' as const : 
-                          cov.change < -5000000 ? 'success' as const : undefined
-              })),
-              {
-                cells: ['TOTAL', formatExecCurrency(budgetMetrics.total2025, true), formatExecCurrency(budgetMetrics.ytdPaid, true), 
-                        `${yoyChange >= 0 ? '+' : ''}${formatExecCurrency(yoyChange, true)}`, '345', `$${Math.round(budgetMetrics.ytdPaid / 345).toLocaleString()}`],
-                highlight: 'total' as const
-              }
-            ],
-            footnote: 'Source: Loya Insurance Group - BI/UM/UI Payments 1/1/26 - 1/7/26'
-          },
-          {
-            title: 'Monthly Budget Tracking',
-            headers: ['Month', 'Budget', 'Actual', 'Variance', 'Status'],
-            rows: budgetMetrics.monthlyData.slice(0, 11).map(month => ({
-              cells: [
-                month.month,
-                formatExecCurrency(month.budget, true),
-                month.actual > 0 ? formatExecCurrency(month.actual, true) : '-',
-                month.actual > 0 ? formatExecCurrency(Math.abs(month.variance), true) : '-',
-                month.actual > 0 ? (month.variance >= 0 ? 'Under' : 'Over') : 'Pending'
-              ],
-              highlight: month.actual > 0 && month.variance < 0 ? 'warning' as const : undefined
-            }))
-          }
-        ],
-        
-        // 6 Quarters of Expert Data
-        quarterlyData: EXPERT_QUARTERLY_DATA,
-        
-        // Appendix with detailed analysis
-        appendix: [
-          {
-            title: 'Expert Spend Trend Analysis',
-            content: `Over the past 6 quarters, expert spend has averaged $${Math.round(EXPERT_QUARTERLY_DATA.reduce((s, q) => s + q.paidMonthly, 0) / EXPERT_QUARTERLY_DATA.length / 1000)}K per month. Q1 2025 showed the largest variance (-$588K) due to accelerated expert retention for complex BI cases. Q4 2025 shows recovery with +$107K favorable variance.`,
-            chart: {
-              type: 'horizontalBar' as const,
-              title: 'Quarterly Expert Spend (Paid)',
-              data: EXPERT_QUARTERLY_DATA.map(q => ({
-                label: q.quarter,
-                value: q.paid / 1000
-              }))
-            }
-          },
-          {
-            title: 'Coverage Mix Impact on Budget',
-            content: `BI/UM/UI claims YTD spend totals $6.04M (1/1/26 - 1/7/26). 345 claims paid - BI: $5.85M (335), UM: $101.9K (7), UI: $90K (3). Tracking against annual budget of $402.8M.`,
-            table: {
-              title: 'Average Cost Per Claim by Coverage',
-              headers: ['Coverage', '2025 Avg', '2026 Avg', 'Change', 'Trend'],
-              rows: Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
-                cells: [
-                  cov.name,
-                  `$${cov.avgPerClaim2025.toLocaleString()}`,
-                  `$${cov.avgPerClaim2026.toLocaleString()}`,
-                  `${cov.avgPerClaim2026 > cov.avgPerClaim2025 ? '+' : ''}$${(cov.avgPerClaim2026 - cov.avgPerClaim2025).toLocaleString()}`,
-                  cov.avgPerClaim2026 > cov.avgPerClaim2025 ? '↑ Increasing' : '↓ Decreasing'
-                ],
-                highlight: cov.avgPerClaim2026 > cov.avgPerClaim2025 * 1.1 ? 'warning' as const : 
-                          cov.avgPerClaim2026 < cov.avgPerClaim2025 * 0.9 ? 'success' as const : undefined
-              }))
-            }
-          }
-        ],
-        
-        includeAllContent: true
-      };
-      
-      // === QUALITY GATE CHECK ===
-      const qualityScore = auditReportQuality(reportConfig);
-      
-      if (!qualityScore.passed) {
-        console.warn('Quality Gate Warning:', qualityScore.issues);
-      }
-      
-      // Generate the report
-      const result = await generateExecutiveReport(reportConfig);
-      
-      if (result.success) {
-        toast.success(`Board-ready Budget report generated (Quality: ${result.qualityScore.overall.toFixed(1)}/10)`);
-      } else {
-        throw new Error('Report generation failed');
-      }
+      await generateBudgetSpendExcel({
+        totalSpend: budgetMetrics.ytdPaid,
+        indemnities: budgetMetrics.ytdPaid * 0.85,
+        expenses: budgetMetrics.ytdPaid * 0.15,
+        coverageBreakdown: Object.values(budgetMetrics.coverageBreakdown).map(cov => ({
+          name: cov.name,
+          indemnity: cov.ytd2026 * 0.85,
+          expense: cov.ytd2026 * 0.15,
+          total: cov.ytd2026,
+          claimCount: cov.claimCount2026
+        }))
+      });
+      toast.success('Budget report generated successfully');
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      toast.error('Failed to generate PDF');
+      console.error('Error:', err);
+      toast.error('Failed to generate report');
     } finally {
       setGeneratingBudgetPDF(false);
     }
@@ -1212,7 +842,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     try {
       const { jsPDF } = await import('jspdf');
       const { default: loyaLogo } = await import('@/assets/fli_logo.jpg');
-      const { getReportContext } = await import('@/lib/executivePDFFramework');
+      const { getReportContext } = await import('@/lib/executiveColors');
       
       const doc = new jsPDF({ orientation: 'portrait' });
       const pw = doc.internal.pageSize.getWidth();
@@ -1965,172 +1595,54 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [cp1BoxData]);
 
-  // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1 + At-Risk + Multi-Pack + Flags)
+  // Generate Combined Board Package - now uses styled Excel exports
   const generateCombinedBoardPackage = useCallback(async () => {
     setGeneratingBoardPackage(true);
     try {
-      // Ensure CSV data is loaded first
-      if (!data?.cp1Data || data.cp1Data.totals.grandTotal === 0) {
-        toast.error('Claims data not loaded. Please wait for data to load and try again.');
-        setGeneratingBoardPackage(false);
-        return;
-      }
-      
-      // Ensure we have pending decisions loaded
-      if (pendingDecisions.length === 0) {
-        await fetchPendingDecisions();
-      }
-      
-      const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2025;
-      const yoyChangePercent = (yoyChange / budgetMetrics.total2025) * 100;
-      
-      // Get flag summary from cp1BoxData
-      const flagSummary = cp1BoxData?.fatalitySummary ? {
-        fatalityCount: cp1BoxData.fatalitySummary.fatalityCount || 0,
-        surgeryCount: cp1BoxData.fatalitySummary.surgeryCount || 0,
-        hospitalizationCount: cp1BoxData.fatalitySummary.hospitalizationCount || 0,
-        medsVsLimitsCount: cp1BoxData.fatalitySummary.medsVsLimitsCount || 0,
-        lifeCarePlannerCount: cp1BoxData.fatalitySummary.lifeCarePlannerCount || 0,
-        fracturesCount: cp1BoxData.fatalitySummary.confirmedFracturesCount || 0,
-        locTbiCount: cp1BoxData.fatalitySummary.lossOfConsciousnessCount || 0,
-        totalFlags: cp1BoxData.totalFlagInstances || 0,
-      } : undefined;
-      
-      const packageConfig: ExecutivePackageConfig = {
-        sections: [
-          {
-            id: 'budget',
-            title: 'BUDGET BURN RATE',
-            financialImpact: formatExecCurrency(budgetMetrics.ytdPaid, true),
-            riskLevel: budgetMetrics.onTrack ? 'stable' : 'elevated',
-            keyMetric: { label: 'Burn Rate', value: `${budgetMetrics.burnRate}%` },
-            actionRequired: budgetMetrics.onTrack ? 'Monitor' : 'Review BI spend'
-          },
-          {
-            id: 'atrisk',
-            title: 'AT-RISK CLAIMS',
-            financialImpact: formatExecCurrency(atRiskSummary.totalExposure, true),
-            riskLevel: atRiskSummary.criticalCount > 50 ? 'critical' : atRiskSummary.criticalCount > 20 ? 'elevated' : 'stable',
-            keyMetric: { label: 'At-Risk', value: atRiskSummary.totalAtRisk.toLocaleString() },
-            actionRequired: atRiskSummary.criticalCount > 0 ? 'Priority review' : 'Monitor'
-          },
-          {
-            id: 'cp1',
-            title: 'CP1 LIMITS',
-            financialImpact: `${CP1_DATA.totals.yes.toLocaleString()} claims`,
-            riskLevel: parseFloat(CP1_DATA.cp1Rate) > 28 ? 'elevated' : 'stable',
-            keyMetric: { label: 'CP1 Rate', value: `${CP1_DATA.cp1Rate}%` },
-            actionRequired: 'Review aged BI'
-          },
-          {
-            id: 'multipack',
-            title: 'MULTI-PACK BI',
-            financialImpact: formatExecCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0, true),
-            riskLevel: (data?.multiPackData?.biMultiPack?.totalGroups || 0) > 300 ? 'elevated' : 'stable',
-            keyMetric: { label: 'Groups', value: (data?.multiPackData?.biMultiPack?.totalGroups || 0).toLocaleString() },
-            actionRequired: 'Consolidation review'
-          },
-          {
-            id: 'flags',
-            title: 'CP1 RISK FLAGS',
-            financialImpact: `${(flagSummary?.totalFlags || 0).toLocaleString()} flags`,
-            riskLevel: (flagSummary?.fatalityCount || 0) > 20 ? 'critical' : 'elevated',
-            keyMetric: { label: 'Fatalities', value: (flagSummary?.fatalityCount || 0).toString() },
-            actionRequired: 'Executive review'
-          }
-        ],
-        budgetData: {
-          annualBudget: budgetMetrics.annualBudget,
-          ytdPaid: budgetMetrics.ytdPaid,
-          burnRate: budgetMetrics.burnRate,
-          remaining: budgetMetrics.remaining,
-          projectedBurn: budgetMetrics.projectedBurn,
-          projectedVariance: budgetMetrics.projectedVariance,
-          onTrack: budgetMetrics.onTrack,
-          yoyChange,
-          yoyChangePercent,
-          coverageBreakdown: budgetMetrics.coverageBreakdown,
-          monthlyData: budgetMetrics.monthlyData
+      // Use the inventory master Excel export instead of PDF
+      await generateInventoryMasterExcel({
+        summary: {
+          totalClaims: data?.totals?.grandTotal || 0,
+          openReserves: data?.financials?.totalOpenReserves || 0,
+          lowEval: data?.financials?.totalLowEval || 0,
+          highEval: data?.financials?.totalHighEval || 0,
+          cp1Rate: CP1_DATA.cp1Rate,
+          atRiskCount: atRiskSummary.totalAtRisk,
+          multiPackGroups: data?.multiPackData?.biMultiPack?.totalGroups || 0,
         },
-        decisionsData: {
-          total: pendingDecisionsStats.total,
-          critical: pendingDecisionsStats.critical,
-          thisWeek: pendingDecisionsStats.thisWeek,
-          statuteDeadlines: pendingDecisionsStats.statuteDeadlines,
-          totalExposure: pendingDecisionsStats.totalExposure,
-          decisions: pendingDecisions.length > 0 
-            ? pendingDecisions.map(d => ({
-                matterId: d.matterId,
-                claimant: d.claimant,
-                amount: d.amount,
-                daysOpen: d.daysOpen,
-                lead: d.lead,
-                severity: d.severity,
-                recommendedAction: d.recommendedAction,
-                department: d.department,
-                type: d.type
-              }))
-            : (decisionsData?.claims || []).slice(0, 20).map(c => ({
-                matterId: c.claimNumber,
-                claimant: c.state,
-                amount: c.reserves,
-                daysOpen: 0,
-                lead: c.team,
-                severity: c.reserves >= 100000 ? 'critical' as const : c.reserves >= 50000 ? 'high' as const : 'medium' as const,
-                recommendedAction: c.reason,
-                department: 'Claims',
-                type: c.painLevel
-              }))
-        },
-        cp1Data: {
-          totalClaims: CP1_DATA.totals.grandTotal,
-          cp1Count: CP1_DATA.totals.yes,
-          cp1Rate: `${CP1_DATA.cp1Rate}%`,
-          biCP1Rate: CP1_DATA.biTotal && CP1_DATA.biTotal.total > 0 
-            ? `${((CP1_DATA.biTotal.yes / CP1_DATA.biTotal.total) * 100).toFixed(1)}%`
-            : '0.0%',
-          byCoverage: CP1_DATA.byCoverage,
-          biByAge: CP1_DATA.biByAge,
-          biTotal: CP1_DATA.biTotal,
-          totals: CP1_DATA.totals
-        },
-        quarterlyExpertData: EXPERT_QUARTERLY_DATA,
-        // NEW: At-Risk Claims Summary
-        atRiskData: {
-          totalAtRisk: atRiskSummary.totalAtRisk,
-          totalExposure: atRiskSummary.totalExposure,
+        atRiskSummary: {
           criticalCount: atRiskSummary.criticalCount,
           criticalReserves: atRiskSummary.criticalReserves,
           highCount: atRiskSummary.highCount,
           highReserves: atRiskSummary.highReserves,
           moderateCount: atRiskSummary.moderateCount,
           moderateReserves: atRiskSummary.moderateReserves,
+          totalAtRisk: atRiskSummary.totalAtRisk,
+          totalExposure: atRiskSummary.totalExposure,
         },
-        // NEW: Multi-Pack Summary
-        multiPackData: data?.multiPackData?.biMultiPack ? {
-          totalGroups: data.multiPackData.biMultiPack.totalGroups,
-          totalClaims: data.multiPackData.biMultiPack.totalClaims,
-          totalReserves: data.multiPackData.biMultiPack.totalReserves,
-          avgClaimsPerGroup: data.multiPackData.biMultiPack.totalClaims / Math.max(data.multiPackData.biMultiPack.totalGroups, 1),
-        } : undefined,
-        // NEW: Flag Summary
-        flagSummary,
-      };
-      
-      const result = await generateBoardReadyPackage(packageConfig);
-      
-      if (result.success) {
-        toast.success(`Board Package generated with comprehensive WoW analysis: ${result.pageCount} page(s)`);
-      } else {
-        throw new Error('Package generation failed');
-      }
+        litigationSpend: {
+          total: budgetMetrics.ytdPaid,
+          indemnities: budgetMetrics.ytdPaid * 0.85,
+          expenses: budgetMetrics.ytdPaid * 0.15,
+        },
+        cp1Data: {
+          cp1Count: CP1_DATA.totals.yes,
+          cp1Rate: CP1_DATA.cp1Rate,
+        },
+        multiPack: {
+          totalGroups: data?.multiPackData?.biMultiPack?.totalGroups || 0,
+          totalClaims: data?.multiPackData?.biMultiPack?.totalClaims || 0,
+          totalReserves: data?.multiPackData?.biMultiPack?.totalReserves || 0,
+        }
+      });
+      toast.success('Board Package Excel generated successfully');
     } catch (err) {
       console.error('Error generating board package:', err);
       toast.error('Failed to generate board package');
     } finally {
       setGeneratingBoardPackage(false);
     }
-  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data, decisionsData, cp1BoxData, atRiskSummary]);
+  }, [data, budgetMetrics, atRiskSummary, CP1_DATA]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "react-router-dom";
 import loyaLogo from "@/assets/fli_logo.jpg";
-import { generateChangelogPDF } from "@/lib/changelogPDFGenerator";
+// Changelog PDF generation removed - using styled Excel exports
 
 interface ReportDownload {
   id: string;
@@ -75,15 +75,7 @@ const AdminDownloads = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="gap-2"
-              onClick={() => generateChangelogPDF()}
-            >
-              <ScrollText className="h-4 w-4" />
-              <span className="hidden sm:inline">Export Changelog PDF</span>
-            </Button>
+            {/* Changelog export removed - using styled Excel exports */}
             <Link to="/">
               <Button variant="outline" size="sm" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
