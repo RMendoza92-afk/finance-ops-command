@@ -1188,10 +1188,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             {
               title: 'Key Metrics',
               metrics: [
-                { label: 'Total CP1 Claims', value: totalClaims },
-                { label: 'Active Trigger Flags', value: totalFlags },
-                { label: 'Multi-Flag Claims (2+)', value: multiFlag2Plus },
-                { label: 'High-Risk Claims (3+)', value: multiFlag3Plus },
+                { label: 'Total CP1 Claims', value: totalClaims, notes: 'Claims at or near policy limits' },
+                { label: 'Active Trigger Flags', value: totalFlags, notes: 'Total flag instances across all claims' },
+                { label: 'High-Risk Claims (3+)', value: multiFlag3Plus, notes: `${safePct(multiFlag3Plus, totalClaims).toFixed(1)}% of inventory` },
               ],
             },
             {
@@ -1316,7 +1315,56 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         });
       }
 
-      // Tab 3: Week-over-Week
+      // Tab 3: 3+ Risk Detail (claims with 3+ flags)
+      const highRiskClaims = allClaims
+        .map(c => ({ ...c, ...getClaimScoring(c) }))
+        .filter(c => c.flagCount >= 3)
+        .sort((a, b) => b.impactScore - a.impactScore);
+
+      if (highRiskClaims.length > 0) {
+        sheets.push({
+          name: '3+ Risk Detail',
+          data: {
+            reportTitle: '3+ Risk Detail (High-Risk Claims)',
+            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+            sections: [
+              {
+                title: 'Summary',
+                metrics: [
+                  { label: '3+ High-Risk Claims', value: highRiskClaims.length, notes: `${safePct(highRiskClaims.length, totalClaims).toFixed(1)}% of inventory` },
+                ],
+              },
+              {
+                title: 'Claims',
+                table: {
+                  headers: ['Claim #', 'Claimant', 'Adjuster', 'Impact Severity', 'Impact Score', 'Severity Tier', 'Flag Count', 'Coverage', 'BI Phase', 'Days Open', 'Age Bucket', 'Team', 'Total Paid', 'Open Reserves', 'Flags Present', 'BI Status'],
+                  rows: highRiskClaims.map(c => ([
+                    c.claimNumber,
+                    c.claimant,
+                    c.adjuster || '',
+                    c.impactSeverity || 'Blank',
+                    c.impactScore,
+                    c.severityTier,
+                    c.flagCount,
+                    c.coverage,
+                    c.evaluationPhase || '',
+                    c.days,
+                    c.ageBucket,
+                    c.teamGroup,
+                    c.totalPaid,
+                    c.openReserves,
+                    c.flagsPresent,
+                    c.biStatus,
+                  ])),
+                  highlightLastRow: false,
+                },
+              },
+            ],
+          }
+        });
+      }
+
+      // Tab 4: Week-over-Week
       if (wow?.hasValidPrior) {
         // CP1 Rate: Lower is better. If rate >= 90% and delta = 0, it's still CRITICAL (stuck at bad level)
         const cp1Trend = (d: number, currentVal: number) => {
