@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, DollarSign, ArrowRight, ArrowLeft, Scale } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ArrowRight, ArrowLeft, Scale, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-// Sales/Premium data - incoming money
+// Sales/Premium data - incoming money (daily average over 10 days)
 const incomingData = {
   period: "1/1/26 - 1/10/26",
+  days: 10,
   items: [
     { label: "Gross Written Premium", amount: 16210447, type: "premium" },
     { label: "Net Written Premium", amount: 14852163, type: "premium" },
@@ -15,9 +16,10 @@ const incomingData = {
   total: 16277408,
 };
 
-// Claims/Payment data - outgoing money
+// Claims/Payment data - outgoing money (over 7 days in period)
 const outgoingData = {
   period: "1/2/26 - 1/9/26",
+  days: 7,
   items: [
     { label: "BI Indemnity", amount: 5823456, type: "indemnity" },
     { label: "PD Payments", amount: 3245678, type: "indemnity" },
@@ -28,6 +30,11 @@ const outgoingData = {
   ],
   total: 12813034,
 };
+
+// Calculate averages
+const avgDailyIncoming = incomingData.total / incomingData.days;
+const avgDailyOutgoing = outgoingData.total / outgoingData.days;
+const avgDailyNet = avgDailyIncoming - avgDailyOutgoing;
 
 // Calculate net cash flow
 const netCashFlow = incomingData.total - outgoingData.total;
@@ -63,8 +70,8 @@ export function OrderBookDrilldown({ open, onOpenChange }: OrderBookDrilldownPro
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto p-4 sm:p-6">
-        <SheetHeader className="pb-4 border-b border-border">
+      <SheetContent side="top" className="h-auto max-h-[85vh] overflow-y-auto p-3 sm:p-6">
+        <SheetHeader className="pb-3 sm:pb-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -86,8 +93,8 @@ export function OrderBookDrilldown({ open, onOpenChange }: OrderBookDrilldownPro
         </SheetHeader>
 
         <div className="py-6 space-y-6">
-          {/* Summary Stats Row */}
-          <div className="grid grid-cols-4 gap-3">
+          {/* Summary Stats Row - Updated with averages */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
               <p className="text-xs text-emerald-400 uppercase tracking-wider">Total Incoming</p>
               <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(incomingData.total, true)}</p>
@@ -96,17 +103,47 @@ export function OrderBookDrilldown({ open, onOpenChange }: OrderBookDrilldownPro
               <p className="text-xs text-red-400 uppercase tracking-wider">Total Outgoing</p>
               <p className="text-xl font-bold text-red-400 mt-1">{formatCurrency(outgoingData.total, true)}</p>
             </div>
-            <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Coverage Ratio</p>
-              <p className={`text-xl font-bold mt-1 ${parseFloat(cashFlowRatio) >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {cashFlowRatio}%
-              </p>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+              <p className="text-xs text-emerald-400 uppercase tracking-wider">Avg Daily Sales</p>
+              <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(avgDailyIncoming, true)}</p>
+            </div>
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
+              <p className="text-xs text-red-400 uppercase tracking-wider">Avg Daily Paid</p>
+              <p className="text-xl font-bold text-red-400 mt-1">{formatCurrency(avgDailyOutgoing, true)}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Net Cash Flow</p>
-              <p className={`text-xl font-bold mt-1 ${netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow, true)}
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Avg Daily Net</p>
+              <p className={`text-xl font-bold mt-1 ${avgDailyNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {avgDailyNet >= 0 ? '+' : ''}{formatCurrency(avgDailyNet, true)}
               </p>
+            </div>
+          </div>
+
+          {/* Tightening Indicator */}
+          <div className={`p-4 rounded-lg border ${avgDailyNet >= 0 ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-red-500/5 border-red-500/30'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {avgDailyNet >= 0 ? (
+                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+                ) : (
+                  <TrendingDown className="h-5 w-5 text-red-400" />
+                )}
+                <div>
+                  <p className="font-semibold">Daily Cash Flow Analysis</p>
+                  <p className="text-sm text-muted-foreground">
+                    {avgDailyNet >= 0 
+                      ? `Averaging ${formatCurrency(avgDailyNet)} surplus per day. Claims velocity is sustainable.`
+                      : `Averaging ${formatCurrency(Math.abs(avgDailyNet))} deficit per day. Consider tightening claims or accelerating collections.`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Coverage Ratio</p>
+                <p className={`text-lg font-bold ${parseFloat(cashFlowRatio) >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {cashFlowRatio}%
+                </p>
+              </div>
             </div>
           </div>
 
@@ -305,41 +342,103 @@ export function OrderBookDrilldown({ open, onOpenChange }: OrderBookDrilldownPro
   );
 }
 
-// Compact ticker button to trigger the order book
-export function OrderBookTrigger({ onClick }: { onClick: () => void }) {
-  const inPct = ((incomingData.total / (incomingData.total + outgoingData.total)) * 100).toFixed(0);
-  const outPct = ((outgoingData.total / (incomingData.total + outgoingData.total)) * 100).toFixed(0);
-  
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 px-4 py-2 bg-card/80 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-    >
-      <div className="flex items-center gap-1.5">
-        <div className="h-3 w-3 rounded-full bg-emerald-500/30 flex items-center justify-center">
-          <ArrowRight className="h-2 w-2 text-emerald-400" />
-        </div>
-        <span className="text-xs text-emerald-400 font-bold">{formatCurrency(incomingData.total, true)}</span>
+// Cash Flow Ticker - matching format of Sales and Claims tickers
+export function CashFlowTicker({ onClick }: { onClick: () => void }) {
+  const TickerContent = () => (
+    <div className="flex items-center gap-6 px-4">
+      {/* Period */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">PERIOD</span>
+        <span className="font-bold text-foreground">{incomingData.period}</span>
+        <span className="text-border ml-4">│</span>
       </div>
       
-      {/* Mini depth bar */}
-      <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden flex">
-        <div className="bg-emerald-500/60 h-full" style={{ width: `${inPct}%` }} />
-        <div className="bg-red-500/60 h-full" style={{ width: `${outPct}%` }} />
+      {/* Total Incoming */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">INCOMING</span>
+        <span className="font-bold text-emerald-400">{formatCurrency(incomingData.total, true)}</span>
+        <span className="text-border ml-4">│</span>
       </div>
       
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-red-400 font-bold">{formatCurrency(outgoingData.total, true)}</span>
-        <div className="h-3 w-3 rounded-full bg-red-500/30 flex items-center justify-center">
-          <ArrowLeft className="h-2 w-2 text-red-400" />
-        </div>
+      {/* Total Outgoing */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">OUTGOING</span>
+        <span className="font-bold text-red-400">{formatCurrency(outgoingData.total, true)}</span>
+        <span className="text-border ml-4">│</span>
       </div>
       
-      <div className={`text-xs font-bold ml-1 ${netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-        {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow, true)}
+      {/* Avg Daily Sales */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">AVG DAILY SALES</span>
+        <span className="font-bold text-emerald-400">{formatCurrency(avgDailyIncoming, true)}</span>
+        <span className="text-border ml-4">│</span>
       </div>
       
-      <Scale className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors ml-1" />
-    </button>
+      {/* Avg Daily Paid */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">AVG DAILY PAID</span>
+        <span className="font-bold text-red-400">{formatCurrency(avgDailyOutgoing, true)}</span>
+        <span className="text-border ml-4">│</span>
+      </div>
+      
+      {/* Net Position */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-amber-400 text-xs font-bold tracking-wider">NET POSITION</span>
+        <span className={`font-bold ${netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow, true)}
+        </span>
+        <span className="text-border ml-4">│</span>
+      </div>
+      
+      {/* Coverage Ratio */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider">RATIO</span>
+        <span className={`font-bold ${parseFloat(cashFlowRatio) >= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {cashFlowRatio}%
+        </span>
+      </div>
+    </div>
   );
+
+  return (
+    <div 
+      className="w-full bg-card/80 backdrop-blur-sm border-y border-border overflow-hidden relative cursor-pointer group"
+      onClick={onClick}
+    >
+      {/* Badge - same size as other tickers */}
+      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-blue-600/90 px-4 py-1">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-blue-300 animate-pulse" />
+          <span className="text-xs font-bold text-white tracking-widest">
+            CASH FLOW
+          </span>
+        </div>
+      </div>
+      
+      {/* Gradient fade on left - matches other tickers */}
+      <div className="absolute left-24 top-0 bottom-0 w-16 bg-gradient-to-r from-card/80 to-transparent z-[5]" />
+      
+      {/* Scrolling ticker - same class as other tickers */}
+      <div className="py-2 pl-28 ticker-wrapper">
+        <div className="ticker-track">
+          <TickerContent />
+          <TickerContent />
+          <TickerContent />
+        </div>
+      </div>
+      
+      {/* Gradient fade on right */}
+      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/80 to-transparent z-[5]" />
+      
+      {/* Click indicator */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
+// Keep the old trigger for backwards compatibility
+export function OrderBookTrigger({ onClick }: { onClick: () => void }) {
+  return <CashFlowTicker onClick={onClick} />;
 }
