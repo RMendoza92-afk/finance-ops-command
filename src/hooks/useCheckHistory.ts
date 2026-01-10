@@ -36,6 +36,8 @@ export interface SpendSummary {
   byLineItem: Map<string, { gross: number; net: number; count: number }>;
   indemnityTotal: number;
   expenseTotal: number;
+  minDate: string | null;
+  maxDate: string | null;
 }
 
 // Parse currency values from CSV
@@ -149,9 +151,19 @@ export function useCheckHistory(sourcePath: string = "/data/check-history-jan202
     let indemnityTotal = 0;
     let expenseTotal = 0;
 
+    let minDate: string | null = null;
+    let maxDate: string | null = null;
+
     for (const rec of records) {
       totalGross += rec.grossCheck;
       totalNet += rec.netAmount;
+
+      // Track date range
+      const checkDate = rec.issueDate || rec.requestedDate;
+      if (checkDate) {
+        if (!minDate || checkDate < minDate) minDate = checkDate;
+        if (!maxDate || checkDate > maxDate) maxDate = checkDate;
+      }
 
       // Classify as expense or indemnity
       if (isExpenseCategory(rec.lineItemCategory)) {
@@ -212,6 +224,8 @@ export function useCheckHistory(sourcePath: string = "/data/check-history-jan202
       byLineItem,
       indemnityTotal,
       expenseTotal,
+      minDate,
+      maxDate,
     };
   }, [records]);
 
