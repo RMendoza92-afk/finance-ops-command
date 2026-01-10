@@ -344,3 +344,75 @@ export function formatValueForDisplay(value: number | string | null | undefined,
   
   return String(value);
 }
+
+/**
+ * Format currency with explicit $ prefix for CSV export
+ * Designed for "boardroom-ready" exports that display nicely when opened in Excel manually
+ */
+export function formatCurrencyForCSV(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/[$,]/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  const absNum = Math.abs(num);
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  
+  // Explicitly prefix with $ for clear currency display
+  return num < 0 ? `-$${formatted}` : `$${formatted}`;
+}
+
+/**
+ * Format number with thousand separators for CSV
+ */
+export function formatNumberForCSV(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/,/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  return num.toLocaleString('en-US');
+}
+
+/**
+ * Create a boardroom-ready 2D array with formatted values
+ * Applies $ formatting to currency columns, % to percent columns
+ * Designed for exports that look great when opened in Excel/Sheets
+ */
+export function formatDataForBoardroom(
+  headers: string[],
+  rows: (string | number | null | undefined)[][]
+): string[][] {
+  const result: string[][] = [];
+  
+  // Headers unchanged
+  result.push(headers.map(h => String(h)));
+  
+  // Format each row
+  rows.forEach(row => {
+    const formattedRow = row.map((cell, idx) => {
+      if (cell === null || cell === undefined) return '';
+      
+      const header = headers[idx] || '';
+      
+      if (typeof cell === 'number') {
+        // Currency columns get $ prefix
+        if (isCurrencyHeader(header)) {
+          return formatCurrencyForCSV(cell);
+        }
+        // Percent columns get % suffix
+        if (isPercentHeader(header)) {
+          return formatPercentDisplay(cell, 2);
+        }
+        // Other numbers get comma formatting
+        return formatNumberForCSV(cell);
+      }
+      
+      return String(cell);
+    });
+    
+    result.push(formattedRow);
+  });
+  
+  return result;
+}
