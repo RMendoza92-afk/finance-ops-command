@@ -1595,6 +1595,16 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [cp1BoxData]);
 
+  // Dynamic CP1 data for the CP1 Analysis "box" — MUST come ONLY from the dedicated CP1 CSV
+  const CP1_DATA = useMemo(() => cp1BoxData?.cp1Data || {
+    biByAge: [],
+    biTotal: { noCP: 0, yes: 0, total: 0 },
+    byCoverage: [],
+    totals: { noCP: 0, yes: 0, grandTotal: 0 },
+    cp1Rate: '0.0',
+    byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
+  }, [cp1BoxData]);
+
   // Generate Combined Board Package - now uses styled Excel exports
   const generateCombinedBoardPackage = useCallback(async () => {
     setGeneratingBoardPackage(true);
@@ -1718,15 +1728,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     closed: 0,
   }, [data]);
 
-  // Dynamic CP1 data for the CP1 Analysis "box" — MUST come ONLY from the dedicated CP1 CSV
-  const CP1_DATA = useMemo(() => cp1BoxData?.cp1Data || {
-    biByAge: [],
-    biTotal: { noCP: 0, yes: 0, total: 0 },
-    byCoverage: [],
-    totals: { noCP: 0, yes: 0, grandTotal: 0 },
-    cp1Rate: '0.0',
-    byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
-  }, [cp1BoxData]);
 
   // CP1 rate should be comparable to the same baseline used in the original build (~27k open exposures).
   // We use the historical baseline total until a full-inventory raw feed is available.
