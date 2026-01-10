@@ -78,6 +78,18 @@ export function ExecutiveCommandDashboardWrapper() {
     
     // Calculate total YTD from real data
     const totalYtd = spendSummary?.totalNet || 6039188.01;
+
+    // Date range from spend data
+    let dateRangeLabel = 'January 2026';
+    if (spendSummary?.minDate && spendSummary?.maxDate) {
+      try {
+        const minD = new Date(spendSummary.minDate);
+        const maxD = new Date(spendSummary.maxDate);
+        if (!isNaN(minD.getTime()) && !isNaN(maxD.getTime())) {
+          dateRangeLabel = `${format(minD, 'MMM d')} - ${format(maxD, 'MMM d, yyyy')}`;
+        }
+      } catch { /* use default */ }
+    }
     
     return {
       coverageBreakdown: {
@@ -107,6 +119,7 @@ export function ExecutiveCommandDashboardWrapper() {
       totalExpense: spendSummary?.expenseTotal || 0,
       totalChecks: spendSummary?.checkCount || 0,
       isRealData: !spendLoading && (spendSummary?.checkCount || 0) > 0,
+      dateRangeLabel,
     };
   }, [biSpend, spendSummary, litigationSpend, spendLoading]);
 
@@ -402,6 +415,7 @@ export function ExecutiveCommandDashboardWrapper() {
           litCount,
           biLitSpend2026: budgetMetrics.coverageBreakdown.bi.ytd2026,
           biLitSpend2025: budgetMetrics.coverageBreakdown.bi.ytd2025,
+          spendDateRange: budgetMetrics.dateRangeLabel,
           dataDate: data.dataDate || timestamp,
           fatalityCount: data.fatalitySummary?.fatalityCount || 0,
           fatalityReserves: data.fatalitySummary?.fatalityReserves || 0,

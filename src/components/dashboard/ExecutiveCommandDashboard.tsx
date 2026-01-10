@@ -83,6 +83,7 @@ interface ExecutiveCommandDashboardProps {
     litCount: number;
     biLitSpend2026: number;
     biLitSpend2025: number;
+    spendDateRange?: string;
     fatalityCount?: number;
     fatalityReserves?: number;
     surgeryCount?: number;
@@ -455,7 +456,7 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           </div>
           <p className="text-3xl font-bold text-foreground tracking-tight font-mono">{formatCurrency(totalPaymentsYTD)}</p>
           <p className="text-xs text-muted-foreground mt-2 font-mono">
-            1/1/26 - 1/7/26 • BI: {formatCurrency(biPaymentsYTD)}
+            {data.spendDateRange || '1/1/26 - 1/7/26'} • BI: {formatCurrency(biPaymentsYTD)}
           </p>
         </div>
       </div>

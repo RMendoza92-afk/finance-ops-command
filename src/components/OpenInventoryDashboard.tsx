@@ -139,6 +139,23 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
   const totalLitigationSpendJan2026 = totalIndemnityJan2026 + totalExpenseJan2026;
   const spendCheckCount = checkSpendSummary?.checkCount || (monthlySpend.indemnities.totalChecks + monthlySpend.expenses.totalChecks);
   const isRealSpendData = !spendLoading && (checkSpendSummary?.checkCount || 0) > 0;
+
+  // Spend date range from check history
+  const spendDateRange = useMemo(() => {
+    if (!checkSpendSummary?.minDate || !checkSpendSummary?.maxDate) {
+      return 'January 2026'; // Fallback label
+    }
+    try {
+      const minD = new Date(checkSpendSummary.minDate);
+      const maxD = new Date(checkSpendSummary.maxDate);
+      if (isNaN(minD.getTime()) || isNaN(maxD.getTime())) {
+        return 'January 2026';
+      }
+      return `${format(minD, 'MMM d')} - ${format(maxD, 'MMM d, yyyy')}`;
+    } catch {
+      return 'January 2026';
+    }
+  }, [checkSpendSummary?.minDate, checkSpendSummary?.maxDate]);
   const data = useMemo(() => {
     if (!rawData) return null;
     
@@ -1209,14 +1226,19 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
 
       // Tab 2: Week-over-Week
       if (wow?.hasValidPrior) {
+        // CP1 Rate: Lower is better, so delta < 0 = IMPROVING
+        const cp1Trend = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
+        // Other metrics: Lower is better (fewer claims, fewer flags, lower reserves, etc.)
+        const lowerIsBetter = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
+
         const rows: (string | number | null)[][] = [
-          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
+          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, lowerIsBetter(wow.totalClaims.delta)],
+          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, lowerIsBetter(wow.age365Plus.delta)],
+          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, lowerIsBetter(wow.age181To365.delta)],
+          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, lowerIsBetter(wow.highRiskClaims.delta)],
+          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, lowerIsBetter(wow.totalFlags.delta)],
+          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, lowerIsBetter(wow.totalReserves.delta)],
+          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', cp1Trend(wow.cp1Rate.delta)],
         ];
 
         sheets.push({
@@ -2828,7 +2850,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Litigation Spend</p>
-                <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] font-normal text-muted-foreground ml-1">Jan</span></p>
+                <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totalLitigationSpendJan2026)}<span className="text-[10px] font-normal text-muted-foreground ml-1">{spendDateRange}</span></p>
                 <div className="flex items-center gap-1">
                   <span className="text-[10px] text-success">↓ -2.1%</span>
                   <span className="text-[10px] text-muted-foreground">vs Dec</span>
