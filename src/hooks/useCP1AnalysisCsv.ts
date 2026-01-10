@@ -166,9 +166,13 @@ function isNonWorkableRow(row: Record<string, string>): boolean {
   const biStatus = normalize(row["BI Status"]);
   const evalPhase = normalize(row["Evaluation Phase"]);
   const coverage = normalize(row["Coverage"]);
+  const overallCP1 = normalize(row["Overall CP1 Flag"]);
 
   // Only include BI, UI, UM, UIM coverages in CP1 analysis
   if (!isIncludedCoverage(coverage)) return true;
+
+  // MUST have Overall CP1 Flag = "Yes" to be a CP1 claim
+  if (overallCP1 !== "yes") return true;
 
   // Exact matches (user-provided list)
   if (NON_WORKABLE_STATUSES.has(status) || NON_WORKABLE_STATUSES.has(biStatus)) return true;
