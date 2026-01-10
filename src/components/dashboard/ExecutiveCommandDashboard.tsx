@@ -515,18 +515,18 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
           onDoubleClick={() => onDoubleClickReport?.('age-mix')}
           title="Click to view age breakdown • Double-click for PDF"
         >
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Age Mix</span>
             <PieChartIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="h-16 w-16 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="h-14 w-14 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={ageData}
-                    innerRadius={18}
-                    outerRadius={30}
+                    innerRadius={14}
+                    outerRadius={26}
                     paddingAngle={2}
                     dataKey="value"
                   >
@@ -537,14 +537,14 @@ export function ExecutiveCommandDashboard({ data, onOpenChat, onDrilldown, onDou
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 min-w-0 space-y-0.5">
               {ageData.slice(0, 2).map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-muted-foreground font-mono">{item.name}</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-muted-foreground font-mono text-[10px]">{item.name}</span>
                   </div>
-                  <span className="font-semibold text-foreground font-mono">{item.value.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground font-mono text-[11px]">{item.value.toLocaleString()}</span>
                 </div>
               ))}
             </div>
