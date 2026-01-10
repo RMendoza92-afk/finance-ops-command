@@ -406,7 +406,7 @@ export function CashFlowTicker({ onClick }: { onClick: () => void }) {
       onClick={onClick}
     >
       {/* Bloomberg-style badge */}
-      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-blue-600 px-3">
+      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-blue-600 px-3 ticker-badge-blue">
         <span className="text-[10px] font-bold text-white tracking-wider font-mono">
           FLOW
         </span>
