@@ -1935,7 +1935,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [cp1BoxData]);
 
-  // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1)
+  // Generate Combined Board-Ready Executive Package (Budget + Decisions + CP1 + At-Risk + Multi-Pack + Flags)
   const generateCombinedBoardPackage = useCallback(async () => {
     setGeneratingBoardPackage(true);
     try {
@@ -1954,6 +1954,18 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
       const yoyChange = budgetMetrics.ytdPaid - budgetMetrics.total2025;
       const yoyChangePercent = (yoyChange / budgetMetrics.total2025) * 100;
       
+      // Get flag summary from cp1BoxData
+      const flagSummary = cp1BoxData?.fatalitySummary ? {
+        fatalityCount: cp1BoxData.fatalitySummary.fatalityCount || 0,
+        surgeryCount: cp1BoxData.fatalitySummary.surgeryCount || 0,
+        hospitalizationCount: cp1BoxData.fatalitySummary.hospitalizationCount || 0,
+        medsVsLimitsCount: cp1BoxData.fatalitySummary.medsVsLimitsCount || 0,
+        lifeCarePlannerCount: cp1BoxData.fatalitySummary.lifeCarePlannerCount || 0,
+        fracturesCount: cp1BoxData.fatalitySummary.confirmedFracturesCount || 0,
+        locTbiCount: cp1BoxData.fatalitySummary.lossOfConsciousnessCount || 0,
+        totalFlags: cp1BoxData.totalFlagInstances || 0,
+      } : undefined;
+      
       const packageConfig: ExecutivePackageConfig = {
         sections: [
           {
@@ -1965,12 +1977,12 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             actionRequired: budgetMetrics.onTrack ? 'Monitor' : 'Review BI spend'
           },
           {
-            id: 'decisions',
-            title: 'PENDING DECISIONS',
-            financialImpact: formatExecCurrency(pendingDecisionsStats.totalExposure, true),
-            riskLevel: pendingDecisionsStats.critical > 0 ? 'critical' : 'stable',
-            keyMetric: { label: 'Critical', value: pendingDecisionsStats.critical.toString() },
-            actionRequired: pendingDecisionsStats.critical > 0 ? 'Immediate review' : 'Standard process'
+            id: 'atrisk',
+            title: 'AT-RISK CLAIMS',
+            financialImpact: formatExecCurrency(atRiskSummary.totalExposure, true),
+            riskLevel: atRiskSummary.criticalCount > 50 ? 'critical' : atRiskSummary.criticalCount > 20 ? 'elevated' : 'stable',
+            keyMetric: { label: 'At-Risk', value: atRiskSummary.totalAtRisk.toLocaleString() },
+            actionRequired: atRiskSummary.criticalCount > 0 ? 'Priority review' : 'Monitor'
           },
           {
             id: 'cp1',
@@ -1979,6 +1991,22 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
             riskLevel: parseFloat(CP1_DATA.cp1Rate) > 28 ? 'elevated' : 'stable',
             keyMetric: { label: 'CP1 Rate', value: `${CP1_DATA.cp1Rate}%` },
             actionRequired: 'Review aged BI'
+          },
+          {
+            id: 'multipack',
+            title: 'MULTI-PACK BI',
+            financialImpact: formatExecCurrency(data?.multiPackData?.biMultiPack?.totalReserves || 0, true),
+            riskLevel: (data?.multiPackData?.biMultiPack?.totalGroups || 0) > 300 ? 'elevated' : 'stable',
+            keyMetric: { label: 'Groups', value: (data?.multiPackData?.biMultiPack?.totalGroups || 0).toLocaleString() },
+            actionRequired: 'Consolidation review'
+          },
+          {
+            id: 'flags',
+            title: 'CP1 RISK FLAGS',
+            financialImpact: `${(flagSummary?.totalFlags || 0).toLocaleString()} flags`,
+            riskLevel: (flagSummary?.fatalityCount || 0) > 20 ? 'critical' : 'elevated',
+            keyMetric: { label: 'Fatalities', value: (flagSummary?.fatalityCount || 0).toString() },
+            actionRequired: 'Executive review'
           }
         ],
         budgetData: {
@@ -2036,13 +2064,33 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           biTotal: CP1_DATA.biTotal,
           totals: CP1_DATA.totals
         },
-        quarterlyExpertData: EXPERT_QUARTERLY_DATA
+        quarterlyExpertData: EXPERT_QUARTERLY_DATA,
+        // NEW: At-Risk Claims Summary
+        atRiskData: {
+          totalAtRisk: atRiskSummary.totalAtRisk,
+          totalExposure: atRiskSummary.totalExposure,
+          criticalCount: atRiskSummary.criticalCount,
+          criticalReserves: atRiskSummary.criticalReserves,
+          highCount: atRiskSummary.highCount,
+          highReserves: atRiskSummary.highReserves,
+          moderateCount: atRiskSummary.moderateCount,
+          moderateReserves: atRiskSummary.moderateReserves,
+        },
+        // NEW: Multi-Pack Summary
+        multiPackData: data?.multiPackData?.biMultiPack ? {
+          totalGroups: data.multiPackData.biMultiPack.totalGroups,
+          totalClaims: data.multiPackData.biMultiPack.totalClaims,
+          totalReserves: data.multiPackData.biMultiPack.totalReserves,
+          avgClaimsPerGroup: data.multiPackData.biMultiPack.totalClaims / Math.max(data.multiPackData.biMultiPack.totalGroups, 1),
+        } : undefined,
+        // NEW: Flag Summary
+        flagSummary,
       };
       
       const result = await generateBoardReadyPackage(packageConfig);
       
       if (result.success) {
-        toast.success(`Board Package generated with CP1 analysis: ${result.pageCount} pages`);
+        toast.success(`Board Package generated with comprehensive WoW analysis: ${result.pageCount} page(s)`);
       } else {
         throw new Error('Package generation failed');
       }
@@ -2052,7 +2100,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     } finally {
       setGeneratingBoardPackage(false);
     }
-  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data, decisionsData, cp1BoxData]);
+  }, [pendingDecisions, pendingDecisionsStats, budgetMetrics, fetchPendingDecisions, data, decisionsData, cp1BoxData, atRiskSummary]);
   
   const formatNumber = (val: number) => val.toLocaleString();
   const formatCurrency = (val: number) => `$${(val / 1000000).toFixed(1)}M`;
