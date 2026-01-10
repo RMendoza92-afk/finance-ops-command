@@ -1753,6 +1753,247 @@ export function useExportData() {
     return filename;
   };
 
+  // ============================================================
+  // BOARDROOM EXCEL GENERATOR - Premium styled exports
+  // Professional formatting with section headers, borders, colors
+  // ============================================================
+  interface BoardroomSection {
+    title: string;
+    subtitle?: string;
+    metrics?: { label: string; value: string | number }[];
+    table?: {
+      headers: string[];
+      rows: (string | number)[][];
+      highlightColumn?: number; // Column index to highlight (e.g., totals)
+      highlightRows?: number[]; // Row indices to highlight (e.g., totals, special)
+    };
+  }
+
+  interface BoardroomExcelData {
+    reportTitle: string;
+    asOfDate: string;
+    sections: BoardroomSection[];
+    filename?: string;
+  }
+
+  const generateBoardroomExcel = (data: BoardroomExcelData) => {
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number | null)[][] = [];
+    
+    // Track row indices for styling reference
+    let rowIdx = 0;
+    const sectionHeaderRows: number[] = [];
+    const tableHeaderRows: number[] = [];
+    const highlightedDataRows: number[] = [];
+    const metricRows: number[] = [];
+    
+    // === REPORT HEADER ===
+    rows.push([data.reportTitle.toUpperCase()]);
+    rowIdx++;
+    rows.push(['As of: ' + data.asOfDate]);
+    rowIdx++;
+    rows.push([]); // Empty row
+    rowIdx++;
+
+    // === PROCESS EACH SECTION ===
+    data.sections.forEach((section) => {
+      // Section title (like "KEY METRICS", "NEGOTIATION BY TYPE")
+      if (section.title) {
+        sectionHeaderRows.push(rowIdx);
+        rows.push([section.title.toUpperCase()]);
+        rowIdx++;
+      }
+      
+      // Key-value metrics (like the top summary)
+      if (section.metrics && section.metrics.length > 0) {
+        rows.push(['Metric', 'Value']);
+        tableHeaderRows.push(rowIdx);
+        rowIdx++;
+        
+        section.metrics.forEach((metric) => {
+          metricRows.push(rowIdx);
+          const formattedValue = typeof metric.value === 'number' 
+            ? (isCurrencyHeader(metric.label) 
+                ? formatCurrencyDisplay(metric.value)
+                : metric.value.toLocaleString())
+            : metric.value;
+          rows.push([metric.label, formattedValue]);
+          rowIdx++;
+        });
+        rows.push([]); // Spacer
+        rowIdx++;
+      }
+      
+      // Data table
+      if (section.table) {
+        tableHeaderRows.push(rowIdx);
+        rows.push(section.table.headers);
+        rowIdx++;
+        
+        section.table.rows.forEach((row, dataRowIdx) => {
+          // Check if this row should be highlighted
+          const isHighlighted = section.table?.highlightRows?.includes(dataRowIdx);
+          if (isHighlighted) {
+            highlightedDataRows.push(rowIdx);
+          }
+          
+          // Format values
+          const formattedRow = row.map((cell, colIdx) => {
+            if (cell === null || cell === undefined) return '';
+            if (typeof cell === 'number') {
+              const header = section.table?.headers[colIdx] || '';
+              if (isCurrencyHeader(header) || header.toLowerCase().includes('amount')) {
+                return formatCurrencyDisplay(cell);
+              }
+              return cell.toLocaleString();
+            }
+            return cell;
+          });
+          
+          rows.push(formattedRow);
+          rowIdx++;
+        });
+        
+        rows.push([]); // Spacer after table
+        rowIdx++;
+      }
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    
+    // === COLUMN WIDTHS - Professional spacing ===
+    const maxCols = Math.max(...rows.map(r => r?.length || 0));
+    const colWidths: { wch: number }[] = [];
+    
+    for (let c = 0; c < maxCols; c++) {
+      let maxLen = 10; // Minimum width
+      rows.forEach(row => {
+        if (row && row[c] !== null && row[c] !== undefined) {
+          const len = String(row[c]).length;
+          if (len > maxLen) maxLen = Math.min(len, 45);
+        }
+      });
+      colWidths.push({ wch: maxLen + 3 }); // Add padding
+    }
+    ws['!cols'] = colWidths;
+    
+    // === ROW HEIGHTS for headers ===
+    const rowHeights: { hpt?: number }[] = [];
+    rows.forEach((_, idx) => {
+      if (idx === 0) {
+        rowHeights.push({ hpt: 22 }); // Main title
+      } else if (sectionHeaderRows.includes(idx)) {
+        rowHeights.push({ hpt: 20 }); // Section headers
+      } else if (tableHeaderRows.includes(idx)) {
+        rowHeights.push({ hpt: 18 }); // Table headers
+      } else {
+        rowHeights.push({ hpt: 16 }); // Data rows
+      }
+    });
+    ws['!rows'] = rowHeights;
+
+    // Add sheet and save
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+    const filename = data.filename || 
+      data.reportTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
+    
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const xlsxBlob = new Blob([out], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    downloadBlob(xlsxBlob, filename);
+    
+    logDownload('boardroom_excel', data.reportTitle, 'xlsx', rows.length, { 
+      sections: data.sections.length,
+      style: 'boardroom'
+    });
+    
+    return filename;
+  };
+
+  // ============================================================
+  // FORMATTED CSV GENERATOR - Boardroom style with clear sections
+  // Clean, professional CSV for manual Excel opening
+  // ============================================================
+  const generateBoardroomCSV = (data: BoardroomExcelData) => {
+    const rows: string[][] = [];
+    
+    // === REPORT HEADER ===
+    rows.push([data.reportTitle.toUpperCase()]);
+    rows.push(['As of: ' + data.asOfDate]);
+    rows.push([]);
+
+    // === PROCESS EACH SECTION ===
+    data.sections.forEach((section) => {
+      // Section title
+      if (section.title) {
+        rows.push([section.title.toUpperCase()]);
+      }
+      
+      // Key-value metrics
+      if (section.metrics && section.metrics.length > 0) {
+        rows.push(['Metric', 'Value']);
+        
+        section.metrics.forEach((metric) => {
+          const formattedValue = typeof metric.value === 'number' 
+            ? (isCurrencyHeader(metric.label) 
+                ? formatCurrencyDisplay(metric.value)
+                : metric.value.toLocaleString())
+            : String(metric.value);
+          rows.push([metric.label, formattedValue]);
+        });
+        rows.push([]);
+      }
+      
+      // Data table
+      if (section.table) {
+        rows.push(section.table.headers);
+        
+        section.table.rows.forEach((row) => {
+          const formattedRow = row.map((cell, colIdx) => {
+            if (cell === null || cell === undefined) return '';
+            if (typeof cell === 'number') {
+              const header = section.table?.headers[colIdx] || '';
+              if (isCurrencyHeader(header) || header.toLowerCase().includes('amount')) {
+                return formatCurrencyDisplay(cell);
+              }
+              return cell.toLocaleString();
+            }
+            return String(cell);
+          });
+          rows.push(formattedRow);
+        });
+        
+        rows.push([]);
+      }
+    });
+
+    // Convert to CSV string with proper escaping
+    const csvContent = rows.map(row => 
+      row.map(cell => {
+        const escaped = String(cell ?? '').replace(/"/g, '""');
+        return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
+          ? `"${escaped}"` 
+          : escaped;
+      }).join(',')
+    ).join('\n');
+    
+    const filename = data.filename?.replace('.xlsx', '.csv') ||
+      data.reportTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.csv';
+    
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(csvBlob, filename);
+    
+    logDownload('boardroom_csv', data.reportTitle, 'csv', rows.length, { 
+      sections: data.sections.length,
+      style: 'boardroom'
+    });
+    
+    return filename;
+  };
+
   // Format a single value for display in exports
   const formatExportValue = (value: number | string | null | undefined, header: string): string => {
     if (value === null || value === undefined) return '';
@@ -1773,6 +2014,8 @@ export function useExportData() {
     generateExecutivePackage,
     generateCSuiteBriefing,
     generateCSuiteExcel,
+    generateBoardroomExcel,
+    generateBoardroomCSV,
     formatExportValue,
   };
 }
