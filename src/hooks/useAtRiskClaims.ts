@@ -182,6 +182,11 @@ export function useAtRiskClaims() {
       const coverage = (row['Coverage'] || '').toUpperCase();
       if (coverage !== 'BI') continue;
       
+      // Exclude settled/closed claims - only workable claims
+      const biStatusRaw = row['BI Status'] || '';
+      const biStatusLower = biStatusRaw.toLowerCase();
+      if (biStatusLower.includes('settled') || biStatusLower.includes('closed') || biStatusLower.includes('resolved')) continue;
+      
       const state = (row['Accident Location State'] || '').toUpperCase().trim();
       const reserves = parseCurrency(row['Open Reserves'] || '0');
       const policyLimit = STATE_BI_LIMITS[state] || 25000;
@@ -193,7 +198,6 @@ export function useAtRiskClaims() {
       const lowEval = parseCurrency(row['Low'] || '0');
       const highEval = parseCurrency(row['High'] || '0');
       const totalPaid = parseCurrency(row['Total Paid'] || '0');
-      const biStatus = row['BI Status'] || '';
       
       // Parse all 17 risk factors
       const fatality = (row['FATALITY'] || '').toLowerCase() === 'yes';
@@ -346,7 +350,7 @@ export function useAtRiskClaims() {
           adjuster: row['Adjuster Assigned'] || '',
           areaNumber: row['Area#'] || '',
           triggerTotal,
-          biStatus,
+          biStatus: biStatusRaw,
           accidentDescription: row['Description of Accident'] || '',
           teamGroup: row['Team Group'] || '',
           // Universal columns
