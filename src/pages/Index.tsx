@@ -316,9 +316,7 @@ const Index = () => {
       <AlertSendDialog
         open={alertDialogOpen}
         onClose={() => setAlertDialogOpen(false)}
-        context={{
-          actionRequired: 'General Dashboard Alert'
-        }}
+        context={{}}
       />
 
       {/* Tutorial Overlay */}

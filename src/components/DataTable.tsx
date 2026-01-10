@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronUp, ChevronDown, ExternalLink, MessageSquare } from "lucide-react";
 import { LitigationMatter } from "@/hooks/useLitigationData";
 import { cn } from "@/lib/utils";
-import { SMSDialog } from "./SMSDialog";
+import { AlertSendDialog } from "./AlertSendDialog";
 
 interface DataTableProps {
   data: LitigationMatter[];
@@ -290,7 +290,7 @@ export function DataTable({ data, view }: DataTableProps) {
       )}
       
       {selectedMatter && (
-        <SMSDialog
+        <AlertSendDialog
           open={smsDialogOpen}
           onClose={() => {
             setSmsDialogOpen(false);
@@ -301,7 +301,6 @@ export function DataTable({ data, view }: DataTableProps) {
             claimant: selectedMatter.claim,
             exposure: selectedMatter.netAmount,
             painLevel: selectedMatter.endPainLvl,
-            actionRequired: `Review ${selectedMatter.class} matter`
           }}
         />
       )}

@@ -14,7 +14,7 @@ import {
   getLitigationStage,
   ExecutiveReviewResult 
 } from "@/lib/executiveReview";
-import { SMSDialog } from "./SMSDialog";
+import { AlertSendDialog } from "./AlertSendDialog";
 
 interface CP1Claim {
   matter_id: string;
@@ -393,7 +393,7 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
         )}
 
         {/* SMS Dialog */}
-        <SMSDialog
+        <AlertSendDialog
           open={smsDialogOpen}
           onClose={() => {
             setSmsDialogOpen(false);
@@ -405,33 +405,7 @@ export function CP1DrilldownModal({ open, onClose, coverage, coverageData }: CP1
             exposure: selectedClaimForSMS.total_amount || 0,
             daysOpen: selectedClaimForSMS.days_open || undefined,
             phase: selectedClaimForSMS.type || undefined,
-            actionRequired: selectedClaimForSMS.executiveReview.reasons[0] || 'Executive review required',
-          } : {
-            actionRequired: `${stats.criticalCount} CRITICAL, ${stats.requiredCount} REQUIRED reviews`,
-          }}
-          onExportExcel={() => {
-            const extractTeamNumber = (team: string | null): string => {
-              const m = String(team || '').match(/\b(\d{1,3})\b/);
-              return m?.[1] || '';
-            };
-            const exportData = claimsWithReview.map(c => ({
-              'Matter ID': c.matter_id,
-              'Review Level': c.executiveReview.level,
-              'Score': c.executiveReview.score,
-              'Claimant': c.claimant || '',
-              'Lead': c.matter_lead || '',
-              'Team': c.team || '',
-              'Team #': extractTeamNumber(c.team),
-              'Location': c.location || '',
-              'Days Open': c.days_open || 0,
-              'Exposure': c.total_amount || 0,
-              'Reasons': c.executiveReview.reasons.join(' | '),
-            }));
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, `${coverage} Claims`);
-            XLSX.writeFile(wb, `CP1_${coverage}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-          }}
+          } : {}}
         />
       </DialogContent>
     </Dialog>
