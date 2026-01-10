@@ -1224,7 +1224,99 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         }
       });
 
-      // Tab 2: Week-over-Week
+      // Helper to compute flags for each claim (reused in detail tabs)
+      const getClaimScoring = (c: typeof allClaims[0]) => {
+        const flagsList: string[] = [];
+        if (c.surgery) flagsList.push('Surgery');
+        if (c.medsVsLimits) flagsList.push('Meds>Limits');
+        if (c.confirmedFractures) flagsList.push('Fractures');
+        if (c.hospitalization) flagsList.push('Hospital');
+        if (c.lossOfConsciousness) flagsList.push('LOC/TBI');
+        if (c.aggFactors) flagsList.push('Re-aggravation');
+        if (c.objectiveInjuries) flagsList.push('MRI/CT');
+        if (c.pedestrianPregnancy) flagsList.push('Ped/Moto/Bike');
+        if (c.lifeCarePlanner) flagsList.push('Life Care');
+        if (c.fatality) flagsList.push('Fatality');
+        if (c.injections) flagsList.push('Injections');
+        if (c.emsHeavyImpact) flagsList.push('EMS/Impact');
+        if (c.lacerations) flagsList.push('Lacerations');
+        if (c.painLevel5Plus) flagsList.push('Pain 5+');
+        if (c.pregnancy) flagsList.push('Pregnancy');
+        if (c.eggshell69Plus) flagsList.push('Eggshell 69+');
+        const flagCount = flagsList.length;
+        let impactScore = 0;
+        if (c.fatality) impactScore += 150;
+        if (c.surgery) impactScore += 100;
+        if (c.medsVsLimits) impactScore += 80;
+        if (c.lifeCarePlanner) impactScore += 100;
+        if (c.confirmedFractures) impactScore += 50;
+        if (c.hospitalization) impactScore += 50;
+        if (c.lossOfConsciousness) impactScore += 50;
+        if (c.aggFactors) impactScore += 30;
+        if (c.objectiveInjuries) impactScore += 50;
+        if (c.pedestrianPregnancy) impactScore += 40;
+        if (c.injections) impactScore += 20;
+        if (c.emsHeavyImpact) impactScore += 30;
+        if (c.lacerations) impactScore += 20;
+        if (c.painLevel5Plus) impactScore += 20;
+        if (c.eggshell69Plus) impactScore += 20;
+        let severityTier = 'STANDARD';
+        if (impactScore >= 400) severityTier = 'HEAVY';
+        else if (impactScore >= 200) severityTier = 'ELEVATED';
+        else if (impactScore >= 100) severityTier = 'MODERATE';
+        return { flagCount, impactScore, severityTier, flagsPresent: flagsList.join(' | ') };
+      };
+
+      // Tab 2: Multi-Flag Risk Concentration
+      if (multiFlagGroups.length > 0) {
+        const riskRows = multiFlagGroups
+          .filter(g => g.flagCount > 0)
+          .sort((a, b) => b.flagCount - a.flagCount)
+          .map(g => {
+            const pct = totalClaims > 0 ? ((g.claimCount / totalClaims) * 100).toFixed(1) : '0.0';
+            const riskLevel = g.flagCount >= 4 ? 'CRITICAL' : g.flagCount === 3 ? 'HIGH' : g.flagCount === 2 ? 'ELEVATED' : 'STANDARD';
+            // Get top flags from this group
+            const flagCounts: Record<string, number> = {};
+            g.claims.forEach(c => {
+              if (c.fatality) flagCounts['Fatality'] = (flagCounts['Fatality'] || 0) + 1;
+              if (c.surgery) flagCounts['Surgery'] = (flagCounts['Surgery'] || 0) + 1;
+              if (c.medsVsLimits) flagCounts['Meds>Limits'] = (flagCounts['Meds>Limits'] || 0) + 1;
+              if (c.hospitalization) flagCounts['Hospital'] = (flagCounts['Hospital'] || 0) + 1;
+              if (c.lossOfConsciousness) flagCounts['LOC/TBI'] = (flagCounts['LOC/TBI'] || 0) + 1;
+              if (c.aggFactors) flagCounts['Re-aggravation'] = (flagCounts['Re-aggravation'] || 0) + 1;
+              if (c.objectiveInjuries) flagCounts['MRI/CT Confirmed'] = (flagCounts['MRI/CT Confirmed'] || 0) + 1;
+              if (c.pedestrianPregnancy) flagCounts['Ped/Moto/Bike'] = (flagCounts['Ped/Moto/Bike'] || 0) + 1;
+              if (c.injections) flagCounts['Injections'] = (flagCounts['Injections'] || 0) + 1;
+              if (c.painLevel5Plus) flagCounts['Pain 5+'] = (flagCounts['Pain 5+'] || 0) + 1;
+            });
+            const topFlags = Object.entries(flagCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 4)
+              .map(([f]) => f)
+              .join(', ');
+            return [`${g.flagCount} Flags`, g.claimCount, `${pct}%`, riskLevel, topFlags];
+          });
+
+        sheets.push({
+          name: 'Multi-Flag Concentration',
+          data: {
+            reportTitle: 'Multi-Flag Risk Concentration',
+            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+            sections: [
+              {
+                title: 'Risk Concentration',
+                table: {
+                  headers: ['Flag Count', 'Claims', '% of Total', 'Risk Level', 'Top Flags'],
+                  rows: riskRows,
+                  highlightLastRow: false,
+                },
+              },
+            ],
+          }
+        });
+      }
+
+      // Tab 3: Week-over-Week
       if (wow?.hasValidPrior) {
         // CP1 Rate: Lower is better. If rate >= 90% and delta = 0, it's still CRITICAL (stuck at bad level)
         const cp1Trend = (d: number, currentVal: number) => {
@@ -1237,7 +1329,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         // Other metrics: Lower is better (fewer claims, fewer flags, lower reserves, etc.)
         const lowerIsBetter = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
 
-        const rows: (string | number | null)[][] = [
+        const wowRows: (string | number | null)[][] = [
           ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, lowerIsBetter(wow.totalClaims.delta)],
           ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, lowerIsBetter(wow.age365Plus.delta)],
           ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, lowerIsBetter(wow.age181To365.delta)],
@@ -1263,7 +1355,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 title: 'Progress',
                 table: {
                   headers: ['Metric', 'Prior', 'Current', 'Delta', '% Change', 'Trend'],
-                  rows,
+                  rows: wowRows,
                   highlightLastRow: false,
                 },
               },
@@ -1303,10 +1395,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           }
         });
 
-        // Tab 4: Stale Negotiations
+        // Tab 5: Stale Negotiations (with scoring)
         const staleClaims = allClaims
           .filter(c => c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60)
-          .sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
+          .map(c => ({ ...c, ...getClaimScoring(c) }))
+          .sort((a, b) => b.impactScore - a.impactScore);
 
         if (staleClaims.length > 0) {
           sheets.push({
@@ -1318,18 +1411,27 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 {
                   title: 'Claims',
                   table: {
-                    headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Negotiation Type', 'Negotiation Amount', 'Negotiation Date', 'Days Since Negotiation', 'Open Reserves', 'Team', 'BI Status'],
+                    headers: ['Claim #', 'Claimant', 'Adjuster', 'Impact Severity', 'Impact Score', 'Severity Tier', 'Flag Count', 'Coverage', 'BI Phase', 'Days Open', 'Age Bucket', 'Team', 'Total Paid', 'Open Reserves', 'Negotiation Type', 'Negotiation Amount', 'Negotiation Date', 'Days Since Negotiation', 'Flags Present', 'BI Status'],
                     rows: staleClaims.map(c => ([
                       c.claimNumber,
                       c.claimant,
+                      c.adjuster || '',
+                      c.impactSeverity || 'Blank',
+                      c.impactScore,
+                      c.severityTier,
+                      c.flagCount,
                       c.coverage,
+                      c.evaluationPhase || '',
                       c.days,
+                      c.ageBucket,
+                      c.teamGroup,
+                      c.totalPaid,
+                      c.openReserves,
                       c.negotiationType,
                       c.negotiationAmount,
                       c.negotiationDate,
                       c.daysSinceNegotiationDate,
-                      c.openReserves,
-                      c.teamGroup,
+                      c.flagsPresent,
                       c.biStatus,
                     ])),
                     highlightLastRow: false,
@@ -1340,10 +1442,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           });
         }
 
-        // Tab 5: No Negotiation
+        // Tab 6: No Negotiation (with scoring)
         const noNegoClaims = allClaims
           .filter(c => !c.negotiationDate && !c.negotiationType)
-          .sort((a, b) => (b.openReserves || 0) - (a.openReserves || 0));
+          .map(c => ({ ...c, ...getClaimScoring(c) }))
+          .sort((a, b) => b.impactScore - a.impactScore);
 
         if (noNegoClaims.length > 0) {
           sheets.push({
@@ -1355,18 +1458,24 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                 {
                   title: 'Claims',
                   table: {
-                    headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Open Reserves', 'Team', 'Adjuster', 'BI Status', 'BI Phase'],
+                    headers: ['Claim #', 'Claimant', 'Adjuster', 'Impact Severity', 'Impact Score', 'Severity Tier', 'Flag Count', 'Coverage', 'BI Phase', 'Days Open', 'Age Bucket', 'Team', 'Total Paid', 'Open Reserves', 'Flags Present', 'BI Status'],
                     rows: noNegoClaims.map(c => ([
                       c.claimNumber,
                       c.claimant,
+                      c.adjuster || '',
+                      c.impactSeverity || 'Blank',
+                      c.impactScore,
+                      c.severityTier,
+                      c.flagCount,
                       c.coverage,
+                      c.evaluationPhase || '',
                       c.days,
                       c.ageBucket,
-                      c.openReserves,
                       c.teamGroup,
-                      (c as any).adjuster || '',
+                      c.totalPaid,
+                      c.openReserves,
+                      c.flagsPresent,
                       c.biStatus,
-                      (c as any).evaluationPhase || '',
                     ])),
                     highlightLastRow: false,
                   },
@@ -1377,9 +1486,14 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
         }
       }
 
-      // Tab 6: All Claims Detail (kept, but limited for file size)
+      // Tab 7: All Claims Detail (with full scoring) - reuse getClaimScoring defined above
       if (allClaims.length > 0) {
-        const limited = allClaims.slice(0, 5000);
+        // Sort by impact score descending
+        const scoredClaims = allClaims.map(c => ({
+          ...c,
+          ...getClaimScoring(c),
+        })).sort((a, b) => b.impactScore - a.impactScore);
+
         sheets.push({
           name: 'All Claims Detail',
           data: {
@@ -1389,26 +1503,24 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               {
                 title: 'Claims',
                 table: {
-                  headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Team', 'Total Paid', 'Open Reserves', 'Low Eval', 'High Eval', 'Overall CP1', 'BI Status', 'BI Phase', 'Negotiation Amount', 'Negotiation Date', 'Negotiation Type', 'Days Since Negotiation'],
-                  rows: limited.map(c => ([
+                  headers: ['Claim #', 'Claimant', 'Adjuster', 'Impact Severity', 'Impact Score', 'Severity Tier', 'Flag Count', 'Coverage', 'BI Phase', 'Days Open', 'Age Bucket', 'Team', 'Total Paid', 'Open Reserves', 'Flags Present', 'BI Status'],
+                  rows: scoredClaims.map(c => ([
                     c.claimNumber,
                     c.claimant,
+                    c.adjuster || '',
+                    c.impactSeverity || 'Blank',
+                    c.impactScore,
+                    c.severityTier,
+                    c.flagCount,
                     c.coverage,
+                    c.evaluationPhase || '',
                     c.days,
                     c.ageBucket,
-                    c.typeGroup,
                     c.teamGroup,
                     c.totalPaid,
                     c.openReserves,
-                    (c as any).lowEval ?? null,
-                    (c as any).highEval ?? null,
-                    c.overallCP1,
+                    c.flagsPresent,
                     c.biStatus,
-                    (c as any).evaluationPhase || '',
-                    (c as any).negotiationAmount ?? null,
-                    (c as any).negotiationDate || '',
-                    (c as any).negotiationType || '',
-                    (c as any).daysSinceNegotiationDate ?? null,
                   ])),
                   highlightLastRow: false,
                 },
