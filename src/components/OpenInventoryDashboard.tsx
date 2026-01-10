@@ -3416,22 +3416,6 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               <p className="text-[10px] text-muted-foreground">{formatCurrency(decisionsData?.totalReserves || 0)}</p>
             </div>
 
-            {/* Reserve Adequacy */}
-            {(() => {
-              const medianEval = (FINANCIAL_DATA.totals.totalLowEval + FINANCIAL_DATA.totals.totalHighEval) / 2;
-              const variance = FINANCIAL_DATA.totals.totalOpenReserves - medianEval;
-              const variancePct = ((variance / medianEval) * 100).toFixed(1);
-              const isOverReserved = variance > 0;
-              return (
-                <div className={`rounded-lg p-3 border-2 ${isOverReserved ? 'bg-success/5 border-success/40' : 'bg-destructive/5 border-destructive/40'}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs font-bold uppercase ${isOverReserved ? 'text-success' : 'text-destructive'}`}>Adequacy</span>
-                  </div>
-                  <p className={`text-xl font-bold ${isOverReserved ? 'text-success' : 'text-destructive'}`}>{isOverReserved ? '+' : ''}{variancePct}%</p>
-                  <p className="text-[10px] text-muted-foreground">{isOverReserved ? 'Over' : 'Under'}-reserved</p>
-                </div>
-              );
-            })()}
           </div>
         </div>
 
