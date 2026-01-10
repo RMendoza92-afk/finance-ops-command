@@ -1689,6 +1689,10 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Team': c.teamGroup,
           'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
+          'Negotiation Amount': c.negotiationAmount || 0,
+          'Negotiation Date': c.negotiationDate || '',
+          'Negotiation Type': c.negotiationType || '',
+          'Days Since Negotiation': c.daysSinceNegotiationDate ?? '',
           'Flags Present': flags.join(' | '),
           'BI Status': c.biStatus,
         };
@@ -1743,6 +1747,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           'Total Paid': c.totalPaid,
           'Open Reserves': c.openReserves,
           'BI Status': c.biStatus,
+          // Negotiation fields
+          'Negotiation Amount': c.negotiationAmount || 0,
+          'Negotiation Date': c.negotiationDate || '',
+          'Negotiation Type': c.negotiationType || '',
+          'Days Since Negotiation': c.daysSinceNegotiationDate ?? '',
           // Tier 1 - Highest Severity (100 pts)
           'Fatality (100)': c.fatality ? 'YES' : '',
           'Surgery (100)': c.surgery ? 'YES' : '',
