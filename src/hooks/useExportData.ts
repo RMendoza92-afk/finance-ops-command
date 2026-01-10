@@ -3,6 +3,14 @@ import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import loyaLogo from '@/assets/fli_logo.jpg';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  autoFormatByHeaders, 
+  formatCurrencyDisplay, 
+  formatPercentDisplay, 
+  isCurrencyHeader, 
+  isPercentHeader,
+  EXCEL_FORMATS
+} from '@/lib/excelUtils';
 
 // Log download to database (fire and forget)
 const logDownload = async (reportType: string, reportName: string, fileFormat: string, rowCount?: number, metadata?: object) => {
@@ -546,6 +554,10 @@ export function useExportData() {
         });
 
         const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
+        
+        // Apply Excel number formats based on headers
+        autoFormatByHeaders(rawSheet, normalized.columns);
+        
         const colWidths = normalized.columns.map((col, i) => {
           const maxLen = Math.max(col.length, ...normalized.rows.slice(0, 100).map(r => String(r[i] || '').length));
           return { wch: Math.min(maxLen + 2, 50) };
@@ -553,6 +565,11 @@ export function useExportData() {
         rawSheet['!cols'] = colWidths;
         XLSX.utils.book_append_sheet(wb, rawSheet, sheetName);
       });
+    }
+
+    // Apply formatting to summary sheet based on data columns
+    if (data.columns.length > 0) {
+      autoFormatByHeaders(summarySheet, data.columns);
     }
 
     const filename = data.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.xlsx';
@@ -1661,14 +1678,101 @@ export function useExportData() {
     return filename;
   };
 
+  // ============================================================
+  // CSV GENERATOR - With formatted $ and % values
+  // ============================================================
+  const generateCSV = (data: ExportableData, includeFormatting = true) => {
+    const rows: string[][] = [];
+    
+    // Header info
+    rows.push([data.title]);
+    rows.push([data.subtitle || '']);
+    rows.push(['Generated: ' + data.timestamp]);
+    rows.push([]);
+    
+    // Summary metrics
+    if (data.summary && Object.keys(data.summary).length > 0) {
+      rows.push(['KEY METRICS']);
+      rows.push(['Metric', 'Value']);
+      Object.entries(data.summary).forEach(([k, v]) => {
+        let formattedValue = String(v);
+        if (includeFormatting && typeof v === 'number') {
+          // Check if key suggests currency
+          if (isCurrencyHeader(k)) {
+            formattedValue = formatCurrencyDisplay(v);
+          } else if (isPercentHeader(k)) {
+            formattedValue = formatPercentDisplay(v);
+          }
+        }
+        rows.push([k, formattedValue]);
+      });
+      rows.push([]);
+    }
+    
+    // Data table
+    if (data.columns.length > 0 && data.rows.length > 0) {
+      rows.push(['DATA']);
+      rows.push(data.columns);
+      
+      data.rows.forEach(row => {
+        const formattedRow = row.map((cell, idx) => {
+          if (!includeFormatting || typeof cell !== 'number') {
+            return String(cell ?? '');
+          }
+          
+          const header = data.columns[idx] || '';
+          if (isCurrencyHeader(header)) {
+            return formatCurrencyDisplay(cell);
+          }
+          if (isPercentHeader(header)) {
+            return formatPercentDisplay(cell);
+          }
+          return String(cell);
+        });
+        rows.push(formattedRow);
+      });
+    }
+    
+    // Convert to CSV string
+    const csvContent = rows.map(row => 
+      row.map(cell => {
+        // Escape quotes and wrap in quotes if contains comma or newline
+        const escaped = String(cell).replace(/"/g, '""');
+        return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
+          ? `"${escaped}"` 
+          : escaped;
+      }).join(',')
+    ).join('\n');
+    
+    const filename = data.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '_' + format(new Date(), 'yyyyMMdd_HHmm') + '.csv';
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(csvBlob, filename);
+    
+    logDownload('csv', data.title, 'csv', data.rows.length, { formatted: includeFormatting });
+    
+    return filename;
+  };
+
+  // Format a single value for display in exports
+  const formatExportValue = (value: number | string | null | undefined, header: string): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'number') {
+      if (isCurrencyHeader(header)) return formatCurrencyDisplay(value);
+      if (isPercentHeader(header)) return formatPercentDisplay(value);
+    }
+    return String(value);
+  };
+
   return {
     generatePDF,
     generateExcel,
+    generateCSV,
     exportBoth,
     generateFullExcel,
     generateExecutivePDF,
     generateExecutivePackage,
     generateCSuiteBriefing,
     generateCSuiteExcel,
+    formatExportValue,
   };
 }

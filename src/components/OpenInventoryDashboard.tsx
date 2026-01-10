@@ -98,6 +98,13 @@ import { useSOLBreachAnalysis } from "@/hooks/useSOLBreachAnalysis";
 import { useDecisionsPending } from "@/hooks/useDecisionsPending";
 import { useLOROffers, LOROfferDB } from "@/hooks/useLOROffers";
 import { LOROfferDialog } from "@/components/LOROfferDialog";
+import { 
+  autoFormatByHeaders, 
+  formatCurrencyDisplay, 
+  formatPercentDisplay,
+  isCurrencyHeader,
+  isPercentHeader
+} from "@/lib/excelUtils";
 
 interface OpenInventoryDashboardProps {
   filters: GlobalFilters;
@@ -3662,6 +3669,7 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     ['Potential Over-Limit', '', atRiskSummary.potentialOverLimit],
                   ];
                   const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                  autoFormatByHeaders(summarySheet, ['Tier', 'Count', 'Reserves']);
                   XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
                   // Detail sheet
                   const detailData = atRiskClaims.map(c => ({
@@ -3671,6 +3679,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     'BI Status': c.biStatus, 'Team': c.teamGroup,
                   }));
                   const detailSheet = XLSX.utils.json_to_sheet(detailData);
+                  const detailHeaders = Object.keys(detailData[0] || {});
+                  autoFormatByHeaders(detailSheet, detailHeaders);
                   XLSX.utils.book_append_sheet(wb, detailSheet, 'Claims Detail');
                   XLSX.writeFile(wb, `At-Risk-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
                   toast.success(`Exported ${atRiskClaims.length} at-risk claims`);
@@ -3719,6 +3729,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       'Low Eval': c.lowEval, 'High Eval': c.highEval, 'BI Status': c.biStatus, 'Team': c.teamGroup,
                     }));
                     const detailSheet = XLSX.utils.json_to_sheet(cp1Claims);
+                    const headers = Object.keys(cp1Claims[0] || {});
+                    autoFormatByHeaders(detailSheet, headers);
                     XLSX.utils.book_append_sheet(wb, detailSheet, 'CP1 Claims');
                   }
                   XLSX.writeFile(wb, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
@@ -3760,6 +3772,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     'Total High Eval': g.totalHighEval, 'Claims': g.claims.map(c => c.claimNumber).join(', '),
                   }));
                   const groupSheet = XLSX.utils.json_to_sheet(groupData);
+                  const groupHeaders = Object.keys(groupData[0] || {});
+                  autoFormatByHeaders(groupSheet, groupHeaders);
                   XLSX.utils.book_append_sheet(wb, groupSheet, 'Groups');
                   XLSX.writeFile(wb, `Multi-Pack-BI-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
                   toast.success(`Exported ${groups.length} multi-pack groups`);
@@ -3818,6 +3832,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     ['Total Reserves', data?.multiPackData?.biMultiPack?.totalReserves || 0],
                   ];
                   const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+                  // Apply Excel number formats to summary sheet
+                  autoFormatByHeaders(summarySheet, ['Metric', 'Current', 'Prior Week', 'Delta', 'Trend']);
                   XLSX.utils.book_append_sheet(wb, summarySheet, 'Executive Summary');
                   
                   // Sheet 2: At-Risk Claims Detail
@@ -3840,6 +3856,9 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                     'BI Status': c.biStatus,
                   }));
                   const atRiskSheet = XLSX.utils.json_to_sheet(atRiskData);
+                  // Apply Excel formatting for currency columns
+                  const atRiskHeaders = Object.keys(atRiskData[0] || {});
+                  autoFormatByHeaders(atRiskSheet, atRiskHeaders);
                   XLSX.utils.book_append_sheet(wb, atRiskSheet, 'At-Risk Claims');
                   
                   // Sheet 3: CP1 Claims
@@ -3859,6 +3878,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       'Team': c.teamGroup,
                     }));
                     const cp1Sheet = XLSX.utils.json_to_sheet(cp1Claims);
+                    const cp1Headers = Object.keys(cp1Claims[0] || {});
+                    autoFormatByHeaders(cp1Sheet, cp1Headers);
                     XLSX.utils.book_append_sheet(wb, cp1Sheet, 'CP1 Claims');
                   }
                   
@@ -3873,6 +3894,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                       'Claims': g.claims.map(c => c.claimNumber).join(', '),
                     }));
                     const multiPackSheet = XLSX.utils.json_to_sheet(multiPackRows);
+                    const mpHeaders = Object.keys(multiPackRows[0] || {});
+                    autoFormatByHeaders(multiPackSheet, mpHeaders);
                     XLSX.utils.book_append_sheet(wb, multiPackSheet, 'Multi-Pack Groups');
                   }
                   

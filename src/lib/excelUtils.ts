@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
  * Excel Export Utility Functions
  * Ensures numeric values are exported as numbers (not formatted strings)
  * so Excel's SUM and other functions work correctly.
+ * Also provides formatting for CSV exports with $ and % symbols.
  */
 
 // Number format codes for Excel
@@ -15,6 +16,131 @@ export const EXCEL_FORMATS = {
   NUMBER: '#,##0',
   NUMBER_DECIMAL: '#,##0.00',
 };
+
+/**
+ * Format a number as currency with $ sign for CSV display
+ */
+export function formatCurrencyDisplay(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/[$,]/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  const absNum = Math.abs(num);
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return num < 0 ? `-$${formatted}` : `$${formatted}`;
+}
+
+/**
+ * Format a number as currency with decimals for CSV display
+ */
+export function formatCurrencyDecimalDisplay(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/[$,]/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  const absNum = Math.abs(num);
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return num < 0 ? `-$${formatted}` : `$${formatted}`;
+}
+
+/**
+ * Format a number as percentage with % sign for CSV display
+ * Expects value as percentage (e.g., 45.5 for 45.5%)
+ */
+export function formatPercentDisplay(value: number | string | null | undefined, decimals = 1): string {
+  if (value === null || value === undefined || value === '') return '';
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/%/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  return `${num.toFixed(decimals)}%`;
+}
+
+/**
+ * Format a number with commas for CSV display
+ */
+export function formatNumberDisplay(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/,/g, ''));
+  if (isNaN(num)) return String(value);
+  
+  return num.toLocaleString('en-US');
+}
+
+/**
+ * Check if a header indicates a currency column
+ */
+export function isCurrencyHeader(header: string): boolean {
+  const h = header.toLowerCase();
+  return (
+    h.includes('reserve') ||
+    h.includes('amount') ||
+    h.includes('paid') ||
+    h.includes('premium') ||
+    h.includes('exposure') ||
+    h.includes('eval') ||
+    h.includes('spend') ||
+    h.includes('budget') ||
+    h.includes('cost') ||
+    h.includes('value') ||
+    h.includes('indemnit') ||
+    h.includes('settlement') ||
+    h.includes('offer') ||
+    h.includes('net ') ||
+    h.includes('gross') ||
+    h.includes('total') && !h.includes('count') && !h.includes('claims')
+  );
+}
+
+/**
+ * Check if a header indicates a percentage column
+ */
+export function isPercentHeader(header: string): boolean {
+  const h = header.toLowerCase();
+  return (
+    h.includes('rate') ||
+    h.includes('%') ||
+    h.includes('percent') ||
+    h.includes('pct') ||
+    h.includes('ratio')
+  );
+}
+
+/**
+ * Format a row of data based on column headers for CSV export
+ * Returns formatted string values with $ and % symbols
+ */
+export function formatRowForCsv(row: (string | number | null | undefined)[], headers: string[]): string[] {
+  return row.map((cell, idx) => {
+    if (cell === null || cell === undefined) return '';
+    const header = headers[idx] || '';
+    
+    // Check if it's a currency column
+    if (isCurrencyHeader(header) && typeof cell === 'number') {
+      return formatCurrencyDisplay(cell);
+    }
+    
+    // Check if it's a percentage column
+    if (isPercentHeader(header) && typeof cell === 'number') {
+      return formatPercentDisplay(cell);
+    }
+    
+    return String(cell);
+  });
+}
+
+/**
+ * Format entire data array for CSV export with $ and % symbols
+ */
+export function formatDataForCsv(data: (string | number | null | undefined)[][]): (string | number)[][] {
+  if (data.length === 0) return [];
+  
+  const headers = data[0]?.map(h => String(h || '')) || [];
+  
+  return data.map((row, rowIdx) => {
+    if (rowIdx === 0) return row.map(h => String(h || '')); // Header row unchanged
+    return formatRowForCsv(row, headers);
+  });
+}
 
 /**
  * Apply number formats to specific columns in a worksheet
@@ -168,36 +294,19 @@ export function formatPercentColumns(ws: XLSX.WorkSheet, colIndices: number[], s
 }
 
 /**
- * Auto-format common columns by header name
+ * Auto-format worksheet columns by header name with Excel number formats
  */
 export function autoFormatByHeaders(ws: XLSX.WorkSheet, headers: string[]) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
   headers.forEach((header, colNum) => {
-    const headerLower = header.toLowerCase();
     let format: string | null = null;
     
-    // Currency columns
-    if (
-      headerLower.includes('reserve') ||
-      headerLower.includes('amount') ||
-      headerLower.includes('paid') ||
-      headerLower.includes('premium') ||
-      headerLower.includes('exposure') ||
-      headerLower.includes('eval') ||
-      headerLower === 'value' ||
-      headerLower.includes('total') && !headerLower.includes('count')
-    ) {
+    if (isCurrencyHeader(header)) {
       format = EXCEL_FORMATS.CURRENCY;
     }
     
-    // Percent columns
-    if (
-      headerLower.includes('rate') ||
-      headerLower.includes('%') ||
-      headerLower.includes('percent') ||
-      headerLower.includes('pct')
-    ) {
+    if (isPercentHeader(header)) {
       format = EXCEL_FORMATS.PERCENT;
     }
     
@@ -215,4 +324,23 @@ export function autoFormatByHeaders(ws: XLSX.WorkSheet, headers: string[]) {
       }
     }
   });
+}
+
+/**
+ * Format value based on header for display (CSV/display purposes)
+ */
+export function formatValueForDisplay(value: number | string | null | undefined, header: string): string {
+  if (value === null || value === undefined) return '';
+  
+  if (typeof value === 'number') {
+    if (isCurrencyHeader(header)) {
+      return formatCurrencyDisplay(value);
+    }
+    if (isPercentHeader(header)) {
+      return formatPercentDisplay(value);
+    }
+    return formatNumberDisplay(value);
+  }
+  
+  return String(value);
 }
