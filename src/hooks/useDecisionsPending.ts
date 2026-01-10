@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import Papa from "papaparse";
+import { useMemo } from "react";
+import { useSharedOpenExposureRows } from "@/contexts/OpenExposureContext";
 
 interface DecisionsPendingData {
   totalCount: number;
@@ -29,110 +29,85 @@ function parseCurrency(val: string): number {
 }
 
 export function useDecisionsPending() {
-  const [data, setData] = useState<DecisionsPendingData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { rawRows, loading, error } = useSharedOpenExposureRows();
 
-  useEffect(() => {
-    async function loadAndAnalyze() {
-      try {
-        const response = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
-        const csvText = await response.text();
-        
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-        });
-        
-        const rows = parsed.data as Record<string, string>[];
-        const claims: DecisionClaim[] = [];
-        const byPainLevel: Record<string, { count: number; reserves: number }> = {};
-        
-        for (const row of rows) {
-          const reserves = parseCurrency(row['Open Reserves'] || '0');
-          const lowEval = parseCurrency(row['Low'] || '0');
-          const highEval = parseCurrency(row['High'] || '0');
-          const hasNoEval = lowEval === 0 && highEval === 0;
-          
-          // Get pain level info
-          const finalEndPain = row['Final End Pain']?.trim() || '';
-          const endPainLevel = row['End Pain Level']?.trim() || '';
-          const painLevelStr = finalEndPain || endPainLevel || 'Unknown';
-          
-          // Determine if this claim needs a decision
-          // Criteria: High reserves ($15K+) with no evaluation set
-          const needsDecision = reserves >= 15000 && hasNoEval;
-          
-          if (!needsDecision) continue;
-          
-          const claimNumber = row['Claim#'] || '';
-          const state = row['Accident Location State']?.trim() || '';
-          const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
-          const team = row['Team Group']?.trim() || '';
-          const fatalityVal = (row['FATALITY'] || '').toString().toLowerCase().trim();
-          const isFatality = fatalityVal === 'yes' || fatalityVal === 'y' || fatalityVal === 'true' || fatalityVal === '1';
-          
-          // Determine reason
-          let reason = 'High reserves with no evaluation';
-          if (painLevelStr === 'Pending' || painLevelStr === 'Blank') {
-            reason = 'Pending pain assessment + no evaluation';
-          } else if (painLevelStr.includes('5+') || painLevelStr === 'Limits') {
-            reason = 'High pain level + no evaluation';
-          }
-          
-          claims.push({
-            claimNumber,
-            state,
-            painLevel: painLevelStr,
-            reserves,
-            biStatus,
-            team,
-            reason,
-            fatality: isFatality,
-          });
-          
-          // Track by pain level category
-          const category = painLevelStr === 'Pending' || painLevelStr === 'Blank' 
-            ? 'Pending' 
-            : painLevelStr.includes('5+') || painLevelStr === 'Limits'
-              ? 'High (5+)'
-              : painLevelStr.includes('Under')
-                ? 'Under 5'
-                : painLevelStr || 'Unknown';
-          
-          if (!byPainLevel[category]) {
-            byPainLevel[category] = { count: 0, reserves: 0 };
-          }
-          byPainLevel[category].count++;
-          byPainLevel[category].reserves += reserves;
-        }
-        
-        // Sort by reserves descending
-        claims.sort((a, b) => b.reserves - a.reserves);
-        
-        const totalReserves = claims.reduce((sum, c) => sum + c.reserves, 0);
-        
-        console.log('Decisions Pending Analysis:', {
-          totalClaims: claims.length,
-          totalReserves,
-          byCategory: byPainLevel,
-        });
-        
-        setData({
-          totalCount: claims.length,
-          totalReserves,
-          claims,
-          byPainLevel,
-        });
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to analyze decisions pending');
-        setLoading(false);
+  const data = useMemo((): DecisionsPendingData | null => {
+    if (!rawRows.length) return null;
+
+    const claims: DecisionClaim[] = [];
+    const byPainLevel: Record<string, { count: number; reserves: number }> = {};
+    
+    for (const row of rawRows) {
+      const reserves = parseCurrency(row['Open Reserves'] || '0');
+      const lowEval = parseCurrency(row['Low'] || '0');
+      const highEval = parseCurrency(row['High'] || '0');
+      const hasNoEval = lowEval === 0 && highEval === 0;
+      
+      // Get pain level info
+      const finalEndPain = (row as any)['Final End Pain']?.trim() || '';
+      const endPainLevel = (row as any)['End Pain Level']?.trim() || '';
+      const painLevelStr = finalEndPain || endPainLevel || 'Unknown';
+      
+      // Determine if this claim needs a decision
+      // Criteria: High reserves ($15K+) with no evaluation set
+      const needsDecision = reserves >= 15000 && hasNoEval;
+      
+      if (!needsDecision) continue;
+      
+      const claimNumber = row['Claim#'] || '';
+      const state = (row as any)['Accident Location State']?.trim() || '';
+      const biStatus = ((row as any)['BI Status'] || (row as any)['BI Status '] || '').trim();
+      const team = (row as any)['Team Group']?.trim() || '';
+      const fatalityVal = ((row as any)['FATALITY'] || '').toString().toLowerCase().trim();
+      const isFatality = fatalityVal === 'yes' || fatalityVal === 'y' || fatalityVal === 'true' || fatalityVal === '1';
+      
+      // Determine reason
+      let reason = 'High reserves with no evaluation';
+      if (painLevelStr === 'Pending' || painLevelStr === 'Blank') {
+        reason = 'Pending pain assessment + no evaluation';
+      } else if (painLevelStr.includes('5+') || painLevelStr === 'Limits') {
+        reason = 'High pain level + no evaluation';
       }
+      
+      claims.push({
+        claimNumber,
+        state,
+        painLevel: painLevelStr,
+        reserves,
+        biStatus,
+        team,
+        reason,
+        fatality: isFatality,
+      });
+      
+      // Track by pain level category
+      const category = painLevelStr === 'Pending' || painLevelStr === 'Blank' 
+        ? 'Pending' 
+        : painLevelStr.includes('5+') || painLevelStr === 'Limits'
+          ? 'High (5+)'
+          : painLevelStr.includes('Under')
+            ? 'Under 5'
+            : painLevelStr || 'Unknown';
+      
+      if (!byPainLevel[category]) {
+        byPainLevel[category] = { count: 0, reserves: 0 };
+      }
+      byPainLevel[category].count++;
+      byPainLevel[category].reserves += reserves;
     }
     
-    loadAndAnalyze();
-  }, []);
+    // Sort by reserves descending
+    claims.sort((a, b) => b.reserves - a.reserves);
+    
+    const totalReserves = claims.reduce((sum, c) => sum + c.reserves, 0);
+    
+    return {
+      totalCount: claims.length,
+      totalReserves,
+      claims,
+      byPainLevel,
+    };
+  }, [rawRows]);
 
   return { data, loading, error };
 }

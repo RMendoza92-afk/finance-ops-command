@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import Papa from 'papaparse';
+import { useMemo } from 'react';
+import { useSharedOpenExposureRows } from '@/contexts/OpenExposureContext';
 
 export interface AtRiskClaim {
   claimNumber: string;
@@ -75,37 +75,7 @@ function parseCurrency(val: string): number {
 }
 
 export function useAtRiskClaims() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [rawClaims, setRawClaims] = useState<any[]>([]);
-
-  // Load CSV data directly
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const response = await fetch('/data/open-exposure-raw-jan8.csv');
-        const csvText = await response.text();
-        
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            setRawClaims(results.data);
-            setLoading(false);
-          },
-          error: (err: any) => {
-            setError(err.message);
-            setLoading(false);
-          },
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
+  const { rawRows, loading, error } = useSharedOpenExposureRows();
 
   // Analyze patterns from historical over-limit payments
   const patterns = useMemo((): RiskPattern[] => {
@@ -175,11 +145,11 @@ export function useAtRiskClaims() {
 
   // Identify at-risk claims from open inventory
   const atRiskClaims = useMemo((): AtRiskClaim[] => {
-    if (!rawClaims.length) return [];
+    if (!rawRows.length) return [];
 
     const claims: AtRiskClaim[] = [];
 
-    for (const row of rawClaims) {
+    for (const row of rawRows) {
       // Only include BI coverage claims
       const coverage = (row['Coverage'] || '').toUpperCase();
       if (coverage !== 'BI') continue;
@@ -326,7 +296,7 @@ export function useAtRiskClaims() {
 
     // Sort by risk score descending
     return claims.sort((a, b) => b.riskScore - a.riskScore);
-  }, [rawClaims]);
+  }, [rawRows]);
 
   // Summary statistics
   const summary = useMemo(() => {

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import Papa from "papaparse";
-import { parse, addYears, addDays, isBefore, isAfter } from "date-fns";
+import { useMemo } from "react";
+import { parse, addYears, addDays, isBefore } from "date-fns";
 import * as XLSX from "xlsx";
+import { useSharedOpenExposureRows } from "@/contexts/OpenExposureContext";
 
 // Statute of Limitations by State (in years)
 const STATE_SOL: Record<string, number> = {
@@ -116,134 +116,115 @@ function parseExpCreateDate(dateStr: string): Date | null {
 }
 
 export function useSOLBreachAnalysis() {
-  const [data, setData] = useState<SOLBreachData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { rawRows, loading, error } = useSharedOpenExposureRows();
 
-  useEffect(() => {
-    async function loadAndAnalyze() {
-      try {
-        const response = await fetch('/data/open-exposure-raw-jan8.csv?d=2026-01-08');
-        const csvText = await response.text();
-        
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-        });
-        
-        const rows = parsed.data as Record<string, string>[];
-        const today = new Date('2026-01-06'); // Current date
-        const approachingThreshold = addDays(today, 90); // 90 days from now
-        
-        const breachedClaims: SOLBreachClaim[] = [];
-        const approachingClaims: SOLBreachClaim[] = [];
-        const byState: Record<string, { count: number; reserves: number }> = {};
-        
-        // Helper to extract team number
-        const extractTeamNumber = (teamGroup: string): string => {
-          const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
-          return m?.[1] || '';
+  const data = useMemo((): SOLBreachData | null => {
+    if (!rawRows.length) return null;
+
+    const today = new Date('2026-01-06'); // Current date
+    const approachingThreshold = addDays(today, 90); // 90 days from now
+    
+    const breachedClaims: SOLBreachClaim[] = [];
+    const approachingClaims: SOLBreachClaim[] = [];
+    const byState: Record<string, { count: number; reserves: number }> = {};
+    
+    // Helper to extract team number
+    const extractTeamNumber = (teamGroup: string): string => {
+      const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
+      return m?.[1] || '';
+    };
+
+    for (const row of rawRows) {
+      // Handle different possible column name formats
+      const biStatus = ((row as any)['BI Status'] || (row as any)['BI Status '] || '').trim();
+      
+      // Only check "In Progress" or "Settled"
+      if (biStatus !== 'In Progress' && biStatus !== 'Settled') continue;
+      
+      const state = ((row as any)['Accident Location State']?.trim().toUpperCase() || '');
+      const expCreateDateStr = ((row as any)['Exp. Create Date']?.trim() || '');
+      const reserves = parseCurrency(row['Open Reserves'] || '0');
+      const claimNumber = row['Claim#'] || '';
+      const teamGroup = row['Type Group']?.trim() || '';
+      const teamNumber = extractTeamNumber(teamGroup);
+      const typeGroup = row['Type Group']?.trim() || '';
+      const exposureCategory = row['Exposure Category']?.trim() || '';
+      
+      // Get SOL for state
+      const solYears = STATE_SOL[state];
+      if (!solYears) continue; // Skip if state not found
+      
+      const expCreateDate = parseExpCreateDate(expCreateDateStr);
+      if (!expCreateDate) continue; // Skip if date can't be parsed
+      
+      // Calculate SOL expiry date
+      const solExpiryDate = addYears(expCreateDate, solYears);
+      const daysUntilExpiry = Math.floor((solExpiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if SOL is breached (expiry date is before today)
+      if (isBefore(solExpiryDate, today)) {
+        const breach: SOLBreachClaim = {
+          claimNumber,
+          state,
+          expCreateDate: expCreateDateStr,
+          solExpiryDate,
+          biStatus,
+          reserves,
+          solYears,
+          daysUntilExpiry,
+          category: 'breached',
+          teamGroup,
+          teamNumber,
+          typeGroup,
+          exposureCategory,
         };
-
-        for (const row of rows) {
-          // Handle different possible column name formats
-          const biStatus = (row['BI Status'] || row['BI Status '] || '').trim();
-          
-          // Only check "In Progress" or "Settled"
-          if (biStatus !== 'In Progress' && biStatus !== 'Settled') continue;
-          
-          const state = row['Accident Location State']?.trim().toUpperCase() || '';
-          const expCreateDateStr = row['Exp. Create Date']?.trim() || '';
-          const reserves = parseCurrency(row['Open Reserves'] || '0');
-          const claimNumber = row['Claim#'] || '';
-          const teamGroup = row['Team Group']?.trim() || '';
-          const teamNumber = extractTeamNumber(teamGroup);
-          const typeGroup = row['Type Group']?.trim() || '';
-          const exposureCategory = row['Exposure Category']?.trim() || '';
-          
-          // Get SOL for state
-          const solYears = STATE_SOL[state];
-          if (!solYears) continue; // Skip if state not found
-          
-          const expCreateDate = parseExpCreateDate(expCreateDateStr);
-          if (!expCreateDate) continue; // Skip if date can't be parsed
-          
-          // Calculate SOL expiry date
-          const solExpiryDate = addYears(expCreateDate, solYears);
-          const daysUntilExpiry = Math.floor((solExpiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          
-          // Check if SOL is breached (expiry date is before today)
-          if (isBefore(solExpiryDate, today)) {
-            const breach: SOLBreachClaim = {
-              claimNumber,
-              state,
-              expCreateDate: expCreateDateStr,
-              solExpiryDate,
-              biStatus,
-              reserves,
-              solYears,
-              daysUntilExpiry,
-              category: 'breached',
-              teamGroup,
-              teamNumber,
-              typeGroup,
-              exposureCategory,
-            };
-            
-            breachedClaims.push(breach);
-            
-            // Track by state
-            if (!byState[state]) {
-              byState[state] = { count: 0, reserves: 0 };
-            }
-            byState[state].count++;
-            byState[state].reserves += reserves;
-          } 
-          // Check if SOL is approaching (within 90 days)
-          else if (isBefore(solExpiryDate, approachingThreshold)) {
-            const approaching: SOLBreachClaim = {
-              claimNumber,
-              state,
-              expCreateDate: expCreateDateStr,
-              solExpiryDate,
-              biStatus,
-              reserves,
-              solYears,
-              daysUntilExpiry,
-              category: 'approaching',
-              teamGroup,
-              teamNumber,
-              typeGroup,
-              exposureCategory,
-            };
-            
-            approachingClaims.push(approaching);
-          }
+        
+        breachedClaims.push(breach);
+        
+        // Track by state
+        if (!byState[state]) {
+          byState[state] = { count: 0, reserves: 0 };
         }
+        byState[state].count++;
+        byState[state].reserves += reserves;
+      } 
+      // Check if SOL is approaching (within 90 days)
+      else if (isBefore(solExpiryDate, approachingThreshold)) {
+        const approaching: SOLBreachClaim = {
+          claimNumber,
+          state,
+          expCreateDate: expCreateDateStr,
+          solExpiryDate,
+          biStatus,
+          reserves,
+          solYears,
+          daysUntilExpiry,
+          category: 'approaching',
+          teamGroup,
+          teamNumber,
+          typeGroup,
+          exposureCategory,
+        };
         
-        const breachedTotal = breachedClaims.reduce((sum, b) => sum + b.reserves, 0);
-        const approachingTotal = approachingClaims.reduce((sum, b) => sum + b.reserves, 0);
-        
-        setData({
-          breachedClaims,
-          approachingClaims,
-          breachedTotal,
-          approachingTotal,
-          combinedTotal: breachedTotal + approachingTotal,
-          breachedCount: breachedClaims.length,
-          approachingCount: approachingClaims.length,
-          totalPendingCount: breachedClaims.length + approachingClaims.length,
-          byState,
-        });
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to analyze SOL breaches');
-        setLoading(false);
+        approachingClaims.push(approaching);
       }
     }
     
-    loadAndAnalyze();
-  }, []);
+    const breachedTotal = breachedClaims.reduce((sum, b) => sum + b.reserves, 0);
+    const approachingTotal = approachingClaims.reduce((sum, b) => sum + b.reserves, 0);
+    
+    return {
+      breachedClaims,
+      approachingClaims,
+      breachedTotal,
+      approachingTotal,
+      combinedTotal: breachedTotal + approachingTotal,
+      breachedCount: breachedClaims.length,
+      approachingCount: approachingClaims.length,
+      totalPendingCount: breachedClaims.length + approachingClaims.length,
+      byState,
+    };
+  }, [rawRows]);
 
   // Export function for Excel - Standardized Executive Format
   const exportToExcel = () => {
