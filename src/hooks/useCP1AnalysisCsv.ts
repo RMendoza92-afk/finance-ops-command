@@ -24,6 +24,11 @@ export interface CP1CsvClaim {
   evaluationPhase: string;
   claimantAge: number;
   endPainLevel: number | null;
+  // Negotiation fields
+  negotiationAmount: number;
+  negotiationDate: string | null;
+  negotiationType: string;
+  daysSinceNegotiationDate: number | null;
   // 17 trigger flags from CSV (original 11 + 6 new)
   fatality: boolean;
   surgery: boolean;
@@ -267,6 +272,16 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
       const endPainLevelRaw = (r["End Pain Level"] || "").trim();
       const endPainLevel = endPainLevelRaw && !isNaN(Number(endPainLevelRaw)) ? Number(endPainLevelRaw) : null;
       
+      // Negotiation fields
+      const negotiationAmount = parseCurrency(r["Negotiation Amount"]);
+      const negotiationDateRaw = (r["Negotiation Date"] || "").trim();
+      const negotiationDate = negotiationDateRaw || null;
+      const negotiationType = (r["Negotiation Type"] || "").trim();
+      const daysSinceNegotiationDateRaw = (r["Days Since Negotiation Date"] || "").trim();
+      const daysSinceNegotiationDate = daysSinceNegotiationDateRaw && !isNaN(Number(daysSinceNegotiationDateRaw)) 
+        ? Number(daysSinceNegotiationDateRaw) 
+        : null;
+      
       // Additional factors from Injury Incident columns
       const confirmedFractures = yesish(r["Injury Incident - Confirmed Fractures"]);
       const lacerations = yesish(r["Injury Incident - Lacerations"]);
@@ -295,6 +310,12 @@ export function useCP1AnalysisCsv(sourcePath: string = "/data/open-exposure-raw-
         evaluationPhase,
         claimantAge,
         endPainLevel,
+        
+        // Negotiation fields
+        negotiationAmount,
+        negotiationDate,
+        negotiationType,
+        daysSinceNegotiationDate,
 
         // 11 UPPERCASE trigger flags from CSV
         fatality: yesish(r["FATALITY"]),
