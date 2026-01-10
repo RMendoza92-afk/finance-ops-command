@@ -183,7 +183,7 @@ export function SalesTickerBanner() {
         onClick={() => setIsExpanded(true)}
       >
         {/* Bloomberg-style badge */}
-        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-amber-500 px-3">
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-amber-500 px-3 ticker-badge-amber">
           <span className="text-[10px] font-bold text-black tracking-wider font-mono">
             SALES
           </span>

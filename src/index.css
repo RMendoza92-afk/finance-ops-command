@@ -581,6 +581,46 @@
     transform: translateX(-33.333%);
   }
 }
+
+/* Bloomberg-style ticker badge glow effects */
+@keyframes glow-amber {
+  0%, 100% {
+    box-shadow: 0 0 8px 0 rgba(245, 158, 11, 0.4), 0 0 16px 0 rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.6), 0 0 24px 4px rgba(245, 158, 11, 0.3);
+  }
+}
+
+@keyframes glow-red {
+  0%, 100% {
+    box-shadow: 0 0 8px 0 rgba(220, 38, 38, 0.4), 0 0 16px 0 rgba(220, 38, 38, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgba(220, 38, 38, 0.6), 0 0 24px 4px rgba(220, 38, 38, 0.3);
+  }
+}
+
+@keyframes glow-blue {
+  0%, 100% {
+    box-shadow: 0 0 8px 0 rgba(37, 99, 235, 0.4), 0 0 16px 0 rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgba(37, 99, 235, 0.6), 0 0 24px 4px rgba(37, 99, 235, 0.3);
+  }
+}
+
+.ticker-badge-amber {
+  animation: glow-amber 2s ease-in-out infinite;
+}
+
+.ticker-badge-red {
+  animation: glow-red 2s ease-in-out infinite;
+}
+
+.ticker-badge-blue {
+  animation: glow-blue 2s ease-in-out infinite;
+}
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;

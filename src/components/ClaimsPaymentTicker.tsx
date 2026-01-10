@@ -152,7 +152,7 @@ export function ClaimsPaymentTicker() {
         onClick={() => setIsExpanded(true)}
       >
         {/* Bloomberg-style badge */}
-        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-red-600 px-3">
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-red-600 px-3 ticker-badge-red">
           <span className="text-[10px] font-bold text-white tracking-wider font-mono">
             CLAIMS
           </span>
