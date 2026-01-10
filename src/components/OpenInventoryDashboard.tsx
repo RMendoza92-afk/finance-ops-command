@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react"; // Updated
 import { useOpenExposureData, OpenExposurePhase, TypeGroupSummary, CP1Data, TexasRearEndData, MultiPackSummary, MultiPackGroup } from "@/hooks/useOpenExposureData";
+import { useAtRiskClaims } from "@/hooks/useAtRiskClaims";
 import { useCP1AnalysisCsv } from "@/hooks/useCP1AnalysisCsv";
 import { useExportData, ExportableData, ManagerTracking, RawClaimData, DashboardVisual, PDFChart } from "@/hooks/useExportData";
 import { KPICard } from "@/components/KPICard";
@@ -324,6 +325,11 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     defaultView === 'executive' ? 'v3' : 'v1'
   );
   const [showChatFromV2V3, setShowChatFromV2V3] = useState(false);
+  const [showAtRiskDrawer, setShowAtRiskDrawer] = useState(false);
+  const [atRiskTab, setAtRiskTab] = useState<'at-risk' | 'validation'>('at-risk');
+
+  // Use At-Risk Claims hook
+  const { atRiskClaims, summary: atRiskSummary, patterns: atRiskPatterns, loading: atRiskLoading } = useAtRiskClaims();
 
   // Fetch reviewers from database
   useEffect(() => {
@@ -1723,8 +1729,51 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           multiFlagData.push([`${group.flagCount} Flags`, group.claimCount.toString(), `${pct}%`, risk, topFlags]);
         });
 
+      // Add granular risk factors breakdown to Multi-Flag sheet
+      multiFlagData.push([]);
+      multiFlagData.push(['GRANULAR RISK FACTORS (17 SEVERITY INDICATORS)']);
+      multiFlagData.push([]);
+      multiFlagData.push(['Tier', 'Flag Type', 'Count', '% of Claims', 'Reserves']);
+      
+      const fsSummary = data?.fatalitySummary;
+      if (fsSummary && data?.rawClaims) {
+        // Tier 1 - Critical
+        const tier1Flags = [
+          { tier: 'CRITICAL', label: 'Fatality', count: fsSummary.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
+          { tier: 'CRITICAL', label: 'Surgery', count: fsSummary.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
+          { tier: 'CRITICAL', label: 'Meds vs Limits', count: fsSummary.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
+          { tier: 'CRITICAL', label: 'Life Care Planner', count: fsSummary.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
+        ];
+        // Tier 2 - High
+        const tier2Flags = [
+          { tier: 'HIGH', label: 'Confirmed Fractures', count: fsSummary.confirmedFracturesCount, claims: data.rawClaims.filter(c => c.confirmedFractures) },
+          { tier: 'HIGH', label: 'Hospitalization', count: fsSummary.hospitalizationCount, claims: data.rawClaims.filter(c => c.hospitalization) },
+          { tier: 'HIGH', label: 'Loss of Consciousness', count: fsSummary.lossOfConsciousnessCount, claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
+          { tier: 'HIGH', label: 'Aggravating Factors', count: fsSummary.aggFactorsCount, claims: data.rawClaims.filter(c => c.aggFactors) },
+          { tier: 'HIGH', label: 'Objective Injuries (MRI/CT)', count: fsSummary.objectiveInjuriesCount, claims: data.rawClaims.filter(c => c.objectiveInjuries) },
+          { tier: 'HIGH', label: 'Ped/Moto/Bike', count: fsSummary.pedestrianPregnancyCount, claims: data.rawClaims.filter(c => c.pedestrianPregnancy) },
+          { tier: 'HIGH', label: 'Surgical Recommendation', count: fsSummary.priorSurgeryCount, claims: data.rawClaims.filter(c => c.priorSurgery) },
+        ];
+        // Tier 3 - Moderate
+        const tier3Flags = [
+          { tier: 'MODERATE', label: 'Injections (ESI, Facet)', count: fsSummary.injectionsCount, claims: data.rawClaims.filter(c => c.injections) },
+          { tier: 'MODERATE', label: 'EMS + Heavy Impact', count: fsSummary.emsHeavyImpactCount, claims: data.rawClaims.filter(c => c.emsHeavyImpact) },
+          { tier: 'MODERATE', label: 'Lacerations/Scarring', count: fsSummary.lacerationsCount, claims: data.rawClaims.filter(c => c.lacerations) },
+          { tier: 'MODERATE', label: 'Pain Level 5+', count: fsSummary.painLevel5PlusCount, claims: data.rawClaims.filter(c => c.painLevel5Plus) },
+          { tier: 'MODERATE', label: 'Pregnancy', count: fsSummary.pregnancyCount, claims: data.rawClaims.filter(c => c.pregnancy) },
+          { tier: 'MODERATE', label: 'Eggshell 69+', count: fsSummary.eggshell69PlusCount, claims: data.rawClaims.filter(c => c.eggshell69Plus) },
+        ];
+        
+        const allFlags = [...tier1Flags, ...tier2Flags, ...tier3Flags];
+        allFlags.forEach(f => {
+          const pct = totalClaims > 0 ? ((f.count / totalClaims) * 100).toFixed(1) : '0.0';
+          const reserves = f.claims.reduce((s, c) => s + c.openReserves, 0);
+          multiFlagData.push([f.tier, f.label, f.count.toString(), `${pct}%`, `$${reserves.toLocaleString()}`]);
+        });
+      }
+
       const multiFlagSheet = XLSX.utils.aoa_to_sheet(multiFlagData);
-      multiFlagSheet['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 50 }];
+      multiFlagSheet['!cols'] = [{ wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(workbook, multiFlagSheet, 'Multi-Flag Analysis');
 
       // Sheet 3: High-Risk Claims (3+ flags) with Impact Severity
@@ -3376,20 +3425,20 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               <ArrowUpRight className="h-4 w-4 text-primary flex-shrink-0" />
             </div>
 
-            {/* Decisions Pending */}
+            {/* At-Risk Claims */}
             <div 
-              className="flex items-center gap-3 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-warning/50 transition-all hover:shadow-lg"
-              onClick={() => setShowDecisionsDrawer(true)}
+              className="flex items-center gap-3 p-3 sm:p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-orange-500/50 transition-all hover:shadow-lg"
+              onClick={() => setShowAtRiskDrawer(true)}
             >
-              <div className="p-2 bg-warning/20 rounded-lg border border-warning/30">
-                <Flag className="h-5 w-5 text-warning" />
+              <div className="p-2 bg-orange-500/20 rounded-lg border border-orange-500/30">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Decisions Pending</p>
-                <p className="text-lg sm:text-xl font-bold text-warning">{formatNumber(decisionsData?.totalCount || 0)}<span className="text-[10px] font-normal text-muted-foreground ml-1">claims</span></p>
-                <p className="text-[10px] text-muted-foreground truncate">Pain 6+ • No eval...</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">At-Risk Claims</p>
+                <p className="text-lg sm:text-xl font-bold text-orange-500">{formatNumber(atRiskSummary.totalAtRisk)}<span className="text-[10px] font-normal text-muted-foreground ml-1">claims</span></p>
+                <p className="text-[10px] text-muted-foreground truncate">Critical: {atRiskSummary.criticalCount} • High: {atRiskSummary.highCount}</p>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-warning flex-shrink-0" />
+              <ArrowUpRight className="h-4 w-4 text-orange-500 flex-shrink-0" />
             </div>
             
             {/* CP1 */}
@@ -6067,6 +6116,276 @@ TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.to
                 </li>
               </ul>
             </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* At-Risk Claims Drawer */}
+      <Sheet open={showAtRiskDrawer} onOpenChange={setShowAtRiskDrawer}>
+        <SheetContent className="w-full sm:w-[800px] sm:max-w-[800px] overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                At-Risk Claims Analysis
+              </SheetTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  import('xlsx').then((XLSX) => {
+                    const wb = XLSX.utils.book_new();
+                    
+                    // Sheet 1: At-Risk Summary
+                    const summaryData = [
+                      ['AT-RISK CLAIMS ANALYSIS'],
+                      [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+                      [],
+                      ['SUMMARY'],
+                      ['Metric', 'Value'],
+                      ['Total At-Risk Claims', atRiskSummary.totalAtRisk],
+                      ['Critical', atRiskSummary.criticalCount],
+                      ['High', atRiskSummary.highCount],
+                      ['Moderate', atRiskSummary.moderateCount],
+                      ['Total Exposure', `$${atRiskSummary.totalExposure.toLocaleString()}`],
+                      ['Potential Over-Limit', `$${atRiskSummary.potentialOverLimit.toLocaleString()}`],
+                      [],
+                      ['BY STATE'],
+                      ['State', 'Count', 'Reserves', 'Avg Risk Score'],
+                      ...atRiskSummary.byState.slice(0, 15).map(s => [s.state, s.count, `$${s.totalReserves.toLocaleString()}`, s.avgRiskScore.toFixed(1)]),
+                      [],
+                      ['BY PATTERN'],
+                      ['Pattern', 'Count'],
+                      ...atRiskSummary.byPattern.map(p => [p.pattern, p.count]),
+                    ];
+                    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+                    
+                    // Sheet 2: All At-Risk Claims
+                    const claimsData = atRiskClaims.map(c => ({
+                      'Claim #': c.claimNumber,
+                      'Claimant': c.claimant,
+                      'State': c.state,
+                      'Risk Level': c.riskLevel,
+                      'Risk Score': c.riskScore,
+                      'Reserves': c.reserves,
+                      'Policy Limit': c.policyLimit,
+                      'Reserve/Limit %': `${(c.reserveToLimitRatio * 100).toFixed(0)}%`,
+                      'Age': c.age,
+                      'In Litigation': c.inLitigation ? 'Yes' : 'No',
+                      'CP1 Flag': c.cp1Flag ? 'Yes' : 'No',
+                      'Trigger Factors': c.triggerFactors.join('; '),
+                      'Pattern Matches': c.patternMatches.join('; '),
+                      'Team': c.teamGroup,
+                      'Adjuster': c.adjuster,
+                    }));
+                    const claimsSheet = XLSX.utils.json_to_sheet(claimsData);
+                    XLSX.utils.book_append_sheet(wb, claimsSheet, 'All At-Risk Claims');
+                    
+                    // Sheet 3: Validation - Historical Patterns
+                    const validationData = [
+                      ['VALIDATION - HISTORICAL OVER-LIMIT PATTERNS'],
+                      [`Back-tested against 123 historical over-limit claims (2015-2024)`],
+                      [],
+                      ['Pattern', 'Historical Hits', 'Avg Over-Limit', 'Description'],
+                      ...atRiskPatterns.map(p => [p.pattern, p.count, `$${p.avgOverLimit.toLocaleString()}`, p.description]),
+                    ];
+                    const validationSheet = XLSX.utils.aoa_to_sheet(validationData);
+                    XLSX.utils.book_append_sheet(wb, validationSheet, 'Validation');
+                    
+                    XLSX.writeFile(wb, `At-Risk-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                    toast.success('At-Risk Claims exported');
+                  });
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <SheetDescription>
+              Claims flagged based on historical over-limit payment patterns
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6">
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-border">
+              <button
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  atRiskTab === 'at-risk' 
+                    ? 'border-orange-500 text-orange-500' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setAtRiskTab('at-risk')}
+              >
+                At-Risk ({formatNumber(atRiskSummary.totalAtRisk)})
+              </button>
+              <button
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  atRiskTab === 'validation' 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setAtRiskTab('validation')}
+              >
+                Validation
+              </button>
+            </div>
+
+            {atRiskTab === 'at-risk' ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/30">
+                    <p className="text-xs text-muted-foreground uppercase">Critical</p>
+                    <p className="text-2xl font-bold text-destructive">{formatNumber(atRiskSummary.criticalCount)}</p>
+                  </div>
+                  <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/30">
+                    <p className="text-xs text-muted-foreground uppercase">High</p>
+                    <p className="text-2xl font-bold text-orange-500">{formatNumber(atRiskSummary.highCount)}</p>
+                  </div>
+                  <div className="bg-warning/10 rounded-lg p-3 border border-warning/30">
+                    <p className="text-xs text-muted-foreground uppercase">Moderate</p>
+                    <p className="text-2xl font-bold text-warning">{formatNumber(atRiskSummary.moderateCount)}</p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground uppercase">Total Exposure</p>
+                    <p className="text-xl font-bold text-foreground">{formatCurrency(atRiskSummary.totalExposure)}</p>
+                  </div>
+                </div>
+
+                {/* By State */}
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h4 className="text-sm font-semibold mb-3">By State (Top 10)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {atRiskSummary.byState.slice(0, 10).map((s) => (
+                      <div key={s.state} className="p-2 bg-muted/30 rounded-lg text-center">
+                        <p className="text-xs font-medium">{s.state}</p>
+                        <p className="text-lg font-bold text-orange-500">{s.count}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatCurrency(s.totalReserves)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* By Pattern */}
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h4 className="text-sm font-semibold mb-3">Pattern Matches</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pattern</TableHead>
+                        <TableHead className="text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {atRiskSummary.byPattern.map((p) => (
+                        <TableRow key={p.pattern}>
+                          <TableCell className="font-medium">{p.pattern.replace(/_/g, ' ')}</TableCell>
+                          <TableCell className="text-right font-semibold text-orange-500">{formatNumber(p.count)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Sample Claims */}
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h4 className="text-sm font-semibold mb-3">Critical Claims (First 20)</h4>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Claim #</TableHead>
+                          <TableHead>State</TableHead>
+                          <TableHead>Risk</TableHead>
+                          <TableHead className="text-right">Reserves</TableHead>
+                          <TableHead className="text-right">Limit</TableHead>
+                          <TableHead>Triggers</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {atRiskClaims.filter(c => c.riskLevel === 'CRITICAL').slice(0, 20).map((c) => (
+                          <TableRow key={c.claimNumber}>
+                            <TableCell className="font-mono text-xs">{c.claimNumber}</TableCell>
+                            <TableCell>{c.state}</TableCell>
+                            <TableCell>
+                              <Badge variant="destructive" className="text-xs">{c.riskScore}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">{formatCurrency(c.reserves)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{formatCurrency(c.policyLimit)}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{c.triggerFactors.slice(0, 2).join(', ')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Validation Tab */
+              <div className="space-y-4">
+                <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                    <span className="font-semibold">Back-tested against 123 historical over-limit claims</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">2015-05-04 to 2024-10-31</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-success/10 rounded-lg p-4 border border-success/30">
+                    <p className="text-xs text-muted-foreground uppercase">High-Risk State Capture</p>
+                    <p className="text-3xl font-bold text-success">100%</p>
+                    <p className="text-xs text-muted-foreground mt-1">TX/NV/CA/GA/NM/CO/AL</p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                    <p className="text-xs text-muted-foreground uppercase">Historical Claims</p>
+                    <p className="text-3xl font-bold text-foreground">123</p>
+                    <p className="text-xs text-muted-foreground mt-1">2015-2024 data</p>
+                  </div>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pattern</TableHead>
+                        <TableHead className="text-right">Historical Hits</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {atRiskPatterns.map((p) => (
+                        <TableRow key={p.pattern}>
+                          <TableCell>
+                            <p className="font-semibold">{p.pattern.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-muted-foreground">{p.description}</p>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-primary">{p.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                  <h4 className="font-semibold flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    Recommendations
+                  </h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-warning mt-0.5">•</span>
+                      <span><strong>TEXAS</strong> accounts for 34% of over-limit claims. Increase monitoring for this state.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">•</span>
+                      <span>High-risk state pattern captures most over-limit claims. Current weight of 30 is appropriate.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
