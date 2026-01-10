@@ -1375,15 +1375,17 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           return 'STABLE';
         };
         // Other metrics: Lower is better (fewer claims, fewer flags, lower reserves, etc.)
+        // Delta sign is INVERTED for display: positive raw delta (growth) → negative display (regression)
         const lowerIsBetter = (d: number) => d < 0 ? 'IMPROVING' : d > 0 ? 'WORSENING' : 'STABLE';
+        const invertDelta = (d: number) => -d; // Invert: growth shows as negative progress
 
         const wowRows: (string | number | null)[][] = [
-          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, lowerIsBetter(wow.totalClaims.delta)],
-          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, lowerIsBetter(wow.age365Plus.delta)],
-          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, lowerIsBetter(wow.age181To365.delta)],
-          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, lowerIsBetter(wow.highRiskClaims.delta)],
-          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, lowerIsBetter(wow.totalFlags.delta)],
-          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, lowerIsBetter(wow.totalReserves.delta)],
+          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, invertDelta(wow.totalClaims.delta), wow.totalClaims.pctChange, lowerIsBetter(wow.totalClaims.delta)],
+          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, invertDelta(wow.age365Plus.delta), wow.age365Plus.pctChange, lowerIsBetter(wow.age365Plus.delta)],
+          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, invertDelta(wow.age181To365.delta), wow.age181To365.pctChange, lowerIsBetter(wow.age181To365.delta)],
+          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, invertDelta(wow.highRiskClaims.delta), wow.highRiskClaims.pctChange, lowerIsBetter(wow.highRiskClaims.delta)],
+          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, invertDelta(wow.totalFlags.delta), wow.totalFlags.pctChange, lowerIsBetter(wow.totalFlags.delta)],
+          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, invertDelta(wow.totalReserves.delta), wow.totalReserves.pctChange, lowerIsBetter(wow.totalReserves.delta)],
           ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', cp1Trend(wow.cp1Rate.delta, wow.cp1Rate.current)],
         ];
 
