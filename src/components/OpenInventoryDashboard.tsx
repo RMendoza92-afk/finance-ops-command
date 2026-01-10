@@ -3637,34 +3637,132 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
               {generatingBudgetPDF ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Budget'}
             </Button>
             
-            {/* At-Risk Claims (renamed from Decisions) */}
+            {/* At-Risk Claims - Quick export PDF + CSV */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={async () => {
-                // Open At-Risk drawer
-                setShowAtRiskDrawer(true);
+                toast.info('Exporting At-Risk Claims...');
+                import('xlsx').then((XLSX) => {
+                  const wb = XLSX.utils.book_new();
+                  // Summary sheet
+                  const summaryData = [
+                    ['AT-RISK CLAIMS REPORT'],
+                    [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+                    [],
+                    ['SUMMARY BY TIER'],
+                    ['Tier', 'Count', 'Reserves'],
+                    ['Critical (80+ pts)', atRiskSummary.criticalCount, atRiskSummary.criticalReserves],
+                    ['High (50-79 pts)', atRiskSummary.highCount, atRiskSummary.highReserves],
+                    ['Moderate (40-49 pts)', atRiskSummary.moderateCount, atRiskSummary.moderateReserves],
+                    ['TOTAL', atRiskSummary.totalAtRisk, atRiskSummary.totalExposure],
+                    [],
+                    ['Potential Over-Limit', '', atRiskSummary.potentialOverLimit],
+                  ];
+                  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+                  // Detail sheet
+                  const detailData = atRiskClaims.map(c => ({
+                    'Claim #': c.claimNumber, 'Claimant': c.claimant, 'Adjuster': c.adjuster,
+                    'Severity Tier': c.severityTier, 'Impact Score': c.impactScore, 'Flag Count': c.flagCount,
+                    'Coverage': c.coverage, 'Days Open': c.ageDays, 'Open Reserves': c.reserves,
+                    'BI Status': c.biStatus, 'Team': c.teamGroup,
+                  }));
+                  const detailSheet = XLSX.utils.json_to_sheet(detailData);
+                  XLSX.utils.book_append_sheet(wb, detailSheet, 'Claims Detail');
+                  XLSX.writeFile(wb, `At-Risk-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                  toast.success(`Exported ${atRiskClaims.length} at-risk claims`);
+                });
               }}
               className="h-9 text-xs"
             >
               At-Risk
             </Button>
             
-            {/* CP1 - Fixed to show proper CP1 data */}
+            {/* CP1 - Quick export PDF + CSV */}
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setShowCP1Drawer(true)} 
+              onClick={async () => {
+                toast.info('Exporting CP1 Claims...');
+                import('xlsx').then((XLSX) => {
+                  const wb = XLSX.utils.book_new();
+                  // Summary
+                  const CP1 = CP1_DATA;
+                  const summaryData = [
+                    ['CP1 ANALYSIS REPORT'],
+                    [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+                    [],
+                    ['KEY METRICS'],
+                    ['CP1 Rate', CP1.cp1Rate + '%'],
+                    ['Total Claims', CP1.totals.grandTotal],
+                    ['In CP1', CP1.totals.yes],
+                    ['Not in CP1', CP1.totals.noCP],
+                    [],
+                    ['BY COVERAGE'],
+                    ['Coverage', 'Total', 'In CP1', 'Not CP', 'Rate'],
+                    ...CP1.byCoverage.map(c => [c.coverage, c.total, c.yes, c.noCP, c.cp1Rate.toFixed(1) + '%']),
+                    [],
+                    ['BI BY AGE'],
+                    ['Age Bucket', 'Total', 'In CP1', 'Not CP'],
+                    ...CP1.biByAge.map(a => [a.age, a.total, a.yes, a.noCP]),
+                  ];
+                  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+                  // CP1 claims detail
+                  if (data?.rawClaims) {
+                    const cp1Claims = data.rawClaims.filter(c => c.overallCP1 === 'Yes').map(c => ({
+                      'Claim #': c.claimNumber, 'Claimant': c.claimant, 'Coverage': c.coverage,
+                      'Days Open': c.days, 'Age Bucket': c.ageBucket, 'Open Reserves': c.openReserves,
+                      'Low Eval': c.lowEval, 'High Eval': c.highEval, 'BI Status': c.biStatus, 'Team': c.teamGroup,
+                    }));
+                    const detailSheet = XLSX.utils.json_to_sheet(cp1Claims);
+                    XLSX.utils.book_append_sheet(wb, detailSheet, 'CP1 Claims');
+                  }
+                  XLSX.writeFile(wb, `CP1-Analysis-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                  toast.success(`Exported CP1 analysis (${CP1.totals.yes} claims)`);
+                });
+              }} 
               className="h-9 text-xs"
             >
               CP1
             </Button>
             
-            {/* Multi-Pack - New button */}
+            {/* Multi-Pack - Quick export */}
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setShowMultiPackDrawer(true)} 
+              onClick={async () => {
+                toast.info('Exporting Multi-Pack Groups...');
+                import('xlsx').then((XLSX) => {
+                  const wb = XLSX.utils.book_new();
+                  const mp = data?.multiPackData?.biMultiPack;
+                  const groups = data?.multiPackData?.groups || [];
+                  // Summary
+                  const summaryData = [
+                    ['MULTI-PACK BI REPORT'],
+                    [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
+                    [],
+                    ['SUMMARY'],
+                    ['Total Groups', mp?.totalGroups || 0],
+                    ['Total Claims', mp?.totalClaims || 0],
+                    ['Total Reserves', mp?.totalReserves || 0],
+                    ['Average Claims/Group', ((mp?.totalClaims || 0) / Math.max(mp?.totalGroups || 1, 1)).toFixed(1)],
+                  ];
+                  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+                  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+                  // Groups detail
+                  const groupData = groups.slice(0, 500).map(g => ({
+                    'Base Claim': g.baseClaimNumber, 'Pack Size': g.packSize,
+                    'Total Reserves': g.totalReserves, 'Total Low Eval': g.totalLowEval,
+                    'Total High Eval': g.totalHighEval, 'Claims': g.claims.map(c => c.claimNumber).join(', '),
+                  }));
+                  const groupSheet = XLSX.utils.json_to_sheet(groupData);
+                  XLSX.utils.book_append_sheet(wb, groupSheet, 'Groups');
+                  XLSX.writeFile(wb, `Multi-Pack-BI-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+                  toast.success(`Exported ${groups.length} multi-pack groups`);
+                });
+              }} 
               className="h-9 text-xs"
             >
               Multi-Pack
