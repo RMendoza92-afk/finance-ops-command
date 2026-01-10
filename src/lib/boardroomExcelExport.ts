@@ -72,18 +72,17 @@ const normalizePercent = (value: number) => {
   return abs > 1 ? value / 100 : value;
 };
 
-/**
- * Generate a boardroom-quality Excel file with full styling
- */
-export async function generateStyledBoardroomExcel(data: BoardroomExportData): Promise<string> {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Fred Loya Insurance';
-  workbook.created = new Date();
-  
-  const worksheet = workbook.addWorksheet('Report', {
-    properties: { defaultColWidth: 18 }
-  });
+type Worksheet = ExcelJS.Worksheet;
 
+type RenderOptions = {
+  reportTitleOverride?: string;
+};
+
+const renderStyledReportToWorksheet = (
+  worksheet: Worksheet,
+  data: BoardroomExportData,
+  _options?: RenderOptions
+) => {
   let currentRow = 1;
 
   // === REPORT TITLE ===
@@ -116,7 +115,7 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
       const metricHeaderRow = worksheet.getRow(currentRow);
       metricHeaderRow.getCell(1).value = 'Metric';
       metricHeaderRow.getCell(2).value = 'Value';
-      
+
       [1, 2].forEach(col => {
         const cell = metricHeaderRow.getCell(col);
         cell.font = { bold: true, color: { argb: COLORS.white } };
@@ -178,14 +177,14 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
 
         currentRow++;
       });
-      
+
       currentRow++; // Spacer
     }
 
     // Data Table
     if (section.table) {
       const { headers, rows, highlightLastRow } = section.table;
-      
+
       // Table header row - BLUE BACKGROUND, WHITE TEXT
       const headerRow = worksheet.getRow(currentRow);
       headers.forEach((header, colIdx) => {
@@ -197,7 +196,7 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
           pattern: 'solid',
           fgColor: { argb: COLORS.navyBlue }
         };
-        cell.alignment = { 
+        cell.alignment = {
           horizontal: colIdx === 0 ? 'left' : 'center',
           vertical: 'middle'
         };
@@ -216,11 +215,11 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
         const row = worksheet.getRow(currentRow);
         const isLastRow = rowIdx === rows.length - 1;
         const shouldHighlight = highlightLastRow && isLastRow;
-        
+
         rowData.forEach((cellValue, colIdx) => {
           const cell = row.getCell(colIdx + 1);
           const header = headers[colIdx] || '';
-          
+
           // Format value - keep numerics numeric
           if (cellValue === null || cellValue === undefined) {
             cell.value = '';
@@ -239,18 +238,18 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
             // If it's a string like "45.0%", keep it as-is.
             cell.value = String(cellValue);
           }
-          
+
           // Alignment
-          cell.alignment = { 
+          cell.alignment = {
             horizontal: colIdx === 0 ? 'left' : (typeof cellValue === 'number' ? 'right' : 'center'),
             vertical: 'middle'
           };
-          
+
           // Highlighted row (dark red, bold) - like "ACCEPTED SETTLEMENT"
           if (shouldHighlight) {
             cell.font = { bold: true, color: { argb: COLORS.darkRed } };
           }
-          
+
           // Alternating row colors (skip if highlighted)
           if (!shouldHighlight && rowIdx % 2 === 1) {
             cell.fill = {
@@ -259,7 +258,7 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
               fgColor: { argb: COLORS.lightBlue }
             };
           }
-          
+
           // Borders
           cell.border = {
             bottom: { style: 'hair', color: { argb: COLORS.borderGray } },
@@ -267,16 +266,16 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
             right: { style: 'hair', color: { argb: COLORS.borderGray } }
           };
         });
-        
+
         currentRow++;
       });
-      
+
       currentRow++; // Spacer after table
     }
   }
 
   // === AUTO-FIT COLUMN WIDTHS ===
-  worksheet.columns.forEach((column, idx) => {
+  worksheet.columns.forEach((column) => {
     let maxLength = 12;
     column.eachCell?.({ includeEmpty: false }, (cell) => {
       const cellLength = cell.value ? String(cell.value).length : 0;
@@ -286,17 +285,14 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
     });
     column.width = maxLength + 4;
   });
+};
 
-  // Generate filename
-  const filename = data.filename || 
-    `${data.reportTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
-
-  // Write to buffer and download
+const downloadWorkbook = async (workbook: ExcelJS.Workbook, filename: string) => {
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { 
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
-  
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -305,8 +301,44 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
+/**
+ * Generate a boardroom-quality Excel file with full styling (single sheet)
+ */
+export async function generateStyledBoardroomExcel(data: BoardroomExportData): Promise<string> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fred Loya Insurance';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Report', {
+    properties: { defaultColWidth: 18 }
+  });
+
+  renderStyledReportToWorksheet(worksheet, data);
+
+  const filename = data.filename ||
+    `${data.reportTitle.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
+
+  await downloadWorkbook(workbook, filename);
   return filename;
+}
+
+export async function generateStyledBoardroomWorkbookExcel(args: {
+  filename: string;
+  sheets: { name: string; data: BoardroomExportData }[];
+}): Promise<string> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fred Loya Insurance';
+  workbook.created = new Date();
+
+  for (const sheet of args.sheets) {
+    const ws = workbook.addWorksheet(sheet.name, { properties: { defaultColWidth: 18 } });
+    renderStyledReportToWorksheet(ws, sheet.data);
+  }
+
+  await downloadWorkbook(workbook, args.filename);
+  return args.filename;
 }
 
 /**
