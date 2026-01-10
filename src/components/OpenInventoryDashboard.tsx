@@ -3432,32 +3432,8 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           </div>
         </div>
 
-        {/* CP1 Risk Factors - Collapsible */}
+        {/* CP1 Risk Factors - Click to open full drawer */}
         {data?.fatalitySummary && (() => {
-          const fs = data.fatalitySummary;
-          const tier1 = [
-            { label: 'Fatality', icon: '💀', count: fs.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
-            { label: 'Surgery', icon: '🏥', count: fs.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
-            { label: 'Meds > Limits', icon: '💊', count: fs.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
-            { label: 'Life Care', icon: '📋', count: fs.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
-          ];
-          const tier2 = [
-            { label: 'Fractures', icon: '🦴', count: fs.confirmedFracturesCount, claims: data.rawClaims.filter(c => c.confirmedFractures) },
-            { label: 'Hospital', icon: '🛏️', count: fs.hospitalizationCount, claims: data.rawClaims.filter(c => c.hospitalization) },
-            { label: 'LOC/TBI', icon: '😵', count: fs.lossOfConsciousnessCount, claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
-            { label: 'Re-Agg', icon: '⚠️', count: fs.aggFactorsCount, claims: data.rawClaims.filter(c => c.aggFactors) },
-            { label: 'MRI/CT', icon: '🩹', count: fs.objectiveInjuriesCount, claims: data.rawClaims.filter(c => c.objectiveInjuries) },
-            { label: 'Ped/Bike', icon: '🚶', count: fs.pedestrianPregnancyCount, claims: data.rawClaims.filter(c => c.pedestrianPregnancy) },
-            { label: 'Surg Rec', icon: '📝', count: fs.priorSurgeryCount, claims: data.rawClaims.filter(c => c.priorSurgery) },
-          ];
-          const tier3 = [
-            { label: 'Inject', icon: '💉', count: fs.injectionsCount, claims: data.rawClaims.filter(c => c.injections) },
-            { label: 'EMS', icon: '🚑', count: fs.emsHeavyImpactCount, claims: data.rawClaims.filter(c => c.emsHeavyImpact) },
-            { label: 'Lacer', icon: '🩸', count: fs.lacerationsCount, claims: data.rawClaims.filter(c => c.lacerations) },
-            { label: 'Pain 5+', icon: '😣', count: fs.painLevel5PlusCount, claims: data.rawClaims.filter(c => c.painLevel5Plus) },
-            { label: 'Preg', icon: '🤰', count: fs.pregnancyCount, claims: data.rawClaims.filter(c => c.pregnancy) },
-            { label: '69+', icon: '👴', count: fs.eggshell69PlusCount, claims: data.rawClaims.filter(c => c.eggshell69Plus) },
-          ];
           const allRiskClaims = data.rawClaims.filter(c => 
             c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
             c.confirmedFractures || c.hospitalization || c.lossOfConsciousness || c.aggFactors ||
@@ -3467,73 +3443,23 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
           const totalRiskReserves = allRiskClaims.reduce((sum, c) => sum + c.openReserves, 0);
 
           return (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <div className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
-                      <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
-                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
-                      <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
+            <div 
+              className="p-3 sm:p-4 bg-destructive/5 border-t border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors"
+              onClick={() => setShowRiskFactorsDrilldown(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-destructive">CP1 Risk Factors</span>
+                  <span className="text-xs text-muted-foreground">All 17 severity indicators from inventory</span>
                 </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 sm:p-6 bg-muted/20 space-y-4">
-                  {/* Tier 1 - Critical */}
-                  <div>
-                    <h4 className="text-[10px] font-bold text-destructive uppercase tracking-wide mb-2">Tier 1 — Critical</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {tier1.map((f, i) => (
-                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/30 border-border'}`}>
-                          <p className="text-xs mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
-                          <p className="text-xl font-bold text-destructive">{formatNumber(f.count)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tier 2 - High */}
-                  <div>
-                    <h4 className="text-[10px] font-bold text-orange-500 uppercase tracking-wide mb-2">Tier 2 — High</h4>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                      {tier2.map((f, i) => (
-                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-muted/30 border-border'}`}>
-                          <p className="text-[9px] mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
-                          <p className="text-lg font-bold text-orange-500">{formatNumber(f.count)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tier 3 - Moderate */}
-                  <div>
-                    <h4 className="text-[10px] font-bold text-primary uppercase tracking-wide mb-2">Tier 3 — Moderate</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {tier3.map((f, i) => (
-                        <div key={i} className={`p-2.5 rounded-lg border text-center ${f.count > 0 ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border'}`}>
-                          <p className="text-[9px] mb-0.5">{f.icon} {f.label.toUpperCase()}</p>
-                          <p className="text-lg font-bold text-primary">{formatNumber(f.count)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Total Fatality Reserves */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <span className="text-sm text-muted-foreground">Total Fatality Reserves:</span>
-                    <span className="text-xl font-bold text-destructive">{formatCurrency(tier1[0].claims.reduce((s, c) => s + c.openReserves, 0))}</span>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-destructive">{formatNumber(allRiskClaims.length)} claims</span>
+                  <span className="text-sm font-bold text-foreground">{formatCurrency(totalRiskReserves)}</span>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              </div>
+            </div>
           );
         })()}
 
