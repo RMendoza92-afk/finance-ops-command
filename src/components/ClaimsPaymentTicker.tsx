@@ -148,33 +148,33 @@ export function ClaimsPaymentTicker() {
   return (
     <>
       <div 
-        className="w-full bg-card/60 backdrop-blur-sm border-b border-border overflow-hidden relative cursor-pointer group"
+        className="w-full bg-card/80 backdrop-blur-sm border-y border-border overflow-hidden relative cursor-pointer group"
         onClick={() => setIsExpanded(true)}
       >
-        {/* Badge */}
+        {/* Badge - same width as SalesTickerBanner */}
         <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-destructive/90 px-4 py-1">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-3 w-3 text-destructive-foreground" />
+            <div className="h-2 w-2 rounded-full bg-red-300 animate-pulse" />
             <span className="text-xs font-bold text-destructive-foreground tracking-widest">
               CLAIMS PAY
             </span>
           </div>
         </div>
         
-        {/* Gradient fade on left */}
-        <div className="absolute left-28 top-0 bottom-0 w-12 bg-gradient-to-r from-card/60 to-transparent z-[5]" />
+        {/* Gradient fade on left - matches SalesTickerBanner */}
+        <div className="absolute left-24 top-0 bottom-0 w-16 bg-gradient-to-r from-card/80 to-transparent z-[5]" />
         
-        {/* Scrolling ticker */}
-        <div className="py-2 pl-32 ticker-wrapper">
-          <div className="ticker-track-slow">
+        {/* Scrolling ticker - same class as SalesTickerBanner */}
+        <div className="py-2 pl-28 ticker-wrapper">
+          <div className="ticker-track">
             <TickerContent />
             <TickerContent />
             <TickerContent />
           </div>
         </div>
         
-        {/* Gradient fade on right */}
-        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-card/60 to-transparent z-[5]" />
+        {/* Gradient fade on right - matches SalesTickerBanner */}
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/80 to-transparent z-[5]" />
       </div>
 
       {/* Expanded Detail Sheet */}
