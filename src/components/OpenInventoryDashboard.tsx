@@ -1130,462 +1130,73 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
     }
   }, [cp1BoxData]);
 
-  // Generate Excel for CP1 Analysis - Executive Ready
+  // Generate Excel for CP1 Trigger Flags - Executive Ready (Styled)
   const generateCP1Excel = useCallback(async () => {
     setGeneratingCP1Excel(true);
     try {
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.utils.book_new();
-
       const CP1_DATA = cp1BoxData?.cp1Data || {
         biByAge: [], biTotal: { noCP: 0, yes: 0, total: 0 }, byCoverage: [],
         totals: { noCP: 0, yes: 0, grandTotal: 0 }, cp1Rate: '0.0',
         byStatus: { inProgress: 0, settled: 0, inProgressPct: '0.0', settledPct: '0.0' },
       };
+
       const fs = cp1BoxData?.fatalitySummary;
       const multiFlagGroups = cp1BoxData?.multiFlagGroups || [];
       const totalFlags = cp1BoxData?.totalFlagInstances || 0;
-      const totalClaims = CP1_DATA.totals.grandTotal;
-      const multiFlag2Plus = multiFlagGroups.filter(g => g.flagCount >= 2).reduce((s, g) => s + g.claimCount, 0);
-      const multiFlag3Plus = multiFlagGroups.filter(g => g.flagCount >= 3).reduce((s, g) => s + g.claimCount, 0);
+      const totalClaims = CP1_DATA.totals.grandTotal || (cp1BoxData?.rawClaims?.length || 0);
 
-      // Sheet 1: Executive Dashboard
-      const execSummary = [
-        ['CP1 TRIGGER FLAGS - EXECUTIVE SUMMARY'],
-        [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
-        [],
-        ['KEY METRICS'],
-        ['Metric', 'Value', 'Notes'],
-        ['Total CP1 Claims', totalClaims, 'Claims at or near policy limits'],
-        ['Active Trigger Flags', totalFlags, 'Total flag instances across all claims'],
-        ['Multi-Flag Claims (2+)', multiFlag2Plus, `${((multiFlag2Plus / totalClaims) * 100).toFixed(1)}% of inventory`],
-        ['High-Risk Claims (3+)', multiFlag3Plus, `${((multiFlag3Plus / totalClaims) * 100).toFixed(1)}% - Priority review required`],
-        [],
-        ['TRIGGER FLAGS BREAKDOWN'],
-        ['Flag Type', 'Count', '% of Claims', 'Tier'],
-        // Tier 1 - Critical (100 pts) - Use raw numbers for Excel SUM
-        ['Fatality', fs?.fatalityCount || 0, (fs?.fatalityCount || 0) / totalClaims * 100, 'CRITICAL'],
-        ['Surgery', fs?.surgeryCount || 0, (fs?.surgeryCount || 0) / totalClaims * 100, 'CRITICAL'],
-        ['Meds vs Limits', fs?.medsVsLimitsCount || 0, (fs?.medsVsLimitsCount || 0) / totalClaims * 100, 'CRITICAL'],
-        ['Life Care Planner', fs?.lifeCarePlannerCount || 0, (fs?.lifeCarePlannerCount || 0) / totalClaims * 100, 'CRITICAL'],
-        // Tier 2 - High (80-70 pts)
-        ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, (fs?.confirmedFracturesCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Hospitalization', fs?.hospitalizationCount || 0, (fs?.hospitalizationCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, (fs?.lossOfConsciousnessCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Aggravating Factors', fs?.aggFactorsCount || 0, (fs?.aggFactorsCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, (fs?.objectiveInjuriesCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, (fs?.pedestrianPregnancyCount || 0) / totalClaims * 100, 'HIGH'],
-        ['Surgical Recommendation', fs?.priorSurgeryCount || 0, (fs?.priorSurgeryCount || 0) / totalClaims * 100, 'HIGH'],
-        // Tier 3 - Moderate (60-50 pts)
-        ['Injections (ESI, Facet)', fs?.injectionsCount || 0, (fs?.injectionsCount || 0) / totalClaims * 100, 'MODERATE'],
-        ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, (fs?.emsHeavyImpactCount || 0) / totalClaims * 100, 'MODERATE'],
-        ['Lacerations/Scarring', fs?.lacerationsCount || 0, (fs?.lacerationsCount || 0) / totalClaims * 100, 'MODERATE'],
-        ['Pain Level 5+', fs?.painLevel5PlusCount || 0, (fs?.painLevel5PlusCount || 0) / totalClaims * 100, 'MODERATE'],
-        ['Pregnancy', fs?.pregnancyCount || 0, (fs?.pregnancyCount || 0) / totalClaims * 100, 'MODERATE'],
-        ['Eggshell 69+', fs?.eggshell69PlusCount || 0, (fs?.eggshell69PlusCount || 0) / totalClaims * 100, 'MODERATE'],
-      ];
-      const summarySheet = XLSX.utils.aoa_to_sheet(execSummary);
-      summarySheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+      const multiFlag2Plus = multiFlagGroups
+        .filter(g => g.flagCount >= 2)
+        .reduce((s, g) => s + g.claimCount, 0);
+      const multiFlag3Plus = multiFlagGroups
+        .filter(g => g.flagCount >= 3)
+        .reduce((s, g) => s + g.claimCount, 0);
 
-      // Sheet: Week-over-Week Progress Tracker
-      const wow = cp1BoxData?.weekOverWeek;
-      if (wow?.hasValidPrior) {
-        const wowData = [
-          ['WEEK-OVER-WEEK PROGRESS TRACKER'],
-          [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
-          [`Prior Snapshot: ${wow.priorSnapshotDate || 'N/A'}`],
-          [],
-          ['METRIC', 'PRIOR', 'CURRENT', 'DELTA', '% CHANGE', 'TREND'],
-          ['Total Claims', wow.totalClaims.prior, wow.totalClaims.current, wow.totalClaims.delta, wow.totalClaims.pctChange, wow.totalClaims.delta < 0 ? 'IMPROVING' : wow.totalClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['365+ Days Aged', wow.age365Plus.prior, wow.age365Plus.current, wow.age365Plus.delta, wow.age365Plus.pctChange, wow.age365Plus.delta < 0 ? 'IMPROVING' : wow.age365Plus.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['181-365 Days', wow.age181To365.prior, wow.age181To365.current, wow.age181To365.delta, wow.age181To365.pctChange, wow.age181To365.delta < 0 ? 'IMPROVING' : wow.age181To365.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['High-Risk (3+ Flags)', wow.highRiskClaims.prior, wow.highRiskClaims.current, wow.highRiskClaims.delta, wow.highRiskClaims.pctChange, wow.highRiskClaims.delta < 0 ? 'IMPROVING' : wow.highRiskClaims.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Flags', wow.totalFlags.prior, wow.totalFlags.current, wow.totalFlags.delta, wow.totalFlags.pctChange, wow.totalFlags.delta < 0 ? 'IMPROVING' : wow.totalFlags.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['Total Reserves ($)', wow.totalReserves.prior, wow.totalReserves.current, wow.totalReserves.delta, wow.totalReserves.pctChange, wow.totalReserves.delta < 0 ? 'IMPROVING' : wow.totalReserves.delta > 0 ? 'WORSENING' : 'STABLE'],
-          ['CP1 Rate (%)', wow.cp1Rate.prior, wow.cp1Rate.current, wow.cp1Rate.delta, '-', wow.cp1Rate.delta < 0 ? 'IMPROVING' : wow.cp1Rate.delta > 0 ? 'WORSENING' : 'STABLE'],
-        ];
-        const wowSheet = XLSX.utils.aoa_to_sheet(wowData);
-        wowSheet['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
-        XLSX.utils.book_append_sheet(workbook, wowSheet, 'Week-over-Week');
-      }
+      const safePct = (num: number, denom: number) => (denom > 0 ? (num / denom) * 100 : 0);
 
-      // Sheet: Negotiation Activity Summary
-      const nego = cp1BoxData?.negotiationSummary;
-      if (nego) {
-        const negoSummaryData = [
-          ['NEGOTIATION ACTIVITY SUMMARY'],
-          [`As of: ${format(new Date(), 'MMMM d, yyyy')}`],
-          [],
-          ['KEY METRICS'],
-          ['Metric', 'Value'],
-          ['Claims with Negotiation', nego.totalWithNegotiation],
-          ['Claims without Negotiation', nego.totalWithoutNegotiation],
-          ['Total Negotiation Amount', nego.totalNegotiationAmount],
-          ['Average Negotiation Amount', nego.avgNegotiationAmount],
-          ['Stale Negotiations (60+ Days)', nego.staleNegotiations60Plus],
-          ['Stale Negotiations (90+ Days)', nego.staleNegotiations90Plus],
-          [],
-          ['NEGOTIATION BY TYPE'],
-          ['Negotiation Type', 'Count', 'Total Amount'],
-          ...nego.byType.map(t => [t.type, t.count, t.totalAmount]),
-        ];
-        const negoSummarySheet = XLSX.utils.aoa_to_sheet(negoSummaryData);
-        negoSummarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 18 }];
-        XLSX.utils.book_append_sheet(workbook, negoSummarySheet, 'Negotiation Summary');
+      await generateStyledBoardroomExcel({
+        reportTitle: 'CP1 Trigger Flags - Executive Summary',
+        asOfDate: format(new Date(), 'MMMM d, yyyy'),
+        sections: [
+          {
+            title: 'Key Metrics',
+            metrics: [
+              { label: 'Total CP1 Claims', value: totalClaims },
+              { label: 'Active Trigger Flags', value: totalFlags },
+              { label: 'Multi-Flag Claims (2+)', value: multiFlag2Plus },
+              { label: 'High-Risk Claims (3+)', value: multiFlag3Plus },
+            ],
+          },
+          {
+            title: 'Trigger Flags Breakdown',
+            table: {
+              headers: ['Flag Type', 'Count', '% of Claims', 'Tier'],
+              rows: [
+                ['Fatality', fs?.fatalityCount || 0, safePct(fs?.fatalityCount || 0, totalClaims), 'CRITICAL'],
+                ['Surgery', fs?.surgeryCount || 0, safePct(fs?.surgeryCount || 0, totalClaims), 'CRITICAL'],
+                ['Meds vs Limits', fs?.medsVsLimitsCount || 0, safePct(fs?.medsVsLimitsCount || 0, totalClaims), 'CRITICAL'],
+                ['Life Care Planner', fs?.lifeCarePlannerCount || 0, safePct(fs?.lifeCarePlannerCount || 0, totalClaims), 'CRITICAL'],
+                ['Confirmed Fractures', fs?.confirmedFracturesCount || 0, safePct(fs?.confirmedFracturesCount || 0, totalClaims), 'HIGH'],
+                ['Hospitalization', fs?.hospitalizationCount || 0, safePct(fs?.hospitalizationCount || 0, totalClaims), 'HIGH'],
+                ['Loss of Consciousness', fs?.lossOfConsciousnessCount || 0, safePct(fs?.lossOfConsciousnessCount || 0, totalClaims), 'HIGH'],
+                ['Aggravating Factors', fs?.aggFactorsCount || 0, safePct(fs?.aggFactorsCount || 0, totalClaims), 'HIGH'],
+                ['Objective Injuries (MRI/CT)', fs?.objectiveInjuriesCount || 0, safePct(fs?.objectiveInjuriesCount || 0, totalClaims), 'HIGH'],
+                ['Ped/Moto/Bike', fs?.pedestrianPregnancyCount || 0, safePct(fs?.pedestrianPregnancyCount || 0, totalClaims), 'HIGH'],
+                ['Surgical Recommendation', fs?.priorSurgeryCount || 0, safePct(fs?.priorSurgeryCount || 0, totalClaims), 'HIGH'],
+                ['Injections (ESI, Facet)', fs?.injectionsCount || 0, safePct(fs?.injectionsCount || 0, totalClaims), 'MODERATE'],
+                ['EMS + Heavy Impact', fs?.emsHeavyImpactCount || 0, safePct(fs?.emsHeavyImpactCount || 0, totalClaims), 'MODERATE'],
+                ['Lacerations/Scarring', fs?.lacerationsCount || 0, safePct(fs?.lacerationsCount || 0, totalClaims), 'MODERATE'],
+                ['Pain Level 5+', fs?.painLevel5PlusCount || 0, safePct(fs?.painLevel5PlusCount || 0, totalClaims), 'MODERATE'],
+                ['Pregnancy', fs?.pregnancyCount || 0, safePct(fs?.pregnancyCount || 0, totalClaims), 'MODERATE'],
+                ['Eggshell 69+', fs?.eggshell69PlusCount || 0, safePct(fs?.eggshell69PlusCount || 0, totalClaims), 'MODERATE'],
+              ],
+              highlightLastRow: false,
+            },
+          },
+        ],
+        filename: `CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+      });
 
-        // Sheet: Stale Negotiations (60+ days)
-        const staleClaims = (cp1BoxData?.rawClaims || []).filter(c => 
-          c.negotiationDate && c.daysSinceNegotiationDate && c.daysSinceNegotiationDate >= 60
-        ).sort((a, b) => (b.daysSinceNegotiationDate || 0) - (a.daysSinceNegotiationDate || 0));
-
-        if (staleClaims.length > 0) {
-          const staleData = staleClaims.map(c => ({
-            'Claim #': c.claimNumber,
-            'Claimant': c.claimant,
-            'Coverage': c.coverage,
-            'Days Open': c.days,
-            'Negotiation Type': c.negotiationType,
-            'Negotiation Amount': c.negotiationAmount,
-            'Negotiation Date': c.negotiationDate,
-            'Days Since Negotiation': c.daysSinceNegotiationDate,
-            'Open Reserves': c.openReserves,
-            'Team': c.teamGroup,
-            'BI Status': c.biStatus,
-          }));
-          const staleSheet = XLSX.utils.json_to_sheet(staleData);
-          staleSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-          XLSX.utils.book_append_sheet(workbook, staleSheet, 'Stale Negotiations');
-        }
-
-        // Sheet: No Negotiation
-        const noNegoClaims = (cp1BoxData?.rawClaims || []).filter(c => 
-          !c.negotiationDate && !c.negotiationType
-        ).sort((a, b) => b.openReserves - a.openReserves);
-
-        if (noNegoClaims.length > 0) {
-          const noNegoData = noNegoClaims.map(c => ({
-            'Claim #': c.claimNumber,
-            'Claimant': c.claimant,
-            'Coverage': c.coverage,
-            'Days Open': c.days,
-            'Age Bucket': c.ageBucket,
-            'Open Reserves': c.openReserves,
-            'Team': c.teamGroup,
-            'Adjuster': c.adjuster,
-            'BI Status': c.biStatus,
-            'BI Phase': c.evaluationPhase,
-          }));
-          const noNegoSheet = XLSX.utils.json_to_sheet(noNegoData);
-          noNegoSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
-          XLSX.utils.book_append_sheet(workbook, noNegoSheet, 'No Negotiation');
-        }
-      }
-
-      // CP1 Impact Severity Weights (official scoring matrix - 17 factors)
-      const CP1_WEIGHTS = {
-        // Tier 1 - Highest severity
-        fatality: 100,
-        surgery: 100,
-        medsVsLimits: 100,
-        lifeCarePlanner: 100,
-        // Tier 2 - High severity
-        confirmedFractures: 80,
-        hospitalization: 80,
-        lossOfConsciousness: 80,
-        aggFactors: 70,
-        objectiveInjuries: 70,
-        pedestrianPregnancy: 70,
-        priorSurgery: 70,
-        // Tier 3 - Moderate severity
-        injections: 60,
-        emsHeavyImpact: 50,
-        lacerations: 50,
-        painLevel5Plus: 50,
-        pregnancy: 50,
-        eggshell69Plus: 50,
-      };
-
-      const calculateImpactScore = (c: typeof cp1BoxData.rawClaims[0]) => {
-        let score = 0;
-        if (c.fatality) score += CP1_WEIGHTS.fatality;
-        if (c.surgery) score += CP1_WEIGHTS.surgery;
-        if (c.medsVsLimits) score += CP1_WEIGHTS.medsVsLimits;
-        if (c.lifeCarePlanner) score += CP1_WEIGHTS.lifeCarePlanner;
-        if (c.confirmedFractures) score += CP1_WEIGHTS.confirmedFractures;
-        if (c.hospitalization) score += CP1_WEIGHTS.hospitalization;
-        if (c.lossOfConsciousness) score += CP1_WEIGHTS.lossOfConsciousness;
-        if (c.aggFactors) score += CP1_WEIGHTS.aggFactors;
-        if (c.objectiveInjuries) score += CP1_WEIGHTS.objectiveInjuries;
-        if (c.pedestrianPregnancy) score += CP1_WEIGHTS.pedestrianPregnancy;
-        if (c.priorSurgery) score += CP1_WEIGHTS.priorSurgery;
-        if (c.injections) score += CP1_WEIGHTS.injections;
-        if (c.emsHeavyImpact) score += CP1_WEIGHTS.emsHeavyImpact;
-        if (c.lacerations) score += CP1_WEIGHTS.lacerations;
-        if (c.painLevel5Plus) score += CP1_WEIGHTS.painLevel5Plus;
-        if (c.pregnancy) score += CP1_WEIGHTS.pregnancy;
-        if (c.eggshell69Plus) score += CP1_WEIGHTS.eggshell69Plus;
-        return score;
-      };
-
-      const getSeverityTier = (score: number) => {
-        if (score >= 200) return 'HEAVY';
-        if (score >= 100) return 'MODERATE';
-        if (score >= 50) return 'LIGHT';
-        return 'MINIMAL';
-      };
-
-      // Sheet 2: Multi-Flag Risk Analysis
-      const flagLabels: Record<string, string> = {
-        fatality: 'Fatality', surgery: 'Surgery', medsVsLimits: 'Meds>Limits',
-        hospitalization: 'Hospital', lossOfConsciousness: 'LOC/TBI', aggFactors: 'Re-aggravation',
-        objectiveInjuries: 'MRI/CT Confirmed', pedestrianPregnancy: 'Ped/Moto/Bike',
-        lifeCarePlanner: 'Life Care', injections: 'Injections', emsHeavyImpact: 'EMS/Impact',
-        confirmedFractures: 'Fractures', lacerations: 'Lacerations', priorSurgery: 'Surg Rec',
-        pregnancy: 'Pregnancy', painLevel5Plus: 'Pain 5+', eggshell69Plus: 'Eggshell 69+',
-      };
-      
-      const multiFlagData: (string | number)[][] = [
-        ['MULTI-FLAG RISK CONCENTRATION'],
-        [],
-        ['Flag Count', 'Claims', '% of Total', 'Risk Level', 'Top Flags'],
-      ];
-      
-      multiFlagGroups
-        .filter(g => g.flagCount > 0)
-        .sort((a, b) => b.flagCount - a.flagCount)
-        .forEach(group => {
-          const pct = (group.claimCount / totalClaims) * 100;
-          const risk = group.flagCount >= 4 ? 'CRITICAL' : group.flagCount === 3 ? 'HIGH' : group.flagCount === 2 ? 'ELEVATED' : 'STANDARD';
-          
-          const flagCounts: Record<string, number> = {};
-          group.claims.forEach(c => {
-            if (c.fatality) flagCounts['fatality'] = (flagCounts['fatality'] || 0) + 1;
-            if (c.surgery) flagCounts['surgery'] = (flagCounts['surgery'] || 0) + 1;
-            if (c.medsVsLimits) flagCounts['medsVsLimits'] = (flagCounts['medsVsLimits'] || 0) + 1;
-            if (c.hospitalization) flagCounts['hospitalization'] = (flagCounts['hospitalization'] || 0) + 1;
-            if (c.lossOfConsciousness) flagCounts['lossOfConsciousness'] = (flagCounts['lossOfConsciousness'] || 0) + 1;
-            if (c.aggFactors) flagCounts['aggFactors'] = (flagCounts['aggFactors'] || 0) + 1;
-            if (c.objectiveInjuries) flagCounts['objectiveInjuries'] = (flagCounts['objectiveInjuries'] || 0) + 1;
-            if (c.pedestrianPregnancy) flagCounts['pedestrianPregnancy'] = (flagCounts['pedestrianPregnancy'] || 0) + 1;
-            if (c.lifeCarePlanner) flagCounts['lifeCarePlanner'] = (flagCounts['lifeCarePlanner'] || 0) + 1;
-            if (c.injections) flagCounts['injections'] = (flagCounts['injections'] || 0) + 1;
-            if (c.emsHeavyImpact) flagCounts['emsHeavyImpact'] = (flagCounts['emsHeavyImpact'] || 0) + 1;
-            if (c.confirmedFractures) flagCounts['confirmedFractures'] = (flagCounts['confirmedFractures'] || 0) + 1;
-            if (c.lacerations) flagCounts['lacerations'] = (flagCounts['lacerations'] || 0) + 1;
-            if (c.priorSurgery) flagCounts['priorSurgery'] = (flagCounts['priorSurgery'] || 0) + 1;
-            if (c.pregnancy) flagCounts['pregnancy'] = (flagCounts['pregnancy'] || 0) + 1;
-            if (c.painLevel5Plus) flagCounts['painLevel5Plus'] = (flagCounts['painLevel5Plus'] || 0) + 1;
-            if (c.eggshell69Plus) flagCounts['eggshell69Plus'] = (flagCounts['eggshell69Plus'] || 0) + 1;
-          });
-          const topFlags = Object.entries(flagCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 4)
-            .map(([k]) => flagLabels[k])
-            .join(', ');
-          
-          // Use raw numbers so Excel SUM works
-          multiFlagData.push([`${group.flagCount} Flags`, group.claimCount, pct, risk, topFlags]);
-        });
-
-      // Add granular risk factors breakdown to Multi-Flag sheet
-      multiFlagData.push([]);
-      multiFlagData.push(['GRANULAR RISK FACTORS (17 SEVERITY INDICATORS)']);
-      multiFlagData.push([]);
-      multiFlagData.push(['Tier', 'Flag Type', 'Count', '% of Claims', 'Reserves']);
-      
-      const fsSummary = data?.fatalitySummary;
-      if (fsSummary && data?.rawClaims) {
-        // Tier 1 - Critical
-        const tier1Flags = [
-          { tier: 'CRITICAL', label: 'Fatality', count: fsSummary.fatalityCount, claims: data.rawClaims.filter(c => c.fatality) },
-          { tier: 'CRITICAL', label: 'Surgery', count: fsSummary.surgeryCount, claims: data.rawClaims.filter(c => c.surgery) },
-          { tier: 'CRITICAL', label: 'Meds vs Limits', count: fsSummary.medsVsLimitsCount, claims: data.rawClaims.filter(c => c.medsVsLimits) },
-          { tier: 'CRITICAL', label: 'Life Care Planner', count: fsSummary.lifeCarePlannerCount, claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
-        ];
-        // Tier 2 - High
-        const tier2Flags = [
-          { tier: 'HIGH', label: 'Confirmed Fractures', count: fsSummary.confirmedFracturesCount, claims: data.rawClaims.filter(c => c.confirmedFractures) },
-          { tier: 'HIGH', label: 'Hospitalization', count: fsSummary.hospitalizationCount, claims: data.rawClaims.filter(c => c.hospitalization) },
-          { tier: 'HIGH', label: 'Loss of Consciousness', count: fsSummary.lossOfConsciousnessCount, claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
-          { tier: 'HIGH', label: 'Aggravating Factors', count: fsSummary.aggFactorsCount, claims: data.rawClaims.filter(c => c.aggFactors) },
-          { tier: 'HIGH', label: 'Objective Injuries (MRI/CT)', count: fsSummary.objectiveInjuriesCount, claims: data.rawClaims.filter(c => c.objectiveInjuries) },
-          { tier: 'HIGH', label: 'Ped/Moto/Bike', count: fsSummary.pedestrianPregnancyCount, claims: data.rawClaims.filter(c => c.pedestrianPregnancy) },
-          { tier: 'HIGH', label: 'Surgical Recommendation', count: fsSummary.priorSurgeryCount, claims: data.rawClaims.filter(c => c.priorSurgery) },
-        ];
-        // Tier 3 - Moderate
-        const tier3Flags = [
-          { tier: 'MODERATE', label: 'Injections (ESI, Facet)', count: fsSummary.injectionsCount, claims: data.rawClaims.filter(c => c.injections) },
-          { tier: 'MODERATE', label: 'EMS + Heavy Impact', count: fsSummary.emsHeavyImpactCount, claims: data.rawClaims.filter(c => c.emsHeavyImpact) },
-          { tier: 'MODERATE', label: 'Lacerations/Scarring', count: fsSummary.lacerationsCount, claims: data.rawClaims.filter(c => c.lacerations) },
-          { tier: 'MODERATE', label: 'Pain Level 5+', count: fsSummary.painLevel5PlusCount, claims: data.rawClaims.filter(c => c.painLevel5Plus) },
-          { tier: 'MODERATE', label: 'Pregnancy', count: fsSummary.pregnancyCount, claims: data.rawClaims.filter(c => c.pregnancy) },
-          { tier: 'MODERATE', label: 'Eggshell 69+', count: fsSummary.eggshell69PlusCount, claims: data.rawClaims.filter(c => c.eggshell69Plus) },
-        ];
-        
-        const allFlags = [...tier1Flags, ...tier2Flags, ...tier3Flags];
-        allFlags.forEach(f => {
-          const pct = totalClaims > 0 ? (f.count / totalClaims) * 100 : 0;
-          const reserves = f.claims.reduce((s, c) => s + c.openReserves, 0);
-          // Use raw numbers so Excel SUM works - format in Excel if needed
-          multiFlagData.push([f.tier, f.label, f.count, pct, reserves]);
-        });
-      }
-
-      const multiFlagSheet = XLSX.utils.aoa_to_sheet(multiFlagData);
-      multiFlagSheet['!cols'] = [{ wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 15 }];
-      XLSX.utils.book_append_sheet(workbook, multiFlagSheet, 'Multi-Flag Analysis');
-
-      // Sheet 3: High-Risk Claims (3+ flags) with Impact Severity
-      const highRiskClaims = (cp1BoxData?.rawClaims || []).filter(c => {
-        let flagCount = 0;
-        if (c.fatality) flagCount++;
-        if (c.surgery) flagCount++;
-        if (c.medsVsLimits) flagCount++;
-        if (c.hospitalization) flagCount++;
-        if (c.lossOfConsciousness) flagCount++;
-        if (c.aggFactors) flagCount++;
-        if (c.objectiveInjuries) flagCount++;
-        if (c.pedestrianPregnancy) flagCount++;
-        if (c.lifeCarePlanner) flagCount++;
-        if (c.injections) flagCount++;
-        if (c.emsHeavyImpact) flagCount++;
-        if (c.confirmedFractures) flagCount++;
-        if (c.lacerations) flagCount++;
-        if (c.priorSurgery) flagCount++;
-        if (c.pregnancy) flagCount++;
-        if (c.painLevel5Plus) flagCount++;
-        if (c.eggshell69Plus) flagCount++;
-        return flagCount >= 3;
-      }).map(c => {
-        let flagCount = 0;
-        const flags: string[] = [];
-        if (c.fatality) { flagCount++; flags.push('Fatality'); }
-        if (c.surgery) { flagCount++; flags.push('Surgery'); }
-        if (c.medsVsLimits) { flagCount++; flags.push('Meds>Limits'); }
-        if (c.lifeCarePlanner) { flagCount++; flags.push('Life Care'); }
-        if (c.confirmedFractures) { flagCount++; flags.push('Fractures'); }
-        if (c.hospitalization) { flagCount++; flags.push('Hospital'); }
-        if (c.lossOfConsciousness) { flagCount++; flags.push('LOC/TBI'); }
-        if (c.aggFactors) { flagCount++; flags.push('Re-aggravation'); }
-        if (c.objectiveInjuries) { flagCount++; flags.push('MRI/CT'); }
-        if (c.pedestrianPregnancy) { flagCount++; flags.push('Ped/Moto/Bike'); }
-        if (c.priorSurgery) { flagCount++; flags.push('Surg Rec'); }
-        if (c.injections) { flagCount++; flags.push('Injections'); }
-        if (c.emsHeavyImpact) { flagCount++; flags.push('EMS/Impact'); }
-        if (c.lacerations) { flagCount++; flags.push('Lacerations'); }
-        if (c.painLevel5Plus) { flagCount++; flags.push('Pain 5+'); }
-        if (c.pregnancy) { flagCount++; flags.push('Pregnancy'); }
-        if (c.eggshell69Plus) { flagCount++; flags.push('Eggshell 69+'); }
-        
-        const impactScore = calculateImpactScore(c);
-        const severityTier = getSeverityTier(impactScore);
-        
-        return {
-          'Claim #': c.claimNumber,
-          'Claimant': c.claimant,
-          'Adjuster': c.adjuster || 'N/A',
-          'Impact Severity': c.impactSeverity || 'N/A',
-          'Impact Score': impactScore,
-          'Severity Tier': severityTier,
-          'Flag Count': flagCount,
-          'Coverage': c.coverage,
-          'BI Phase': c.evaluationPhase || 'N/A',
-          'Days Open': c.days,
-          'Age Bucket': c.ageBucket,
-          'Team': c.teamGroup,
-          'Total Paid': c.totalPaid,
-          'Open Reserves': c.openReserves,
-          'Negotiation Amount': c.negotiationAmount || 0,
-          'Negotiation Date': c.negotiationDate || '',
-          'Negotiation Type': c.negotiationType || '',
-          'Days Since Negotiation': c.daysSinceNegotiationDate ?? '',
-          'Flags Present': flags.join(' | '),
-          'BI Status': c.biStatus,
-        };
-      }).sort((a, b) => (b['Impact Score'] as number) - (a['Impact Score'] as number));
-
-      if (highRiskClaims.length > 0) {
-        const highRiskSheet = XLSX.utils.json_to_sheet(highRiskClaims);
-        highRiskSheet['!cols'] = [
-          { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 12 },
-          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 15 }
-        ];
-        XLSX.utils.book_append_sheet(workbook, highRiskSheet, 'High-Risk (3+ Flags)');
-      }
-
-      const allClaimsData = (cp1BoxData?.rawClaims || []).map(c => {
-        let flagCount = 0;
-        if (c.fatality) flagCount++;
-        if (c.surgery) flagCount++;
-        if (c.medsVsLimits) flagCount++;
-        if (c.hospitalization) flagCount++;
-        if (c.lossOfConsciousness) flagCount++;
-        if (c.aggFactors) flagCount++;
-        if (c.objectiveInjuries) flagCount++;
-        if (c.pedestrianPregnancy) flagCount++;
-        if (c.lifeCarePlanner) flagCount++;
-        if (c.injections) flagCount++;
-        if (c.emsHeavyImpact) flagCount++;
-        if (c.confirmedFractures) flagCount++;
-        if (c.lacerations) flagCount++;
-        if (c.priorSurgery) flagCount++;
-        if (c.pregnancy) flagCount++;
-        if (c.painLevel5Plus) flagCount++;
-        if (c.eggshell69Plus) flagCount++;
-        
-        const impactScore = calculateImpactScore(c);
-        const severityTier = getSeverityTier(impactScore);
-        
-        return {
-          'Claim #': c.claimNumber,
-          'Claimant': c.claimant,
-          'Adjuster': c.adjuster || 'N/A',
-          'Impact Severity': c.impactSeverity || 'N/A',
-          'Impact Score': impactScore,
-          'Severity Tier': severityTier,
-          'Flag Count': flagCount,
-          'Coverage': c.coverage,
-          'BI Phase': c.evaluationPhase || 'N/A',
-          'Days Open': c.days,
-          'Age Bucket': c.ageBucket,
-          'Type Group': c.typeGroup,
-          'Team': c.teamGroup,
-          'Total Paid': c.totalPaid,
-          'Open Reserves': c.openReserves,
-          'BI Status': c.biStatus,
-          // Negotiation fields
-          'Negotiation Amount': c.negotiationAmount || 0,
-          'Negotiation Date': c.negotiationDate || '',
-          'Negotiation Type': c.negotiationType || '',
-          'Days Since Negotiation': c.daysSinceNegotiationDate ?? '',
-          // Tier 1 - Highest Severity (100 pts)
-          'Fatality (100)': c.fatality ? 'YES' : '',
-          'Surgery (100)': c.surgery ? 'YES' : '',
-          'Meds vs Limits (100)': c.medsVsLimits ? 'YES' : '',
-          'Life Care (100)': c.lifeCarePlanner ? 'YES' : '',
-          // Tier 2 - High Severity (70-80 pts)
-          'Fractures (80)': c.confirmedFractures ? 'YES' : '',
-          'Hospital (80)': c.hospitalization ? 'YES' : '',
-          'LOC/TBI (80)': c.lossOfConsciousness ? 'YES' : '',
-          'Re-aggravation (70)': c.aggFactors ? 'YES' : '',
-          'MRI/CT Confirmed (70)': c.objectiveInjuries ? 'YES' : '',
-          'Ped/Moto/Bike (70)': c.pedestrianPregnancy ? 'YES' : '',
-          'Surg Rec (70)': c.priorSurgery ? 'YES' : '',
-          // Tier 3 - Moderate Severity (50-60 pts)
-          'Injections (60)': c.injections ? 'YES' : '',
-          'EMS/Impact (50)': c.emsHeavyImpact ? 'YES' : '',
-          'Lacerations (50)': c.lacerations ? 'YES' : '',
-          'Pain 5+ (50)': c.painLevel5Plus ? 'YES' : '',
-          'Pregnancy (50)': c.pregnancy ? 'YES' : '',
-          'Eggshell 69+ (50)': c.eggshell69Plus ? 'YES' : '',
-        };
-      }).sort((a, b) => (b['Impact Score'] as number) - (a['Impact Score'] as number));
-
-      const allClaimsSheet = XLSX.utils.json_to_sheet(allClaimsData);
-      XLSX.utils.book_append_sheet(workbook, allClaimsSheet, 'All Claims Detail');
-
-      XLSX.writeFile(workbook, `CP1_Trigger_Flags_Executive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
       toast.success('Executive Excel report generated');
     } catch (err) {
       console.error('Error generating Excel:', err);
@@ -4734,26 +4345,43 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                         key={flag.label}
                         className="group relative rounded-lg border border-border bg-card hover:bg-accent/50 cursor-pointer transition-all hover:shadow-lg overflow-hidden"
                         onClick={() => {
-                          import('xlsx').then((XLSX) => {
-                            const allClaims = cp1BoxData?.rawClaims || [];
-                            const filteredClaims = allClaims.filter((c) => (c as any)[flag.key]);
-                            const rows = filteredClaims.map((c) => ({
-                              'Claim #': c.claimNumber,
-                              Claimant: c.claimant,
-                              Coverage: c.coverage,
-                              'Days Open': c.days,
-                              'Age Bucket': c.ageBucket,
-                              'Type Group': c.typeGroup,
-                              Team: c.teamGroup,
-                              'Total Paid': c.totalPaid,
-                              'Open Reserves': c.openReserves,
-                              'Overall CP1': c.overallCP1,
-                              'BI Status': c.biStatus,
-                            }));
-                            const ws = XLSX.utils.json_to_sheet(rows);
-                            const wb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(wb, ws, `${flag.label} Claims`);
-                            XLSX.writeFile(wb, `CP1_${flag.key}_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
+                          const allClaims = cp1BoxData?.rawClaims || [];
+                          const filteredClaims = allClaims.filter((c) => (c as any)[flag.key]);
+                          const total = filteredClaims.length;
+
+                          generateStyledBoardroomExcel({
+                            reportTitle: `CP1 ${flag.label} Claims`,
+                            asOfDate: format(new Date(), 'MMMM d, yyyy'),
+                            sections: [
+                              {
+                                title: 'Key Metrics',
+                                metrics: [
+                                  { label: 'Total Claims', value: total },
+                                ],
+                              },
+                              {
+                                title: 'Claims Detail',
+                                table: {
+                                  headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Team', 'Total Paid', 'Open Reserves', 'Overall CP1', 'BI Status'],
+                                  rows: filteredClaims.map((c) => ([
+                                    c.claimNumber,
+                                    c.claimant,
+                                    c.coverage,
+                                    c.days,
+                                    c.ageBucket,
+                                    c.typeGroup,
+                                    c.teamGroup,
+                                    c.totalPaid,
+                                    c.openReserves,
+                                    c.overallCP1,
+                                    c.biStatus,
+                                  ])),
+                                  highlightLastRow: false,
+                                },
+                              },
+                            ],
+                            filename: `CP1_${flag.key}_Claims_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+                          }).then(() => {
                             toast.success(`Exported ${filteredClaims.length} ${flag.label} claims`);
                           });
                         }}
@@ -4855,34 +4483,58 @@ export function OpenInventoryDashboard({ filters, defaultView = 'operations' }: 
                           key={group.flagCount}
                           className="group flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 hover:bg-accent/30 cursor-pointer transition-all gap-3"
                           onClick={() => {
-                            import('xlsx').then((XLSX) => {
-                              const rows = group.claims.map((c) => ({
-                                'Claim #': c.claimNumber, Claimant: c.claimant, Coverage: c.coverage,
-                                'Days Open': c.days, 'Age Bucket': c.ageBucket, 'Type Group': c.typeGroup,
-                                Team: c.teamGroup, 'Open Reserves': c.openReserves, 'Overall CP1': c.overallCP1,
-                                'BI Status': c.biStatus, 'Fatality': c.fatality ? 'Yes' : '',
-                                'Surgery': c.surgery ? 'Yes' : '', 'Meds vs Limits': c.medsVsLimits ? 'Yes' : '',
-                                'Hospitalization': c.hospitalization ? 'Yes' : '',
-                                'Loss of Consciousness': c.lossOfConsciousness ? 'Yes' : '',
-                                'Aggravating Factors': c.aggFactors ? 'Yes' : '',
-                                'Objective Injuries': c.objectiveInjuries ? 'Yes' : '',
-                                'Ped/Moto/Bike/Pregnancy': c.pedestrianPregnancy ? 'Yes' : '',
-                                'Life Care Planner': c.lifeCarePlanner ? 'Yes' : '',
-                                'Injections': c.injections ? 'Yes' : '',
-                                'EMS + Heavy Impact': c.emsHeavyImpact ? 'Yes' : '',
-                                'Confirmed Fractures': c.confirmedFractures ? 'Yes' : '',
-                                'Lacerations/Scarring': c.lacerations ? 'Yes' : '',
-                                'Surgical Recommendation': c.priorSurgery ? 'Yes' : '',
-                                'Pregnancy': c.pregnancy ? 'Yes' : '',
-                                'End Pain Level 5+': c.painLevel5Plus ? 'Yes' : '',
-                                'Eggshell 69+': c.eggshell69Plus ? 'Yes' : '',
-                              }));
-                              const ws = XLSX.utils.json_to_sheet(rows);
-                              const wb = XLSX.utils.book_new();
-                              XLSX.utils.book_append_sheet(wb, ws, `${group.flagCount} Flags`);
-                              XLSX.writeFile(wb, `CP1_${group.flagCount}_Flags_Claims_${new Date().toISOString().split('T')[0]}.xlsx`);
-                              toast.success(`Exported ${group.claimCount} claims`);
-                            });
+                            const total = group.claims.length;
+
+                            generateStyledBoardroomExcel({
+                              reportTitle: `CP1 ${group.flagCount} Flags Claims`,
+                              asOfDate: format(new Date(), 'MMMM d, yyyy'),
+                              sections: [
+                                {
+                                  title: 'Key Metrics',
+                                  metrics: [
+                                    { label: 'Total Claims', value: total },
+                                    { label: 'Flag Count', value: group.flagCount },
+                                  ],
+                                },
+                                {
+                                  title: 'Claims Detail',
+                                  table: {
+                                    headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Age Bucket', 'Type Group', 'Team', 'Open Reserves', 'Overall CP1', 'BI Status', 'Fatality', 'Surgery', 'Meds vs Limits', 'Hospitalization', 'LOC/TBI', 'Re-Aggravation', 'Objective Injuries', 'Ped/Moto/Bike', 'Life Care', 'Injections', 'EMS/Impact', 'Fractures', 'Lacerations', 'Surg Rec', 'Pregnancy', 'Pain 5+', 'Eggshell 69+'],
+                                    rows: group.claims.map((c) => ([
+                                      c.claimNumber,
+                                      c.claimant,
+                                      c.coverage,
+                                      c.days,
+                                      c.ageBucket,
+                                      c.typeGroup,
+                                      c.teamGroup,
+                                      c.openReserves,
+                                      c.overallCP1,
+                                      c.biStatus,
+                                      c.fatality ? 'Yes' : '',
+                                      c.surgery ? 'Yes' : '',
+                                      c.medsVsLimits ? 'Yes' : '',
+                                      c.hospitalization ? 'Yes' : '',
+                                      c.lossOfConsciousness ? 'Yes' : '',
+                                      c.aggFactors ? 'Yes' : '',
+                                      c.objectiveInjuries ? 'Yes' : '',
+                                      c.pedestrianPregnancy ? 'Yes' : '',
+                                      c.lifeCarePlanner ? 'Yes' : '',
+                                      c.injections ? 'Yes' : '',
+                                      c.emsHeavyImpact ? 'Yes' : '',
+                                      c.confirmedFractures ? 'Yes' : '',
+                                      c.lacerations ? 'Yes' : '',
+                                      c.priorSurgery ? 'Yes' : '',
+                                      c.pregnancy ? 'Yes' : '',
+                                      c.painLevel5Plus ? 'Yes' : '',
+                                      c.eggshell69Plus ? 'Yes' : '',
+                                    ])),
+                                    highlightLastRow: false,
+                                  },
+                                },
+                              ],
+                              filename: `CP1_${group.flagCount}_Flags_Claims_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+                            }).then(() => toast.success(`Exported ${group.claimCount} claims`));
                           }}
                         >
                           <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -5298,95 +4950,72 @@ ${nego.byType.slice(0, 5).map(t => `- ${t.type}: ${t.count} ($${t.totalAmount.to
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
+                onClick={async () => {
                   if (!data?.fatalitySummary) return;
                   const fs = data.fatalitySummary;
-                  import('xlsx').then((XLSX) => {
-                    const wb = XLSX.utils.book_new();
-                    
-                    // Summary sheet with all 17 factors
-                    const summaryData = [
-                      ['CP1 RISK FACTORS SUMMARY'],
-                      [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`],
-                      [],
-                      ['TIER 1 - CRITICAL (100-80 pts)'],
-                      ['Factor', 'Count', 'Description'],
-                      ['Fatality', fs.fatalityCount, 'Claims involving death'],
-                      ['Surgery', fs.surgeryCount, 'Claims with surgical procedures'],
-                      ['Meds > Limits', fs.medsVsLimitsCount, 'Medical costs exceeding policy limits'],
-                      ['Life Care Planner', fs.lifeCarePlannerCount, 'Life care plans required'],
-                      [],
-                      ['TIER 2 - HIGH (70-50 pts)'],
-                      ['Factor', 'Count', 'Description'],
-                      ['Confirmed Fractures', fs.confirmedFracturesCount, 'Documented fractures'],
-                      ['Hospitalization', fs.hospitalizationCount, 'Hospital admissions'],
-                      ['Loss of Consciousness/TBI', fs.lossOfConsciousnessCount, 'LOC or traumatic brain injury'],
-                      ['Re-Aggravation', fs.aggFactorsCount, 'Pre-existing condition aggravation'],
-                      ['Objective Injuries (MRI/CT)', fs.objectiveInjuriesCount, 'Injuries confirmed by imaging'],
-                      ['Pedestrian/Bicycle', fs.pedestrianPregnancyCount, 'Pedestrian or bicycle accidents'],
-                      ['Surgery Recommended', fs.priorSurgeryCount, 'Surgery recommendations pending'],
-                      [],
-                      ['TIER 3 - MODERATE (40-30 pts)'],
-                      ['Factor', 'Count', 'Description'],
-                      ['Injections', fs.injectionsCount, 'Injection treatments'],
-                      ['EMS/Heavy Impact', fs.emsHeavyImpactCount, 'Emergency services or heavy impact'],
-                      ['Lacerations', fs.lacerationsCount, 'Laceration injuries'],
-                      ['Pain Level 5+', fs.painLevel5PlusCount, 'Pain severity 5 or higher'],
-                      ['Pregnancy', fs.pregnancyCount, 'Pregnancy-related claims'],
-                      ['Eggshell (69+)', fs.eggshell69PlusCount, 'Claimants 69 years or older'],
-                      [],
-                      ['TOTALS'],
-                      ['Fatality Reserves', `$${fs.fatalityReserves.toLocaleString()}`],
-                    ];
-                    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-                    summarySheet['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 40 }];
-                    XLSX.utils.book_append_sheet(wb, summarySheet, 'Risk Factor Summary');
 
-                    // Claims by factor - get raw claims with each factor
-                    const factorClaims: { factor: string; claims: any[] }[] = [
-                      { factor: 'Fatality', claims: data.rawClaims.filter(c => c.fatality) },
-                      { factor: 'Surgery', claims: data.rawClaims.filter(c => c.surgery) },
-                      { factor: 'Meds > Limits', claims: data.rawClaims.filter(c => c.medsVsLimits) },
-                      { factor: 'Life Care Planner', claims: data.rawClaims.filter(c => c.lifeCarePlanner) },
-                      { factor: 'Confirmed Fractures', claims: data.rawClaims.filter(c => c.confirmedFractures) },
-                      { factor: 'Hospitalization', claims: data.rawClaims.filter(c => c.hospitalization) },
-                      { factor: 'Loss of Consciousness', claims: data.rawClaims.filter(c => c.lossOfConsciousness) },
-                      { factor: 'Re-Aggravation', claims: data.rawClaims.filter(c => c.aggFactors) },
-                      { factor: 'Objective Injuries', claims: data.rawClaims.filter(c => c.objectiveInjuries) },
-                    ];
+                  const allHighRiskClaims = data.rawClaims
+                    .filter(c => c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner || c.confirmedFractures || c.hospitalization || c.lossOfConsciousness)
+                    .sort((a, b) => b.openReserves - a.openReserves);
 
-                    // Create a sheet with all high-risk claims
-                    const allHighRiskClaims = data.rawClaims.filter(c => 
-                      c.fatality || c.surgery || c.medsVsLimits || c.lifeCarePlanner ||
-                      c.confirmedFractures || c.hospitalization || c.lossOfConsciousness
-                    ).sort((a, b) => b.openReserves - a.openReserves);
-
-                    if (allHighRiskClaims.length > 0) {
-                      const claimsData = allHighRiskClaims.map(c => ({
-                        'Claim #': c.claimNumber,
-                        'Claimant': c.claimant,
-                        'Coverage': c.coverage,
-                        'Days Open': c.days,
-                        'Open Reserves': c.openReserves,
-                        'Fatality': c.fatality ? 'Yes' : '',
-                        'Surgery': c.surgery ? 'Yes' : '',
-                        'Meds>Limits': c.medsVsLimits ? 'Yes' : '',
-                        'Life Care': c.lifeCarePlanner ? 'Yes' : '',
-                        'Fractures': c.confirmedFractures ? 'Yes' : '',
-                        'Hospital': c.hospitalization ? 'Yes' : '',
-                        'LOC/TBI': c.lossOfConsciousness ? 'Yes' : '',
-                        'Team': c.teamGroup,
-                        'Adjuster': c.adjuster,
-                      }));
-                      const claimsSheet = XLSX.utils.json_to_sheet(claimsData);
-                      claimsSheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, 
-                        { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 15 }, { wch: 20 }];
-                      XLSX.utils.book_append_sheet(wb, claimsSheet, 'High-Risk Claims');
-                    }
-
-                    XLSX.writeFile(wb, `CP1_Risk_Factors_${format(new Date(), 'yyyyMMdd')}.xlsx`);
-                    toast.success('Risk factors exported to Excel');
+                  await generateStyledBoardroomExcel({
+                    reportTitle: 'CP1 Risk Factors',
+                    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+                    sections: [
+                      {
+                        title: 'Summary',
+                        table: {
+                          headers: ['Tier', 'Factor', 'Count', 'Description'],
+                          rows: [
+                            ['CRITICAL', 'Fatality', fs.fatalityCount, 'Claims involving death'],
+                            ['CRITICAL', 'Surgery', fs.surgeryCount, 'Claims with surgical procedures'],
+                            ['CRITICAL', 'Meds > Limits', fs.medsVsLimitsCount, 'Medical costs exceeding policy limits'],
+                            ['CRITICAL', 'Life Care Planner', fs.lifeCarePlannerCount, 'Life care plans required'],
+                            ['HIGH', 'Confirmed Fractures', fs.confirmedFracturesCount, 'Documented fractures'],
+                            ['HIGH', 'Hospitalization', fs.hospitalizationCount, 'Hospital admissions'],
+                            ['HIGH', 'Loss of Consciousness/TBI', fs.lossOfConsciousnessCount, 'LOC or traumatic brain injury'],
+                            ['HIGH', 'Re-Aggravation', fs.aggFactorsCount, 'Pre-existing condition aggravation'],
+                            ['HIGH', 'Objective Injuries (MRI/CT)', fs.objectiveInjuriesCount, 'Imaging confirmed'],
+                            ['HIGH', 'Pedestrian/Bicycle', fs.pedestrianPregnancyCount, 'Ped/bike/moto'],
+                            ['HIGH', 'Surgery Recommended', fs.priorSurgeryCount, 'Surgery recommendations pending'],
+                            ['MODERATE', 'Injections', fs.injectionsCount, 'Injection treatments'],
+                            ['MODERATE', 'EMS/Heavy Impact', fs.emsHeavyImpactCount, 'EMS or heavy impact'],
+                            ['MODERATE', 'Lacerations', fs.lacerationsCount, 'Laceration injuries'],
+                            ['MODERATE', 'Pain Level 5+', fs.painLevel5PlusCount, 'Pain severity 5+'],
+                            ['MODERATE', 'Pregnancy', fs.pregnancyCount, 'Pregnancy-related'],
+                            ['MODERATE', 'Eggshell (69+)', fs.eggshell69PlusCount, 'Claimants 69+'],
+                          ],
+                          highlightLastRow: false,
+                        },
+                      },
+                      {
+                        title: 'High-Risk Claims',
+                        table: {
+                          headers: ['Claim #', 'Claimant', 'Coverage', 'Days Open', 'Open Reserves', 'Fatality', 'Surgery', 'Meds>Limits', 'Life Care', 'Fractures', 'Hospital', 'LOC/TBI', 'Team', 'Adjuster'],
+                          rows: allHighRiskClaims.map(c => ([
+                            c.claimNumber,
+                            c.claimant,
+                            c.coverage,
+                            c.days,
+                            c.openReserves,
+                            c.fatality ? 'Yes' : '',
+                            c.surgery ? 'Yes' : '',
+                            c.medsVsLimits ? 'Yes' : '',
+                            c.lifeCarePlanner ? 'Yes' : '',
+                            c.confirmedFractures ? 'Yes' : '',
+                            c.hospitalization ? 'Yes' : '',
+                            c.lossOfConsciousness ? 'Yes' : '',
+                            c.teamGroup,
+                            c.adjuster,
+                          ])),
+                          highlightLastRow: false,
+                        },
+                      },
+                    ],
+                    filename: `CP1_Risk_Factors_${format(new Date(), 'yyyyMMdd')}.xlsx`,
                   });
+
+                  toast.success('Risk factors exported to Excel');
                 }}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -5604,46 +5233,58 @@ TOTAL: ${allRiskClaims.length.toLocaleString()} claims | $${totalRiskReserves.to
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  import('xlsx').then((XLSX) => {
-                    const groups = data?.multiPackData?.groups || [];
-                    const extractTeamNumber = (teamGroup: string) => {
-                      const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
-                      return m?.[1] || '';
-                    };
-                    const rows: any[] = [];
-                    groups
-                      .filter(g => selectedPackSize === null || g.packSize === selectedPackSize)
-                      .forEach((group) => {
-                        group.claims.forEach((claim, idx) => {
-                          rows.push({
-                            'Base Claim #': group.baseClaimNumber,
-                            'Pack Size': group.packSize,
-                            'Claim Number': claim.claimNumber,
-                            'Claimant #': claim.claimant,
-                            'Coverage': claim.coverage,
-                            'Days Open': claim.days,
-                            'Type Group': claim.typeGroup,
-                            'Team Group': claim.teamGroup,
-                            'Team #': extractTeamNumber(claim.teamGroup),
-                            'Exposure Category': claim.exposureCategory,
-                            'Overall CP1': claim.overallCP1,
-                            'BI Phase': claim.evaluationPhase,
-                            'Reserves': claim.reserves,
-                            'Low Eval': claim.lowEval,
-                            'High Eval': claim.highEval,
-                            'Group Total Reserves': idx === 0 ? group.totalReserves : '',
-                            'Group Total Low Eval': idx === 0 ? group.totalLowEval : '',
-                            'Group Total High Eval': idx === 0 ? group.totalHighEval : '',
-                          });
-                        });
+                 onClick={async () => {
+                  const groups = data?.multiPackData?.groups || [];
+                  const extractTeamNumber = (teamGroup: string) => {
+                    const m = String(teamGroup || '').match(/\b(\d{1,3})\b/);
+                    return m?.[1] || '';
+                  };
+
+                  const rows: (string | number | null)[][] = [];
+                  groups
+                    .filter(g => selectedPackSize === null || g.packSize === selectedPackSize)
+                    .forEach((group) => {
+                      group.claims.forEach((claim, idx) => {
+                        rows.push([
+                          group.baseClaimNumber,
+                          group.packSize,
+                          claim.claimNumber,
+                          claim.claimant,
+                          claim.coverage,
+                          claim.days,
+                          claim.typeGroup,
+                          claim.teamGroup,
+                          extractTeamNumber(claim.teamGroup),
+                          claim.exposureCategory,
+                          claim.overallCP1,
+                          claim.evaluationPhase,
+                          claim.reserves,
+                          claim.lowEval,
+                          claim.highEval,
+                          idx === 0 ? group.totalReserves : null,
+                          idx === 0 ? group.totalLowEval : null,
+                          idx === 0 ? group.totalHighEval : null,
+                        ]);
                       });
-                    const ws = XLSX.utils.json_to_sheet(rows);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Multi-Pack Claims');
-                    XLSX.writeFile(wb, `Multi-Pack-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-                    toast.success('Multi-Pack Claims exported to Excel');
+                    });
+
+                  await generateStyledBoardroomExcel({
+                    reportTitle: 'Multi-Pack Claims',
+                    asOfDate: format(new Date(), 'MMMM d, yyyy'),
+                    sections: [
+                      {
+                        title: 'Claims',
+                        table: {
+                          headers: ['Base Claim #', 'Pack Size', 'Claim Number', 'Claimant #', 'Coverage', 'Days Open', 'Type Group', 'Team Group', 'Team #', 'Exposure Category', 'Overall CP1', 'BI Phase', 'Reserves', 'Low Eval', 'High Eval', 'Group Total Reserves', 'Group Total Low Eval', 'Group Total High Eval'],
+                          rows,
+                          highlightLastRow: false,
+                        },
+                      },
+                    ],
+                    filename: `Multi-Pack-Claims-${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
                   });
+
+                  toast.success('Multi-Pack Claims exported to Excel');
                 }}
                 className="gap-2"
               >

@@ -56,22 +56,20 @@ export interface LegacyExportData {
 }
 
 /**
- * Format a number as currency for Excel display
+ * ExcelJS number format strings
  */
-const formatCurrency = (value: number): string => {
-  const absNum = Math.abs(value);
-  const formatted = absNum.toLocaleString('en-US', { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
-  });
-  return value < 0 ? `-$${formatted}` : `$${formatted}`;
+const NUMFMTS = {
+  CURRENCY: '$#,##0',
+  CURRENCY_DECIMAL: '$#,##0.00',
+  NUMBER: '#,##0',
+  NUMBER_DECIMAL: '#,##0.00',
+  PERCENT: '0.0%',
 };
 
-/**
- * Format a number with commas
- */
-const formatNumber = (value: number): string => {
-  return value.toLocaleString('en-US');
+const normalizePercent = (value: number) => {
+  // Accept either 0-1 or 0-100 style percents.
+  const abs = Math.abs(value);
+  return abs > 1 ? value / 100 : value;
 };
 
 /**
@@ -139,19 +137,27 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
       section.metrics.forEach((metric, idx) => {
         const row = worksheet.getRow(currentRow);
         row.getCell(1).value = metric.label;
-        
-        // Format value
-        let displayValue: string | number = metric.value;
-        if (typeof metric.value === 'number') {
+
+        const valueCell = row.getCell(2);
+        const v = metric.value;
+
+        // Keep Excel cells numeric (no green "number stored as text" triangles)
+        if (typeof v === 'number' && Number.isFinite(v)) {
+          valueCell.value = v;
           if (isCurrencyHeader(metric.label)) {
-            displayValue = formatCurrency(metric.value);
+            valueCell.numFmt = NUMFMTS.CURRENCY;
+          } else if (isPercentHeader(metric.label)) {
+            valueCell.value = normalizePercent(v);
+            valueCell.numFmt = NUMFMTS.PERCENT;
           } else {
-            displayValue = formatNumber(metric.value);
+            valueCell.numFmt = NUMFMTS.NUMBER;
           }
+          valueCell.alignment = { horizontal: 'right' };
+        } else {
+          valueCell.value = v ?? '';
+          valueCell.alignment = { horizontal: 'right' };
         }
-        row.getCell(2).value = displayValue;
-        row.getCell(2).alignment = { horizontal: 'right' };
-        
+
         // Alternating row color
         if (idx % 2 === 1) {
           [1, 2].forEach(col => {
@@ -162,14 +168,14 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
             };
           });
         }
-        
+
         // Light border
         [1, 2].forEach(col => {
           row.getCell(col).border = {
             bottom: { style: 'hair', color: { argb: COLORS.borderGray } }
           };
         });
-        
+
         currentRow++;
       });
       
@@ -215,18 +221,22 @@ export async function generateStyledBoardroomExcel(data: BoardroomExportData): P
           const cell = row.getCell(colIdx + 1);
           const header = headers[colIdx] || '';
           
-          // Format value
+          // Format value - keep numerics numeric
           if (cellValue === null || cellValue === undefined) {
             cell.value = '';
-          } else if (typeof cellValue === 'number') {
-            if (isCurrencyHeader(header) || header.toLowerCase().includes('amount')) {
-              cell.value = formatCurrency(cellValue);
-            } else if (isPercentHeader(header)) {
-              cell.value = `${cellValue.toFixed(1)}%`;
+          } else if (typeof cellValue === 'number' && Number.isFinite(cellValue)) {
+            if (isPercentHeader(header)) {
+              cell.value = normalizePercent(cellValue);
+              cell.numFmt = NUMFMTS.PERCENT;
+            } else if (isCurrencyHeader(header) || header.toLowerCase().includes('amount')) {
+              cell.value = cellValue;
+              cell.numFmt = NUMFMTS.CURRENCY;
             } else {
-              cell.value = formatNumber(cellValue);
+              cell.value = cellValue;
+              cell.numFmt = NUMFMTS.NUMBER;
             }
           } else {
+            // If it's a string like "45.0%", keep it as-is.
             cell.value = String(cellValue);
           }
           
