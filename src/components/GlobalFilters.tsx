@@ -11,7 +11,7 @@ export interface PainLevelRow {
 }
 
 export interface GlobalFilters {
-  inventoryStatus: 'eoy' | 'operations' | 'executive' | 'rbc';
+  inventoryStatus: 'eoy' | 'operations' | 'executive' | 'rbc' | 'intervention';
   department: string;
   team: string;
   adjuster: string;
@@ -106,6 +106,16 @@ export function GlobalFilterPanel({
             }`}
           >
             Operations
+          </button>
+          <button
+            onClick={() => onFilterChange('inventoryStatus', 'intervention')}
+            className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-base font-medium transition-colors rounded-md sm:rounded-none ${
+              filters.inventoryStatus === 'intervention'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Early Intervention
           </button>
           <button
             onClick={() => onFilterChange('inventoryStatus', 'executive')}

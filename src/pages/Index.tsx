@@ -13,6 +13,7 @@ import { ClaimsPaymentTicker } from "@/components/ClaimsPaymentTicker";
 import { OrderBookDrilldown, CashFlowTicker } from "@/components/OrderBookDrilldown";
 import { TutorialOverlay, useTutorial } from "@/components/TutorialOverlay";
 import RBCGaugeDashboard from "@/components/RBCGaugeDashboard";
+import EarlyInterventionReport from "@/components/EarlyInterventionReport";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send, HelpCircle } from "lucide-react";
 import loyaLogo from "@/assets/fli_logo.jpg";
@@ -225,7 +226,8 @@ const Index = () => {
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {filters.inventoryStatus === 'operations' ? 'Open Inventory' : 
                  filters.inventoryStatus === 'executive' ? 'Executive View' : 
-                 filters.inventoryStatus === 'rbc' ? 'RBC Performance' : '2025 EOY Portfolio'}
+                 filters.inventoryStatus === 'rbc' ? 'RBC Performance' :
+                 filters.inventoryStatus === 'intervention' ? 'Early Intervention' : '2025 EOY Portfolio'}
               </p>
             </div>
           </div>
@@ -291,6 +293,8 @@ const Index = () => {
           <ExecutiveCommandDashboardWrapper />
         ) : filters.inventoryStatus === 'rbc' ? (
           <RBCGaugeDashboard />
+        ) : filters.inventoryStatus === 'intervention' ? (
+          <EarlyInterventionReport />
         ) : (
           <div className="space-y-6">
             <ExecutiveDashboard 
