@@ -59,7 +59,26 @@ export interface InterventionSummary {
   avgMeds: number;
   texasPilotCount: number;
   expansionCandidates: number;
-}
+}// High-risk states for expansion
+const HIGH_RISK_STATES = [...]
+type StatePosture = {
+  litigationAvoidanceBias: number;
+  frequencyPressure: number;
+  salesRecoverySensitivity: number;
+};
+
+const STATE_POSTURE: Record<string, StatePosture> = {
+  NEVADA:      { litigationAvoidanceBias: 1.25, frequencyPressure: 1.2, salesRecoverySensitivity: 0.8 },
+  CALIFORNIA: { litigationAvoidanceBias: 1.2,  frequencyPressure: 1.1, salesRecoverySensitivity: 0.75 },
+  GEORGIA:    { litigationAvoidanceBias: 1.15, frequencyPressure: 1.3, salesRecoverySensitivity: 0.85 },
+  NEW_MEXICO: { litigationAvoidanceBias: 1.15, frequencyPressure: 1.0, salesRecoverySensitivity: 0.9 },
+  TEXAS:      { litigationAvoidanceBias: 1.3,  frequencyPressure: 1.1, salesRecoverySensitivity: 0.7 },
+
+  INDIANA:    { litigationAvoidanceBias: 0.9,  frequencyPressure: 1.1, salesRecoverySensitivity: 1.2 },
+  OHIO:       { litigationAvoidanceBias: 0.95, frequencyPressure: 1.05, salesRecoverySensitivity: 1.15 },
+  ARIZONA:    { litigationAvoidanceBias: 0.95, frequencyPressure: 1.0, salesRecoverySensitivity: 1.1 },
+};
+
 
 // State BI limits
 const STATE_BI_LIMITS: Record<string, number> = {
@@ -222,6 +241,7 @@ export function useEarlyIntervention() {
         if (hasFatality) priorityScore += 20;
       }
 
+
       // Only include if at least one strategy applies AND has 3+ flags
       if (strategies.length > 0 && effectiveFlagCount >= 3) {
         // Add state risk bonus
@@ -236,7 +256,32 @@ export function useEarlyIntervention() {
           reasoning.push(`Low meds ($${totalMeds.toLocaleString()}) - optimal LOR timing`);
         }
 
-        claims.push({
+        claims.push(
+          
+ {  // === STATE POSTURE ADJUSTMENT ===
+  const posture = STATE_POSTURE[state];
+
+  if (posture) {
+    // Favor early settlement in hostile litigation states
+    if (
+      strategies.includes('LOR_CANDIDATE') ||
+      strategies.includes('PROACTIVE_NEGO')
+    ) {
+      priorityScore *= posture.litigationAvoidanceBias;
+      reasoning.push(`State posture favors early settlement (${state})`);
+    }
+
+    // Apply overall frequency pressure
+    priorityScore *= posture.frequencyPressure;
+
+    // Avoid over-aggressive settlement where sales recovery matters
+    if (!strategies.includes('EXPERT_EARLY')) {
+      priorityScore *= posture.salesRecoverySensitivity;
+    }
+  }
+
+
+
           claimNumber: row['Claim#'] || '',
           claimant: row['Claimant'] || '',
           state,
